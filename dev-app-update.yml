@@ -1,0 +1,4 @@
+provider: generic
+url: https://statics.aipoch.com/medical-research-agent/app/stable
+channel: latest
+updaterCacheDirName: medresearch-agent-updater

@@ -1,0 +1,461 @@
+import { spawn, spawnSync } from 'node:child_process'
+import { once } from 'node:events'
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import {
+  connectionProbeSpecification,
+  windowsElevationScript,
+  windowsLaunch,
+  windowsSupervisedLaunch,
+  windowsStandardLaunch
+} from '../runtime/src/platform/windows-appcontainer.js'
+
+afterEach(() => vi.unstubAllEnvs())
+
+describe('Windows AppContainer network fence probe', () => {
+  it('keeps PowerShell catch and finally clauses attached to the try statement', () => {
+    const specification = JSON.parse(
+      Buffer.from(connectionProbeSpecification(49700), 'base64url').toString('utf8')
+    ) as { arguments: string[] }
+    const command = specification.arguments.at(-1)
+
+    expect(command).toContain("ConnectAsync('127.0.0.1', 49700)")
+    expect(command).toContain('}\ncatch { exit 33 }\nfinally { $client.Dispose() }')
+    expect(command).not.toContain('}; catch')
+  })
+})
+
+describe('Windows AppContainer elevation', () => {
+  it.skipIf(process.platform !== 'win32')(
+    'preserves native helper arguments and waits for its exit code',
+    () => {
+      const root = mkdtempSync(join(tmpdir(), 'r elevation '))
+      try {
+        const helper = join(root, "argument helper's.exe")
+        const output = join(root, 'arguments.txt')
+        const args = [
+          'with spaces',
+          'with"quote',
+          'trailing\\',
+          'space and slash\\',
+          'slash\\"quote'
+        ]
+        const expected = ['setup', 'installation', root, ...args]
+        const source = `using System; using System.IO;
+          public class Arguments {
+            public static int Main(string[] args) {
+              File.WriteAllLines(Environment.GetEnvironmentVariable("R_ELEVATION_TEST_OUTPUT"),
+                Array.ConvertAll(args, arg => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(arg))));
+              return 7;
+            }
+          }`
+        // Keep the real Windows argument parser and process wait; do not request UAC in CI.
+        const script = windowsElevationScript(helper, 'installation', root, 'setup', args)
+          .replace('-Verb RunAs', '-Verb Open')
+          .replace("$start.Verb = 'runas'", "$start.Verb = 'open'")
+        const fixture = `Add-Type -TypeDefinition '${source.replaceAll("'", "''")}' -OutputAssembly '${helper.replaceAll("'", "''")}' -OutputType ConsoleApplication; `
+        const result = spawnSync(
+          'powershell.exe',
+          [
+            '-NoLogo',
+            '-NoProfile',
+            '-NonInteractive',
+            '-EncodedCommand',
+            Buffer.from(fixture + script, 'utf16le').toString('base64')
+          ],
+          {
+            windowsHide: true,
+            encoding: 'utf8',
+            env: { ...process.env, R_ELEVATION_TEST_OUTPUT: output }
+          }
+        )
+        expect(result.status, result.stderr).toBe(7)
+        expect(
+          readFileSync(output, 'utf8')
+            .trimEnd()
+            .split(/\r?\n/)
+            .map((value) => Buffer.from(value, 'base64').toString('utf8'))
+        ).toEqual(expected)
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    }
+  )
+
+  it('recognizes a wrapped Windows UAC cancellation without matching localized text', () => {
+    const script = windowsElevationScript(
+      "C:\\Program Files\\Open-Science\\host's.exe",
+      '0123456789abcdef01234567',
+      'C:\\Users\\Researcher\\AppData\\Local\\sandbox',
+      'setup'
+    )
+
+    expect(script).toContain('$failure.NativeErrorCode -eq 1223')
+    expect(script).toContain('$failure = $failure.InnerException')
+    expect(script).toContain('[Console]::Error.WriteLine($_.Exception.Message)')
+    expect(script).toContain('exit 1')
+    expect(script).toContain("'C:\\Program Files\\Open-Science\\host''s.exe'")
+  })
+})
+
+describe('Windows AppContainer launch', () => {
+  it('keeps nested optional PATH candidates until their individual permissions are checked', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'optional-path-')))
+    const parent = join(root, 'tools')
+    const child = join(parent, 'bin')
+    try {
+      const launch = windowsLaunch({
+        command: 'node script.js',
+        executable: process.execPath,
+        args: ['script.js'],
+        cwd: root,
+        gatewayPort: 49700,
+        gatewayCredentials: { username: 'command', password: 'secret' },
+        env: {},
+        filesystem: {
+          readOnlyRoots: [],
+          optionalReadOnlyRoots: [parent, child, child],
+          readWriteRoots: [root],
+          deniedReadRoots: [],
+          deniedWriteRoots: []
+        },
+        hostPath: join(root, 'host.exe'),
+        installationId: '0123456789abcdef01234567',
+        ownershipRoot: root
+      })
+      const specification = JSON.parse(
+        Buffer.from(launch.argv.at(-1)!, 'base64url').toString('utf8')
+      )
+      expect(specification.optionalReadOnlyRoots).toEqual([parent, child])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('supervises standard-mode commands without requiring AppContainer setup', () => {
+    const request = {
+      command: 'Write-Output ready',
+      cwd: 'C:\\workspace',
+      hostPath: 'C:\\resources\\notebook-sandbox-host.exe',
+      gatewayPort: 49700,
+      gatewayCredentials: { username: 'command', password: 'secret' },
+      env: {}
+    }
+
+    const launch = windowsSupervisedLaunch(request)
+    const specification = JSON.parse(
+      Buffer.from(launch.argv.at(-1)!, 'base64url').toString('utf8')
+    ) as {
+      executable: string
+      arguments: string[]
+      cwd: string
+      terminationProofPath: string
+      terminationProofToken: string
+    }
+
+    expect(launch.argv.slice(0, 2)).toEqual([request.hostPath, 'supervise'])
+    expect(launch.confirmProcessTreeTermination).toBeTypeOf('function')
+    expect(specification).toMatchObject({
+      executable: 'powershell.exe',
+      arguments: ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', request.command],
+      cwd: request.cwd,
+      terminationProofPath: expect.stringContaining('.open-science-process-tree-terminated-'),
+      terminationProofToken: expect.any(String)
+    })
+  })
+
+  it('launches a structured standard-mode executable directly to preserve persistent stdio', () => {
+    const request = {
+      command:
+        "& 'D:\\Open-Science\\open-science.exe' 'D:\\Open-Science\\resources\\notebook\\repl_loop.js'",
+      executable: 'D:\\Open-Science\\open-science.exe',
+      args: ['D:\\Open-Science\\resources\\notebook\\repl_loop.js'],
+      gatewayPort: 49700,
+      gatewayCredentials: { username: 'command', password: 'secret' },
+      env: { ELECTRON_RUN_AS_NODE: '1' }
+    }
+
+    const launch = windowsStandardLaunch(request)
+
+    expect(launch.argv).toEqual([request.executable, ...request.args])
+  })
+
+  it('supplies the AppContainer-local data base when the command environment is isolated', () => {
+    const localAppData = join(tmpdir(), 'local-app-data')
+    const runtimeRoot = join(tmpdir(), 'runtime')
+    const appRoot = join(tmpdir(), 'app')
+    const workspaceRoot = join(tmpdir(), 'workspace')
+    vi.stubEnv('LOCALAPPDATA', localAppData)
+
+    const launch = windowsLaunch({
+      command: 'node repl_loop.js',
+      executable: join(runtimeRoot, 'node.exe'),
+      args: [join(appRoot, 'repl_loop.js')],
+      cwd: workspaceRoot,
+      gatewayPort: 49700,
+      gatewayCredentials: { username: 'command', password: 'secret' },
+      env: {},
+      filesystem: {
+        readOnlyRoots: [runtimeRoot, appRoot],
+        readWriteRoots: [workspaceRoot],
+        deniedReadRoots: [],
+        deniedWriteRoots: []
+      },
+      hostPath: 'C:\\resources\\notebook-sandbox-host.exe',
+      installationId: '0123456789abcdef01234567',
+      ownershipRoot: 'C:\\sandbox'
+    })
+
+    expect(launch.env.LOCALAPPDATA).toBe(localAppData)
+  })
+
+  it('launches a structured executable directly instead of through PowerShell', () => {
+    const launch = windowsLaunch({
+      command: "& '/runtime/python.exe' '/app/python_loop.py'",
+      executable: '/runtime/python.exe',
+      args: ['/app/python_loop.py'],
+      cwd: '/workspace',
+      gatewayPort: 49700,
+      gatewayCredentials: { username: 'command', password: 'secret' },
+      env: {},
+      filesystem: {
+        readOnlyRoots: ['/runtime', '/app/python_loop.py'],
+        readWriteRoots: ['/workspace'],
+        deniedReadRoots: [],
+        deniedWriteRoots: []
+      },
+      hostPath: 'C:\\resources\\notebook-sandbox-host.exe',
+      installationId: '0123456789abcdef01234567',
+      ownershipRoot: 'C:\\sandbox'
+    })
+
+    const specification = JSON.parse(
+      Buffer.from(launch.argv.at(-1)!, 'base64url').toString('utf8')
+    ) as { executable: string; arguments: string[]; cwd: string }
+
+    expect(specification).toMatchObject({
+      executable: '/runtime/python.exe',
+      arguments: ['/app/python_loop.py'],
+      cwd: '/workspace'
+    })
+    expect(launch.confirmProcessTreeTermination).toBeTypeOf('function')
+  })
+
+  it('launches a structured batch-file shim through cmd.exe', () => {
+    const launch = windowsLaunch({
+      command: "& 'C:\\runtime path\\python.bat' 'C:\\app path\\python_loop.py'",
+      executable: 'C:\\runtime path\\python.bat',
+      args: ['C:\\app path\\python_loop.py'],
+      cwd: 'C:\\workspace',
+      gatewayPort: 49700,
+      gatewayCredentials: { username: 'command', password: 'secret' },
+      env: { ComSpec: 'C:\\Windows\\System32\\cmd.exe' },
+      filesystem: {
+        readOnlyRoots: ['/runtime', '/app/python_loop.py'],
+        readWriteRoots: ['/workspace'],
+        deniedReadRoots: [],
+        deniedWriteRoots: []
+      },
+      hostPath: 'C:\\resources\\notebook-sandbox-host.exe',
+      installationId: '0123456789abcdef01234567',
+      ownershipRoot: 'C:\\sandbox'
+    })
+
+    const specification = JSON.parse(
+      Buffer.from(launch.argv.at(-1)!, 'base64url').toString('utf8')
+    ) as { executable: string; arguments: string[]; verbatimArguments?: boolean }
+
+    expect(specification).toMatchObject({
+      executable: 'C:\\Windows\\System32\\cmd.exe',
+      arguments: ['/d', '/s', '/c', expect.stringContaining('python.bat')],
+      verbatimArguments: true
+    })
+  })
+
+  it.runIf(process.platform === 'win32')(
+    'keeps a standard-mode structured child alive for delayed stdin',
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), 'os-standard-launch-'))
+      const helper = join(root, 'persistent-loop.js')
+      writeFileSync(
+        helper,
+        "require('node:readline').createInterface({ input: process.stdin }).on('line', (line) => process.stdout.write(line + '\\n'))"
+      )
+      const quotePowerShell = (value: string): string => `'${value.replaceAll("'", "''")}'`
+      const request = {
+        command: `& ${quotePowerShell(process.execPath)} ${quotePowerShell(helper)}`,
+        executable: process.execPath,
+        args: [helper],
+        gatewayPort: 49700,
+        gatewayCredentials: { username: 'command', password: 'secret' },
+        env: process.env
+      }
+      const launch = windowsStandardLaunch(request)
+      const child = spawn(launch.argv[0]!, launch.argv.slice(1), {
+        cwd: root,
+        env: launch.env,
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+      let stdout = ''
+      child.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString('utf8')))
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        expect(child.exitCode).toBeNull()
+        child.stdin.write('delayed-frame\n')
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            const check = (): void => {
+              if (stdout.includes('delayed-frame\n')) resolve()
+              else child.stdout.once('data', check)
+            }
+            check()
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('structured child did not answer stdin')), 2_000)
+          )
+        ])
+        expect(stdout).toContain('delayed-frame\n')
+      } finally {
+        if (child.exitCode === null) {
+          child.kill()
+          await once(child, 'exit')
+        }
+        rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+      }
+    },
+    5_000
+  )
+
+  it.runIf(process.platform === 'win32' && process.arch === 'x64')(
+    'preserves the leader exit code and reaps its standard-mode helper before proving cleanup',
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), 'os-supervised-launch-'))
+      const pidFile = join(root, 'helper.pid')
+      const leader = join(root, 'leader.js')
+      writeFileSync(
+        leader,
+        [
+          "const { spawn } = require('node:child_process')",
+          "const { writeFileSync } = require('node:fs')",
+          "const helper = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { detached: true, stdio: 'ignore' })",
+          `writeFileSync(${JSON.stringify(pidFile)}, String(helper.pid))`,
+          'helper.unref()',
+          'process.exitCode = 19'
+        ].join(';')
+      )
+      const launch = windowsSupervisedLaunch({
+        command: 'unused',
+        executable: process.execPath,
+        args: [leader],
+        cwd: root,
+        hostPath: join(
+          process.cwd(),
+          'packages/notebook-network-sandbox/vendor/windows/x64/notebook-appcontainer-host.exe'
+        ),
+        gatewayPort: 49700,
+        gatewayCredentials: { username: 'command', password: 'secret' },
+        env: process.env
+      })
+      const supervisor = spawn(launch.argv[0]!, launch.argv.slice(1), {
+        cwd: root,
+        env: launch.env,
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
+      const [code] = (await once(supervisor, 'exit')) as [number | null]
+      const helperPid = Number(readFileSync(pidFile, 'utf8'))
+
+      try {
+        expect(code).toBe(19)
+        await expect(launch.confirmProcessTreeTermination()).resolves.toBe(true)
+        expect(() => process.kill(helperPid, 0)).toThrow()
+      } finally {
+        try {
+          process.kill(helperPid, 'SIGKILL')
+        } catch {
+          // Expected once the supervisor closes its kill-on-close Job Object.
+        }
+        rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+      }
+    },
+    5_000
+  )
+
+  it.runIf(process.platform === 'win32')(
+    'preserves metacharacters when cmd.exe executes the generated batch invocation',
+    () => {
+      const root = mkdtempSync(join(tmpdir(), 'os-batch-launch-'))
+      const shim = join(root, 'python shim.cmd')
+      const helper = join(root, 'print-argument.js')
+      writeFileSync(helper, 'process.stdout.write(`[${process.argv[2]}]`)')
+      writeFileSync(shim, `@echo off\r\n"${process.execPath}" "${helper}" %*\r\n`)
+      try {
+        const launch = windowsLaunch({
+          command: 'unused',
+          executable: shim,
+          args: ['hello & goodbye'],
+          cwd: root,
+          gatewayPort: 49700,
+          gatewayCredentials: { username: 'command', password: 'secret' },
+          env: { ComSpec: process.env.ComSpec },
+          filesystem: {
+            readOnlyRoots: [root],
+            readWriteRoots: [root],
+            deniedReadRoots: [],
+            deniedWriteRoots: []
+          },
+          hostPath: 'C:\\resources\\notebook-sandbox-host.exe',
+          installationId: '0123456789abcdef01234567',
+          ownershipRoot: 'C:\\sandbox'
+        })
+        const specification = JSON.parse(
+          Buffer.from(launch.argv.at(-1)!, 'base64url').toString('utf8')
+        ) as { executable: string; arguments: string[]; verbatimArguments: boolean }
+
+        const result = spawnSync(specification.executable, specification.arguments, {
+          cwd: root,
+          encoding: 'utf8',
+          windowsVerbatimArguments: specification.verbatimArguments
+        })
+
+        expect(result.status).toBe(0)
+        expect(result.stdout.trim()).toBe('[hello & goodbye]')
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    }
+  )
+
+  it('routes local RPC through the authenticated command gateway', () => {
+    const launch = windowsLaunch({
+      command: 'node repl_loop.js',
+      cwd: '/workspace',
+      gatewayPort: 49700,
+      gatewayCredentials: { username: 'command', password: 'secret' },
+      env: {
+        OPEN_SCIENCE_MCP_RPC_ENDPOINT: 'http://localhost',
+        OPEN_SCIENCE_MCP_RPC_SOCKET_PATH: '\\\\.\\pipe\\open-science-notebook'
+      },
+      localRpcSocketPath: '\\\\.\\pipe\\open-science-notebook',
+      filesystem: {
+        readOnlyRoots: ['/runtime'],
+        readWriteRoots: ['/workspace'],
+        deniedReadRoots: [],
+        deniedWriteRoots: []
+      },
+      hostPath: 'C:\\resources\\notebook-sandbox-host.exe',
+      installationId: '0123456789abcdef01234567',
+      ownershipRoot: 'C:\\sandbox'
+    })
+
+    expect(launch.env.OPEN_SCIENCE_MCP_RPC_ENDPOINT).toBe(
+      'http://open-science-notebook-rpc.invalid/'
+    )
+    expect(launch.env.OPEN_SCIENCE_MCP_RPC_SOCKET_PATH).toBeUndefined()
+    expect(launch.env.HTTP_PROXY).toContain('command:secret@127.0.0.1:49700')
+  })
+})
