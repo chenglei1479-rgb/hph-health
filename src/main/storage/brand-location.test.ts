@@ -125,7 +125,7 @@ it.each([true, false])(
     const profilePath = join(fixture, 'profile')
     const prepared = await prepareApplicationLocations(configRoot)
     expect((await prepared.repository.getSettings()).dataRoot).toBeUndefined()
-    expect(resolveDataRoot()).toBe(join(fixture, packaged ? 'MedResearch Agent' : 'MedResearch Agent-DEV'))
+    expect(resolveDataRoot()).toBe(join(fixture, packaged ? 'MedResearch-Agent' : 'MedResearch-Agent-DEV'))
     expect(existsSync(resolveDataRoot())).toBe(false)
     expect((await prepared.repository.getSettings()).onboardingCompletedAt).toBeUndefined()
     expect(existsSync(join(configRoot, 'settings.json'))).toBe(false)
@@ -220,7 +220,7 @@ it('does not infer a root from research content in the configuration directory',
   await seed(join(fixture, 'MedResearch Agent'))
   const repository = new SettingsRepository(configRoot)
   await initializeDataLocation(repository)
-  expect(resolveDataRoot()).toBe(join(fixture, 'MedResearch Agent'))
+  expect(resolveDataRoot()).toBe(join(fixture, 'MedResearch-Agent'))
   expect((await repository.getSettings()).dataRoot).toBeUndefined()
   expect((await repository.getSettings()).onboardingCompletedAt).toBeUndefined()
 })
@@ -229,7 +229,7 @@ it('does not infer a data pointer from old copies when settings is absent', asyn
   await seed(join(fixture, 'OpenScience'))
   const repository = new SettingsRepository(resolveConfigRoot())
   await initializeDataLocation(repository)
-  expect(resolveDataRoot()).toBe(join(fixture, 'MedResearch Agent'))
+  expect(resolveDataRoot()).toBe(join(fixture, 'MedResearch-Agent'))
   expect((await repository.getSettings()).dataRoot).toBeUndefined()
   expect((await repository.getSettings()).onboardingCompletedAt).toBeUndefined()
   expect(await readFile(join(fixture, 'OpenScience/workspaces/history.json'), 'utf8')).toContain(
@@ -246,7 +246,7 @@ it.each([true, false])(
     const profilePath = join(fixture, 'task-profile')
     const { repository } = await prepareApplicationLocations(configRoot)
     expect((await repository.getSettings()).dataRoot).toBeUndefined()
-    expect(resolveDataRoot()).toBe(join(configRoot, packaged ? 'MedResearch Agent' : 'MedResearch Agent-DEV'))
+    expect(resolveDataRoot()).toBe(join(configRoot, packaged ? 'MedResearch-Agent' : 'MedResearch-Agent-DEV'))
     expect(existsSync(join(fixture, '.open-science'))).toBe(false)
     expect(existsSync(join(fixture, '.open-science-project'))).toBe(false)
     expect(existsSync(profilePath)).toBe(false)
@@ -352,7 +352,7 @@ it.each([42, false, {}, [], 'relative/path'])(
     await writeFile(join(configRoot, 'settings.json'), json)
     await expect(prepareApplicationLocations(configRoot)).rejects.toThrow(/dataRoot|data location/)
     expect(await readFile(join(configRoot, 'settings.json'), 'utf8')).toBe(json)
-    expect(existsSync(join(fixture, 'MedResearch Agent'))).toBe(false)
+    expect(existsSync(join(fixture, 'MedResearch-Agent'))).toBe(false)
   }
 )
 
@@ -384,7 +384,7 @@ it('preserves malformed JSON and does not select an alternative', async () => {
   await writeFile(join(configRoot, 'settings.json'), '{invalid')
   await expect(prepareApplicationLocations(configRoot)).rejects.toThrow(/settings.json/)
   expect(await readFile(join(configRoot, 'settings.json'), 'utf8')).toBe('{invalid')
-  expect(existsSync(join(fixture, 'MedResearch Agent'))).toBe(false)
+  expect(existsSync(join(fixture, 'MedResearch-Agent'))).toBe(false)
 })
 
 it.each([null, '', '   '])(
@@ -395,7 +395,7 @@ it.each([null, '', '   '])(
     const json = JSON.stringify({ version: 2, dataRoot })
     await writeFile(join(configRoot, 'settings.json'), json)
     const { repository } = await prepareApplicationLocations(configRoot)
-    expect(resolveDataRoot()).toBe(join(fixture, 'MedResearch Agent'))
+    expect(resolveDataRoot()).toBe(join(fixture, 'MedResearch-Agent'))
     expect((await repository.getSettings()).dataRoot).toBeUndefined()
     expect(await readFile(join(configRoot, 'settings.json'), 'utf8')).toBe(json)
   }
@@ -408,7 +408,7 @@ it('reports a missing completed legacy root without creating another root', asyn
   await writeFile(join(configRoot, 'settings.json'), json)
   await expect(prepareApplicationLocations(configRoot)).rejects.toThrow(/OpenScience.*Reconnect/)
   expect(existsSync(join(fixture, 'OpenScience'))).toBe(false)
-  expect(existsSync(join(fixture, 'MedResearch Agent'))).toBe(false)
+  expect(existsSync(join(fixture, 'MedResearch-Agent'))).toBe(false)
   expect(await readFile(join(configRoot, 'settings.json'), 'utf8')).toBe(json)
 })
 
