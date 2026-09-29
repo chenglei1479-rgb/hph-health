@@ -32,6 +32,10 @@ on:
           notarization in isolation; release/nightly leave it false so builds stay gated on tests.
         type: boolean
         default: false
+      apply_snapshot:
+        description: Apply the staged DRA source snapshot before packaging.
+        type: boolean
+        default: false
       verify_only:
         description: Run verification without packaging, signing, or publication.
         type: boolean
@@ -323,6 +327,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Apply DRA source snapshot
+        if: ${{ inputs.apply_snapshot }}
+        shell: bash
+        run: unzip -q .codex/dra-source-snapshot.zip -d .
+
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -343,6 +352,7 @@ jobs:
       # Exercise persisted data-location upgrades on each actual target OS before packaging.
       # The shared verification job cannot substitute for Windows path semantics or Linux casing.
       - name: Verify native data-location upgrades
+        if: ${{ !inputs.skip_verify }}
         run: >-
           npx vitest run
           src/main/storage-root.test.ts

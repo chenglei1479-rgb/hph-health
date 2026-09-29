@@ -27,6 +27,7 @@ jobs:
     with:
       mac_only: true
       skip_verify: true
+      apply_snapshot: true
     secrets: inherit
 
   # Notarize + staple those artifacts and re-emit the stapled versions as run artifacts; nothing is
