@@ -100,16 +100,16 @@ describe('dataRootForPicked', () => {
     // still be recognized as the data folder rather than getting a second one appended.
     setPlatform('win32')
     appMock.isPackaged = true
-    const lower = '/mnt/data/open-science'
+    const lower = '/mnt/data/medresearch-agent'
     expect(dataRootForPicked(lower)).toBe(resolve(lower))
-    const upper = '/mnt/data/OPENSCIENCE'
+    const upper = '/mnt/data/MEDRESEARCH-AGENT'
     expect(dataRootForPicked(upper)).toBe(resolve(upper))
   })
 
   it('is case-sensitive off Windows (a differently-cased folder is not the data folder)', () => {
     setPlatform('linux')
     appMock.isPackaged = true
-    const lower = '/mnt/data/open-science'
+    const lower = '/mnt/data/medresearch-agent'
     expect(dataRootForPicked(lower)).toBe(join(resolve(lower), 'MedResearch-Agent'))
   })
 })
@@ -128,7 +128,7 @@ describe('samePath / isPathInsideOrEqual (platform-aware)', () => {
 
   it('compares case-insensitively on win32 (NTFS is case-insensitive)', () => {
     setPlatform('win32')
-    expect(samePath(p('Data', 'MedResearch-Agent'), p('data', 'open-science'))).toBe(true)
+    expect(samePath(p('Data', 'MedResearch-Agent'), p('data', 'medresearch-agent'))).toBe(true)
     expect(isPathInsideOrEqual(p('Data'), p('data', 'MedResearch-Agent'))).toBe(true)
   })
 
