@@ -1,0 +1,17 @@
+name: DRA macOS packages (artifact only)
+
+on:
+  push:
+    branches:
+      - codex/macos-package-0.1.12
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      mac_only: true
+      skip_verify: true
+      apply_snapshot: true
