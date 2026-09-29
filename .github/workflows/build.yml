@@ -330,7 +330,7 @@ jobs:
       - name: Apply DRA source snapshot
         if: ${{ inputs.apply_snapshot }}
         shell: bash
-        run: unzip -q .codex/dra-source-snapshot.zip -d .
+        run: unzip -oq .codex/dra-source-snapshot.zip -d .
 
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
