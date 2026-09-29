@@ -59,7 +59,9 @@ const dataRootForPicked = (picked: string): string => {
       : name === candidate
   )
   if (isDataFolder) return resolved
-  const candidates = folderNames.map((candidate) => join(resolved, candidate)).filter(hasDataRootContent)
+  const candidates = folderNames
+    .map((candidate) => join(resolved, candidate))
+    .filter(hasDataRootContent)
   // A generic models/uploads/runtime directory is common outside this application. Only saved
   // choices or application ownership receipts can make an unbranded selection a root itself.
   // The adoption owner validates receipt contents before allowing a pointer switch.
@@ -75,7 +77,7 @@ const dataRootForPicked = (picked: string): string => {
     throw new DataLocationSelectionError(
       `Cannot verify existing data locations. Select or recover the original folder before restarting:\n${resolved}`
     )
-  return direct ? resolved : (candidates[0] ?? join(resolved, folder))
+  return direct ? resolved : (candidates[0] ?? join(resolved, dataFolderName()))
 }
 
 // The default data directory belongs to this independent product. Completed installs of this
@@ -158,10 +160,13 @@ const initDataRoot = (settingsDataRoot: unknown, onboardingCompletedAt?: number)
 
     // Empty historical roots are still meaningful locations for a completed install. Prefer the
     // known legacy root over incidental empty markers under the fixed config directory.
-    const existingHistorical = historicalCandidates.find(
-      (root) => lstatSync(root, { throwIfNoEntry: false })?.isDirectory()
+    const existingHistorical = historicalCandidates.find((root) =>
+      lstatSync(root, { throwIfNoEntry: false })?.isDirectory()
     )
-    return existingHistorical ?? (legacyUsedConfig ? configRoot : historicalCandidates[0] ?? homeDefault)
+    return (
+      existingHistorical ??
+      (legacyUsedConfig ? configRoot : (historicalCandidates[0] ?? homeDefault))
+    )
   }
   cachedDataRoot =
     configuredDataRoot ??
