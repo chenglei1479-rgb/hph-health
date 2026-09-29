@@ -25,6 +25,20 @@ const dataFolderName = (): string =>
 const legacyDataFolderName = (): string =>
   app.isPackaged ? 'MedResearchAgent' : 'MedResearchAgent-DEV'
 
+// Historical roots remain selectable during upgrades. These names are intentionally limited to
+// known product data folders; arbitrary directories are still validated by the adoption owner.
+const historicalDataFolderNames = (): string[] => [
+  'OpenScience',
+  'OpenScience-DEV',
+  'OpenScience-dev',
+  'MedResearch Agent',
+  'MedResearch Agent-DEV',
+  'MedResearchAgent',
+  'MedResearchAgent-DEV'
+]
+const selectableDataFolderNames = (): string[] =>
+  [...new Set([dataFolderName(), ...historicalDataFolderNames()])]
+
 // The data root the app derives from a user-picked (or default) parent directory: always
 // `<parent>/<dataFolderName()>` for a new location. Verified existing roots are adopted directly
 // by dataRootForPicked without appending a second product folder.
@@ -38,16 +52,14 @@ const defaultDataParent = (): string =>
 const dataRootForPicked = (picked: string): string => {
   const resolved = resolve(picked)
   const name = basename(resolved)
-  const folder = dataFolderName()
-  const isDataFolder = [folder, legacyDataFolderName()].some((candidate) =>
+  const folderNames = selectableDataFolderNames()
+  const isDataFolder = folderNames.some((candidate) =>
     process.platform === 'win32'
       ? name.toLowerCase() === candidate.toLowerCase()
       : name === candidate
   )
   if (isDataFolder) return resolved
-  const candidates = [join(resolved, folder), join(resolved, legacyDataFolderName())].filter(
-    hasDataRootContent
-  )
+  const candidates = folderNames.map((candidate) => join(resolved, candidate)).filter(hasDataRootContent)
   // A generic models/uploads/runtime directory is common outside this application. Only saved
   // choices or application ownership receipts can make an unbranded selection a root itself.
   // The adoption owner validates receipt contents before allowing a pointer switch.
@@ -106,20 +118,27 @@ const initDataRoot = (settingsDataRoot: unknown, onboardingCompletedAt?: number)
   const legacyDefault = (): string => {
     const configRoot = resolveConfigRoot()
     const homeDefault = join(defaultDataParent(), legacyDataFolderName())
+    const isolatedStorageRoot = process.env.OPEN_SCIENCE_E2E_STORAGE_ROOT?.trim()
     const legacyUsedConfig =
       MIGRATABLE_DATA_DIRS.some(
         (dir) => lstatSync(join(configRoot, dir), { throwIfNoEntry: false }) !== undefined
       ) && !existsSync(join(configRoot, legacyDataFolderName()))
+    // Pre-relocation releases stored research in OpenScience (or OpenScience-DEV for dev).
+    // Certification runs are confined to their disposable root; ordinary config overrides must
+    // still recover the historical data directory from the user's home folder.
+    const historicalParent = isolatedStorageRoot ? configRoot : app.getPath('home')
+    const historicalName = app.isPackaged ? 'OpenScience' : 'OpenScience-DEV'
+    const historicalCandidates = [
+      join(historicalParent, historicalName),
+      ...(!app.isPackaged ? [join(historicalParent, 'OpenScience-dev')] : [])
+    ]
     const candidates = [
-      // The nested branded-folder guard only decides the empty-marker fallback. Older
-      // research in the config root still needs conflict detection before pinning a pointer.
+      // The config root was the original pre-relocation data root for some installs.
       configRoot,
       homeDefault,
       // 0.31 ignored ordinary config overrides when resolving its implicit home root.
-      // Keep only this product's former unspaced folder as a local migration candidate.
-      ...(!process.env.OPEN_SCIENCE_E2E_STORAGE_ROOT?.trim()
-        ? [join(app.getPath('home'), legacyDataFolderName())]
-        : [])
+      ...(!isolatedStorageRoot ? [join(app.getPath('home'), legacyDataFolderName())] : []),
+      ...historicalCandidates
     ]
     const physicalLocations = new Set<string>()
     const populated = candidates.filter((root) => {
@@ -135,7 +154,14 @@ const initDataRoot = (settingsDataRoot: unknown, onboardingCompletedAt?: number)
       throw new DataLocationSelectionError(
         `Multiple data locations exist. Select or recover the original data folder before restarting:\n${populated.join('\n')}`
       )
-    return populated[0] ?? (legacyUsedConfig ? configRoot : homeDefault)
+    if (populated.length === 1) return populated[0]
+
+    // Empty historical roots are still meaningful locations for a completed install. Prefer the
+    // known legacy root over incidental empty markers under the fixed config directory.
+    const existingHistorical = historicalCandidates.find(
+      (root) => lstatSync(root, { throwIfNoEntry: false })?.isDirectory()
+    )
+    return existingHistorical ?? (legacyUsedConfig ? configRoot : historicalCandidates[0] ?? homeDefault)
   }
   cachedDataRoot =
     configuredDataRoot ??
