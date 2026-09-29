@@ -1179,7 +1179,7 @@ describe('AgentRuntimeManager', () => {
 
   it('verifies a managed Windows CodeBuddy shim through the command shell', async () => {
     const run = vi.fn(async () => ({ stdout: '2.138.0\n' }))
-    const binPath = 'C:\\MedResearch Agent\\codebuddy.cmd'
+    const binPath = 'C:\\Deep Research Agent\\codebuddy.cmd'
 
     await expect(verifyCodeBuddyVersion(binPath, 'win32', run)).resolves.toBe('2.138.0')
     expect(run).toHaveBeenCalledWith(`"${binPath}"`, ['--version'], {

@@ -570,7 +570,7 @@ describe('ParserEngine declarative path', () => {
     }
     await engine.call(desc, {}, {})
     const headers = (fetchImpl.mock.calls[0][1] as { headers: Record<string, string> }).headers
-    expect(headers['user-agent']).toMatch(/MedResearch Agent/)
+    expect(headers['user-agent']).toMatch(/Deep Research Agent/)
   })
 
   it('redacts credentials from the URL in error messages', async () => {

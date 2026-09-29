@@ -3899,13 +3899,13 @@ type BuildEnvFn = (
 
 describe('NotebookKernelExecutor spawn env', () => {
   it('grants the complete macOS app bundle to the Electron-backed repl kernel', () => {
-    const executable = '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent'
+    const executable = '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent'
 
     expect(kernelExecutableReadRoot(executable, 'repl', 'darwin')).toBe(
-      '/Applications/MedResearch Agent.app'
+      '/Applications/Deep Research Agent.app'
     )
     expect(kernelExecutableReadRoot(executable, 'python', 'darwin')).toBe(
-      '/Applications/MedResearch Agent.app/Contents/MacOS'
+      '/Applications/Deep Research Agent.app/Contents/MacOS'
     )
   })
 

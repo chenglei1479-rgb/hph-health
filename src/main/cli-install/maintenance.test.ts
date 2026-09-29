@@ -39,7 +39,7 @@ describe.skipIf(process.platform === 'win32')(
         pathVar: '',
         appExecPath: join(boundary.home, '.mount_current', 'open-science'),
         cliEntryPath: join(boundary.home, '.mount_current', 'resources', 'cli', 'index.mjs'),
-        appImagePath: join(boundary.home, 'MedResearch Agent-current.AppImage')
+        appImagePath: join(boundary.home, 'Deep Research Agent-current.AppImage')
       }
       await writeFile(env.appImagePath!, '#!/bin/sh\nexit 0\n', { mode: 0o755 })
       vi.stubGlobal('process', {
@@ -61,7 +61,7 @@ describe.skipIf(process.platform === 'win32')(
       const owner = createCliCommandOwner()
       await owner.install()
       const target = planCliLauncher(env).target
-      const legacy = (await readFile(target, 'utf8')).replaceAll('MedResearch Agent ', 'MedResearch Agent ')
+      const legacy = (await readFile(target, 'utf8')).replaceAll('Deep Research Agent ', 'Deep Research Agent ')
       await writeFile(target, legacy)
       expect(await owner.getStatus()).toMatchObject({ installed: true })
       await owner.ensureCurrent()
@@ -78,12 +78,12 @@ describe.skipIf(process.platform === 'win32')(
         const other = {
           ...env,
           appImagePath:
-            kind === 'AppImage' ? join(boundary.home, "MedResearch Agent's other.AppImage") : undefined
+            kind === 'AppImage' ? join(boundary.home, "Deep Research Agent's other.AppImage") : undefined
         }
         if (other.appImagePath)
           await writeFile(other.appImagePath, '#!/bin/sh\nexit 0\n', { mode: 0o755 })
         else {
-          other.appExecPath = join(boundary.home, 'old app', 'MedResearch Agent')
+          other.appExecPath = join(boundary.home, 'old app', 'Deep Research Agent')
           other.cliEntryPath = join(boundary.home, 'old app', 'cli.mjs')
           await mkdir(join(boundary.home, 'old app'))
           await writeFile(other.appExecPath, '#!/bin/sh\nexit 0\n', { mode: 0o755 })
@@ -164,7 +164,7 @@ describe.skipIf(process.platform === 'win32')(
       const target = (await installCliLauncher(other)).target
       const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
       const replacement =
-        '#!/bin/sh\n# MedResearch Agent command-line launcher. Managed by the app. Format version: 1.\necho new binding\n'
+        '#!/bin/sh\n# Deep Research Agent command-line launcher. Managed by the app. Format version: 1.\necho new binding\n'
       vi.mocked(lstat).mockImplementation(async (...args) => {
         if (args[0] === other.appImagePath) {
           await writeFile(target + '.replacement', replacement)

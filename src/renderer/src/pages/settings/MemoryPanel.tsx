@@ -777,6 +777,13 @@ const MemoryList = ({
                     ) : null}
                   </div>
                 </div>
+                {selectedProject ? (
+                  <div className="border-b border-border bg-muted/20 px-4 py-2 text-xs leading-5 text-muted-foreground">
+                    {t(
+                      'Store researcher-confirmed hypotheses, endpoints, eligibility criteria, analysis decisions and reasons, and manuscript revision notes here. With Memory on, the Agent can recall them in later sessions. Add a dated note when a decision changes; never store patient identifiers or raw data.'
+                    )}
+                  </div>
+                ) : null}
                 {adding ? (
                   <NoteEditor
                     placeholder={t('Add a note…')}

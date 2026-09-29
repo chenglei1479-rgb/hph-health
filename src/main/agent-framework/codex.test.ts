@@ -807,7 +807,7 @@ describe('codexFramework', () => {
           visibility: 'list',
           supported_in_api: true,
           base_instructions: expect.stringContaining(
-            'inside MedResearch Agent through the Agent Client Protocol'
+            'inside Deep Research Agent through the Agent Client Protocol'
           ),
           include_skills_usage_instructions: true,
           default_reasoning_level: 'none',
@@ -1155,7 +1155,7 @@ describe('codexFramework', () => {
     })
   })
 
-  it('delivers MedResearch Agent session guidance as persistent developer instructions', () => {
+  it('delivers Deep Research Agent session guidance as persistent developer instructions', () => {
     const framework = createCodexFramework()
 
     const config = framework.prepareModelConfig(
@@ -1259,7 +1259,7 @@ describe('codexFramework', () => {
   it('runs an app-managed JavaScript adapter with Electron as Node', () => {
     const spawnProcess = vi.fn().mockReturnValue(fakeChild)
     const framework = createCodexFramework({
-      execPath: '/Applications/MedResearch Agent/Electron',
+      execPath: '/Applications/Deep Research Agent/Electron',
       platform: 'darwin',
       spawnProcess
     })
@@ -1272,7 +1272,7 @@ describe('codexFramework', () => {
       })
     ).toBe(fakeChild)
     expect(spawnProcess).toHaveBeenCalledWith(
-      '/Applications/MedResearch Agent/Electron',
+      '/Applications/Deep Research Agent/Electron',
       ['/data/codex-acp/dist/index.js', '--flag'],
       expect.objectContaining({
         env: expect.objectContaining({

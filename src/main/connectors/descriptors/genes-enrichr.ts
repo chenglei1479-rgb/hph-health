@@ -331,7 +331,7 @@ export const GENES_ENRICHR_TOOLS: ToolDescriptor[] = [
       const description =
         typeof args.description === 'string' && args.description.trim() !== ''
           ? args.description.trim()
-          : 'MedResearch Agent gene-set enrichment'
+          : 'Deep Research Agent gene-set enrichment'
       const maxResults =
         typeof args.max_results === 'number' && Number.isInteger(args.max_results)
           ? args.max_results

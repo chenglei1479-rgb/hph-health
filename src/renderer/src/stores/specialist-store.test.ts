@@ -60,7 +60,7 @@ describe('specialist store catalog', () => {
     expect(useSpecialistStore.getState()).toMatchObject({
       items: [],
       isLoaded: false,
-      loadError: 'MedResearch Agent could not load Specialists. Retry to continue.'
+      loadError: 'Deep Research Agent could not load Specialists. Retry to continue.'
     })
 
     await expect(useSpecialistStore.getState().load()).resolves.toBeUndefined()

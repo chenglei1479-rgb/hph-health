@@ -945,21 +945,21 @@ describe('AgentBackendResolver configured and explicit targets', () => {
         model: { kind: 'required', id: 'model-a' },
         reasoningEffort: 'high'
       },
-      { systemPromptAppends: ['Stable MedResearch Agent app guidance.'] }
+      { systemPromptAppends: ['Stable Deep Research Agent app guidance.'] }
     )
 
     expect(backend.systemPromptAppends?.join('\n')).toContain(
       join('/storage', 'skills', 'personal')
     )
     expect(backend.systemPromptAppends?.join('\n')).not.toContain(
-      'Stable MedResearch Agent app guidance.'
+      'Stable Deep Research Agent app guidance.'
     )
     await backend.anthropicBridgeLease?.release()
   })
 
   it('persists application guidance before user Skill directories for OpenCode', async () => {
     const harness = makeHarness()
-    const applicationGuidance = 'Stable MedResearch Agent app guidance.'
+    const applicationGuidance = 'Stable Deep Research Agent app guidance.'
 
     const backend = await harness.resolver.resolveExplicitTarget(
       {
@@ -1017,7 +1017,7 @@ describe('AgentBackendResolver configured and explicit targets', () => {
       expect(instructions).toBe(restrictedPrompt)
     }
     expect(instructions).not.toContain('<open_science_user_skill_directories>')
-    expect(instructions).not.toContain('# MedResearch Agent data connector conventions')
+    expect(instructions).not.toContain('# Deep Research Agent data connector conventions')
     expect(harness.runtime.materializeAgentSkills).not.toHaveBeenCalled()
     if (testCase.frameworkId === 'claude-code') {
       expect(harness.runtime.provisionClaudeRuntimeConfig).toHaveBeenCalledWith(
@@ -1936,7 +1936,7 @@ describe('AgentBackendResolver bridge predicates', () => {
         })
       })
 
-      const applicationGuidance = 'Stable MedResearch Agent app guidance.'
+      const applicationGuidance = 'Stable Deep Research Agent app guidance.'
       const backend = await harness.resolver.resolveExplicitTarget(
         {
           frameworkId: 'codex',
@@ -1952,7 +1952,7 @@ describe('AgentBackendResolver bridge predicates', () => {
       expect(developerInstructions).toBeDefined()
       const userSkillIndex = developerInstructions?.indexOf('<open_science_user_skill_directories>')
       const connectorIndex = developerInstructions?.indexOf(
-        '# MedResearch Agent data connector conventions'
+        '# Deep Research Agent data connector conventions'
       )
       expect(developerInstructions?.indexOf(applicationGuidance)).toBeGreaterThanOrEqual(0)
       expect(userSkillIndex).toBeGreaterThan(

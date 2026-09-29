@@ -18,7 +18,7 @@ const ComputeRecoveryNotice = ({ retry }: { retry: () => void }): React.JSX.Elem
     <SessionPersistenceAlert
       title={t('Remote job recovery needs attention')}
       message={t(
-        'MedResearch Agent could not check saved remote jobs. Retry to restore pending result analysis.'
+        'Deep Research Agent could not check saved remote jobs. Retry to restore pending result analysis.'
       )}
       dismissLabel={t('Close')}
       onDismiss={() => setDismissed(true)}

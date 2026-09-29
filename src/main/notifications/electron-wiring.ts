@@ -132,8 +132,8 @@ export const showTestTaskNotification = (
       {
         title: deps.translate?.('Test notification') ?? 'Test notification',
         body:
-          deps.translate?.('System notifications from MedResearch Agent are working.') ??
-          'System notifications from MedResearch Agent are working.',
+          deps.translate?.('System notifications from Deep Research Agent are working.') ??
+          'System notifications from Deep Research Agent are working.',
         onClick: () => undefined
       },
       finish

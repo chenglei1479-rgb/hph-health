@@ -1,6 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
 /* Hallmark · component: restore-default-permissions button · genre: modern-minimal
- * theme: MedResearch Agent Settings
+ * theme: Deep Research Agent Settings
  * states: default · hover · focus · active · disabled · loading · error · success
  * contrast: pass (40–41) · icons: pass (30) · tokens: pass (48) · responsive: pass (49)
  */

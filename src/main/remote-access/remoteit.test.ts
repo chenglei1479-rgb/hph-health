@@ -98,7 +98,7 @@ describe('Remote.It adapter', () => {
       }
     })
     const commands = [
-      ['service', 'add', '--name', 'MedResearch Agent Remote', '--json'],
+      ['service', 'add', '--name', 'Deep Research Agent Remote', '--json'],
       ['service', 'add', '--name', 'System Service', '--json']
     ]
 
@@ -112,7 +112,7 @@ describe('Remote.It adapter', () => {
       { timeoutMs: 120_000 }
     )
     const script = String(run.mock.calls.at(-1)?.[1][1])
-    expect(script).toContain('MedResearch Agent Remote')
+    expect(script).toContain('Deep Research Agent Remote')
     expect(script).toContain('System Service')
     expect(script).toContain('with administrator privileges')
   })
@@ -277,7 +277,7 @@ describe('Remote.It adapter', () => {
       enableRemoteItService(
         '/usr/local/bin/remoteit',
         4180,
-        { name: 'MedResearch Agent Remote', preferredServiceId: 'service-1' },
+        { name: 'Deep Research Agent Remote', preferredServiceId: 'service-1' },
         run,
         'linux'
       )
@@ -339,7 +339,7 @@ describe('Remote.It adapter', () => {
       enableRemoteItService(
         '/usr/local/bin/remoteit',
         4180,
-        { name: 'MedResearch Agent Remote', preferredServiceId: 'service-1' },
+        { name: 'Deep Research Agent Remote', preferredServiceId: 'service-1' },
         run
       )
     ).resolves.toMatchObject({
@@ -390,7 +390,7 @@ describe('Remote.It adapter', () => {
     })
 
     await expect(
-      enableRemoteItService('/usr/local/bin/remoteit', 4180, { name: 'MedResearch Agent Remote' }, run)
+      enableRemoteItService('/usr/local/bin/remoteit', 4180, { name: 'Deep Research Agent Remote' }, run)
     ).resolves.toMatchObject({ serviceId: 'service-new' })
     expect(run).toHaveBeenCalledWith(
       '/usr/local/bin/remoteit',
@@ -398,7 +398,7 @@ describe('Remote.It adapter', () => {
         'service',
         'add',
         '--name',
-        'MedResearch Agent Remote',
+        'Deep Research Agent Remote',
         '--port',
         '4180',
         '--type',
@@ -511,7 +511,7 @@ describe('Remote.It adapter', () => {
     const script = String(
       run.mock.calls.find(([command]) => command === '/usr/bin/osascript')?.[1][1]
     )
-    expect(script).toContain('MedResearch Agent Remote')
+    expect(script).toContain('Deep Research Agent Remote')
     expect(script).toContain('System Service')
   })
 
@@ -662,7 +662,7 @@ describe('Remote.It adapter', () => {
                 {
                   id: 'device-1',
                   services: [
-                    { id: 'app-service', name: 'MedResearch Agent Remote' },
+                    { id: 'app-service', name: 'Deep Research Agent Remote' },
                     { id: 'browser-service', name: 'System Service' }
                   ]
                 }
@@ -729,7 +729,7 @@ describe('Remote.It adapter', () => {
       if (args[0] === 'service' && args[1] === 'add') {
         addCount += 1
         if (addCount === 2) phase = 'restarting'
-        const serviceId = args.includes('MedResearch Agent Remote') ? 'app-service' : 'browser-service'
+        const serviceId = args.includes('Deep Research Agent Remote') ? 'app-service' : 'browser-service'
         return { stdout: JSON.stringify({ code: 0, data: { serviceId } }), stderr: '' }
       }
       throw new Error(`Unexpected command: ${args.join(' ')}`)
@@ -821,7 +821,7 @@ describe('Remote.It adapter', () => {
     })
 
     await expect(
-      enableRemoteItService('/usr/local/bin/remoteit', 4180, { name: 'MedResearch Agent Remote' }, run)
+      enableRemoteItService('/usr/local/bin/remoteit', 4180, { name: 'Deep Research Agent Remote' }, run)
     ).rejects.toThrow('complete Add Device once')
     expect(run.mock.calls.some(([command]) => command === '/usr/bin/osascript')).toBe(false)
     expect(run.mock.calls.some(([, args]) => args[0] === 'device' && args[1] === 'register')).toBe(
@@ -895,7 +895,7 @@ describe('Remote.It adapter', () => {
       enableRemoteItService(
         '/usr/local/bin/remoteit',
         4180,
-        { name: 'MedResearch Agent Remote', preferredServiceId: 'service-that-was-deleted' },
+        { name: 'Deep Research Agent Remote', preferredServiceId: 'service-that-was-deleted' },
         run
       )
     ).resolves.toMatchObject({ serviceId: 'service-recreated' })
@@ -943,7 +943,7 @@ it('renames and reuses an old-brand Remote.It service without creating a duplica
         stdout: status([
           {
             id: 'old-id',
-            name: renamed ? 'MedResearch Agent Remote' : 'MedResearch Agent Remote',
+            name: renamed ? 'Deep Research Agent Remote' : 'Deep Research Agent Remote',
             type: 7,
             addressHost: '127.0.0.1',
             addressPort: 4180,
@@ -955,13 +955,13 @@ it('renames and reuses an old-brand Remote.It service without creating a duplica
       }
     if (args[0] === 'version') return { stdout: '4.1.0', stderr: '' }
     if (args[0] === 'service' && args[1] === 'modify') {
-      renamed = args.includes('--name') && args.includes('MedResearch Agent Remote')
+      renamed = args.includes('--name') && args.includes('Deep Research Agent Remote')
       return { stdout: '{}', stderr: '' }
     }
     throw new Error(`Unexpected mutation: ${args.join(' ')}`)
   })
   await expect(
-    enableRemoteItService('/fake/remoteit', 4180, { name: 'MedResearch Agent Remote' }, run, 'win32')
+    enableRemoteItService('/fake/remoteit', 4180, { name: 'Deep Research Agent Remote' }, run, 'win32')
   ).resolves.toMatchObject({ serviceId: 'old-id' })
   expect(renamed).toBe(true)
   expect(run.mock.calls.some(([, args]) => args.includes('add'))).toBe(false)
@@ -974,7 +974,7 @@ it('rejects a successful service command when readback still reports the old bra
         stdout: status([
           {
             id: 'old-id',
-            name: 'MedResearch Agent Remote',
+            name: 'Deep Research Agent Remote',
             type: 7,
             addressHost: '127.0.0.1',
             addressPort: 4180,
@@ -988,6 +988,6 @@ it('rejects a successful service command when readback still reports the old bra
     return { stdout: '{}', stderr: '' }
   })
   await expect(
-    enableRemoteItService('/fake/remoteit', 4180, { name: 'MedResearch Agent Remote' }, run, 'win32')
+    enableRemoteItService('/fake/remoteit', 4180, { name: 'Deep Research Agent Remote' }, run, 'win32')
   ).rejects.toThrow(/brand|name/i)
 })

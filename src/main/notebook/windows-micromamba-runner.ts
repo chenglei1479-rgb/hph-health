@@ -337,7 +337,7 @@ export const createProductionMicromambaRunner = (
     (isolated
       ? join(isolated, 'tools', 'micromamba')
       : localAppData
-        ? join(localAppData, 'MedResearch Agent', 'tools', 'micromamba')
+        ? join(localAppData, 'Deep Research Agent', 'tools', 'micromamba')
         : undefined)
   if (!toolsDir) {
     if (locations.length === 0) return undefined

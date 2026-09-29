@@ -15,8 +15,8 @@ import {
 } from './database-migration-ledger-smoke.mjs'
 import { authenticatePackagedAppEndpoint } from './packaged-web-service-auth.mjs'
 
-const ARTIFACT_PATTERN = /^aipoch-medresearch-agent-(.+)-mac-(?:arm64|x64)\.(dmg|zip)$/
-const SMOKE_ROOT_PREFIX = 'medresearch-agent-macos-package-smoke-'
+const ARTIFACT_PATTERN = /^deep-research-agent-(.+)-mac-(?:arm64|x64)\.(dmg|zip)$/
+const SMOKE_ROOT_PREFIX = 'deep-research-agent-macos-package-smoke-'
 const STARTUP_TIMEOUT_MS = 60_000
 
 const delay = (milliseconds) =>
@@ -52,7 +52,7 @@ const findAppBundle = async (directory) => {
 
 const parsePackagedAppEndpoint = (output) => {
   const match = output.match(
-    /MedResearch Agent Web:\s+(http:\/\/127\.0\.0\.1:\d+\/(?:\?token=[A-Za-z0-9_-]+)?)/
+    /Deep Research Agent Web:\s+(http:\/\/127\.0\.0\.1:\d+\/(?:\?token=[A-Za-z0-9_-]+)?)/
   )
   if (!match) return undefined
   const url = new URL(match[1])
@@ -113,7 +113,7 @@ const terminateSpawnedProcessGroup = (child) => {
 const assertPackagedResources = async (appBundle) => {
   const resources = join(appBundle, 'Contents', 'Resources')
   const paths = [
-    join(appBundle, 'Contents', 'MacOS', 'MedResearch Agent'),
+    join(appBundle, 'Contents', 'MacOS', 'Deep Research Agent'),
     join(resources, 'app.asar'),
     join(resources, 'micromamba'),
     // electron-builder compiles build/icon.icon into the adaptive catalog and also emits an ICNS
@@ -191,7 +191,7 @@ const launchAndProbe = async ({ executable, expectedVersion, env, userDataRoot }
     if (!response.ok) throw new Error(`Packaged macOS bootstrap returned HTTP ${response.status}.`)
     const bootstrap = await response.json()
     if (
-      bootstrap.appName !== 'MedResearch Agent' ||
+      bootstrap.appName !== 'Deep Research Agent' ||
       bootstrap.appVersion !== expectedVersion ||
       bootstrap.platform !== 'darwin'
     ) {

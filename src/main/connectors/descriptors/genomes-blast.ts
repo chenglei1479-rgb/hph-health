@@ -109,7 +109,7 @@ async function submitBlast(
         redirect: 'error', // Never replay a submission through an HTTP redirect.
         headers: {
           accept: 'text/plain, */*',
-          'user-agent': 'MedResearch Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)',
+          'user-agent': 'Deep Research Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)',
           'content-type': 'application/x-www-form-urlencoded'
         },
         body: body.toString(),

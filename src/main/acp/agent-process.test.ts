@@ -36,10 +36,10 @@ describe('ACP agent process packaging paths', () => {
   it('uses the real unpacked path for executables resolved inside app.asar', () => {
     expect(
       toUnpackedAsarPath(
-        '/Applications/MedResearch Agent.app/Contents/Resources/app.asar/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude'
+        '/Applications/Deep Research Agent.app/Contents/Resources/app.asar/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude'
       )
     ).toBe(
-      '/Applications/MedResearch Agent.app/Contents/Resources/app.asar.unpacked/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude'
+      '/Applications/Deep Research Agent.app/Contents/Resources/app.asar.unpacked/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude'
     )
   })
 
@@ -48,10 +48,10 @@ describe('ACP agent process packaging paths', () => {
     // app.asar.unpacked the same way the POSIX case above does.
     expect(
       toUnpackedAsarPath(
-        'C:\\Program Files\\MedResearch Agent\\resources\\app.asar\\node_modules\\@anthropic-ai\\claude-agent-sdk-win32-x64\\claude.exe'
+        'C:\\Program Files\\Deep Research Agent\\resources\\app.asar\\node_modules\\@anthropic-ai\\claude-agent-sdk-win32-x64\\claude.exe'
       )
     ).toBe(
-      'C:\\Program Files\\MedResearch Agent\\resources\\app.asar.unpacked\\node_modules\\@anthropic-ai\\claude-agent-sdk-win32-x64\\claude.exe'
+      'C:\\Program Files\\Deep Research Agent\\resources\\app.asar.unpacked\\node_modules\\@anthropic-ai\\claude-agent-sdk-win32-x64\\claude.exe'
     )
   })
 

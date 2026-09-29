@@ -12,7 +12,7 @@ import {
 
 const baseError: DatabaseStartupError = {
   code: 'database_migration_failed',
-  message: 'MedResearch Agent could not update its database. Existing data was not reset.',
+  message: 'Deep Research Agent could not update its database. Existing data was not reset.',
   migrationId: '0009_vision_evidence',
   retryable: true,
   environment: {

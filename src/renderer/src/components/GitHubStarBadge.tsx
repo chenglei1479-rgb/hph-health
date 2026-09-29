@@ -1,4 +1,4 @@
-/* Hallmark · component: GitHub Star CTA · genre: modern-minimal · theme: existing MedResearch Agent
+/* Hallmark · component: GitHub Star CTA · genre: modern-minimal · theme: existing Deep Research Agent
  * states: default · hover · focus · active · disabled · loading · error · success
  * contrast: pass (40–41)
  */

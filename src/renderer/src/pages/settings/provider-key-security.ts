@@ -6,11 +6,11 @@
 type ApiKeySecurityCopyKeys =
   | {
       readonly title: 'Your key stays private.'
-      readonly description: 'It is stored only on this device and never uploaded to MedResearch Agent. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
+      readonly description: 'It is stored only on this device and never uploaded to Deep Research Agent. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
     }
   | {
       readonly title: 'Secure storage is unavailable.'
-      readonly description: 'MedResearch Agent will not save API keys until the operating-system credential vault is available. Unlock or authorize the system keychain, then retry.'
+      readonly description: 'Deep Research Agent will not save API keys until the operating-system credential vault is available. Unlock or authorize the system keychain, then retry.'
     }
 
 const getApiKeySecurityCopyKeys = (encryptionAvailable: boolean): ApiKeySecurityCopyKeys =>
@@ -18,12 +18,12 @@ const getApiKeySecurityCopyKeys = (encryptionAvailable: boolean): ApiKeySecurity
     ? ({
         title: 'Your key stays private.',
         description:
-          'It is stored only on this device and never uploaded to MedResearch Agent. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
+          'It is stored only on this device and never uploaded to Deep Research Agent. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
       } as const)
     : ({
         title: 'Secure storage is unavailable.',
         description:
-          'MedResearch Agent will not save API keys until the operating-system credential vault is available. Unlock or authorize the system keychain, then retry.'
+          'Deep Research Agent will not save API keys until the operating-system credential vault is available. Unlock or authorize the system keychain, then retry.'
       } as const)
 
 export { getApiKeySecurityCopyKeys }

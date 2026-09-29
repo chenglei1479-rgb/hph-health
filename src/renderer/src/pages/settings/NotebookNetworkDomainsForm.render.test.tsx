@@ -91,7 +91,7 @@ describe('NotebookNetworkDomainsForm', () => {
     await typeInput(container.querySelector('input')!, 'next.example.org')
     await act(async () => button('Save changes').click())
     const controls = container.querySelectorAll<HTMLInputElement | HTMLButtonElement>(
-      '[aria-label="MedResearch Agent domains"] button, [aria-label="Allowed domains"] button, input'
+      '[aria-label="Deep Research Agent domains"] button, [aria-label="Allowed domains"] button, input'
     )
     expect
       .soft(

@@ -17,7 +17,8 @@ export type CredentialIdentity = Readonly<
 export class CredentialIdentityError extends Error {
   constructor(
     readonly reason: string,
-    readonly probe?: IdentityProbeResult & Readonly<{ appName: string }>
+    readonly probe?: IdentityProbeResult & Readonly<{ appName: string }>,
+    readonly diagnosticCode?: string
   ) {
     // Native startup recovery translates this stable message before displaying it.
     super(

@@ -397,7 +397,7 @@ describe('importCodexAuthentication', () => {
       await mkdir(source, { recursive: true })
 
       await expect(importCodexAuthentication(source, destination)).rejects.toThrow(
-        'MedResearch Agent could not find a file-backed Codex credential to import. Your existing Codex sign-in may be stored in the system credential store, which MedResearch Agent cannot import from. Continue with the MedResearch Agent Codex sign-in instead.'
+        'Deep Research Agent could not find a file-backed Codex credential to import. Your existing Codex sign-in may be stored in the system credential store, which Deep Research Agent cannot import from. Continue with the Deep Research Agent Codex sign-in instead.'
       )
     } finally {
       await rm(root, { recursive: true, force: true })
@@ -534,17 +534,17 @@ describe('importCodexAuthentication', () => {
         [
           'model = "app-default"',
           'cli_auth_credentials_store = "file"',
-          '# MedResearch Agent: begin imported Codex route selection',
+          '# Deep Research Agent: begin imported Codex route selection',
           'model_provider = "subscription-route"',
-          '# MedResearch Agent: end imported Codex route selection',
-          '# MedResearch Agent: begin imported Codex provider',
+          '# Deep Research Agent: end imported Codex route selection',
+          '# Deep Research Agent: begin imported Codex provider',
           '[model_providers."subscription-route"]',
           'name = "OpenAI"',
           'base_url = "http://127.0.0.1:1087/v1"',
           'wire_api = "responses"',
           'requires_openai_auth = true',
           'supports_websockets = false',
-          '# MedResearch Agent: end imported Codex provider',
+          '# Deep Research Agent: end imported Codex provider',
           ''
         ].join('\n')
       )
@@ -676,7 +676,7 @@ describe('importCodexAuthentication', () => {
       expect(restoredConfigToml).toContain('base_url = "http://127.0.0.1:9999/v1"')
       expect(restoredConfigToml).toContain('[model_providers.app-default-route]')
       expect(restoredConfigToml).toContain('[mcp_servers.app]')
-      expect(restoredConfigToml).not.toContain('MedResearch Agent:')
+      expect(restoredConfigToml).not.toContain('Deep Research Agent:')
     } finally {
       await rm(root, { recursive: true, force: true })
     }
@@ -1291,7 +1291,7 @@ describe('Codex authentication install admission', () => {
 })
 
 describe('legacy branded Codex markers', () => {
-  it.each(['MedResearch Agent', 'MedResearch Agent'])(
+  it.each(['Deep Research Agent', 'Deep Research Agent'])(
     'restores preserved user config while replacing an imported route marked %s',
     async (brand) => {
       const root = await mkdtemp(join(tmpdir(), 'codex-legacy-marker-'))
@@ -1317,7 +1317,7 @@ describe('legacy branded Codex markers', () => {
         await writeFile(configPath, 'model = "preserve"\nmodel_provider = "user-route"\n')
         await importCodexAuthentication(source, destination)
         const current = await readFile(configPath, 'utf8')
-        await writeFile(configPath, current.replaceAll('# MedResearch Agent:', `# ${brand}:`))
+        await writeFile(configPath, current.replaceAll('# Deep Research Agent:', `# ${brand}:`))
         await writeFile(join(source, 'config.toml'), 'model = "ignored"\n')
         await importCodexAuthentication(source, destination)
         const restored = await readFile(configPath, 'utf8')
@@ -1339,17 +1339,17 @@ describe('legacy branded Codex markers', () => {
     try {
       await ensureCodexAuthHome('isolated', root, 'https')
       const current = await readFile(configPath, 'utf8')
-      const comment = '# MedResearch Agent: user comment, not a managed marker'
+      const comment = '# Deep Research Agent: user comment, not a managed marker'
       await writeFile(
         configPath,
-        `${comment}\n${current.replaceAll('# MedResearch Agent:', '# MedResearch Agent:')}`
+        `${comment}\n${current.replaceAll('# Deep Research Agent:', '# Deep Research Agent:')}`
       )
       await ensureCodexAuthHome('isolated', root, 'websocket')
       const updated = await readFile(configPath, 'utf8')
       expect(updated).toContain(comment)
-      expect(updated).not.toContain('# MedResearch Agent: begin Codex transport')
+      expect(updated).not.toContain('# Deep Research Agent: begin Codex transport')
       expect(updated).not.toContain('open-science-chatgpt-https')
-      expect(updated).toContain('# MedResearch Agent: begin Codex transport')
+      expect(updated).toContain('# Deep Research Agent: begin Codex transport')
       await ensureCodexAuthHome('isolated', root, 'websocket')
       expect(await readFile(configPath, 'utf8')).toBe(updated)
     } finally {

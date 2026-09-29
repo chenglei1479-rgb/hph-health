@@ -84,7 +84,7 @@ const resolvePermissionProfileApplication = (
         ...(!nativeAuto
           ? {
               message:
-                'This model does not provide native auto review. MedResearch Agent will auto-approve only clearly low-risk workspace operations.'
+                'This model does not provide native auto review. Deep Research Agent will auto-approve only clearly low-risk workspace operations.'
             }
           : {})
       }

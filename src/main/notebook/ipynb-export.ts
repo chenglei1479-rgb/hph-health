@@ -60,7 +60,7 @@ type IpynbNotebook = {
     }
     open_science: {
       sessionId: string
-      // MedResearch Agent export metadata uses the immutable Project id.
+      // Deep Research Agent export metadata uses the immutable Project id.
       projectId: string
       artifactSessionId?: string
       appVersion?: string

@@ -12,7 +12,7 @@ export const buildWslSupportPrefillDoc = (
     {
       type: 'text',
       text: [
-        t('Set up or repair WSL2 Bash in MedResearch Agent.'),
+        t('Set up or repair WSL2 Bash in Deep Research Agent.'),
         '',
         t('Review this diagnostic snapshot before sending. It contains no passwords.'),
         t('Diagnostic snapshot:'),

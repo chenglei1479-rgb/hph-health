@@ -438,7 +438,7 @@ describe('ConnectorsPanel (groups)', () => {
     await act(async () => rejectLoad?.(new Error('catalog unavailable')))
 
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
-      'MedResearch Agent could not load Connectors.'
+      'Deep Research Agent could not load Connectors.'
     )
     const retry = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
       (button) => button.textContent?.trim() === 'Retry'

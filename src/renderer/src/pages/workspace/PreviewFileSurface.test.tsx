@@ -1386,7 +1386,7 @@ describe('PreviewFileSurface managed text versions', () => {
     },
     {
       code: 'PERMISSION_DENIED' as const,
-      message: 'MedResearch Agent does not have permission to save this file.'
+      message: 'Deep Research Agent does not have permission to save this file.'
     },
     {
       code: 'OUT_OF_SPACE' as const,

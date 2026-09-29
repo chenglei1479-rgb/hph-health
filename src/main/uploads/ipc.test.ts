@@ -119,7 +119,7 @@ describe('default upload repository', () => {
       ]
     })
 
-    // Uploads follow the configurable data root; a fresh dev install defaults to <home>/MedResearch Agent-DEV.
+    // Uploads follow the configurable data root; a fresh dev install defaults to <home>/Deep Research Agent-DEV.
     expect(attachment.path).toBe(
       join(
         homeRoot,

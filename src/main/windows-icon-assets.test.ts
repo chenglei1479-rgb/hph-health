@@ -19,30 +19,30 @@ type IcoEntry = {
 const APP_ICON_SIZES = [16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 128, 256]
 const TRAY_ICON_SIZES = [16, 20, 24, 32, 40, 48, 64, 256]
 const LIGHT_SMALL_FRAME_HASHES = {
-  16: '0787e4735835ca5fbdb3e9dba6503b1be42ac158c9697b86a5eb453091c2f287',
-  20: 'a53cf11df1e7f7415354d422da6f4833cbf0f87f18d88320777a188022ac12aa',
-  24: 'ab9f6d540ac9a9bc39c61b20ae5de10e0ec700f2f0be7647e56fe40ed4bd8158'
+  16: '77b2212664b48c5a40a005e123362e99f246586de24e88820606b0873425f1d2',
+  20: '1bbd3d62a478c9edf7b22add9cb3739e4fecbd472c811f7c9c754c9a4e7fcb9e',
+  24: '3370727feb206786056691651c99735fd206c7c031bc9f9d6e0cd188ff6aa844'
 }
 const DARK_SMALL_FRAME_HASHES = {
-  16: '14de66f924f41608a172ec4f9b47250b6d3b3eaa1adddf11a22f00bde222e417',
-  20: 'bde25166f295f9a991ed876bb133a87a2b1d08dbfad3f30e5ea84611150edfe0',
-  24: '3c7c65e7280b88c29c0964377061963e86615ff38ee3060f8ad481631a6ceb9f'
+  16: 'dc8485993ef13fa9c91941abbf9c675c3779568a1e211c718a80de3183a7d9c2',
+  20: 'a226f67a6014f0375af17372fdb3691d2bbf5bcf0706d68819c3802cb38a3ac5',
+  24: '7ec444bf13db3575c4db867853cb04c04ab3984452f6a6cfe536ba44aed985d7'
 }
 const ICON_ASSETS = [
   {
     relativePath: 'build/icon.ico',
     expectedSizes: APP_ICON_SIZES,
-    expectedSha256: '751f333327cc0a19d5120cf85d10bc9b8efcfc270d6ae0e494814725237b5692'
+    expectedSha256: '264ae20edd2f6be43164286b89f2f86a9601c858f181a3f5d37a73b3490b1794'
   },
   {
     relativePath: 'resources/icon-light.ico',
     expectedSizes: APP_ICON_SIZES,
-    expectedSha256: '751f333327cc0a19d5120cf85d10bc9b8efcfc270d6ae0e494814725237b5692'
+    expectedSha256: '264ae20edd2f6be43164286b89f2f86a9601c858f181a3f5d37a73b3490b1794'
   },
   {
     relativePath: 'resources/icon-dark.ico',
     expectedSizes: APP_ICON_SIZES,
-    expectedSha256: '5e13ac218c0622eb232dfcb1d29f0330e1a261d35344776276dfc1f808bc115d'
+    expectedSha256: '336c5f30c65dc65f8500b9b93d0139ba7a291dec82632162dbc54b48ebdf4893'
   },
   {
     relativePath: 'resources/tray-light.ico',
@@ -99,7 +99,7 @@ describe('Windows icon assets', () => {
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(asset.expectedSha256)
   })
 
-  it('keeps the packaged default synchronized with the V3 light icon', () => {
+  it('keeps the packaged default synchronized with the light icon', () => {
     expect(readFileSync(resolve(projectRoot, 'build/icon.ico'))).toEqual(
       readFileSync(resolve(projectRoot, 'resources/icon-light.ico'))
     )
@@ -109,7 +109,7 @@ describe('Windows icon assets', () => {
     { relativePath: 'build/icon.ico', expectedHashes: LIGHT_SMALL_FRAME_HASHES },
     { relativePath: 'resources/icon-light.ico', expectedHashes: LIGHT_SMALL_FRAME_HASHES },
     { relativePath: 'resources/icon-dark.ico', expectedHashes: DARK_SMALL_FRAME_HASHES }
-  ])('keeps the V3 ring recognizable in the small frames of $relativePath', (asset) => {
+  ])('keeps the dotted-ring mark recognizable in the small frames of $relativePath', (asset) => {
     const { bytes, entries } = readIco(asset.relativePath)
     const smallFrameHashes = Object.fromEntries(
       entries

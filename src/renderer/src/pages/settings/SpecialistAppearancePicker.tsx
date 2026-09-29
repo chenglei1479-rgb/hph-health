@@ -1,5 +1,5 @@
 import { Notice } from '@/components/notice'
-/* Hallmark · component: Specialist appearance picker · genre: modern-minimal · theme: MedResearch Agent Settings
+/* Hallmark · component: Specialist appearance picker · genre: modern-minimal · theme: Deep Research Agent Settings
  * states: default · hover · focus · active · disabled · loading · error · success
  * contrast: uses the project semantic foreground, muted, ring, destructive, and success tokens
  * pre-emit critique: P5 H4 E5 S5 R5 V5

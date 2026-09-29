@@ -198,7 +198,7 @@ export const exportAnnotatedPdf = async (request: PdfExportRequest): Promise<Arr
       Subtype: TYPES[mark.kind],
       P: page.ref,
       NM: PDFHexString.fromText(`open-science:${mark.id}`),
-      T: PDFHexString.fromText('MedResearch Agent'),
+      T: PDFHexString.fromText('Deep Research Agent'),
       Subj: PDFHexString.fromText(mark.kind),
       Contents: PDFHexString.fromText(mark.note),
       CreationDate: PDFHexString.fromText(pdfDate(mark.createdAt)),

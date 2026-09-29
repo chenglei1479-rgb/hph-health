@@ -40,9 +40,9 @@ vi.mock('node:child_process', async (original) => ({
 }))
 
 it.each([
-  ['MedResearch Agent.app', true],
-  ['MedResearch Agent.app', true],
-  ['MedResearch Agent.app', false],
+  ['Deep Research Agent.app', true],
+  ['Deep Research Agent.app', true],
+  ['Deep Research Agent.app', false],
   ['OpenScience.app', false]
 ] as const)(
   'starts from %s with old/new coexistence=%s without changing system entries',
@@ -52,15 +52,15 @@ it.each([
     const bundle = `/virtual/Applications/${name}`
     fixture.bundles.add(bundle)
     if (coexist) {
-      fixture.bundles.add('/virtual/Applications/MedResearch Agent.app')
-      fixture.bundles.add('/virtual/Applications/MedResearch Agent.app')
+      fixture.bundles.add('/virtual/Applications/Deep Research Agent.app')
+      fixture.bundles.add('/virtual/Applications/Deep Research Agent.app')
     }
     const before = [...fixture.bundles]
     vi.stubGlobal(
       'process',
       Object.defineProperties(Object.create(process), {
         platform: { value: 'darwin' },
-        execPath: { value: `${bundle}/Contents/MacOS/MedResearch Agent` },
+        execPath: { value: `${bundle}/Contents/MacOS/Deep Research Agent` },
         // Simulate ordinary packaged startup, without invoking any real native integration.
         env: {
           value: {
@@ -75,7 +75,7 @@ it.each([
     await import('./index')
     await Promise.race([fixture.ready, fixture.exited])
     expect.soft(fixture.configureDesktop).toHaveBeenCalledOnce()
-    expect.soft(fixture.electron.app.setName).toHaveBeenLastCalledWith('MedResearch Agent')
+    expect.soft(fixture.electron.app.setName).toHaveBeenLastCalledWith('Deep Research Agent')
     expect.soft(fixture.electron.dialog.showErrorBox).not.toHaveBeenCalled()
     expect.soft(fixture.electron.app.relaunch).not.toHaveBeenCalled()
     expect.soft(fixture.electron.app.exit).not.toHaveBeenCalled()
@@ -105,7 +105,7 @@ const fixture = vi.hoisted(() => {
       void args
       return {
         backend: 'mac-keychain',
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         exists: true
       }
     }),
@@ -697,14 +697,14 @@ it('reports each IPC cleanup failure and still attempts registry disposal on lif
   expect(errors).toHaveLength(2)
 })
 
-it.each(['MedResearch Agent.app', 'MedResearch Agent.app'])(
+it.each(['Deep Research Agent.app', 'Deep Research Agent.app'])(
   'a losing second instance launched from %s shares the profile and never initializes writers',
   async (name) => {
     const { mkdtemp, mkdir, rm } = await import('node:fs/promises')
     const { tmpdir } = await import('node:os')
     const { join } = await import('node:path')
     const root = await mkdtemp(join(tmpdir(), 'profile-lock-'))
-    const legacy = join(root, 'MedResearch Agent')
+    const legacy = join(root, 'Deep Research Agent')
     await mkdir(legacy)
     const actual = await vi.importActual<typeof import('./storage/electron-profile')>(
       './storage/electron-profile'
@@ -721,7 +721,7 @@ it.each(['MedResearch Agent.app', 'MedResearch Agent.app'])(
       vi.stubGlobal(
         'process',
         Object.defineProperty(Object.create(process), 'execPath', {
-          value: `/virtual/Applications/${name}/Contents/MacOS/MedResearch Agent`
+          value: `/virtual/Applications/${name}/Contents/MacOS/Deep Research Agent`
         })
       )
       fixture.electron.app.requestSingleInstanceLock.mockReturnValue(false)
@@ -808,7 +808,7 @@ it.each([
       await import('./index')
       await fixture.exited
       expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-        'MedResearch Agent',
+        'Deep Research Agent',
         expect.stringContaining(path)
       )
       expect(fixture.electron.dialog.showErrorBox.mock.calls[0][1]).toMatch(/restore|recover/i)
@@ -881,7 +881,7 @@ it('stops synchronously on a failed credential preflight before Electron ready o
     expect(readiness).not.toHaveBeenCalled()
     expect(fixture.prepareLocations).not.toHaveBeenCalled()
     expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-      'MedResearch Agent',
+      'Deep Research Agent',
       expect.stringContaining('windows-profile-key-unavailable')
     )
   } finally {
@@ -963,14 +963,14 @@ it.each([
       await Promise.race([fixture.ready, fixture.exited])
       if (['fresh', 'existing'].includes(scenario)) {
         expect(fixture.configureDesktop).toHaveBeenCalledOnce()
-        expect(fixture.electron.app.setName).toHaveBeenNthCalledWith(1, 'MedResearch Agent')
-        expect(fixture.electron.app.setName).toHaveBeenLastCalledWith('MedResearch Agent')
+        expect(fixture.electron.app.setName).toHaveBeenNthCalledWith(1, 'Deep Research Agent')
+        expect(fixture.electron.app.setName).toHaveBeenLastCalledWith('Deep Research Agent')
         expect(fixture.electron.dialog.showErrorBox).not.toHaveBeenCalled()
         if (scenario === 'existing')
           expect(cipher.decryptString).toHaveBeenCalledWith(Buffer.from('v11original'))
       } else {
         expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-          'MedResearch Agent',
+          'Deep Research Agent',
           expect.stringContaining('CREDENTIAL_IDENTITY')
         )
         expect(fixture.prepareLocations).not.toHaveBeenCalled()
@@ -1027,7 +1027,7 @@ it('reports headless credential recovery on stderr without a blocking dialog', a
 it('redacts secrets in detailed startup errors and identifies their phase', async () => {
   fixture.selectCredentialIdentity.mockReset().mockReturnValue({
     backend: 'mac-keychain',
-    appName: 'MedResearch Agent',
+    appName: 'Deep Research Agent',
     exists: true
   })
   fixture.prepareCredentialValidation.mockReset().mockImplementationOnce(() => {
@@ -1090,7 +1090,7 @@ it.each([
       )
     fixture.nativeProbe.mockReset().mockImplementation((_executable, args) => {
       const identity = (args as string[])[0]
-      const absent = legacy && identity === 'MedResearch Agent (DEV)'
+      const absent = legacy && identity === 'Deep Research Agent (DEV)'
       return {
         status: 0,
         signal: null,
@@ -1121,12 +1121,12 @@ it.each([
     )
     expect(summary?.[1]).toMatchObject({
       outcome: 'selected',
-      appName: 'MedResearch Agent (DEV)',
+      appName: 'Deep Research Agent (DEV)',
       exists: false,
       reason: 'no-identity-confirmed',
       probes: [
-        { appName: 'MedResearch Agent (DEV)', status: legacy ? 'not-found' : 'access-blocked' },
-        { appName: 'MedResearch Agent (DEV)', status: 'access-blocked' }
+        { appName: 'Deep Research Agent (DEV)', status: legacy ? 'not-found' : 'access-blocked' },
+        { appName: 'Deep Research Agent (DEV)', status: 'access-blocked' }
       ]
     })
     const line = formatLine(
@@ -1178,7 +1178,7 @@ it.each(['access-blocked', 'error', 'unsupported'] as const)(
       )
     fixture.nativeProbe.mockReset().mockImplementation((_executable, args) => {
       const identity = (args as string[])[0]
-      const absent = legacy && identity === 'MedResearch Agent (DEV)'
+      const absent = legacy && identity === 'Deep Research Agent (DEV)'
       return {
         status: 0,
         signal: null,
@@ -1209,12 +1209,12 @@ it.each(['access-blocked', 'error', 'unsupported'] as const)(
     )
     expect(summary?.[1]).toMatchObject({
       outcome: 'selected',
-      appName: 'MedResearch Agent (DEV)',
+      appName: 'Deep Research Agent (DEV)',
       exists: false,
       reason: 'no-identity-confirmed',
       probes: [
-        { appName: 'MedResearch Agent (DEV)', status },
-        { appName: 'MedResearch Agent (DEV)', status }
+        { appName: 'Deep Research Agent (DEV)', status },
+        { appName: 'Deep Research Agent (DEV)', status }
       ]
     })
     const line = formatLine(
@@ -1240,7 +1240,7 @@ it('logs later credential recovery with concrete diagnostics after normal startu
   const recover = fixture.validateCredentials.mock.calls[0][1] as (error: Error) => void
   recover(
     new CredentialIdentityError('access-access-blocked', {
-      appName: 'MedResearch Agent',
+      appName: 'Deep Research Agent',
       status: 'access-blocked',
       reason: 'keychain-locked',
       osStatus: 0
@@ -1255,7 +1255,7 @@ it('logs later credential recovery with concrete diagnostics after normal startu
   expect(JSON.parse(line).data).toMatchObject({
     recoveryReason: 'access-access-blocked',
     identityProbe: {
-      appName: 'MedResearch Agent',
+      appName: 'Deep Research Agent',
       status: 'access-blocked',
       reason: 'keychain-locked',
       osStatus: 0

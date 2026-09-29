@@ -8,7 +8,7 @@ const GITHUB_REPO_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
 const PRODUCT_RELEASES_URL = `${GITHUB_REPO_URL}/releases`
 
 export const APP = {
-  name: 'MedResearch Agent',
+  name: 'Deep Research Agent',
   githubOwner: GITHUB_OWNER,
   githubRepo: GITHUB_REPO,
   links: {

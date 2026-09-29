@@ -361,7 +361,7 @@ export class SessionPackageDesktop {
       if (detail === PACKAGE_REQUIRES_UPDATE)
         throw new Error(
           translate(
-            'This Session package requires a newer version of MedResearch Agent. Update MedResearch Agent, then try importing it again.'
+            'This Session package requires a newer version of Deep Research Agent. Update Deep Research Agent, then try importing it again.'
           ),
           { cause: error }
         )
@@ -550,7 +550,7 @@ export class SessionPackageDesktop {
                     const options = {
                       title: this.options.translate('Export Session package'),
                       defaultPath: `${sanitizeExportFilename(title || 'Session', 220)}-${date}.science`,
-                      filters: [{ name: 'MedResearch Agent Session', extensions: ['science'] }]
+                      filters: [{ name: 'Deep Research Agent Session', extensions: ['science'] }]
                     }
                     const selected = await this.nativeDialog(
                       parent
@@ -640,7 +640,7 @@ export class SessionPackageDesktop {
               const options = {
                 title: this.options.translate('Import Session package'),
                 properties: ['openFile'] as ['openFile'],
-                filters: [{ name: 'MedResearch Agent Session', extensions: ['science'] }]
+                filters: [{ name: 'Deep Research Agent Session', extensions: ['science'] }]
               }
               const selected = sourcePath
                 ? { canceled: false, filePaths: [sourcePath] }

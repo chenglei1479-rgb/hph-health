@@ -127,7 +127,7 @@ describe('WorkspaceActivityGroup text annotations', () => {
               query: 'open-science repositories',
               results: [
                 {
-                  title: 'MedResearch Agent Framework',
+                  title: 'Deep Research Agent Framework',
                   url: 'https://osf.io'
                 },
                 {
@@ -184,7 +184,7 @@ describe('WorkspaceActivityGroup text annotations', () => {
         }
       },
       {
-        quote: 'MedResearch Agent Framework',
+        quote: 'Deep Research Agent Framework',
         source: {
           kind: 'session-item',
           sessionId: 'session-1',
@@ -198,7 +198,7 @@ describe('WorkspaceActivityGroup text annotations', () => {
     await renderActivity(activity, addedAnnotations, onAdd)
     expect(
       Array.from(highlights.get('agent-annotation-draft') ?? []).map((range) => range.toString())
-    ).toEqual(expect.arrayContaining(['open-science repositories', 'MedResearch Agent Framework']))
+    ).toEqual(expect.arrayContaining(['open-science repositories', 'Deep Research Agent Framework']))
 
     const reorderedActivity = createActivity({
       ...activity,
@@ -211,7 +211,7 @@ describe('WorkspaceActivityGroup text annotations', () => {
               query: 'open-science repositories',
               results: [
                 { title: 'Zenodo', url: 'https://zenodo.org' },
-                { title: 'MedResearch Agent Framework', url: 'https://osf.io' }
+                { title: 'Deep Research Agent Framework', url: 'https://osf.io' }
               ]
             })
           }
@@ -222,7 +222,7 @@ describe('WorkspaceActivityGroup text annotations', () => {
     const reorderedHighlights = Array.from(highlights.get('agent-annotation-draft') ?? []).map(
       (range) => range.toString()
     )
-    expect(reorderedHighlights).toContain('MedResearch Agent Framework')
+    expect(reorderedHighlights).toContain('Deep Research Agent Framework')
     expect(reorderedHighlights).not.toContain('Zenodo')
   })
 

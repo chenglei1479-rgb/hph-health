@@ -128,7 +128,7 @@ const callRememberMemoryThroughMcp = async (
 describe('notebook MCP server config', () => {
   it('builds an ACP stdio MCP server config scoped to the notebook runtime RPC endpoint', () => {
     const config = createNotebookMcpServerConfig({
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
       entryPath: '/app/out/main/index.js',
       endpoint: 'http://127.0.0.1:4567',
       token: 'secret-token',
@@ -140,7 +140,7 @@ describe('notebook MCP server config', () => {
 
     expect(config).toEqual({
       name: 'open-science-notebook',
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
       args: ['/app/out/main/index.js', '--open-science-notebook-mcp'],
       env: [
         { name: 'ELECTRON_RUN_AS_NODE', value: '1' },
@@ -178,7 +178,7 @@ describe('notebook MCP server config', () => {
 
   it('passes the Windows named-pipe path to the notebook MCP process', () => {
     const config = createNotebookMcpServerConfig({
-      command: 'C:\\MedResearch Agent.exe',
+      command: 'C:\\Deep Research Agent.exe',
       entryPath: 'C:\\app\\main.js',
       endpoint: 'http://localhost',
       socketPath: '\\\\.\\pipe\\open-science-notebook',
@@ -207,7 +207,7 @@ describe('notebook MCP server config', () => {
       user: 'researcher'
     }
     const config = createNotebookMcpServerConfig({
-      command: 'MedResearch Agent.exe',
+      command: 'Deep Research Agent.exe',
       entryPath: 'main.js',
       endpoint: 'http://localhost',
       token: 'secret-token',

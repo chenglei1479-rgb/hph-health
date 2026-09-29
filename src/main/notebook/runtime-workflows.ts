@@ -104,7 +104,7 @@ const createRuntimeWorkflows = (deps: RuntimeWorkflowDeps): RuntimeWorkflows => 
     if (language !== 'r' || !deps.setWindowsRuntimeAccess) return operation()
     if (isMigrationInProgress()) {
       throw new Error(
-        'MedResearch Agent is moving your data. Wait for the move to finish before running this.'
+        'Deep Research Agent is moving your data. Wait for the move to finish before running this.'
       )
     }
     if (runtimeAccessUpdate)

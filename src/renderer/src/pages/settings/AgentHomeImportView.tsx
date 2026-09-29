@@ -32,7 +32,7 @@ const SOURCE_INFO = {
 
 const skillKey = (skill: AgentHomeSkillRef): string => `${skill.source}:${skill.slug}`
 
-// Lists skills installed outside MedResearch Agent's isolated agent profile, then copies the checked
+// Lists skills installed outside Deep Research Agent's isolated agent profile, then copies the checked
 // directories through the existing imported-skill pipeline. Main owns source routing and path
 // containment; this view handles only renderer-safe source ids, slugs, and display metadata.
 const AgentHomeImportView = ({ onImported }: AgentHomeImportViewProps): React.JSX.Element => {
@@ -217,8 +217,8 @@ const AgentHomeImportView = ({ onImported }: AgentHomeImportViewProps): React.JS
         <Trans
           i18nKey={
             frameworkSource
-              ? 'Scan <code>{{path}}</code> and <code>{{frameworkPath}}</code> on this computer. Check skills to copy into MedResearch Agent; the originals stay in place.'
-              : 'Scan <code>{{path}}</code> on this computer. Check skills to copy into MedResearch Agent; the originals stay in place.'
+              ? 'Scan <code>{{path}}</code> and <code>{{frameworkPath}}</code> on this computer. Check skills to copy into Deep Research Agent; the originals stay in place.'
+              : 'Scan <code>{{path}}</code> on this computer. Check skills to copy into Deep Research Agent; the originals stay in place.'
           }
           values={{
             path: SOURCE_INFO.agents.path,

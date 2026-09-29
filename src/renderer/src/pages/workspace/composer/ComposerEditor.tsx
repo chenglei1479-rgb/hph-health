@@ -823,12 +823,12 @@ export const ComposerEditor = ({
       event.clipboardData?.getData(PASTED_TEXT_CLIPBOARD_TYPE) ?? ''
     )
     if (internalFragment && onLongTextPaste) {
-      event.preventDefault()
       const root = editorRef.current
       const pastedTextNodes = root
         ? insertComposerClipboardFragmentAtCaret(root, internalFragment)
         : []
       if (root && pastedTextNodes.length > 0) {
+        event.preventDefault()
         onLongTextPaste(domToDoc(root), pastedTextNodes, undoCaretRef.current)
         undoCaretRef.current = undefined
       }
@@ -837,7 +837,6 @@ export const ComposerEditor = ({
     // For text, insert it as plain text ourselves to keep the contenteditable free of rich HTML.
     const text = event.clipboardData?.getData('text/plain') ?? ''
     if (text) {
-      event.preventDefault()
       const root = editorRef.current
       if (onLongTextPaste && shouldAttachPastedText(text)) {
         const node: ComposerPastedTextNode = {
@@ -846,11 +845,15 @@ export const ComposerEditor = ({
           text
         }
         if (root && insertPastedTextAtCaret(root, node)) {
+          event.preventDefault()
           onLongTextPaste(domToDoc(root), node, undoCaretRef.current)
           undoCaretRef.current = undefined
         }
       } else {
-        if (root && insertPlainTextAtCaret(root, text)) emitDocFromDom()
+        if (root && insertPlainTextAtCaret(root, text)) {
+          event.preventDefault()
+          emitDocFromDom()
+        }
       }
     }
   }

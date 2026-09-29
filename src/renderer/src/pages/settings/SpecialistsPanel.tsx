@@ -1630,7 +1630,7 @@ const InstalledSpecialistsPanel = ({
         <ErrorNotice
           role="alert"
           className="mb-4"
-          description={t('MedResearch Agent could not load Specialists. Retry to continue.')}
+          description={t('Deep Research Agent could not load Specialists. Retry to continue.')}
           primaryButton={{ label: t('Retry'), onClick: () => void load({ force: true }) }}
         />
       ) : null}

@@ -705,7 +705,7 @@ describe('harvestJob — data-root migration gate', () => {
           jobRepository,
           storageRoot: dataRoot
         })
-      ).rejects.toThrow('MedResearch Agent is moving your data')
+      ).rejects.toThrow('Deep Research Agent is moving your data')
     } finally {
       clearMigrationPending()
     }

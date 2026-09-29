@@ -42,27 +42,27 @@ let home: string
 
 const posixEnv = (overrides: Partial<CliLauncherEnv> = {}): CliLauncherEnv => ({
   platform: 'linux',
-  appExecPath: '/opt/MedResearch Agent/medresearch-agent',
-  cliEntryPath: '/opt/MedResearch Agent/resources/cli/index.mjs',
+  appExecPath: '/opt/Deep Research Agent/medresearch-agent',
+  cliEntryPath: '/opt/Deep Research Agent/resources/cli/index.mjs',
   packaged: true,
   homeDir: home,
-  userDataDir: join(home, '.config', 'MedResearch Agent'),
+  userDataDir: join(home, '.config', 'Deep Research Agent'),
   pathVar: '/usr/bin',
   ...overrides
 })
 
 const winEnv = (overrides: Partial<CliLauncherEnv> = {}): CliLauncherEnv => ({
   platform: 'win32',
-  appExecPath: 'C:\\Program Files\\MedResearch Agent\\medresearch-agent.exe',
-  cliEntryPath: 'C:\\Program Files\\MedResearch Agent\\resources\\cli\\index.mjs',
+  appExecPath: 'C:\\Program Files\\Deep Research Agent\\medresearch-agent.exe',
+  cliEntryPath: 'C:\\Program Files\\Deep Research Agent\\resources\\cli\\index.mjs',
   packaged: true,
   homeDir: home,
-  userDataDir: join(home, 'AppData', 'Roaming', 'MedResearch Agent'),
+  userDataDir: join(home, 'AppData', 'Roaming', 'Deep Research Agent'),
   pathVar: 'C:\\Windows\\System32',
   ...overrides
 })
 
-const WINDOWS_PATH_RECEIPT_OWNER = 'MedResearch Agent Windows PATH entry. Managed by the app.'
+const WINDOWS_PATH_RECEIPT_OWNER = 'Deep Research Agent Windows PATH entry. Managed by the app.'
 const windowsPathPendingPath = (env: CliLauncherEnv): string =>
   join(planCliLauncher(env).binDir, '.medresearch-agent-path-pending')
 const windowsPathReceiptPath = (env: CliLauncherEnv): string =>
@@ -104,8 +104,8 @@ describe('planCliLauncher', () => {
     expect(plan.shim).toContain('Format version: 1')
     expect(plan.shim).toContain('ELECTRON_RUN_AS_NODE=1')
     // Packaged: pins the app path and single-quotes both paths (they contain a space).
-    expect(plan.shim).toContain("OPEN_SCIENCE_APP_PATH='/opt/MedResearch Agent/medresearch-agent'")
-    expect(plan.shim).toContain('\'/opt/MedResearch Agent/resources/cli/index.mjs\' "$@"')
+    expect(plan.shim).toContain("OPEN_SCIENCE_APP_PATH='/opt/Deep Research Agent/medresearch-agent'")
+    expect(plan.shim).toContain('\'/opt/Deep Research Agent/resources/cli/index.mjs\' "$@"')
   })
 
   it('omits OPEN_SCIENCE_APP_PATH for a development (unpackaged) build', () => {
@@ -127,11 +127,11 @@ describe('planCliLauncher', () => {
       posixEnv({
         appExecPath: '/tmp/.mount_medresearch-agentOLD/medresearch-agent',
         cliEntryPath: '/tmp/.mount_medresearch-agentOLD/resources/cli/index.mjs',
-        appImagePath: "/home/alice/MedResearch Agent's build.AppImage"
+        appImagePath: "/home/alice/Deep Research Agent's build.AppImage"
       })
     )
 
-    expect(plan.shim).toContain("app_image='/home/alice/MedResearch Agent'\\''s build.AppImage'")
+    expect(plan.shim).toContain("app_image='/home/alice/Deep Research Agent'\\''s build.AppImage'")
     expect(plan.shim).toContain('"$app_image" --appimage-mount')
     expect(plan.shim).toContain('app_exec="$mount_dir"/\'medresearch-agent\'')
     expect(plan.shim).toContain('cli_entry="$mount_dir"/\'resources/cli/index.mjs\'')
@@ -145,8 +145,8 @@ describe('planCliLauncher', () => {
       planCliLauncher(
         posixEnv({
           appExecPath: '/tmp/.mount_medresearch-agent/medresearch-agent',
-          cliEntryPath: '/opt/MedResearch Agent/resources/cli/index.mjs',
-          appImagePath: '/home/alice/MedResearch Agent.AppImage'
+          cliEntryPath: '/opt/Deep Research Agent/resources/cli/index.mjs',
+          appImagePath: '/home/alice/Deep Research Agent.AppImage'
         })
       )
     ).toThrow('inside the current AppImage mount')
@@ -156,8 +156,8 @@ describe('planCliLauncher', () => {
     const plan = planCliLauncher(
       posixEnv({
         platform: 'win32',
-        appExecPath: 'C:\\Program Files\\MedResearch Agent\\medresearch-agent.exe',
-        userDataDir: 'C:\\Users\\me\\AppData\\Roaming\\MedResearch Agent'
+        appExecPath: 'C:\\Program Files\\Deep Research Agent\\medresearch-agent.exe',
+        userDataDir: 'C:\\Users\\me\\AppData\\Roaming\\Deep Research Agent'
       })
     )
     expect(plan.target.endsWith('medresearch-agent.cmd')).toBe(true)
@@ -256,7 +256,7 @@ describe('initial CLI installation failure recovery', () => {
 
       await expect(installCliLauncher(env)).rejects.toBe(error)
       await expect(readFile(plan.target, 'utf8')).resolves.toBe(userContent)
-      await expect(installCliLauncher(env)).rejects.toThrow(/not managed by MedResearch Agent/)
+      await expect(installCliLauncher(env)).rejects.toThrow(/not managed by Deep Research Agent/)
     }
   )
 })
@@ -304,7 +304,7 @@ pdescribe('installCliLauncher / status / uninstall (POSIX)', () => {
 
     await expect(
       installCliLauncher(
-        posixEnv({ appExecPath: '/opt/MedResearch Agent/medresearch-agent-next' }),
+        posixEnv({ appExecPath: '/opt/Deep Research Agent/medresearch-agent-next' }),
         () => true
       )
     ).rejects.toMatchObject({ code: 'ENOSPC' })
@@ -343,7 +343,7 @@ pdescribe('installCliLauncher / status / uninstall (POSIX)', () => {
       return originalSync.apply(this, args)
     })
 
-    const nextEnv = posixEnv({ appExecPath: '/opt/MedResearch Agent/medresearch-agent-next' })
+    const nextEnv = posixEnv({ appExecPath: '/opt/Deep Research Agent/medresearch-agent-next' })
     await installCliLauncher(nextEnv)
 
     const validatedFd = events.find((event) => event.operation === 'stat')?.fd
@@ -432,7 +432,7 @@ describe.each([
     await writeFile(plan.target, userContent)
 
     await expect(installCliLauncher(env, () => true)).rejects.toThrow(
-      'because it is not managed by MedResearch Agent'
+      'because it is not managed by Deep Research Agent'
     )
     await expect(readFile(plan.target, 'utf8')).resolves.toBe(userContent)
   })
@@ -445,7 +445,7 @@ describe.each([
     await writeFile(plan.target, userContent)
 
     await expect(uninstallCliLauncher(env)).rejects.toThrow(
-      'because it is not managed by MedResearch Agent'
+      'because it is not managed by Deep Research Agent'
     )
     await expect(readFile(plan.target, 'utf8')).resolves.toBe(userContent)
   })
@@ -467,14 +467,14 @@ describe.each([
     const plan = planCliLauncher(env)
     const userContent = [
       'user-managed launcher',
-      'MedResearch Agent command-line launcher. Managed by the app',
+      'Deep Research Agent command-line launcher. Managed by the app',
       'still user-managed'
     ].join('\n')
     await mkdir(plan.binDir, { recursive: true })
     await writeFile(plan.target, userContent)
 
     await expect(installCliLauncher(env, () => true)).rejects.toThrow(
-      'because it is not managed by MedResearch Agent'
+      'because it is not managed by Deep Research Agent'
     )
     await expect(readFile(plan.target, 'utf8')).resolves.toBe(userContent)
   })
@@ -486,13 +486,13 @@ describe.each([
       env.platform === 'win32'
         ? [
             '@echo off',
-            'rem MedResearch Agent command-line launcher. Managed by the app; edits are overwritten on reinstall.',
+            'rem Deep Research Agent command-line launcher. Managed by the app; edits are overwritten on reinstall.',
             'set ELECTRON_RUN_AS_NODE=1',
             'legacy launcher'
           ].join('\r\n')
         : [
             '#!/bin/sh',
-            '# MedResearch Agent command-line launcher. Managed by the app (Settings -> General -> Command line',
+            '# Deep Research Agent command-line launcher. Managed by the app (Settings -> General -> Command line',
             "# tool); edits will be overwritten on reinstall. Runs the app's Electron in Node mode.",
             'legacy launcher'
           ].join('\n')
@@ -517,7 +517,7 @@ symlinkDescribe('symlinked launcher safety', () => {
     const env = posixEnv()
     const plan = planCliLauncher(env)
     const userFile = join(home, 'user-script')
-    const userContent = 'MedResearch Agent command-line launcher. Managed by the app\nuser content\n'
+    const userContent = 'Deep Research Agent command-line launcher. Managed by the app\nuser content\n'
     await mkdir(plan.binDir, { recursive: true })
     await writeFile(userFile, userContent)
     await symlink(userFile, plan.target, 'file')
@@ -533,7 +533,7 @@ symlinkDescribe('symlinked launcher safety', () => {
   it('refuses to follow a symlink during install', async () => {
     const { env, target, userFile, userContent } = await arrangeManagedTargetSymlink()
 
-    await expect(installCliLauncher(env)).rejects.toThrow('not managed by MedResearch Agent')
+    await expect(installCliLauncher(env)).rejects.toThrow('not managed by Deep Research Agent')
     await expect(readFile(userFile, 'utf8')).resolves.toBe(userContent)
     expect((await lstat(target)).isSymbolicLink()).toBe(true)
   })
@@ -541,7 +541,7 @@ symlinkDescribe('symlinked launcher safety', () => {
   it('refuses to remove a symlink during uninstall', async () => {
     const { env, target, userFile, userContent } = await arrangeManagedTargetSymlink()
 
-    await expect(uninstallCliLauncher(env)).rejects.toThrow('not managed by MedResearch Agent')
+    await expect(uninstallCliLauncher(env)).rejects.toThrow('not managed by Deep Research Agent')
     await expect(readFile(userFile, 'utf8')).resolves.toBe(userContent)
     expect((await lstat(target)).isSymbolicLink()).toBe(true)
   })
@@ -557,7 +557,7 @@ describe('hard-linked launcher safety', () => {
     const env = posixEnv()
     const plan = planCliLauncher(env)
     const userFile = join(home, 'user-script')
-    const userContent = 'MedResearch Agent command-line launcher. Managed by the app\nuser content\n'
+    const userContent = 'Deep Research Agent command-line launcher. Managed by the app\nuser content\n'
     await mkdir(plan.binDir, { recursive: true })
     await writeFile(userFile, userContent)
     await link(userFile, plan.target)
@@ -573,14 +573,14 @@ describe('hard-linked launcher safety', () => {
   it('refuses to follow a hard link during install', async () => {
     const { env, userFile, userContent } = await arrangeManagedTargetHardLink()
 
-    await expect(installCliLauncher(env)).rejects.toThrow('not managed by MedResearch Agent')
+    await expect(installCliLauncher(env)).rejects.toThrow('not managed by Deep Research Agent')
     await expect(readFile(userFile, 'utf8')).resolves.toBe(userContent)
   })
 
   it('refuses to remove a hard link during uninstall', async () => {
     const { env, target, userFile, userContent } = await arrangeManagedTargetHardLink()
 
-    await expect(uninstallCliLauncher(env)).rejects.toThrow('not managed by MedResearch Agent')
+    await expect(uninstallCliLauncher(env)).rejects.toThrow('not managed by Deep Research Agent')
     await expect(readFile(userFile, 'utf8')).resolves.toBe(userContent)
     await expect(lstat(target)).resolves.toMatchObject({ nlink: 2 })
   })
@@ -588,7 +588,7 @@ describe('hard-linked launcher safety', () => {
 
 describe('buildWindowsPathCommand', () => {
   it('embeds the bin dir as a PowerShell literal, not via -args', () => {
-    const binDir = 'C:\\Users\\me\\AppData\\Roaming\\MedResearch Agent\\bin'
+    const binDir = 'C:\\Users\\me\\AppData\\Roaming\\Deep Research Agent\\bin'
     const { command, args } = buildWindowsPathCommand(binDir)
     expect(command).toBe('powershell')
     // The script must be passed to -Command and contain the actual dir literal; -args (the fragile
@@ -643,7 +643,7 @@ describe('installCliLauncher on Windows PATH edit', () => {
     expect(status.pathHint).toContain('new terminal')
     // The injected runner received the actual bin dir embedded in the script (regression guard for
     // the -args passing bug).
-    const binDir = join(home, 'AppData', 'Roaming', 'MedResearch Agent', 'bin')
+    const binDir = join(home, 'AppData', 'Roaming', 'Deep Research Agent', 'bin')
     expect(calls).toHaveLength(1)
     expect(calls[0].args.at(-1)).toContain(binDir)
   })
@@ -656,7 +656,7 @@ describe('installCliLauncher on Windows PATH edit', () => {
   })
 
   it('skips the PATH edit entirely when the bin dir is already on PATH', async () => {
-    const binDir = join(home, 'AppData', 'Roaming', 'MedResearch Agent', 'bin')
+    const binDir = join(home, 'AppData', 'Roaming', 'Deep Research Agent', 'bin')
     let called = false
     const status = await installCliLauncher(
       winEnv({ pathVar: `C:\\Windows;${binDir.toUpperCase()}\\` }),
@@ -671,7 +671,7 @@ describe('installCliLauncher on Windows PATH edit', () => {
   })
 
   it.each([
-    ['unmanaged', 'because it is not managed by MedResearch Agent'],
+    ['unmanaged', 'because it is not managed by Deep Research Agent'],
     ['ambiguous', 'The Windows PATH ownership journal is ambiguous.']
   ] as const)('rejects an %s PATH journal before creating the shim', async (scenario, message) => {
     const env = winEnv()
@@ -712,7 +712,7 @@ describe('uninstallCliLauncher on Windows PATH edit', () => {
     const runCommand = vi.fn(() => true)
 
     await expect(uninstallCliLauncher(env, runCommand)).rejects.toThrow(
-      'because it is not managed by MedResearch Agent'
+      'because it is not managed by Deep Research Agent'
     )
 
     expect(runCommand).not.toHaveBeenCalled()
@@ -793,7 +793,7 @@ describe('uninstallCliLauncher on Windows PATH edit', () => {
   })
 
   it('preserves a pre-existing user PATH entry when no ownership receipt exists', async () => {
-    const binDir = join(home, 'AppData', 'Roaming', 'MedResearch Agent', 'bin')
+    const binDir = join(home, 'AppData', 'Roaming', 'Deep Research Agent', 'bin')
     const env = winEnv({ pathVar: `C:\\Windows;${binDir.toUpperCase()}\\` })
     const runCommand = vi.fn(() => true)
     await installCliLauncher(env, runCommand)
@@ -816,7 +816,7 @@ pdescribe('AppImage launcher reconciliation (POSIX)', () => {
     posixEnv({
       appExecPath: '/tmp/.mount_medresearch-agentNEW/medresearch-agent',
       cliEntryPath: '/tmp/.mount_medresearch-agentNEW/resources/cli/index.mjs',
-      appImagePath: join(home, 'MedResearch Agent.AppImage'),
+      appImagePath: join(home, 'Deep Research Agent.AppImage'),
       ...overrides
     })
 
@@ -831,7 +831,7 @@ pdescribe('AppImage launcher reconciliation (POSIX)', () => {
 
   it('runs the CLI through the mounted payload and cleans up the mount process', async () => {
     const mountDir = join(home, 'mounted AppImage')
-    const appImagePath = join(home, "MedResearch Agent's build.AppImage")
+    const appImagePath = join(home, "Deep Research Agent's build.AppImage")
     const resultPath = join(home, 'cli-result.txt')
     const stoppedPath = join(home, 'mount-stopped.txt')
     const cliDir = join(mountDir, 'resources', 'cli')
@@ -940,7 +940,7 @@ pdescribe('AppImage launcher reconciliation (POSIX)', () => {
 
   it('updates the stable shim after the AppImage file moves', async () => {
     await installCliLauncher(appImageEnv())
-    const moved = appImageEnv({ appImagePath: join(home, 'Applications', 'MedResearch Agent.AppImage') })
+    const moved = appImageEnv({ appImagePath: join(home, 'Applications', 'Deep Research Agent.AppImage') })
 
     expect(await isCliShimStale(moved)).toBe(true)
     await ensureCliLauncherCurrent(moved)
@@ -984,10 +984,10 @@ pdescribe('AppImage launcher reconciliation (POSIX)', () => {
 
 describe('AppImage reconciliation platform boundary', () => {
   it.each([
-    ['win32', () => winEnv({ appImagePath: 'C:\\Users\\me\\MedResearch Agent.AppImage' })],
+    ['win32', () => winEnv({ appImagePath: 'C:\\Users\\me\\Deep Research Agent.AppImage' })],
     [
       'darwin',
-      () => posixEnv({ platform: 'darwin', appImagePath: '/Applications/MedResearch Agent.AppImage' })
+      () => posixEnv({ platform: 'darwin', appImagePath: '/Applications/Deep Research Agent.AppImage' })
     ]
   ])('does not rewrite a packaged %s launcher', async (_platform, createEnv) => {
     const env = createEnv()

@@ -266,7 +266,7 @@ describe('UpdateDialog', () => {
         current: '0.1.0',
         latest: '0.2.0',
         applyKind: 'installer',
-        localPath: '/data/update/MedResearch Agent.dmg',
+        localPath: '/data/update/Deep Research Agent.dmg',
         error: 'Could not open the update installer: no associated application'
       }
     })
@@ -307,7 +307,7 @@ describe('UpdateDialog', () => {
     expect(document.body.textContent).toContain(
       'use Reveal in Settings → General → Diagnostics to locate the log file'
     )
-    expect(document.body.textContent).toContain('Quit and reopen MedResearch Agent')
+    expect(document.body.textContent).toContain('Quit and reopen Deep Research Agent')
     const issueLink = document.body.querySelector(`a[href="${APP.links.githubIssues}"]`)
     expect(issueLink?.textContent).toContain('open a GitHub issue')
   })

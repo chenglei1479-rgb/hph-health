@@ -4,10 +4,12 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
   shell,
   webFrameMain,
   WebContentsView,
   type BrowserWindowConstructorOptions,
+  type MenuItemConstructorOptions,
   type IpcMainEvent,
   type WebContents,
   type WebFrameMain
@@ -90,7 +92,9 @@ const createAppWindow = (options: BrowserWindowConstructorOptions): BrowserWindo
   })
 
   window.on('ready-to-show', () => {
-    if (e2eWindowMode === 'hidden') return
+    // Electron can deliver a queued readiness event while shutdown is already tearing this window
+    // down. BrowserWindow.show() throws once the native window has been destroyed.
+    if (e2eWindowMode === 'hidden' || window.isDestroyed()) return
     window.show()
   })
 
@@ -209,6 +213,33 @@ const configureMainWindow = (window: BrowserWindow, opts: MainWindowCloseOptions
   mainWindowCloseOptions.set(window, opts)
 }
 
+const installNativeEditContextMenu = (window: BrowserWindow): (() => void) => {
+  const listener = (event: Electron.Event, params: Electron.ContextMenuParams): void => {
+    const items: MenuItemConstructorOptions[] = []
+    if (params.isEditable) {
+      const flags = params.editFlags
+      items.push(
+        { role: 'undo', enabled: flags.canUndo },
+        { role: 'redo', enabled: flags.canRedo },
+        { type: 'separator' },
+        { role: 'cut', enabled: flags.canCut },
+        { role: 'copy', enabled: flags.canCopy },
+        { role: 'paste', enabled: flags.canPaste },
+        { type: 'separator' },
+        { role: 'selectAll', enabled: flags.canSelectAll }
+      )
+    } else if (params.selectionText) {
+      items.push({ role: 'copy' })
+    }
+    if (items.length === 0) return
+
+    event.preventDefault()
+    Menu.buildFromTemplate(items).popup({ window })
+  }
+  window.webContents.on('context-menu', listener)
+  return () => window.webContents.removeListener('context-menu', listener)
+}
+
 const createMainWindow = (
   opts?: MainWindowCloseOptions,
   translate: NativeTranslator = englishNativeTranslator
@@ -221,10 +252,11 @@ const createMainWindow = (
     height: 960,
     minWidth: 1100,
     minHeight: 720,
-    title: 'MedResearch Agent',
+    title: 'Deep Research Agent',
     webPreferences: { webviewTag: true }
   })
   mainWindows.add(window)
+  const unregisterNativeEditContextMenu = installNativeEditContextMenu(window)
   installSourcePreviewWebviews(window)
   if (opts) configureMainWindow(window, opts)
 
@@ -329,7 +361,7 @@ const createMainWindow = (
         buttons: [translate('Reload', { context: 'window' }), translate('Close window')],
         defaultId: 0,
         cancelId: 1,
-        title: 'MedResearch Agent',
+        title: 'Deep Research Agent',
         message: translate('The app window stopped responding repeatedly.'),
         detail: translate(
           'Automatic recovery has been paused. Reloading returns this window to the home screen; background work may still be running.'
@@ -484,6 +516,7 @@ const createMainWindow = (
     clearRendererHangState()
   })
   window.on('closed', () => {
+    unregisterNativeEditContextMenu()
     ipcMain.removeListener(CLOSE_ACTIVE_PANE_READY_CHANNEL, onListenerReady)
     ipcMain.removeListener(CLOSE_ACTIVE_PANE_UNREADY_CHANNEL, onListenerGone)
     ipcMain.removeListener(WINDOW_FIND_READY_CHANNEL, onWindowFindReady)
@@ -584,7 +617,7 @@ const createMainWindow = (
     if (action === 'close') return
     event.preventDefault()
     if (action === 'hide') {
-      window.hide()
+      if (!window.isDestroyed()) window.hide()
       return
     }
     if (action === 'quit') {
@@ -596,6 +629,9 @@ const createMainWindow = (
     void closeOptions!
       .resolveCloseAction()
       .then((choice) => {
+        // The confirmation can settle after OS shutdown or another owner destroys the window.
+        // Never call a native BrowserWindow method after that boundary.
+        if (window.isDestroyed()) return
         if (choice === 'minimize') window.hide()
         else if (choice === 'quit') closeOptions!.requestQuit(false)
       })
@@ -609,6 +645,7 @@ const createMainWindow = (
   if (!app.isPackaged) {
     window.on('page-title-updated', (event, pageTitle) => {
       event.preventDefault()
+      if (window.isDestroyed()) return
       window.setTitle(`${pageTitle} (DEV)`)
     })
   }

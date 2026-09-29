@@ -98,7 +98,7 @@ const providerErrorCopy = (error: ProviderPanelError, t: TFunction): string => {
     case 'claude-sign-out':
       return t('Could not sign out of Claude.')
     case 'claude-disconnect':
-      return t('Could not disconnect Claude from MedResearch Agent.')
+      return t('Could not disconnect Claude from Deep Research Agent.')
     case 'xai-sign-in':
       return t('Could not sign in to xAI.')
     case 'xai-sign-out':
@@ -390,7 +390,7 @@ const ProvidersPanel = ({
     try {
       const result = await logoutSharedClaude()
       if (!result.ok) {
-        setProviderTestError(result.message ?? t('Could not disconnect Claude from MedResearch Agent.'))
+        setProviderTestError(result.message ?? t('Could not disconnect Claude from Deep Research Agent.'))
       }
     } catch (error) {
       setProviderTestError({ action: 'claude-disconnect', detail: errorDetail(error) })
@@ -655,7 +655,7 @@ const ProvidersPanel = ({
                       ) : null}
                     </>
                   ) : (
-                    t('This provider will be removed from MedResearch Agent.')
+                    t('This provider will be removed from Deep Research Agent.')
                   )}
                 </div>
               </AlertDialog.Description>

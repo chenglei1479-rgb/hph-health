@@ -427,10 +427,10 @@ function JobDetailView({ job, onBack, onOpenFileBrowser }: JobDetailViewProps): 
                 )
               : latestJob.last_poll_error.includes('recovery_pending')
                 ? t(
-                    'Checking whether the original job started. MedResearch Agent will check again without resubmitting it.'
+                    'Checking whether the original job started. Deep Research Agent will check again without resubmitting it.'
                   )
                 : t(
-                    'The latest remote observation failed. The last confirmed execution state is shown; MedResearch Agent will check again.'
+                    'The latest remote observation failed. The last confirmed execution state is shown; Deep Research Agent will check again.'
                   )}
         </div>
       ) : null}
@@ -442,7 +442,7 @@ function JobDetailView({ job, onBack, onOpenFileBrowser }: JobDetailViewProps): 
             tone="amber"
             title={
               latestJob.harvested_at === undefined
-                ? t('Harvest pending. MedResearch Agent will retry automatically.')
+                ? t('Harvest pending. Deep Research Agent will retry automatically.')
                 : t('Harvest failed. Remote files were left untouched.')
             }
             description={

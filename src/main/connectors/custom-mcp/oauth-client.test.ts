@@ -174,7 +174,7 @@ describe('PersistentOAuthClientProvider', () => {
     })
 
     expect(provider.clientMetadata).toMatchObject({
-      client_name: 'MedResearch Agent',
+      client_name: 'Deep Research Agent',
       token_endpoint_auth_method: 'none',
       scope: 'openid profile'
     })

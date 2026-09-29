@@ -51,7 +51,7 @@ import type {
 } from 'electron'
 import type { InterfaceScaleShortcut } from '../shared/interface-scale'
 
-const APP_NAME = 'MedResearch Agent'
+const APP_NAME = 'Deep Research Agent'
 const APP_USER_MODEL_ID = 'com.aipoch.medresearch-agent'
 const shouldRunArtifactMcpServer = process.argv.includes(ARTIFACT_MCP_SERVER_ARG)
 const shouldRunNotebookMcpServer = process.argv.includes(NOTEBOOK_MCP_SERVER_ARG)
@@ -202,6 +202,7 @@ if (shouldRunArtifactMcpServer) {
       ...(error instanceof CredentialIdentityError
         ? {
             recoveryReason: error.reason,
+            ...(error.diagnosticCode ? { recoveryDiagnosticCode: error.diagnosticCode } : {}),
             ...(error.probe ? { identityProbe: error.probe } : {})
           }
         : {})
@@ -331,6 +332,7 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
     if (!credentialRecoveryPresented) {
       bootstrapLog.error('credential access failed', {
         recoveryReason: error.reason,
+        ...(error.diagnosticCode ? { recoveryDiagnosticCode: error.diagnosticCode } : {}),
         ...(error.probe ? { identityProbe: error.probe } : {})
       })
       credentialRecoveryPresented = true
@@ -419,10 +421,10 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
   startupDiagnostics.phase('load-bootstrap-modules')
   const [
     { electronApp },
-    { default: icon },
-    { default: iconDark },
-    { default: iconWindows },
-    { default: iconDarkWindows },
+    { default: appIconPng },
+    { default: appIconDarkPng },
+    { default: appIconIco },
+    { default: appIconDarkIco },
     { default: trayMacTemplate },
     { default: trayLightWindows },
     { default: trayDarkWindows },
@@ -439,21 +441,23 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
     import('../../resources/tray.png?asset')
   ])
 
-  // Windows gets multi-resolution ICOs for title-bar and Alt-Tab fidelity; the macOS runtime Dock
-  // Theme override and Linux use matching lossless 1024px PNGs. The installed macOS icon itself is
-  // build/icon.icon (electron-builder.yml), not either runtime PNG.
+  // Light and dark surfaces use the same dotted-ring mark on theme-matched backgrounds.
   const iconVariantPaths =
     process.platform === 'win32'
-      ? { light: iconWindows, dark: iconDarkWindows }
-      : { light: icon, dark: iconDark }
-  // The static fallback on Windows stays the dark tile: it is byte-identical to the legacy tray.ico,
-  // so a missing/unreadable variant asset degrades to the pre-change appearance.
+      ? { light: appIconIco, dark: appIconDarkIco }
+      : { light: appIconPng, dark: appIconDarkPng }
   const trayIconPath =
-    process.platform === 'win32' ? trayDarkWindows : process.platform === 'linux' ? trayLinux : icon
-  // Windows keeps one tray tile per app-icon variant so the tray glyph can follow the variant the
-  // user picks in settings (setTrayIconVariant); other platforms use a single static tray icon.
+    process.platform === 'win32'
+      ? trayLightWindows
+      : process.platform === 'linux'
+        ? trayLinux
+        : appIconPng
   const trayVariantIconPaths =
-    process.platform === 'win32' ? { light: trayLightWindows, dark: trayDarkWindows } : undefined
+    process.platform === 'win32'
+      ? { light: trayLightWindows, dark: trayDarkWindows }
+      : process.platform === 'linux'
+        ? { light: appIconPng, dark: appIconDarkPng }
+        : undefined
 
   // Ordered startup: the single-instance lock is acquired FIRST (UI path only — the MCP stdio server
   // modes never reach startElectronApp), so a secondary launch quits before prepare() imports any
@@ -809,11 +813,6 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
                 notifyRendererSessionPersistenceFlushAborted(() => mainWindowGetterBox.current?.()),
               onAppIconVariantChanged: (variant) => {
                 appIconControllerBox.current?.setVariant(variant)
-                // Keep the tray glyph on the same variant as the window icon. No-op before the lifecycle
-                // installs the tray, or off Windows (single static tray asset there).
-                if (appTrayBox.current && trayVariantIconPaths) {
-                  setTrayIconVariant(appTrayBox.current, trayVariantIconPaths, variant)
-                }
               },
               listAppIconPreviews: () => buildAppIconPreviews(nativeImage, iconVariantPaths)
             })
@@ -850,10 +849,8 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
               controller: notificationInbox,
               onError: (error) => log.warn('message center visibility IPC failed', error)
             })
-            // Restore the independent icon variant off macOS and create the macOS Theme/Dock controller.
-            // macOS deliberately leaves the packaged Icon Composer icon untouched until a renderer announces
-            // its Theme; after that, nativeTheme keeps System mode live even with no BrowserWindow open.
-            const initialVariant = await settingsService.getAppIconVariant()
+            // Start with the OS day/night icon, then use the app's resolved theme after the renderer reports it.
+            const initialVariant = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
             appIconControllerBox.current = createAppIconController({
               electron: {
                 app,
@@ -862,7 +859,12 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
                 nativeTheme
               },
               variantPaths: iconVariantPaths,
-              initialVariant
+              initialVariant,
+              onVariantChanged: (variant) => {
+                if (appTrayBox.current && trayVariantIconPaths) {
+                  setTrayIconVariant(appTrayBox.current, trayVariantIconPaths, variant)
+                }
+              }
             })
             startupDiagnostics?.phase('compose-remote-access')
             const remoteAccess = await RemoteAccessService.create()
@@ -1046,7 +1048,8 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
           const tray = ctx.createAppTray({
             iconPath: trayIconPath,
             variantIconPaths: trayVariantIconPaths,
-            initialVariant: ctx.getAppIconVariant(),
+            initialVariant:
+              ctx.appIconControllerBox.current?.getVariant() ?? ctx.getAppIconVariant(),
             translate: ctx.translate,
             templateIconPath: process.platform === 'darwin' ? trayMacTemplate : undefined,
             ...handlers,

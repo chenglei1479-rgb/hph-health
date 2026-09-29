@@ -44,7 +44,7 @@ const windowsDeps = (overrides: Partial<MicromambaCacheDeps> = {}): MicromambaCa
 })
 
 it('uses the new brand for a fresh Windows cache without creating a legacy directory', () => {
-  const cache = selectMicromambaCache('D:\\MedResearch Agent\\runtime', 200, {
+  const cache = selectMicromambaCache('D:\\Deep Research Agent\\runtime', 200, {
     platform: 'win32',
     env: { USERNAME: 'fixture', USERDOMAIN: 'test' },
     canonicalize: (path) => path,
@@ -52,7 +52,7 @@ it('uses the new brand for a fresh Windows cache without creating a legacy direc
     verifyOwnership: () => true,
     exists: () => false
   })
-  expect(cache.path).toMatch(/^D:\\MedResearch AgentTmp\\m-/)
+  expect(cache.path).toMatch(/^D:\\Deep Research AgentTmp\\m-/)
 })
 
 describe('managedNotebookWorkingCache', () => {
@@ -101,7 +101,7 @@ describe('selectMicromambaCache', () => {
       windowsDeps()
     )
 
-    expect(first.path).toMatch(/^D:\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(first.path).toMatch(/^D:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
     expect(repeated).toEqual(first)
     expect(otherRoot.path).not.toBe(first.path)
     expect(first.lockKey).toBe(first.path.toLowerCase())
@@ -141,10 +141,10 @@ describe('selectMicromambaCache', () => {
       })
     )
 
-    expect(cache.path).toMatch(/^D:\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(cache.path).toMatch(/^D:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
     expect(prepare).toHaveBeenCalledOnce()
     expect(prepare).toHaveBeenCalledWith(
-      expect.stringMatching(/^D:\\MedResearch AgentTmp\\m-/),
+      expect.stringMatching(/^D:\\Deep Research AgentTmp\\m-/),
       expect.any(Object)
     )
   })
@@ -170,7 +170,7 @@ describe('selectMicromambaCache', () => {
       })
     )
 
-    expect(cache.path).toMatch(/^E:\\Tmp\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(cache.path).toMatch(/^E:\\Tmp\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
     expect(prepare).toHaveBeenCalledTimes(3)
   })
 
@@ -213,7 +213,7 @@ describe('selectMicromambaCache', () => {
 
     expect(message).toContain('Candidate diagnostics:')
     expect(message).toMatch(
-      /E:\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}: ownership or permissions are not trusted/
+      /E:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}: ownership or permissions are not trusted/
     )
     expect(message).not.toContain('unavailable, untrusted, or not writable')
     expect(message).not.toContain('restrict write access')
@@ -291,7 +291,7 @@ describe('removeMicromambaCacheForRoot', () => {
 
     expect(completed).toBe(true)
     expect(removed).toHaveLength(1)
-    expect(removed[0]).toMatch(/^D:\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(removed[0]).toMatch(/^D:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
   })
 
   it('retains symlinked, unowned, and non-Windows candidates', () => {
@@ -330,7 +330,7 @@ describe('removeMicromambaCacheForRoot', () => {
     })
 
     expect(removed).toHaveLength(7)
-    expect(removed[0]).toMatch(/^D:\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(removed[0]).toMatch(/^D:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
     expect(removed[1]).toMatch(/^C:\\Users\\alice\\os-tmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
     expect(removed[2]).toContain('MedResearchAgentTmp')
     expect(removed.slice(3)).toEqual([
@@ -350,14 +350,14 @@ describe('removeMicromambaCacheForRoot', () => {
       verifyOwnership: () => true,
       inspectParent: (path) => ({
         ...inspectTrustedParent(path),
-        symbolicLink: path === 'D:\\MedResearch AgentTmp',
+        symbolicLink: path === 'D:\\Deep Research AgentTmp',
         physical: path === 'C:\\Users\\alice\\os-tmp' ? 'C:\\Users\\alice\\unexpected-parent' : path
       }),
       inspect: (path) => ({
         directory: true,
         symbolicLink: false,
         marker:
-          path.includes('\\MedResearch AgentTmp\\') || path.includes('\\os-tmp\\')
+          path.includes('\\Deep Research AgentTmp\\') || path.includes('\\os-tmp\\')
             ? marker
             : { ...marker, canonicalRoot: 'd:\\tampered' }
       }),
@@ -404,7 +404,7 @@ describe('removeMicromambaCacheForRoot', () => {
 })
 
 describe('removeEmptyManagedParent', () => {
-  const parent = 'D:\\MedResearch AgentTmp'
+  const parent = 'D:\\Deep Research AgentTmp'
   const raw = `${JSON.stringify({
     schema: 1,
     kind: 'micromamba-working-cache-parent',
@@ -422,7 +422,7 @@ describe('removeEmptyManagedParent', () => {
       removeParent
     })
 
-    expect(removeMarker).toHaveBeenCalledWith('D:\\MedResearch AgentTmp\\.open-science-temp.json')
+    expect(removeMarker).toHaveBeenCalledWith('D:\\Deep Research AgentTmp\\.open-science-temp.json')
     expect(removeParent).toHaveBeenCalledWith(parent)
   })
 
@@ -440,7 +440,7 @@ describe('removeEmptyManagedParent', () => {
         restoreMarker
       })
     ).toThrow(/directory not empty/)
-    expect(restoreMarker).toHaveBeenCalledWith('D:\\MedResearch AgentTmp\\.open-science-temp.json', raw)
+    expect(restoreMarker).toHaveBeenCalledWith('D:\\Deep Research AgentTmp\\.open-science-temp.json', raw)
   })
 })
 
@@ -511,7 +511,7 @@ describe('isTrustedMicromambaWorkingCacheForRoot', () => {
     expect(JSON.stringify(cacheWarnings.mock.calls)).not.toContain(missing.message)
   })
 
-  it.each(['MedResearch AgentTmp', 'MedResearchAgentTmp'])(
+  it.each(['Deep Research AgentTmp', 'MedResearchAgentTmp'])(
     'accepts a marker-owned %s fallback after TEMP changes',
     (parentName) => {
       const retained = win32.join('E:\\PreviousTemp', parentName, win32.basename(cache.path))
@@ -610,7 +610,7 @@ describe('retainMicromambaWorkingCache', () => {
     const firstCompletion = releaseFirst({
       archivePublications: [
         {
-          workingRoot: 'D:\\MedResearch AgentTmp\\m-test',
+          workingRoot: 'D:\\Deep Research AgentTmp\\m-test',
           authorizations: [archiveAuthorization]
         }
       ]
@@ -629,7 +629,7 @@ describe('retainMicromambaWorkingCache', () => {
     expect(publishArchives).toHaveBeenNthCalledWith(
       1,
       'D:\\OpenScience\\runtime',
-      'D:\\MedResearch AgentTmp\\m-test',
+      'D:\\Deep Research AgentTmp\\m-test',
       [archiveAuthorization]
     )
     expect(publishArchives).toHaveBeenNthCalledWith(
@@ -669,7 +669,7 @@ describe('retainMicromambaWorkingCache', () => {
     const firstRelease = releaseFirst({
       archivePublications: [
         {
-          workingRoot: 'D:\\MedResearch AgentTmp\\m-test',
+          workingRoot: 'D:\\Deep Research AgentTmp\\m-test',
           authorizations: [{ file: 'a-1.conda', algorithm: 'sha256', digest: 'a'.repeat(64) }]
         }
       ]
@@ -712,7 +712,7 @@ describe('retainMicromambaWorkingCache', () => {
       failedRelease({
         archivePublications: [
           {
-            workingRoot: 'E:\\MedResearch AgentTmp\\m-test',
+            workingRoot: 'E:\\Deep Research AgentTmp\\m-test',
             authorizations: [{ file: 'a-1.conda', algorithm: 'sha256', digest: 'a'.repeat(64) }]
           }
         ]
@@ -750,7 +750,7 @@ describe('retainMicromambaWorkingCache', () => {
       laterRelease({
         archivePublications: [
           {
-            workingRoot: 'F:\\MedResearch AgentTmp\\m-later',
+            workingRoot: 'F:\\Deep Research AgentTmp\\m-later',
             authorizations: [laterAuthorization]
           }
         ]
@@ -758,7 +758,7 @@ describe('retainMicromambaWorkingCache', () => {
     ).resolves.toBe(true)
     expect(publishAfterRetention).toHaveBeenCalledWith(
       'F:\\OpenScience\\runtime',
-      'F:\\MedResearch AgentTmp\\m-later',
+      'F:\\Deep Research AgentTmp\\m-later',
       [laterAuthorization]
     )
     expect(cleanup).not.toHaveBeenCalled()
@@ -830,7 +830,7 @@ describe('retainMicromambaWorkingCache', () => {
     const runtimeRoot = mkdtempSync(join(tmpdir(), 'os-working-cache-published-'))
     try {
       const operationId = 'completed-install'
-      const workingRoot = 'C:\\MedResearch AgentTmp\\m-current'
+      const workingRoot = 'C:\\Deep Research AgentTmp\\m-current'
       const authorization = {
         file: 'numpy-1.conda',
         algorithm: 'sha256' as const,
@@ -876,7 +876,7 @@ describe('retainMicromambaWorkingCache', () => {
   it('refuses a new writer while recovered archive publication is still pending', async () => {
     const runtimeRoot = mkdtempSync(join(tmpdir(), 'os-working-cache-publication-block-'))
     try {
-      const workingRoot = 'C:\\MedResearch AgentTmp\\m-recovered'
+      const workingRoot = 'C:\\Deep Research AgentTmp\\m-recovered'
       const authorization = {
         file: 'numpy-1.conda',
         algorithm: 'sha256' as const,
@@ -935,7 +935,7 @@ describe('retainMicromambaWorkingCache', () => {
     ).resolves.toBe(true)
 
     expect(exists).toHaveBeenCalledWith(
-      expect.stringMatching(/^G:\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+      expect.stringMatching(/^G:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
     )
     expect(cleanup).toHaveBeenCalledWith('G:\\OpenScience\\runtime')
 
@@ -994,7 +994,7 @@ describe('retainMicromambaWorkingCache', () => {
   })
 
   it('finalizes the exact recovered fallback even after TEMP changes', async () => {
-    const recovered = 'E:\\PreviousTemp\\MedResearch AgentTmp\\m-retained'
+    const recovered = 'E:\\PreviousTemp\\Deep Research AgentTmp\\m-retained'
     const cleanupExact = vi.fn().mockReturnValue(true)
 
     await expect(
@@ -1029,7 +1029,7 @@ describe('retainMicromambaWorkingCache', () => {
         },
         {
           mode: 'exact',
-          workingRoots: ['E:\\PreviousTemp\\MedResearch AgentTmp\\m-retained']
+          workingRoots: ['E:\\PreviousTemp\\Deep Research AgentTmp\\m-retained']
         }
       )
     ).resolves.toBe(false)

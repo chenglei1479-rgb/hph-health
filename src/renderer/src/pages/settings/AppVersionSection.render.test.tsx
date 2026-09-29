@@ -21,7 +21,7 @@ beforeEach(() => {
 
   useUpdateStore.setState({
     appInfo: {
-      name: 'MedResearch Agent',
+      name: 'Deep Research Agent',
       version: '0.2.0',
       copyright: '© 2026 AIPOCH. All rights reserved.'
     },
@@ -51,7 +51,7 @@ describe('AppVersionSection', () => {
       root.render(<AppVersionSection />)
     })
 
-    expect(container.textContent).toContain('MedResearch Agent')
+    expect(container.textContent).toContain('Deep Research Agent')
     expect(container.textContent).toContain('v0.2.0')
     expect(container.textContent).toContain('© 2026 AIPOCH')
   })

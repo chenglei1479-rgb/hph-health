@@ -6,17 +6,17 @@ import { LiteratureCitationFormatter } from './citation-formatter'
 const oldBook = `TY  - BOOK
 TI  - Legacy institutions
 A3  - Department, University
-N1  - MedResearch Agent literal creator: ["A3",0,"Department, University"]
+N1  - Deep Research Agent literal creator: ["A3",0,"Department, University"]
 A4  - Translation, Institute
-N1  - MedResearch Agent literal creator: ["A4",0,"Translation, Institute"]
+N1  - Deep Research Agent literal creator: ["A4",0,"Translation, Institute"]
 ER  -
 `
 const oldArticle = `TY  - JOUR
 TI  - Legacy article
 A2  - Department, University
-N1  - MedResearch Agent literal creator: ["A2",0,"Department, University"]
+N1  - Deep Research Agent literal creator: ["A2",0,"Department, University"]
 A4  - Translation, Institute
-N1  - MedResearch Agent literal creator: ["A4",0,"Translation, Institute"]
+N1  - Deep Research Agent literal creator: ["A4",0,"Translation, Institute"]
 ER  -
 `
 
@@ -46,15 +46,15 @@ describe('RIS literal creator compatibility', () => {
       translator: [{ literal: 'Translation, Institute' }]
     }
     const text = exportRisFields(item)
-    expect(text).toContain('MedResearch Agent literal creator: ')
-    expect(text).not.toContain('MedResearch Agent literal creator: ')
+    expect(text).toContain('Deep Research Agent literal creator: ')
+    expect(text).not.toContain('Deep Research Agent literal creator: ')
     expect(importRisFields(text, { type })).toMatchObject({
       editor: item.editor,
       translator: item.translator
     })
   })
 
-  it.each(['MedResearch Agent literal creator: ', 'MedResearch Agent literal creator: '])(
+  it.each(['Deep Research Agent literal creator: ', 'Deep Research Agent literal creator: '])(
     'validates all %s markers against the visible tag, index and value',
     (prefix) => {
       for (const marker of [
@@ -84,7 +84,7 @@ describe('RIS literal creator compatibility', () => {
   it('ignores unknown notes and notes outside the record', () => {
     expect(
       importRisFields(
-        'A3  - Department, University\nN1  - Unknown literal creator: ["A3",0,"Department, University"]\nER  -\nN1  - MedResearch Agent literal creator: ["A3",0,"Department, University"]',
+        'A3  - Department, University\nN1  - Unknown literal creator: ["A3",0,"Department, University"]\nER  -\nN1  - Deep Research Agent literal creator: ["A3",0,"Department, University"]',
         { type: 'book' }
       ).editor
     ).toEqual([{ family: 'Department', given: 'University' }])

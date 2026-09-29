@@ -21,7 +21,7 @@ import type {
 
 type DatabaseStartupGateProps = { children: ReactNode }
 
-const UNAVAILABLE_STARTUP_MESSAGE = 'MedResearch Agent could not finish checking its database.'
+const UNAVAILABLE_STARTUP_MESSAGE = 'Deep Research Agent could not finish checking its database.'
 
 const unavailableStartupState: DatabaseStartupState = {
   phase: 'blocked',
@@ -52,7 +52,7 @@ const BLOCKED_GUIDANCE: Partial<Record<DatabaseStartupErrorCode, BlockedGuidance
     tone: 'teal',
     icon: CircleArrowUp,
     why: "This data folder was last written by a newer release. Older builds can't safely read its newer format.",
-    how: 'Update MedResearch Agent to the latest version, then relaunch. Your data is intact and will open in the newer version.'
+    how: 'Update Deep Research Agent to the latest version, then relaunch. Your data is intact and will open in the newer version.'
   },
   database_history_invalid: {
     tone: 'red',
@@ -70,13 +70,13 @@ const BLOCKED_GUIDANCE: Partial<Record<DatabaseStartupErrorCode, BlockedGuidance
     tone: 'red',
     icon: Cpu,
     why: 'The database engine bundled with this app failed to load — the installation is usually incomplete or damaged.',
-    how: "Reinstall MedResearch Agent. Your data folder is stored separately and won't be touched."
+    how: "Reinstall Deep Research Agent. Your data folder is stored separately and won't be touched."
   },
   database_open_failed: {
     tone: 'amber',
     icon: Lock,
     why: "The database file couldn't be opened — it's often locked by another copy of the app, a full disk, or a read-only location.",
-    how: 'Quit other copies of MedResearch Agent, check free disk space and folder permissions, then retry.'
+    how: 'Quit other copies of Deep Research Agent, check free disk space and folder permissions, then retry.'
   },
   database_migration_failed: {
     tone: 'amber',
@@ -88,7 +88,7 @@ const BLOCKED_GUIDANCE: Partial<Record<DatabaseStartupErrorCode, BlockedGuidance
     tone: 'amber',
     icon: Unplug,
     why: "The background service that owns the database didn't respond in time — this is usually transient.",
-    how: 'Retry. If it keeps happening, fully quit MedResearch Agent and start it again.'
+    how: 'Retry. If it keeps happening, fully quit Deep Research Agent and start it again.'
   }
 }
 
@@ -169,12 +169,12 @@ const DatabaseStartupGate = ({ children }: DatabaseStartupGateProps): React.JSX.
                 {state.phase === 'migrating'
                   ? t('Updating database…')
                   : state.phase === 'starting'
-                    ? t('Starting MedResearch Agent…')
+                    ? t('Starting Deep Research Agent…')
                     : t('Checking database…')}
               </span>
               {state.phase === 'migrating' || state.phase === 'starting' ? (
                 <p className="text-sm text-muted-foreground">
-                  {t('Keep MedResearch Agent open while this finishes.')}
+                  {t('Keep Deep Research Agent open while this finishes.')}
                 </p>
               ) : null}
             </div>
@@ -196,7 +196,7 @@ const DatabaseStartupGate = ({ children }: DatabaseStartupGateProps): React.JSX.
         fullPage
         icon={guidance?.icon}
         tone={guidance?.tone}
-        title={t("MedResearch Agent couldn't start")}
+        title={t("Deep Research Agent couldn't start")}
         description={t(error.message)}
         errorCode={error.migrationId ? `${error.code} · ${error.migrationId}` : error.code}
         help={
@@ -211,7 +211,9 @@ const DatabaseStartupGate = ({ children }: DatabaseStartupGateProps): React.JSX.
         }
         issueLink={{
           label: t('Still stuck? Create an issue for help'),
-          tooltip: t('Review and edit the redacted report in MedResearch Agent before opening GitHub.'),
+          tooltip: t(
+            'Review and edit the redacted report in Deep Research Agent before opening GitHub.'
+          ),
           onClick: openIssueDraft
         }}
         secondaryButton={{

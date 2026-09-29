@@ -29,7 +29,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 import { cn } from '@/lib/utils'
-import { GitHubStarBadge } from '@/components/GitHubStarBadge'
 import { NetworkStatusIndicator } from '@/components/NetworkStatusIndicator'
 import { UpdateCapsule } from '@/components/UpdateCapsule'
 import { sessionWaitReasonLabelKeys } from '@/lib/session-wait-reason-labels'
@@ -67,7 +66,6 @@ type WorkspaceSidebarProps = {
     description: string
   }>
   onOpenProject?: (projectId: string) => void
-  starNudgeKey?: string
   sessions: ChatSession[]
   credentialPendingSessionIds?: ReadonlySet<string>
   activeSessionId: string | undefined
@@ -405,7 +403,6 @@ const WorkspaceSidebarView = ({
   projectName,
   otherProjects = [],
   onOpenProject,
-  starNudgeKey,
   sessions,
   credentialPendingSessionIds = EMPTY_CREDENTIAL_SESSION_IDS,
   activeSessionId,
@@ -467,9 +464,6 @@ const WorkspaceSidebarView = ({
       .map((session, index) => [session.id, index + 1])
   )
   const isMac = window.api?.platform === 'darwin'
-  const activeStarNudgeKey = (mobileMode ? isMobileOpen : sidebarToggle?.state !== 'collapsed')
-    ? starNudgeKey
-    : undefined
   const projectMatches = providedProjectMatches ?? matchProjects(otherProjects, projectQuery)
   const visibleProjectMatches = showAllProjects
     ? projectMatches
@@ -1167,11 +1161,6 @@ const WorkspaceSidebarView = ({
                 align="start"
                 className="size-8 rounded-md"
                 onOpen={mobileMode ? onMobileClose : undefined}
-              />
-              <GitHubStarBadge
-                key={activeStarNudgeKey}
-                variant="workspace"
-                nudgeKey={activeStarNudgeKey}
               />
               <NetworkStatusIndicator variant="icon" />
             </div>

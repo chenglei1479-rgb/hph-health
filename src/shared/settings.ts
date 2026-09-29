@@ -537,8 +537,8 @@ export type AppIconVariantInfo = {
 
 // The ordered icon variants shown in Settings. The default (light) leads.
 export const APP_ICON_VARIANT_INFOS: readonly AppIconVariantInfo[] = [
-  { id: 'light', label: 'Light', description: 'The light MedResearch Agent logo.' },
-  { id: 'dark', label: 'Dark', description: 'The dark MedResearch Agent logo.' }
+  { id: 'light', label: 'Light', description: 'The light Deep Research Agent logo.' },
+  { id: 'dark', label: 'Dark', description: 'The dark Deep Research Agent logo.' }
 ]
 
 // Renderer-facing descriptor for one selectable agent framework (built from the main registry).

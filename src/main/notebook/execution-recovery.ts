@@ -34,7 +34,7 @@ export const executionRecoveryContext = (
       : undefined
   const prerequisite =
     retryAfter === 'cleanup-verified'
-      ? 'At failure, cleanup was unverified. The affected runtime can resume after MedResearch Agent verifies cleanup.'
+      ? 'At failure, cleanup was unverified. The affected runtime can resume after Deep Research Agent verifies cleanup.'
       : 'Check that the affected runtime is available before retrying.'
   const effects =
     execution === 'not-started'

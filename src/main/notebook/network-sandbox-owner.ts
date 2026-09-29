@@ -903,7 +903,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
         throw new NotebookRuntimeAccessCancelledError('R access preparation was cancelled.')
       if (isMigrationInProgress())
         throw new Error(
-          'MedResearch Agent is moving your data. Wait for the move to finish before running this.'
+          'Deep Research Agent is moving your data. Wait for the move to finish before running this.'
         )
       diagnostic.phase('data-root-write-wait')
       const result = await withDataRootWrite(async () => {
@@ -942,7 +942,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
           throw new NotebookRuntimeAccessCancelledError('R access preparation was cancelled.')
         if (!this.options.allowRuntimeAccessPrompt)
           throw new Error(
-            'R access requires administrator authorization on the local MedResearch Agent desktop.'
+            'R access requires administrator authorization on the local Deep Research Agent desktop.'
           )
         diagnostic.phase('authorize')
         return {

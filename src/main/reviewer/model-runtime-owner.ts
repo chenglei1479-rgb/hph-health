@@ -76,7 +76,7 @@ class ReviewerModelRuntimeOwner {
     if (this.options.isDataRootHandoffActive?.()) {
       return Promise.reject(
         new Error(
-          'Reviewer cannot start while MedResearch Agent is moving data. Retry after it finishes.'
+          'Reviewer cannot start while Deep Research Agent is moving data. Retry after it finishes.'
         )
       )
     }

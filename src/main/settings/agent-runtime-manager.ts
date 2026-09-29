@@ -1102,7 +1102,7 @@ export class AgentRuntimeManager {
     const adapterPath =
       this.codexDetectDeps.managedAdapterPath ?? managedCodexAdapterEntry(this.configRoot)
     if (!(await this.pathExists(adapterPath))) {
-      throw new Error('MedResearch Agent Codex ACP adapter not found. Install Codex in settings.')
+      throw new Error('Deep Research Agent Codex ACP adapter not found. Install Codex in settings.')
     }
 
     const adapterOutput = await this.codexDetectDeps
@@ -1110,7 +1110,7 @@ export class AgentRuntimeManager {
       .catch(() => undefined)
     const adapterVersion = adapterOutput ? parseCodexVersion(adapterOutput) : undefined
     if (!adapterVersion) {
-      throw new Error('MedResearch Agent could not determine the Codex ACP adapter version.')
+      throw new Error('Deep Research Agent could not determine the Codex ACP adapter version.')
     }
     if (!isSupportedCodexAcpVersion(adapterVersion)) {
       throw new Error(buildUnsupportedCodexAcpVersionMessage(adapterVersion))
@@ -1368,19 +1368,19 @@ export class AgentRuntimeManager {
     const components = await detectCodexComponents(detectDeps, signal)
     let diagnostic: string | undefined
     if (components.nativeCliFound && !components.adapterFound) {
-      diagnostic = `Native Codex ${components.nativeCliVersion} is installed at ${components.nativeCliPath}, but the Codex ACP adapter required by MedResearch Agent is missing.`
+      diagnostic = `Native Codex ${components.nativeCliVersion} is installed at ${components.nativeCliPath}, but the Codex ACP adapter required by Deep Research Agent is missing.`
     } else if (!components.nativeCliFound && components.adapterFound) {
       diagnostic =
         components.adapterFailureReason === 'smoke-test-failed'
           ? `Codex ACP adapter ${components.adapterVersion} is installed at ${components.adapterPath}, but it failed to initialize (native Codex CLI may be missing or incompatible).`
           : components.adapterFailureReason === 'unsupported-version'
-            ? `Codex ACP adapter ${components.adapterVersion} is installed at ${components.adapterPath}, but MedResearch Agent requires ${MINIMUM_CODEX_ACP_VERSION} or later.`
+            ? `Codex ACP adapter ${components.adapterVersion} is installed at ${components.adapterPath}, but Deep Research Agent requires ${MINIMUM_CODEX_ACP_VERSION} or later.`
             : `Codex ACP adapter is installed at ${components.adapterPath}, but version detection failed.`
     } else if (components.nativeCliFound && components.adapterFound) {
       if (components.adapterFailureReason === 'smoke-test-failed') {
         diagnostic = `Both native Codex ${components.nativeCliVersion} and ACP adapter ${components.adapterVersion} are installed, but the adapter failed to initialize with the native CLI.`
       } else if (components.adapterFailureReason === 'unsupported-version') {
-        diagnostic = `Native Codex ${components.nativeCliVersion} and ACP adapter ${components.adapterVersion} are installed, but MedResearch Agent requires ACP adapter ${MINIMUM_CODEX_ACP_VERSION} or later.`
+        diagnostic = `Native Codex ${components.nativeCliVersion} and ACP adapter ${components.adapterVersion} are installed, but Deep Research Agent requires ACP adapter ${MINIMUM_CODEX_ACP_VERSION} or later.`
       } else if (components.adapterFailureReason === 'version-probe-failed') {
         diagnostic = `Native Codex ${components.nativeCliVersion} is installed, and an ACP adapter exists at ${components.adapterPath}, but the adapter's version could not be determined.`
       }

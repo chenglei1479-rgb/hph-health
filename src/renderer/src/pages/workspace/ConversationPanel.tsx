@@ -1025,10 +1025,10 @@ const ConversationPanel = ({
         return
       }
       if (!(await workflows.wslSetup.start())) {
-        onSetComposerError(t('MedResearch Agent could not open the WSL2 setup conversation.'))
+        onSetComposerError(t('Deep Research Agent could not open the WSL2 setup conversation.'))
       }
     } catch {
-      onSetComposerError(t('MedResearch Agent could not open the WSL2 setup conversation.'))
+      onSetComposerError(t('Deep Research Agent could not open the WSL2 setup conversation.'))
     }
   }
 

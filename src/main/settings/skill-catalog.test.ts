@@ -887,7 +887,7 @@ describe('SkillCatalogModule', () => {
     await mkdir(join(bundleRoot, 'customize'), { recursive: true })
     await writeFile(
       join(bundleRoot, 'customize', 'SKILL.md'),
-      '---\nname: customize\ndescription: Customize MedResearch Agent.\n---\n\nCustomize body.'
+      '---\nname: customize\ndescription: Customize Deep Research Agent.\n---\n\nCustomize body.'
     )
     await writeFile(
       join(bundleRoot, 'manifest.json'),

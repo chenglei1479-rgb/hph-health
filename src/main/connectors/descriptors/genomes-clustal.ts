@@ -186,7 +186,7 @@ const submitClustal = async (ctx: ToolContext, params: URLSearchParams): Promise
         headers: {
           accept: 'text/plain, */*',
           'content-type': 'application/x-www-form-urlencoded',
-          'user-agent': 'MedResearch Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
+          'user-agent': 'Deep Research Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
         },
         body: params.toString(),
         signal

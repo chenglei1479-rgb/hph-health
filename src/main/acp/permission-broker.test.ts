@@ -21,7 +21,7 @@ type EmittedPermissionRequest = Parameters<ConstructorParameters<typeof AcpPermi
 const getSessionOptionId = (request: EmittedPermissionRequest): string => {
   const optionId = request.options.find((option) => option.scope === 'session')?.optionId
 
-  if (!optionId) throw new Error('Expected a MedResearch Agent session option')
+  if (!optionId) throw new Error('Expected a Deep Research Agent session option')
   return optionId
 }
 
@@ -1294,7 +1294,7 @@ describe('ACP permission broker', () => {
     })
   })
 
-  it('projects Codex commands to MedResearch Agent once and session scopes', async () => {
+  it('projects Codex commands to Deep Research Agent once and session scopes', async () => {
     const emitted: EmittedPermissionRequest[] = []
     const broker = new AcpPermissionBroker((request) => emitted.push(request))
     const context = {

@@ -18,8 +18,9 @@ export const credentialRecoveryMessage = (
           'Silent credential identity checks are not supported by this system credential backend. Startup has stopped to preserve existing encrypted data.'
         )
       : translate(
-          'MedResearch Agent could not safely access existing encrypted data. Unlock the system credential store or restore the original key and profile, then restart. Existing credentials have not been replaced.'
+          'Deep Research Agent could not safely access existing encrypted data. Unlock the system credential store or restore the original key and profile, then restart. Existing credentials have not been replaced.'
         )
-  const code = error.probe?.reason ? `${error.reason} / ${error.probe.reason}` : error.reason
+  const details = [error.probe?.reason, error.diagnosticCode].filter(Boolean)
+  const code = details.length ? `${error.reason} / ${details.join(' / ')}` : error.reason
   return `${title}\n\n${description}\n\nCREDENTIAL_IDENTITY: ${code}`
 }

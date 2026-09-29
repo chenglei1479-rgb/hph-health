@@ -123,7 +123,7 @@ const SkillDetailView = ({
         <SettingsLoadNotice
           state={loadState === 'error' ? 'error' : 'loading'}
           loadingLabel={t('Loading Skill…')}
-          errorMessage={t('MedResearch Agent could not load this Skill.')}
+          errorMessage={t('Deep Research Agent could not load this Skill.')}
           onRetry={retryLoad}
         />
       </div>

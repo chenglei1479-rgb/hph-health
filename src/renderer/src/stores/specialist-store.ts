@@ -97,7 +97,7 @@ type SpecialistStoreActions = {
 
 type SpecialistStore = SpecialistStoreData & SpecialistStoreActions
 
-const SAFE_SPECIALIST_LOAD_ERROR = 'MedResearch Agent could not load Specialists. Retry to continue.'
+const SAFE_SPECIALIST_LOAD_ERROR = 'Deep Research Agent could not load Specialists. Retry to continue.'
 const SPECIALIST_DOCUMENT_READ_ONLY_ERROR =
   'Specialist data must be repaired before changes can be saved.'
 

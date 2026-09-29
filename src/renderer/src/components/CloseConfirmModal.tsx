@@ -96,17 +96,17 @@ export const CloseConfirmModal = ({
         hasDelegatedWork
           ? 'Subagents are still running'
           : isQuitVariant
-            ? 'Quit MedResearch Agent?'
+            ? 'Quit Deep Research Agent?'
             : 'Minimize or quit?'
       )
   const description = isPersistenceFailure
     ? t(
-        'MedResearch Agent could not confirm that all recent changes were saved. Retry saving, or force quit and risk losing recent changes.',
+        'Deep Research Agent could not confirm that all recent changes were saved. Retry saving, or force quit and risk losing recent changes.',
         { ns: 'common' }
       )
     : t(
         hasDelegatedWork
-          ? 'Return to the listed tasks and stop their subagents before quitting MedResearch Agent.'
+          ? 'Return to the listed tasks and stop their subagents before quitting Deep Research Agent.'
           : isQuitVariant
             ? 'Work is still running and will be interrupted if you quit.'
             : 'This app can keep running in the tray, or you can quit.'

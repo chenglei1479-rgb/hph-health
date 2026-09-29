@@ -134,7 +134,7 @@ class LiteratureReferenceResolver {
     const response = await this.fetchFn(`${PUBMED_BASE}?${params.toString()}`, {
       headers: {
         Accept: 'text/plain',
-        'User-Agent': 'MedResearch Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
+        'User-Agent': 'Deep Research Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
       },
       signal: signal
         ? AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
@@ -167,7 +167,7 @@ class LiteratureReferenceResolver {
     const response = await this.fetchFn(sourceUrl, {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'MedResearch Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
+        'User-Agent': 'Deep Research Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
       },
       signal: signal
         ? AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])

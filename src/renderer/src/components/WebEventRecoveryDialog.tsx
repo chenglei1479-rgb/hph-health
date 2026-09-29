@@ -48,22 +48,22 @@ const WebEventRecoveryDialog = ({
   const title = authorizationRequired
     ? t('Pairing required')
     : phase === 'connecting'
-      ? t('Connecting to MedResearch Agent')
+      ? t('Connecting to Deep Research Agent')
       : phase === 'reconnecting'
-        ? t('Reconnecting to MedResearch Agent')
+        ? t('Reconnecting to Deep Research Agent')
         : phase === 'replaying'
           ? t('Restoring missed updates')
           : t('Reload required')
   const description = authorizationRequired
     ? t(
-        'Access authorization has expired. Reopen the Web link from MedResearch Agent on the host computer, or return to the remote access entry page to pair again.'
+        'Access authorization has expired. Reopen the Web link from Deep Research Agent on the host computer, or return to the remote access entry page to pair again.'
       )
     : reloadRequired
       ? t(
-          'MedResearch Agent could not restore a complete, current view. Reload this page to reconnect safely.'
+          'Deep Research Agent could not restore a complete, current view. Reload this page to reconnect safely.'
         )
       : t(
-          'Controls are paused while MedResearch Agent restores updates that may have arrived during the interruption.'
+          'Controls are paused while Deep Research Agent restores updates that may have arrived during the interruption.'
         )
 
   return (
@@ -96,7 +96,7 @@ const WebEventRecoveryDialog = ({
             {!authorizationRequired ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 {t(
-                  'If recovery keeps failing, check that MedResearch Agent is running on the host computer and that both devices are connected. Save a copy of unsent drafts before leaving this page.'
+                  'If recovery keeps failing, check that Deep Research Agent is running on the host computer and that both devices are connected. Save a copy of unsent drafts before leaving this page.'
                 )}
               </p>
             ) : null}

@@ -15,7 +15,7 @@ import { withTimeoutSignal } from '../request-policy'
 // pathway, only notFound groups by identifier), so per-identifier pathway membership is obtained by
 // submitting each found identifier on its own — which also yields that identifier's own statistics.
 const BASE = 'https://reactome.org/AnalysisService'
-const USER_AGENT = 'MedResearch Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
+const USER_AGENT = 'Deep Research Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
 const HTTP_TIMEOUT_MS = 30_000
 
 const ID_TYPES = new Set(['symbol', 'uniprot'])

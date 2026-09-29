@@ -13,6 +13,7 @@ const EXPECTED_IDS = [
   'openalex_venue_info',
   'arxiv_search',
   'arxiv_get_papers',
+  'crossref_search_works',
   'crossref_get_work',
   'crossref_get_updates',
   'datacite_search_records',
@@ -20,7 +21,7 @@ const EXPECTED_IDS = [
 ]
 
 describe('literature / aggregate', () => {
-  it('exposes exactly the 13 Literature Graph tools in order', () => {
+  it('exposes exactly the 14 Literature Graph tools in order', () => {
     expect(LITERATURE_TOOLS.map((t) => t.id)).toEqual(EXPECTED_IDS)
   })
 

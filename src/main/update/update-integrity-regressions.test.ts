@@ -171,7 +171,7 @@ it('omits a Linux estimate when the updater package format is unknown and the fe
   updater.emit('update-available', {
     version: '1.1.0',
     files: [
-      { url: 'MedResearch Agent-1.1.0-x64.AppImage', size: 300 },
+      { url: 'Deep Research Agent-1.1.0-x64.AppImage', size: 300 },
       { url: 'open-science_1.1.0_amd64.deb', size: 200 }
     ]
   })

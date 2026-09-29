@@ -94,11 +94,11 @@ const recoveryCopy = (
           )
     case 'wsl_dependency_install_failed':
       return t(
-        'MedResearch Agent could not install the missing Linux dependencies. Check the distribution’s package manager, then try again.'
+        'Deep Research Agent could not install the missing Linux dependencies. Check the distribution’s package manager, then try again.'
       )
     case 'wsl_dependency_install_unconfirmed':
       return t(
-        'MedResearch Agent could not confirm that the missing Linux dependencies were installed. Check again before retrying.'
+        'Deep Research Agent could not confirm that the missing Linux dependencies were installed. Check again before retrying.'
       )
     case 'wsl_dependency_install_not_allowed':
       return t(
@@ -114,7 +114,7 @@ const recoveryCopy = (
       )
     case 'wsl_install_journal_unavailable':
       return t(
-        'MedResearch Agent could not safely record the installation. No new installation command was started.'
+        'Deep Research Agent could not safely record the installation. No new installation command was started.'
       )
     case 'wsl_network_mode_unsupported':
       return t('Set WSL networkingMode to mirrored, shut down WSL, then check again.')
@@ -123,7 +123,7 @@ const recoveryCopy = (
     case 'wsl_workspace_not_local':
     case 'wsl_workspace_not_ntfs':
     case 'wsl_workspace_volume_unavailable':
-      return t('Move the MedResearch Agent data folder to a local NTFS drive, then check again.')
+      return t('Move the app data folder to a local NTFS drive, then check again.')
     default:
       return t('Check again, or solve this setup issue in a conversation.')
   }
@@ -183,7 +183,7 @@ const installFailureTitle = (failure: InstallFailure, t: Translate): string => {
     case 'uac-cancelled':
       return t('WSL2 installation was cancelled in Windows.')
     case 'spawn-failed':
-      return t('MedResearch Agent could not start the WSL2 installer.')
+      return t('Deep Research Agent could not start the WSL2 installer.')
     case 'unknown':
       return t('Windows did not confirm the WSL2 installation result.')
   }
@@ -575,13 +575,13 @@ export const WslLocalShellSection = ({
               }
               title={
                 shellSwitchFailed
-                  ? t('MedResearch Agent could not finish changing the Shell runtime.')
+                  ? t('Deep Research Agent could not finish changing the Shell runtime.')
                   : t('WSL2 Bash Preview is unavailable.')
               }
               description={
                 shellSwitchFailed
                   ? t(
-                      'Restart MedResearch Agent before running another Shell command, then try the switch again.'
+                      'Restart Deep Research Agent before running another Shell command, then try the switch again.'
                     )
                   : t('Switch to PowerShell to continue with Shell commands.')
               }
@@ -665,7 +665,7 @@ export const WslLocalShellSection = ({
           tone="amber"
           title={statusCopy(snapshot, t)}
           description={t(
-            'Windows will ask for administrator approval. MedResearch Agent installs only the WSL2 platform, without a distribution.'
+            'Windows will ask for administrator approval. Deep Research Agent installs only the WSL2 platform, without a distribution.'
           )}
           errorCode={operationErrorReference(snapshot)}
           diagnosticsLabel={t('Diagnostics')}
@@ -733,7 +733,7 @@ export const WslLocalShellSection = ({
           : t('Local Shell · WSL2 Bash Preview')
       }
       description={t(
-        'Choose the exact WSL2 distribution and non-root Linux user MedResearch Agent should verify. Selection alone never enables WSL2 Bash.'
+        'Choose the exact WSL2 distribution and non-root Linux user Deep Research Agent should verify. Selection alone never enables WSL2 Bash.'
       )}
       action={
         <Button
@@ -813,7 +813,7 @@ export const WslLocalShellSection = ({
             </Button>
             <p className="mt-2 text-xs text-muted-foreground">
               {t(
-                'Finish the distribution’s username and password prompts in the terminal. MedResearch Agent never enters credentials for you.'
+                'Finish the distribution’s username and password prompts in the terminal. Deep Research Agent never enters credentials for you.'
               )}
             </p>
           </div>
@@ -929,9 +929,9 @@ export const WslLocalShellSection = ({
               role="alert"
               icon={CircleX}
               tone="red"
-              title={t('MedResearch Agent could not finish changing the Shell runtime.')}
+              title={t('Deep Research Agent could not finish changing the Shell runtime.')}
               description={t(
-                'Restart MedResearch Agent before running another Shell command, then try the switch again.'
+                'Restart Deep Research Agent before running another Shell command, then try the switch again.'
               )}
               diagnosticsLabel={t('Diagnostics')}
               primaryButton={{
@@ -975,7 +975,7 @@ export const WslLocalShellSection = ({
                 role="alert"
                 icon={CircleX}
                 tone="red"
-                title={t('MedResearch Agent could not prepare the WSL2 setup conversation.')}
+                title={t('Deep Research Agent could not prepare the WSL2 setup conversation.')}
                 description={t('Check the WSL2 status again, then retry the conversation setup.')}
                 primaryButton={{
                   label: t('Try again'),
@@ -990,7 +990,7 @@ export const WslLocalShellSection = ({
         open={confirmDependencyInstall}
         title={t('Install missing Linux dependencies?')}
         description={t(
-          'MedResearch Agent will run a one-time root installation in {{distro}} for missing Linux packages only. It will not change sudoers, and {{user}} will remain the selected non-root user for everyday and future runs.',
+          'Deep Research Agent will run a one-time root installation in {{distro}} for missing Linux packages only. It will not change sudoers, and {{user}} will remain the selected non-root user for everyday and future runs.',
           {
             distro: snapshot.selection?.distro ?? '',
             user: snapshot.selection?.user ?? ''

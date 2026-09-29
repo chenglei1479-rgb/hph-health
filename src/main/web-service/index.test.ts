@@ -23,16 +23,16 @@ describe('parseWebModeOptions', () => {
 
   it('rejects invalid ports', () => {
     expect(() => parseWebModeOptions(['electron', '--serve=nope'], {})).toThrow(
-      'Invalid MedResearch Agent web port'
+      'Invalid Deep Research Agent web port'
     )
     expect(() => parseWebModeOptions(['electron', '--serve=44100abc'], {})).toThrow(
-      'Invalid MedResearch Agent web port'
+      'Invalid Deep Research Agent web port'
     )
     expect(() => parseWebModeOptions(['electron', '--serve='], {})).toThrow(
-      'Invalid MedResearch Agent web port'
+      'Invalid Deep Research Agent web port'
     )
     expect(() => parseWebModeOptions(['electron'], { OPEN_SCIENCE_WEB_PORT: '44100xyz' })).toThrow(
-      'Invalid MedResearch Agent web port'
+      'Invalid Deep Research Agent web port'
     )
   })
 })

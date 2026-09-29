@@ -19,7 +19,7 @@ const createModule = async (
     preferences: new SettingsPreferencesModule(
       repository,
       () => now,
-      () => join(root, 'MedResearch Agent')
+      () => join(root, 'Deep Research Agent')
     ),
     repository
   }
@@ -37,7 +37,7 @@ describe('SettingsPreferencesModule', () => {
     const complete = await preferences.markOnboardingComplete()
     const persisted = JSON.parse(await readFile(join(roots.at(-1)!, 'settings.json'), 'utf8'))
     expect(complete).toMatchObject({
-      dataRoot: join(roots.at(-1)!, 'MedResearch Agent'),
+      dataRoot: join(roots.at(-1)!, 'Deep Research Agent'),
       onboardingCompletedAt: 3000
     })
     expect(persisted).toMatchObject({ dataRoot: complete.dataRoot, onboardingCompletedAt: 3000 })
@@ -45,7 +45,7 @@ describe('SettingsPreferencesModule', () => {
 
   it('does not mark completion or recreate a saved root removed during onboarding', async () => {
     const { preferences, repository } = await createModule()
-    const selected = join(roots.at(-1)!, 'MedResearch Agent')
+    const selected = join(roots.at(-1)!, 'Deep Research Agent')
     await repository.setDataRoot({ dataRoot: selected })
     await expect(preferences.markOnboardingComplete()).rejects.toThrow(/missing/)
     expect((await repository.getSettings()).onboardingCompletedAt).toBeUndefined()

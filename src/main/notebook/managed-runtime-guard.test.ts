@@ -345,7 +345,7 @@ describe('protectManagedRuntimeWrites', () => {
   })
 
   it('keeps an absolute executable with shell metacharacters in one sandbox argv element', () => {
-    const executable = '/Applications/MedResearch Agent; touch injected.app/Contents/MacOS/MedResearch Agent'
+    const executable = '/Applications/Deep Research Agent; touch injected.app/Contents/MacOS/Deep Research Agent'
     const protectedInvocation = protectManagedRuntimeWrites(
       { executable, args: ['--inspect'] },
       '/tmp/open-science/runtime',

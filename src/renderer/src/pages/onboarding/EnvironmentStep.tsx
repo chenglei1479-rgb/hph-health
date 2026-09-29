@@ -12,6 +12,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
+import { APP } from '../../../../shared/app-config'
 import { EnvironmentSetupCard } from './EnvironmentSetupCard'
 
 type EnvironmentStepProps = {
@@ -64,7 +65,9 @@ const EnvironmentStep = ({
           </Button>
         </CardAction>
         <CardDescription className="text-xs leading-5">
-          {t('MedResearch Agent confirms its core requirements before your first research session.')}
+          {t('{{appName}} checks its core requirements before your first research session.', {
+            appName: APP.name
+          })}
         </CardDescription>
       </CardHeader>
       <Separator className="bg-border-200" />

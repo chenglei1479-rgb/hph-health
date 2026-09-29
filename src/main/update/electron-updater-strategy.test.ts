@@ -55,7 +55,7 @@ class FakeUpdater extends EventEmitter {
     this.emit('update-available', {
       version: '0.3.0',
       releaseNotes: 'notes',
-      files: [{ url: 'https://cdn/MedResearch Agent-0.3.0.zip', size: 10000 }]
+      files: [{ url: 'https://cdn/Deep Research Agent-0.3.0.zip', size: 10000 }]
     })
   })
   downloadUpdate = vi.fn((token?: FakeToken): Promise<void> => {
@@ -303,7 +303,7 @@ describe('ElectronUpdaterStrategy', () => {
         updater.emit('update-available', {
           version: '0.3.0',
           releaseNotes: 'notes',
-          files: [{ url: 'https://cdn/MedResearch Agent-0.3.0.zip', size: 10000 }]
+          files: [{ url: 'https://cdn/Deep Research Agent-0.3.0.zip', size: 10000 }]
         })
         return
       }
@@ -364,7 +364,7 @@ describe('ElectronUpdaterStrategy', () => {
         updater.emit('update-available', {
           version: '0.4.0',
           releaseNotes: 'newer notes',
-          files: [{ url: 'https://cdn/MedResearch Agent-0.4.0.zip', size: 12000 }]
+          files: [{ url: 'https://cdn/Deep Research Agent-0.4.0.zip', size: 12000 }]
         })
       })
       const available = await strategy.check()

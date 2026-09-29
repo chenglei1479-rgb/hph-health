@@ -532,7 +532,7 @@ const isMcpPermission = (
   )
 }
 
-// MedResearch Agent owns per-session grants, so Codex approvals omit options that grant persistent
+// Deep Research Agent owns per-session grants, so Codex approvals omit options that grant persistent
 // (cross-session) access outside the app's visible, revocable grant model.
 const projectPermissionOptions = (
   params: RequestPermissionRequest,
@@ -973,7 +973,7 @@ class AcpPermissionBroker {
       toolCallId: `app-approval:${requestId}`,
       title: input.title,
       appOwned: true,
-      providerToolName: 'MedResearch Agent',
+      providerToolName: 'Deep Research Agent',
       rawInput: input.rawInput,
       options: input.options.map((option) => ({ ...option }))
     }
@@ -1453,7 +1453,7 @@ class AcpPermissionBroker {
         return true
       }
 
-      // Legacy Session grants are owned by MedResearch Agent. The Agent receives only its one-shot option.
+      // Legacy Session grants are owned by Deep Research Agent. The Agent receives only its one-shot option.
       if (pending.categoryKey) {
         this.rememberSessionGrant(pending.request, pending.categoryKey, response.optionId)
       }
@@ -1559,7 +1559,7 @@ class AcpPermissionBroker {
     return request.options.find((option) => option.scope === 'once')?.optionId
   }
 
-  // Records the category when the user picks MedResearch Agent's synthetic session scope.
+  // Records the category when the user picks Deep Research Agent's synthetic session scope.
   private rememberSessionGrant(
     request: AcpPermissionRequest,
     categoryKey: string,

@@ -106,6 +106,7 @@ const MIME_TYPES: Record<string, string> = {
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -113,7 +114,15 @@ const MIME_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2'
 }
 
-const COMPRESSIBLE_EXTENSIONS = new Set(['.css', '.html', '.js', '.mjs', '.json', '.svg'])
+const COMPRESSIBLE_EXTENSIONS = new Set([
+  '.css',
+  '.html',
+  '.js',
+  '.mjs',
+  '.json',
+  '.webmanifest',
+  '.svg'
+])
 
 type WebServerOptions = {
   host: string
@@ -1352,7 +1361,10 @@ const serveStatic = async (
       ...STATIC_RESPONSE_SECURITY_HEADERS,
       'content-type': MIME_TYPES[extension] ?? 'application/octet-stream',
       'content-length': String(body.byteLength),
-      'cache-control': filePath.endsWith('index.html') ? 'no-store' : 'public, max-age=31536000',
+      'cache-control':
+        filePath.endsWith('index.html') || extension === '.webmanifest'
+          ? 'no-store'
+          : 'public, max-age=31536000',
       'x-content-type-options': 'nosniff',
       ...(canCompress ? { vary: 'Accept-Encoding' } : {}),
       ...(body !== content ? { 'content-encoding': 'gzip' } : {})

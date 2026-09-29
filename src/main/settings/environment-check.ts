@@ -61,7 +61,7 @@ const platformLabel = (platform: NodeJS.Platform): string => {
 }
 
 // Writes and removes a uniquely-named sentinel inside the exact directory used by the managed
-// runtime. This verifies the permission MedResearch Agent actually needs without requesting admin access
+// runtime. This verifies the permission Deep Research Agent actually needs without requesting admin access
 // or touching a system-owned installation directory.
 const verifyStorageAccess = async (storageRoot: string): Promise<void> => {
   await mkdir(storageRoot, { recursive: true })
@@ -212,7 +212,7 @@ const runEnvironmentCheck = async ({
         id: 'storage',
         label: 'App storage permission',
         status: 'passed',
-        summary: 'MedResearch Agent can write to its private data folder.',
+        summary: 'Deep Research Agent can write to its private data folder.',
         detail: storageRoot,
         presentation: { kind: 'storage-writable' }
       }))
@@ -220,7 +220,7 @@ const runEnvironmentCheck = async ({
         id: 'storage',
         label: 'App storage permission',
         status: 'failed',
-        summary: 'MedResearch Agent cannot write to its private data folder.',
+        summary: 'Deep Research Agent cannot write to its private data folder.',
         detail:
           error instanceof Error
             ? `${storageRoot} — ${error.message}`

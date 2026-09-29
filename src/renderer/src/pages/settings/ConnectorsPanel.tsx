@@ -592,7 +592,7 @@ export function ConnectorsPanel({
         <SettingsLoadNotice
           state={catalogState === 'error' ? 'error' : 'loading'}
           loadingLabel={t('Loading Connectors…')}
-          errorMessage={t('MedResearch Agent could not load Connectors.')}
+          errorMessage={t('Deep Research Agent could not load Connectors.')}
           onRetry={retryCatalog}
         />
       </div>
@@ -605,7 +605,7 @@ export function ConnectorsPanel({
         <SettingsLoadNotice
           state="error"
           loadingLabel={t('Loading Connectors…')}
-          errorMessage={t('MedResearch Agent could not load Connectors.')}
+          errorMessage={t('Deep Research Agent could not load Connectors.')}
           onRetry={retryCatalog}
           className="mb-4"
         />

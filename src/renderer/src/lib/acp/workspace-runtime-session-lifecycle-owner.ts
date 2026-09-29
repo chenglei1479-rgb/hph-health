@@ -489,7 +489,7 @@ const recoverContextOverflowWorkspaceSession = async (
         projectId: session.projectId,
         permissionProfile: session.permissionProfile ?? DEFAULT_PERMISSION_PROFILE,
         // Native compaction retained its own framework-authored summary. Only a replacement session needs
-        // MedResearch Agent to replay the prior transcript into its first prompt.
+        // Deep Research Agent to replay the prior transcript into its first prompt.
         forceHistoryReplay: !nativeCompacted,
         allowCompactionRecovery: true,
         supportsImageInput,

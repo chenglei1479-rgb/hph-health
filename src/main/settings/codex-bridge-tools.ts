@@ -72,7 +72,7 @@ const LIBRARY_CORE_TOOLS: ResponsesBridgeNamespacedTool[] = [
   tool(
     LITERATURE_LIBRARY_MCP_SERVER_NAME,
     LITERATURE_LIBRARY_SEARCH_TOOL_NAME,
-    "Browse or search the user's MedResearch Agent Literature Library. Scope defaults to the trusted current Project.",
+    "Browse or search the user's Deep Research Agent Literature Library. Scope defaults to the trusted current Project.",
     z.object({
       query: z.string().trim().min(1).max(2_000).optional(),
       scope: libraryScope.optional(),
@@ -218,7 +218,7 @@ const ARTIFACT_TOOLS: ResponsesBridgeNamespacedTool[] = [
   tool(
     ARTIFACT_MCP_SERVER_NAME,
     'write_artifact_file',
-    'Attach a generated image, chart, report, data export, or archive to the current MedResearch Agent response. The file must already exist before using a localPath source.',
+    'Attach a generated image, chart, report, data export, or archive to the current Deep Research Agent response. The file must already exist before using a localPath source.',
     z.object(writeArtifactFileToolSchema)
   )
 ]
@@ -229,7 +229,7 @@ const notebookTools = (options: NotebookToolEnvironmentOptions): ResponsesBridge
     name: definition.name,
     description:
       definition.name === 'notebook_execute'
-        ? `${definition.description} For MedResearch Agent data connectors, the Python code MUST call host.mcp(server, method, arguments). Never use requests, urllib, httpx, curl, or a raw upstream API for connector data; those bypass app permissions, credentials, and rate limits. Codex MCP resource-list tools are not connector discovery.`
+        ? `${definition.description} For Deep Research Agent data connectors, the Python code MUST call host.mcp(server, method, arguments). Never use requests, urllib, httpx, curl, or a raw upstream API for connector data; those bypass app permissions, credentials, and rate limits. Codex MCP resource-list tools are not connector discovery.`
         : definition.description,
     parameters: jsonSchema(z.object(definition.inputSchema))
   }))

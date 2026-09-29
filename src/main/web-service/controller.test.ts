@@ -104,7 +104,7 @@ const makeController = (
     }),
     appInfo: () => ({
       appPath: '/fake/app',
-      appName: 'MedResearch Agent',
+      appName: 'Deep Research Agent',
       appVersion: '9.9.9',
       versions: { electron: 'e', chrome: 'c', node: 'n' },
       pid: 4242
@@ -300,7 +300,7 @@ describe('createWebServiceController', () => {
     const result = await h.controller.ensureStarted(44100, { attached: false })
 
     expect(result.url).toBe('http://127.0.0.1:44100/?token=tok-123')
-    expect(log.info).toHaveBeenCalledWith('MedResearch Agent Web: http://127.0.0.1:44100/', {
+    expect(log.info).toHaveBeenCalledWith('Deep Research Agent Web: http://127.0.0.1:44100/', {
       host: '127.0.0.1',
       port: 44100,
       attached: false
@@ -600,7 +600,7 @@ describe('createWebServiceController', () => {
       expect(tasks.getRun('run-interrupted')).toMatchObject({
         status: 'failed',
         failureCode: 'process_restarted',
-        error: 'Run interrupted because MedResearch Agent restarted.'
+        error: 'Run interrupted because Deep Research Agent restarted.'
       })
       await expect(tasks.cancelRun('run-interrupted')).resolves.toMatchObject({
         status: 'failed',

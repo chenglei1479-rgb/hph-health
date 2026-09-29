@@ -253,7 +253,7 @@ export const classifyDataRoot = async (
       return {
         kind: 'invalid',
         error:
-          'Network folders are not supported as the MedResearch Agent data location on Windows. Choose a folder on a local drive.'
+          'Network folders are not supported for the app data location on Windows. Choose a folder on a local drive.'
       }
     }
     if (!capabilities.supportsHardLinks) {
@@ -349,7 +349,7 @@ export const classifyDataRoot = async (
     return {
       kind: 'invalid',
       error:
-        "MedResearch Agent can't write to this folder. Make sure you have permission to it — on macOS, grant access when prompted, or pick a folder inside your home directory."
+        "The app can't write to this folder. Make sure you have permission to it — on macOS, grant access when prompted, or pick a folder inside your home directory."
     }
   }
 
@@ -436,12 +436,12 @@ export const classifyDataRoot = async (
     return {
       kind: 'invalid',
       error:
-        'The new data location contains runtime data that MedResearch Agent cannot safely replace. Choose another location or remove that data first.'
+        'The new data location contains runtime data that the app cannot safely replace. Choose another location or remove that data first.'
     }
 
   return {
     kind: 'invalid',
-    error: 'A different folder named MedResearch Agent already exists here. Choose another location.'
+    error: 'A folder with the existing app data name already exists here. Choose another location.'
   }
 }
 
@@ -460,7 +460,7 @@ export const validateNewDataRoot = async (
   if (result.kind === 'adopt') {
     return {
       ok: false,
-      error: 'The selected folder already contains MedResearch Agent data. Pick an empty folder.'
+      error: 'The selected folder already contains app data. Pick an empty folder.'
     }
   }
   if (result.kind === 'recover') {
@@ -688,7 +688,7 @@ export const runDataRootMigration = async (
     return {
       ok: false,
       error:
-        'The new data location contains runtime data that MedResearch Agent cannot safely replace. Choose another location or remove that data first.'
+        'The new data location contains runtime data that the app cannot safely replace. Choose another location or remove that data first.'
     }
   }
   let targetRuntimeCacheClean = true
@@ -710,7 +710,7 @@ export const runDataRootMigration = async (
     return {
       ok: false,
       error:
-        'The new data location contains a Notebook cache that MedResearch Agent cannot safely replace. Choose another location or remove that cache first.'
+        'The new data location contains a Notebook cache that the app cannot safely replace. Choose another location or remove that cache first.'
     }
   }
   try {
@@ -749,7 +749,7 @@ export const runDataRootMigration = async (
     return {
       ok: false,
       error:
-        'The new data location contains runtime data that MedResearch Agent cannot safely replace. Choose another location or remove that data first.'
+        'The new data location contains runtime data that the app cannot safely replace. Choose another location or remove that data first.'
     }
   }
 

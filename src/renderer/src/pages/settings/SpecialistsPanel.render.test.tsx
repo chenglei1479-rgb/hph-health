@@ -217,7 +217,7 @@ describe('SpecialistsPanel', () => {
     })
 
     expect(document.body.textContent).toContain(
-      'MedResearch Agent could not load Specialists. Retry to continue.'
+      'Deep Research Agent could not load Specialists. Retry to continue.'
     )
     expect(document.body.textContent).not.toContain('Loading…')
 
@@ -1055,7 +1055,7 @@ describe('SpecialistsPanel', () => {
     },
     {
       code: 'recovery-failed' as const,
-      copy: 'MedResearch Agent could not recover an earlier package operation. Restart the app before trying again.',
+      copy: 'Deep Research Agent could not recover an earlier package operation. Restart the app before trying again.',
       action: 'Open data folder'
     },
     {
@@ -1289,7 +1289,7 @@ describe('SpecialistsPanel', () => {
       modifiedSinceImport: false,
       marketplaceProvenance: {
         sourceId: 'official',
-        publisher: 'MedResearch Agent',
+        publisher: 'Deep Research Agent',
         version: '1.0.1'
       },
       importBaseline: {
@@ -1324,7 +1324,7 @@ describe('SpecialistsPanel', () => {
     )
     expect(marketplaceGroup?.textContent).toContain('RNA Reviewer')
     expect(document.body.textContent).toContain('Marketplace')
-    expect(document.body.textContent).toContain('Publisher: MedResearch Agent')
+    expect(document.body.textContent).toContain('Publisher: Deep Research Agent')
     expect(document.body.textContent).toContain('Version 1.0.1')
     expect(document.body.textContent).not.toContain('Unchanged locally')
     expect(document.body.textContent).not.toContain('Imported ZIP')
@@ -1345,7 +1345,7 @@ describe('SpecialistsPanel', () => {
       modifiedSinceImport: false,
       marketplaceProvenance: {
         sourceId: 'official',
-        publisher: 'MedResearch Agent',
+        publisher: 'Deep Research Agent',
         version: '1.0.0'
       }
     }
@@ -2098,7 +2098,7 @@ describe('SpecialistsPanel', () => {
       packageVersion: '1.0.0',
       marketplaceProvenance: {
         sourceId: 'official',
-        publisher: 'MedResearch Agent',
+        publisher: 'Deep Research Agent',
         version: '1.0.0'
       }
     }
@@ -2124,12 +2124,12 @@ describe('SpecialistsPanel', () => {
         specialists: [
           {
             sourceId: 'official',
-            sourceName: 'MedResearch Agent Marketplace',
+            sourceName: 'Deep Research Agent Marketplace',
             sourceTrust: 'official',
             id: managed.id,
             displayName: managed.name,
             summary: managed.description,
-            publisher: { id: 'open-science', name: 'MedResearch Agent' },
+            publisher: { id: 'open-science', name: 'Deep Research Agent' },
             version: '1.1.0',
             installedVersion: '1.0.0',
             updateAvailable: true
@@ -2472,7 +2472,7 @@ describe('S04 explicit Specialist refresh controls', () => {
       useSpecialistStore.setState(
         scenario === 'read failure'
           ? {
-              loadError: 'MedResearch Agent could not load Specialists. Retry to continue.'
+              loadError: 'Deep Research Agent could not load Specialists. Retry to continue.'
             }
           : {
               integrity: {

@@ -1,5 +1,5 @@
 import { fieldErrorClassName } from '@/components/ui/notice-chrome'
-/* Hallmark · component: named credential editor · genre: modern-minimal · theme: MedResearch Agent
+/* Hallmark · component: named credential editor · genre: modern-minimal · theme: Deep Research Agent
  * states: default · hover · focus · active · disabled · loading · error · success
  * contrast: project semantic tokens
  */

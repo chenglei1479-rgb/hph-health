@@ -150,7 +150,7 @@ const createAppTray = (opts: {
     rebuildMenu()
     trayMenuRefreshers.set(tray, rebuildMenu)
 
-    tray.setToolTip(headlessWeb ? 'MedResearch Agent (Web)' : 'MedResearch Agent')
+    tray.setToolTip(headlessWeb ? 'Deep Research Agent (Web)' : 'Deep Research Agent')
 
     const primaryAction = (): void => {
       if (headlessWeb) void opts.onOpenWeb!()

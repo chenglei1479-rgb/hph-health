@@ -64,7 +64,7 @@ const installFixture = async (
     dataRoot,
     registries: ['https://registry.example.test'],
     platform: 'darwin',
-    execPath: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+    execPath: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
     fetchJson: async (url) => {
       expect(url).toBe('https://registry.example.test/@tencent-ai%2Fcodebuddy-code')
       return {
@@ -113,7 +113,7 @@ describe('managed CodeBuddy runtime', () => {
     ).toContain('codebuddy')
     expect(await readFile(binary, 'utf8')).toContain('ELECTRON_RUN_AS_NODE=1')
     expect(await readFile(binary, 'utf8')).toContain(
-      "'/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent'"
+      "'/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent'"
     )
     expect(isManagedCodeBuddyPath(binary, dataRoot)).toBe(true)
     expect(onEvent).toHaveBeenCalledWith({

@@ -163,7 +163,7 @@ export function ComputeAddForm({ onCreated, onCancel }: ComputeAddFormProps): Re
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between gap-2">
             <label htmlFor="compute-details" className="text-sm font-medium text-foreground">
-              {t('Anything MedResearch Agent should know? (optional)')}
+              {t('Anything Deep Research Agent should know? (optional)')}
             </label>
             <span
               className={`text-xs ${detailsTooLong ? 'text-destructive' : 'text-muted-foreground'}`}

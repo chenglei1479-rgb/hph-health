@@ -1517,7 +1517,7 @@ const ArtifactProvenancePanel = ({
   const editSummary = isUserEdit ? (
     <div className="space-y-1.5 text-xs text-text-300">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span>{t('Edited in MedResearch Agent')}</span>
+        <span>{t('Edited in Deep Research Agent')}</span>
         {basedOnVersionId && basedOnVersionNumber !== undefined ? (
           <button
             type="button"
@@ -2055,7 +2055,7 @@ const ArtifactProvenancePanel = ({
               <p>
                 {provenance.messages.reason === 'message-snapshot-unsupported'
                   ? t(
-                      'This message snapshot was created by a newer version of MedResearch Agent. Update the app to view it.'
+                      'This message snapshot was created by a newer version of Deep Research Agent. Update the app to view it.'
                     )
                   : t(
                       'The immutable message snapshot is not available for this version ({{reason}}).',
@@ -2242,7 +2242,7 @@ const ArtifactProvenancePanel = ({
                             </p>
                             <p>
                               {t(
-                                'Downloads include MedResearch Agent metadata and tool-native lock files.'
+                                'Downloads include Deep Research Agent metadata and tool-native lock files.'
                               )}
                             </p>
                           </div>

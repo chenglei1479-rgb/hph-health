@@ -8,7 +8,7 @@ describe('official Specialist Marketplace source', () => {
   it('pins the production repository, CDN fallback order, and Ed25519 key', () => {
     expect(OFFICIAL_MARKETPLACE_SOURCE).toEqual({
       id: 'openscience-official',
-      name: 'MedResearch Agent Specialist Marketplace',
+      name: 'Deep Research Agent Specialist Marketplace',
       repositoryUrl: 'https://github.com/aipoch/openscience-specialist-marketplace',
       ref: 'published',
       metadataBaseUrls: [

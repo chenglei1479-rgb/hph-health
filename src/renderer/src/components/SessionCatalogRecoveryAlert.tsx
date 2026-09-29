@@ -54,7 +54,7 @@ const SessionCatalogRecoveryAlert = ({
       <SessionPersistenceAlert
         title={t('Project recovery needs attention')}
         message={t(
-          'MedResearch Agent could not finish recovering a previous project deletion. Retry recovery before archiving or deleting projects.'
+          'Deep Research Agent could not finish recovering a previous project deletion. Retry recovery before archiving or deleting projects.'
         )}
         inline={inline}
         onRetry={onRetry}
@@ -66,13 +66,13 @@ const SessionCatalogRecoveryAlert = ({
   if (recovery.kind === 'unsupported-version') {
     return (
       <SessionPersistenceAlert
-        title={t('MedResearch Agent update required')}
+        title={t('Deep Research Agent update required')}
         message={t(
-          '{{count}} saved conversations require a newer version of MedResearch Agent. Update the app before creating or saving conversations so those files stay unchanged.',
+          '{{count}} saved conversations require a newer version of Deep Research Agent. Update the app before creating or saving conversations so those files stay unchanged.',
           {
             count: recovery.affectedFileCount,
             defaultValue_one:
-              'A saved conversation requires a newer version of MedResearch Agent. Update the app before creating or saving conversations so those files stay unchanged.'
+              'A saved conversation requires a newer version of Deep Research Agent. Update the app before creating or saving conversations so those files stay unchanged.'
           }
         )}
         variant="warning"

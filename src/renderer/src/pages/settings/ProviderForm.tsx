@@ -473,7 +473,7 @@ const ProviderForm = ({
           <p className="text-sm font-medium text-foreground">{t('One xAI login, every agent')}</p>
           <p className="text-xs text-muted-foreground">
             {t(
-              'Save this provider, then sign in from its card with a device code. MedResearch Agent securely refreshes the login and exposes Messages, Chat Completions, and Responses locally.'
+              'Save this provider, then sign in from its card with a device code. Deep Research Agent securely refreshes the login and exposes Messages, Chat Completions, and Responses locally.'
             )}
           </p>
           <code className="font-mono text-xs text-muted-foreground">
@@ -496,22 +496,22 @@ const ProviderForm = ({
                   <span>
                     {value.type === 'codex-shared'
                       ? t('Import existing Codex sign-in')
-                      : t('Sign in with MedResearch Agent')}
+                      : t('Sign in with Deep Research Agent')}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="codex-shared">{t('Import existing Codex sign-in')}</SelectItem>
-                  <SelectItem value="codex-isolated">{t('Sign in with MedResearch Agent')}</SelectItem>
+                  <SelectItem value="codex-isolated">{t('Sign in with Deep Research Agent')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <p className="text-xs text-muted-foreground">
               {value.type === 'codex-shared'
                 ? t(
-                    "Copies Codex authentication and, when compatible, the active provider's non-secret loopback route into MedResearch Agent app data. Other global config, Skills and sessions are not imported."
+                    "Copies Codex authentication and, when compatible, the active provider's non-secret loopback route into Deep Research Agent app data. Other global config, Skills and sessions are not imported."
                   )
                 : t(
-                    'Stores a separate Codex login in MedResearch Agent app data without changing your Codex CLI profile.'
+                    'Stores a separate Codex login in Deep Research Agent app data without changing your Codex CLI profile.'
                   )}
             </p>
           </div>
@@ -591,7 +591,7 @@ const ProviderForm = ({
                     'Recommended. Uses your existing Claude login from ~/.claude. Sign in once via browser OAuth and use across all Claude tools.'
                   )
                 : t(
-                    'Advanced. Signs in through the browser and stores a separate Claude login in MedResearch Agent, completely isolated from your personal Claude profile.'
+                    'Advanced. Signs in through the browser and stores a separate Claude login in Deep Research Agent, completely isolated from your personal Claude profile.'
                   )}
             </p>
             <div className="space-y-1.5 border-t border-border-200 pt-3">
@@ -846,7 +846,7 @@ const ProviderForm = ({
                           <>
                             <span className="block">
                               {t(
-                                'MedResearch Agent maps five relative strengths onto the exact levels accepted by this model.'
+                                'Deep Research Agent maps five relative strengths onto the exact levels accepted by this model.'
                               )}
                             </span>
                             <span className="mt-1 block">
@@ -1009,7 +1009,7 @@ const ProviderForm = ({
               </p>
               <p>
                 {t(
-                  'MedResearch Agent keeps legacy model names after refresh so existing sessions can continue using their original model IDs.'
+                  'Deep Research Agent keeps legacy model names after refresh so existing sessions can continue using their original model IDs.'
                 )}
               </p>
               <ExternalTextLink href="https://api-docs.deepseek.com/quick_start/pricing/">

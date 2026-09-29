@@ -122,7 +122,7 @@ process.stdout.write('ready')`
     expect(result.run_summary.delta.pass_rate).toBe(0.5)
   })
 
-  it('validates the MedResearch Agent frontmatter contract without third-party packages', () => {
+  it('validates the Deep Research Agent frontmatter contract without third-party packages', () => {
     const { validateSkillDocument } = require(join(skillRoot, 'scripts', 'index.js')) as {
       validateSkillDocument(
         content: string,

@@ -1619,7 +1619,7 @@ const validateLedger = (
     const newerMigration = ledger[manifest.length]!
     throw new DatabaseMigrationError(
       'database_newer_than_app',
-      'The database was updated by a newer version of MedResearch Agent.',
+      'The database was updated by a newer version of Deep Research Agent.',
       false,
       newerMigration.id
     )
@@ -1698,7 +1698,7 @@ const classifyDatabaseFailure = (
   if (phase !== 'migration') {
     return new DatabaseMigrationError(
       'database_open_failed',
-      'MedResearch Agent could not open its database.',
+      'Deep Research Agent could not open its database.',
       transient,
       undefined,
       { cause: error }
@@ -1706,7 +1706,7 @@ const classifyDatabaseFailure = (
   }
   return new DatabaseMigrationError(
     'database_migration_failed',
-    'MedResearch Agent could not update its database. Existing data was not reset.',
+    'Deep Research Agent could not update its database. Existing data was not reset.',
     transient,
     migrationId,
     { cause: error }

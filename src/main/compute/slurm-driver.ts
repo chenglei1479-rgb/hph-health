@@ -53,14 +53,14 @@ const terminalStates = new Set([
 ])
 
 const APP_OWNED_DIRECTIVE_GUIDANCE: Record<string, string> = {
-  output: 'Remove it; MedResearch Agent captures scheduler stdout in the Job result.',
-  error: 'Remove it; MedResearch Agent captures scheduler stderr in the Job result.',
-  chdir: 'Remove it; MedResearch Agent submits from the managed Job working directory.',
-  'job-name': 'Remove it; MedResearch Agent assigns the Job name used for tracking and recovery.',
-  array: 'Submit independent MedResearch Agent Jobs instead.',
+  output: 'Remove it; Deep Research Agent captures scheduler stdout in the Job result.',
+  error: 'Remove it; Deep Research Agent captures scheduler stderr in the Job result.',
+  chdir: 'Remove it; Deep Research Agent submits from the managed Job working directory.',
+  'job-name': 'Remove it; Deep Research Agent assigns the Job name used for tracking and recovery.',
+  array: 'Submit independent Deep Research Agent Jobs instead.',
   wrap: 'Put the workload command directly after the #SBATCH header instead.',
   clusters: 'Choose a Compute Host for the intended Slurm cluster instead.',
-  'het-group': 'Submit each workload as a separate MedResearch Agent Job instead.'
+  'het-group': 'Submit each workload as a separate Deep Research Agent Job instead.'
 }
 
 const appOwnedDirective = (line: string): { option: string; guidance: string } | undefined => {
@@ -98,7 +98,7 @@ const commandDirectives = (
     if (owned) {
       throw new SlurmDriverError(
         'invalid_resources',
-        `Slurm directive ${owned.option} is managed by MedResearch Agent. ${owned.guidance}`
+        `Slurm directive ${owned.option} is managed by Deep Research Agent. ${owned.guidance}`
       )
     }
     if (
@@ -270,7 +270,7 @@ export const dispatchSlurmJob = async (
     if (recovered) return recovered
     throw new SlurmDriverError(
       'host_unreachable',
-      'Slurm submission may have succeeded, but its job id was not confirmed. MedResearch Agent will look up candidates and recover only a job whose recorded workdir proves ownership; it will not submit a duplicate.'
+      'Slurm submission may have succeeded, but its job id was not confirmed. Deep Research Agent will look up candidates and recover only a job whose recorded workdir proves ownership; it will not submit a duplicate.'
     )
   }
   return handleFor(workdir, id)

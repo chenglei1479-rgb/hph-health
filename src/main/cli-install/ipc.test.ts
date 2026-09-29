@@ -103,13 +103,13 @@ describe('registerCliInstallIpcHandlers', () => {
   })
 
   it('reconciles an AppImage launcher through the owner and logs failures', async () => {
-    vi.stubEnv('APPIMAGE', '/home/u/MedResearch Agent.AppImage')
+    vi.stubEnv('APPIMAGE', '/home/u/Deep Research Agent.AppImage')
     launcher.ensureCliLauncherCurrent.mockRejectedValue(new Error('read only'))
 
     await expect(createCliCommandOwner().ensureCurrent()).resolves.toBeUndefined()
 
     expect(launcher.ensureCliLauncherCurrent).toHaveBeenCalledWith(
-      expect.objectContaining({ appImagePath: '/home/u/MedResearch Agent.AppImage' })
+      expect.objectContaining({ appImagePath: '/home/u/Deep Research Agent.AppImage' })
     )
     expect(logger.error).toHaveBeenCalledWith(
       'cli launcher reconciliation failed',

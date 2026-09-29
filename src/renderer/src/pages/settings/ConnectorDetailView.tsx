@@ -155,7 +155,7 @@ const ConnectorDetailView = ({
         <SettingsLoadNotice
           state={loadState === 'error' ? 'error' : 'loading'}
           loadingLabel={t('Loading Connector…')}
-          errorMessage={t('MedResearch Agent could not load this Connector.')}
+          errorMessage={t('Deep Research Agent could not load this Connector.')}
           onRetry={retryLoad}
         />
       </div>

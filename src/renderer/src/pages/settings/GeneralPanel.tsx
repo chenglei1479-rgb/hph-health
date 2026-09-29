@@ -17,7 +17,6 @@ import { ExternalTextLink } from '@/components/ExternalTextLink'
 import { DiagnosticDetails } from '@/components/diagnostic-details'
 import { LanguageSelect } from '@/components/LanguageControls'
 import { ThemeSegmentedControl } from '@/components/ThemeControls'
-import { GitHubStarBadge } from '@/components/GitHubStarBadge'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -43,12 +42,11 @@ import type {
   NotificationDesktopAvailability,
   NotificationTestResult
 } from '../../../../shared/notifications'
-import { AppIconSection } from './AppIconSection'
 import { AppVersionSection } from './AppVersionSection'
+import { AppIconSection } from './AppIconSection'
 import { SettingsRow, SettingsSection, SettingsToggle } from './SettingsLayout'
 
-// Community entry links (Discord, X) share the GitHub badge's compact look so the row reads as one
-// set of "connect with the project" actions.
+// Community entry links share a compact button style so the row reads as one group of project links.
 const socialLinkClassName =
   'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2 text-xs font-medium text-muted-foreground transition-colors duration-150 motion-reduce:transition-none hover:bg-muted hover:text-foreground'
 
@@ -465,9 +463,7 @@ const GeneralPanel = (): React.JSX.Element => {
         </p>
       </SettingsSection>
 
-      {/* macOS uses the adaptive build/icon.icon for the installed app and binds its live Dock icon
-          to Theme. Hiding the independent picker prevents two controls from racing each other. */}
-      {!isMac ? <AppIconSection /> : null}
+      <AppIconSection />
 
       <SettingsSection
         data-settings-anchor="general.diagnostics"
@@ -648,12 +644,11 @@ const GeneralPanel = (): React.JSX.Element => {
       <SettingsSection
         title={t('Enjoying {{appName}}?', { appName: APP.name })}
         description={t(
-          "It's free and open source. Star it on GitHub to help others find it, and come build in public with us on Discord and X. Thanks for being here."
+          'Connect with the open-source community and follow project updates on Discord and X.'
         )}
         aria-label={t('Community')}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <GitHubStarBadge className="border border-border" />
           <a
             href={APP.links.discord}
             target="_blank"

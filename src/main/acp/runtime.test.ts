@@ -11235,7 +11235,7 @@ describe('ACP runtime session management', () => {
         },
         sessionOptions: {
           [OPEN_SCIENCE_SKILL_RUNTIME_SESSION_OPTION]: {
-            command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+            command: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
             entryPath: '/app/out/main/index.js',
             root: runtimeRoot
           }
@@ -11244,7 +11244,7 @@ describe('ACP runtime session management', () => {
       notebook: {
         projectId: 'project-1',
         mcpEntryPath: '/app/out/main/index.js',
-        mcpCommand: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+        mcpCommand: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
         getRpcConnection
       },
       skills: {
@@ -11276,7 +11276,7 @@ describe('ACP runtime session management', () => {
       'open-science-notebook'
     ])
     expect(selectSkills).toHaveBeenCalledOnce()
-    expect(fakeAgent.prompts[0].text).toContain('already loaded by MedResearch Agent')
+    expect(fakeAgent.prompts[0].text).toContain('already loaded by Deep Research Agent')
     expect(fakeAgent.prompts[0].text).toContain('PUBMED_RUNTIME_ROUTE_SENTINEL')
     expect(fakeAgent.prompts[0].text).not.toContain(
       'Before any Notebook or Connector call, call `mcp__skills__load_skill`'
@@ -13352,7 +13352,7 @@ describe('ACP runtime session management', () => {
           const sessionOptionId = request.options.find(
             (option) => option.scope === 'session'
           )?.optionId
-          if (!sessionOptionId) throw new Error('Missing MedResearch Agent session permission option')
+          if (!sessionOptionId) throw new Error('Missing Deep Research Agent session permission option')
           runtime.respondToPermission({
             requestId: request.requestId,
             optionId: sessionOptionId
@@ -13631,7 +13631,7 @@ describe('ACP runtime session management', () => {
             (option) => option.scope === 'session'
           )?.optionId
           if (!sessionOptionId) {
-            throw new Error('Expected MedResearch Agent to provide a conversation permission option')
+            throw new Error('Expected Deep Research Agent to provide a conversation permission option')
           }
           runtime.respondToPermission({
             requestId: request.requestId,
@@ -14588,7 +14588,7 @@ describe('ACP runtime session management', () => {
           const sessionOptionId = request.options.find(
             (option) => option.scope === 'session'
           )?.optionId
-          if (!sessionOptionId) throw new Error('Missing MedResearch Agent conversation option')
+          if (!sessionOptionId) throw new Error('Missing Deep Research Agent conversation option')
           runtime.respondToPermission({ requestId: request.requestId, optionId: sessionOptionId })
         }
       }
@@ -20629,7 +20629,7 @@ describe('ACP runtime session management', () => {
         ),
         { numTurns: 2, origin: 'human' },
         // Unknown future origins remain eligible so a newly introduced user-driven lane does not
-        // silently under-report model turns until MedResearch Agent knows its name.
+        // silently under-report model turns until Deep Research Agent knows its name.
         { numTurns: 3, origin: 'future-user-lane' }
       ],
       onPrompt: () => ({
@@ -20771,7 +20771,7 @@ describe('ACP runtime session management', () => {
       onPrompt: () => ({
         stopReason: 'end_turn',
         // A Responses bridge still returns standard ACP usage even when its adapter does not publish
-        // MedResearch Agent's private whole-turn metadata. The footer must not become entirely unavailable.
+        // Deep Research Agent's private whole-turn metadata. The footer must not become entirely unavailable.
         usage: {
           totalTokens: 27,
           inputTokens: 19,
@@ -22055,7 +22055,7 @@ describe('ACP runtime session management', () => {
         dataRoot: '/Users/example/.open-science',
         projectId: 'default-project',
         mcpEntryPath: '/app/out/main/index.js',
-        mcpCommand: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent'
+        mcpCommand: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent'
       }
     })
 
@@ -22069,7 +22069,7 @@ describe('ACP runtime session management', () => {
     expect(fakeAgent.newSessions[0].mcpServers).toHaveLength(1)
     expect(fakeAgent.newSessions[0].mcpServers[0]).toMatchObject({
       name: 'open-science-artifacts',
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
       args: ['/app/out/main/index.js', '--open-science-artifact-mcp']
     })
     expect(
@@ -22174,7 +22174,7 @@ describe('ACP runtime session management', () => {
       notebook: {
         projectId: 'default-project',
         mcpEntryPath: '/app/out/main/index.js',
-        mcpCommand: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+        mcpCommand: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
         getRpcConnection,
         registerSessionAlias: (aliasSessionId, sessionId) => {
           aliases.push({ aliasSessionId, sessionId })
@@ -22192,7 +22192,7 @@ describe('ACP runtime session management', () => {
     expect(fakeAgent.newSessions[0].mcpServers).toHaveLength(1)
     expect(fakeAgent.newSessions[0].mcpServers[0]).toMatchObject({
       name: 'open-science-notebook',
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
       args: ['/app/out/main/index.js', '--open-science-notebook-mcp']
     })
     expect(
@@ -22261,7 +22261,7 @@ describe('ACP runtime session management', () => {
       spawnAgent: () => asAgentProcess(process),
       skillImport: {
         mcpEntryPath: '/app/out/main/index.js',
-        mcpCommand: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+        mcpCommand: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
         getRpcConnection,
         registerSessionAlias: (aliasSessionId, sessionId) => {
           aliases.push({ aliasSessionId, sessionId })
@@ -22274,7 +22274,7 @@ describe('ACP runtime session management', () => {
     expect(fakeAgent.newSessions[0].mcpServers).toHaveLength(1)
     expect(fakeAgent.newSessions[0].mcpServers[0]).toMatchObject({
       name: 'open-science-skills',
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent',
       args: ['/app/out/main/index.js', '--open-science-skill-import-mcp']
     })
     const aliasSessionId = getEnvValue(
@@ -22381,7 +22381,7 @@ describe('ACP runtime session management', () => {
         dataRoot: '/Users/example/.open-science',
         projectId: 'default-project',
         mcpEntryPath: '/app/out/main/index.js',
-        mcpCommand: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent'
+        mcpCommand: '/Applications/Deep Research Agent.app/Contents/MacOS/Deep Research Agent'
       }
     })
 
@@ -22482,7 +22482,7 @@ describe('ACP runtime session management', () => {
     expect(fakeAgent.newSessions[0]._meta).toMatchObject({
       systemPrompt: {
         append: expect.stringContaining(
-          'If a Connector result from MedResearch Agent includes an `artifact_id`, do not call `mcp__open-science-artifacts__write_artifact_file` again for that file.'
+          'If a Connector result from Deep Research Agent includes an `artifact_id`, do not call `mcp__open-science-artifacts__write_artifact_file` again for that file.'
         )
       }
     })

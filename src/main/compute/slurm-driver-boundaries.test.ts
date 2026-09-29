@@ -129,7 +129,7 @@ describe('Slurm lifecycle boundaries', () => {
     expect(() =>
       buildSlurmScript(job('#SBATCH --time=00:05:00 --job-name=custom\necho done'), handle.workdir)
     ).toThrow(
-      'Slurm directive --job-name is managed by MedResearch Agent. Remove it; MedResearch Agent assigns the Job name used for tracking and recovery.'
+      'Slurm directive --job-name is managed by Deep Research Agent. Remove it; Deep Research Agent assigns the Job name used for tracking and recovery.'
     )
   })
 

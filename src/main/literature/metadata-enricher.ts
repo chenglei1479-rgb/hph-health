@@ -508,7 +508,7 @@ class LiteratureMetadataEnricher {
     const response = await this.fetchFn(sourceUrl, {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'MedResearch Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
+        'User-Agent': 'Deep Research Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
       },
       signal: AbortSignal.timeout(15_000)
     })

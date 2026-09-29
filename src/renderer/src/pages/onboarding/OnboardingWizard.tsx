@@ -16,6 +16,7 @@ import {
 } from '../settings/provider-form-value'
 import { AgentStep } from './AgentStep'
 import { EnvironmentStep } from './EnvironmentStep'
+import { JapanResearchGuide } from './JapanResearchGuide'
 import { LocationStep, type LocationDraft } from './LocationStep'
 import { NotebookStep } from './NotebookStep'
 import { onboardingErrorMessage } from './onboarding-error'
@@ -435,7 +436,7 @@ const OnboardingWizard = ({
           rel="noreferrer"
           className="font-serif text-[26px] font-medium leading-none tracking-[-0.02em] text-text-000 transition-colors duration-150 ease-out hover:text-text-100"
         >
-          MedResearch Agent
+          {APP.name}
         </a>
 
         <div
@@ -456,6 +457,7 @@ const OnboardingWizard = ({
               )}
             </p>
             <OnboardingProgress step={step} />
+            <JapanResearchGuide />
           </section>
 
           {/* One stable work surface keeps the setup steps aligned as their content changes. */}

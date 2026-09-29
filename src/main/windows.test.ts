@@ -222,7 +222,7 @@ vi.mock('electron', () => ({
 
 vi.mock('@electron-toolkit/utils', () => ({ is: { dev: false } }))
 
-vi.mock('../../resources/icon.png?asset', () => ({ default: 'icon-path' }))
+vi.mock('../../resources/icon-light.ico?asset', () => ({ default: 'icon-path' }))
 
 const { createMainWindow } = await import('./windows')
 

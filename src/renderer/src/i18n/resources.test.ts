@@ -826,7 +826,7 @@ describe('dynamic counted lookup translations', () => {
 
 const PRODUCT_TECHNICAL_TERM_LOCALES = TRANSLATED
 const RETAINED_PRODUCT_GLOSSARY = [
-  { term: 'MedResearch Agent', source: /\bMedResearch Agent\b/ },
+  { term: 'Deep Research Agent', source: /\bDeep Research Agent\b/ },
   { term: 'Anthropic', source: /\bAnthropic\b/ },
   { term: 'Claude', source: /\bClaude\b/ },
   { term: 'Codex', source: /\bCodex\b/ },
@@ -846,12 +846,12 @@ const RETAINED_PRODUCT_GLOSSARY = [
 ]
 
 const RETAINED_PRODUCT_GLOSSARY_EXCEPTIONS = new Set([
-  'ru: MedResearch Agent could not load Specialists. Retry to continue.: MedResearch Agent',
-  'ru: MedResearch Agent could not load projects. Retry to continue.: MedResearch Agent',
-  'ru: MedResearch Agent could not load Connectors.: MedResearch Agent',
-  'ru: MedResearch Agent could not load Skills.: MedResearch Agent',
-  'ru: MedResearch Agent could not load this Connector.: MedResearch Agent',
-  'ru: MedResearch Agent could not load this Skill.: MedResearch Agent'
+  'ru: Deep Research Agent could not load Specialists. Retry to continue.: Deep Research Agent',
+  'ru: Deep Research Agent could not load projects. Retry to continue.: Deep Research Agent',
+  'ru: Deep Research Agent could not load Connectors.: Deep Research Agent',
+  'ru: Deep Research Agent could not load Skills.: Deep Research Agent',
+  'ru: Deep Research Agent could not load this Connector.: Deep Research Agent',
+  'ru: Deep Research Agent could not load this Skill.: Deep Research Agent'
 ])
 
 const retainedProductGlossaryOffenders = (
@@ -970,7 +970,7 @@ describe('mandatory product glossary', () => {
       sessionNotebook: de.renderer['Session notebook'],
       drivenAgent:
         de.renderer[
-          'Pick the agent MedResearch Agent drives, then install it. Only this agent needs to be installed to continue.'
+          'Pick the agent Deep Research Agent drives, then install it. Only this agent needs to be installed to continue.'
         ]
     }).toEqual({
       minimizeToTray: 'In den Infobereich minimieren',
@@ -1007,7 +1007,7 @@ describe('mandatory product glossary', () => {
         'Durch das Senden dieses bearbeiteten Prompts wird ab hier ein neuer Branch erstellt. Die folgende {{count}} Interaktion bleibt über die Versionssteuerung der Nachricht verfügbar.',
       sessionNotebook: 'Sitzungs-Notebook',
       drivenAgent:
-        'Wählen Sie den Agenten aus, den MedResearch Agent steuert, und installieren Sie ihn. Nur dieser Agent muss installiert sein, um fortzufahren.'
+        'Wählen Sie den Agenten aus, den Deep Research Agent steuert, und installieren Sie ihn. Nur dieser Agent muss installiert sein, um fortzufahren.'
     })
   })
 
@@ -1496,14 +1496,14 @@ describe('mandatory product glossary', () => {
           'This job remains visible, but automatic result analysis is paused because its saved state is incompatible.'
         ],
       loadFailed: de.renderer['Unable to load remote jobs.'],
-      harvestPending: de.renderer['Harvest pending. MedResearch Agent will retry automatically.'],
+      harvestPending: de.renderer['Harvest pending. Deep Research Agent will retry automatically.'],
       harvestFailed: de.renderer['Harvest failed. Remote files were left untouched.'],
       queued: de.renderer['Waiting in queue'],
       submitting: de.renderer.Submitting,
       recoveryWarning: de.renderer['Remote job recovery needs attention'],
       recoveryDetail:
         de.renderer[
-          'MedResearch Agent could not check saved remote jobs. Retry to restore pending result analysis.'
+          'Deep Research Agent could not check saved remote jobs. Retry to restore pending result analysis.'
         ],
       completed: de.renderer['Remote job completed'],
       analysisStarted: de.renderer['Analysis started automatically']
@@ -1517,14 +1517,14 @@ describe('mandatory product glossary', () => {
         'Dieser Job bleibt sichtbar, aber die automatische Ergebnisanalyse ist angehalten, da sich sein gespeicherter Zustand nicht verarbeiten lässt.',
       loadFailed: 'Remote-Jobs konnten nicht geladen werden.',
       harvestPending:
-        'Der Ergebnisabruf steht noch aus. MedResearch Agent versucht es automatisch erneut.',
+        'Der Ergebnisabruf steht noch aus. Deep Research Agent versucht es automatisch erneut.',
       harvestFailed:
         'Der Ergebnisabruf ist fehlgeschlagen. Die Remote-Dateien wurden nicht verändert.',
       queued: 'In der Warteschlange',
       submitting: 'Wird übermittelt',
       recoveryWarning: 'Problem bei der Wiederherstellung von Remote-Jobs',
       recoveryDetail:
-        'MedResearch Agent konnte die gespeicherten Remote-Jobs nicht prüfen. Versuchen Sie es erneut, um die ausstehende Ergebnisanalyse fortzusetzen.',
+        'Deep Research Agent konnte die gespeicherten Remote-Jobs nicht prüfen. Versuchen Sie es erneut, um die ausstehende Ergebnisanalyse fortzusetzen.',
       completed: 'Remote-Job abgeschlossen',
       analysisStarted: 'Analyse automatisch gestartet'
     })
@@ -1545,7 +1545,7 @@ describe('mandatory product glossary', () => {
         ],
       researchData:
         de.renderer[
-          'Your research data is in a hidden folder. Moving it into a visible MedResearch Agent folder makes it easy to find and back up — your settings and history stay where they are.'
+          'Your research data is in a hidden folder. Moving it into a visible Deep Research Agent folder makes it easy to find and back up — your settings and history stay where they are.'
         ],
       credentials:
         de.renderer[
@@ -1564,7 +1564,7 @@ describe('mandatory product glossary', () => {
       dataFolder:
         'Ihr Datenordner <path>{{path}}</path> wurde nicht gefunden. Möglicherweise wurde er gelöscht oder befindet sich auf einem nicht verbundenen Laufwerk.',
       researchData:
-        'Ihre Forschungsdaten befinden sich in einem versteckten Ordner. Wenn Sie sie in einen sichtbaren MedResearch Agent-Ordner verschieben, lassen sie sich leichter finden und sichern. Ihre Einstellungen und Ihr Verlauf bleiben am bisherigen Speicherort.',
+        'Ihre Forschungsdaten befinden sich in einem versteckten Ordner. Wenn Sie sie in einen sichtbaren Deep Research Agent-Ordner verschieben, lassen sie sich leichter finden und sichern. Ihre Einstellungen und Ihr Verlauf bleiben am bisherigen Speicherort.',
       credentials:
         'Die gespeicherten Anmeldedaten können auf diesem Gerät nicht verwendet werden. Ersetzen Sie sie und testen Sie die Verbindung erneut.',
       remoteCommand:
@@ -1631,7 +1631,7 @@ describe('mandatory product glossary', () => {
 
     expect(
       de.renderer[
-        "MedResearch Agent will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>"
+        "Deep Research Agent will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>"
       ]
     ).toContain('<em>sein Inhalt wird nicht mit Ihren aktuellen Daten zusammengeführt</em>')
     expect(
@@ -1735,7 +1735,7 @@ describe('mandatory product glossary', () => {
       readFileSync(join(__dirname, '..', '..', '..', '..', 'package.json'), 'utf8')
     ) as { version: string }
     // The banner assertion tracks the repo version instead of a hardcoded bump target.
-    expect(readme).toContain(`AIPOCH MedResearch Agent v${rootPackage.version} veröffentlicht`)
+    expect(readme).toContain(`AIPOCH Deep Research Agent v${rootPackage.version} veröffentlicht`)
   })
 
   const chosenGenericTerms = {
@@ -1970,7 +1970,7 @@ describe('mandatory product glossary', () => {
   })
 
   it('rejects a native Subagent compound translated as generic Agent', () => {
-    const key = 'Return to the running tasks and stop their subagents before quitting MedResearch Agent.'
+    const key = 'Return to the running tasks and stop their subagents before quitting Deep Research Agent.'
 
     expect(
       subagentGlossaryOffenders('zh-Hans', [[key, '请返回正在运行的任务并停止其智能体。']])
@@ -2073,8 +2073,8 @@ describe('mandatory product glossary', () => {
       'Search specialists': 'Rechercher des spécialistes',
       'Search specialists…': 'Rechercher des spécialistes…',
       'Specialist delete': 'Suppression du spécialiste',
-      'Remote.It is a third-party service. MedResearch Agent only calls its user-installed desktop CLI and does not include, redistribute, register, or create an account for it.':
-        "Remote.It est un service tiers. MedResearch Agent utilise uniquement son interface en ligne de commande (CLI) de bureau installée par l'utilisateur ; il n'inclut pas ce logiciel, ne le redistribue pas, ne l'enregistre pas et ne crée aucun compte pour ce service.",
+      'Remote.It is a third-party service. Deep Research Agent only calls its user-installed desktop CLI and does not include, redistribute, register, or create an account for it.':
+        "Remote.It est un service tiers. Deep Research Agent utilise uniquement son interface en ligne de commande (CLI) de bureau installée par l'utilisateur ; il n'inclut pas ce logiciel, ne le redistribue pas, ne l'enregistre pas et ne crée aucun compte pour ce service.",
       'No folders granted yet.': "Aucun accès à un dossier n'a encore été autorisé.",
       "Your home folder itself can't be granted — pick a subfolder.":
         "L'accès ne peut pas être accordé directement au dossier personnel ; choisissez un sous-dossier.",
@@ -2318,7 +2318,7 @@ describe('mandatory product glossary', () => {
 
   it('ko preserves executable names, API identifiers, code spans, and data directory names', () => {
     const patterns = [
-      /\bMedResearch Agent\b/g,
+      /\bDeep Research Agent\b/g,
       /\b[\w.-]+\.(?:ps1|sh|mcp)\b/g,
       /<code>[^<]+<\/code>/g,
       /\bMessages(?= (?:or|또는) Chat Completions\b)/g,
@@ -2718,12 +2718,12 @@ describe('Russian catalog quality', () => {
     ],
     ['Preview uploaded attachment {{name}}', 'Предпросмотр загруженного вложения {{name}}'],
     [
-      "MedResearch Agent will recreate the folder as you use it. Files from the old location won't be available until it's reconnected.",
-      'MedResearch Agent воссоздаст папку при следующем обращении к ней. Файлы из прежнего расположения будут недоступны, пока подключение не восстановится.'
+      "Deep Research Agent will recreate the folder as you use it. Files from the old location won't be available until it's reconnected.",
+      'Deep Research Agent воссоздаст папку при следующем обращении к ней. Файлы из прежнего расположения будут недоступны, пока подключение не восстановится.'
     ],
     [
-      'MedResearch Agent could not finish recovering a previous project deletion. Retry recovery before archiving or deleting projects.',
-      'MedResearch Agent не удалось завершить восстановление после предыдущего удаления проекта. Повторите восстановление перед архивированием или удалением проектов.'
+      'Deep Research Agent could not finish recovering a previous project deletion. Retry recovery before archiving or deleting projects.',
+      'Deep Research Agent не удалось завершить восстановление после предыдущего удаления проекта. Повторите восстановление перед архивированием или удалением проектов.'
     ],
     ['SSH alias', 'Псевдоним SSH'],
     [
@@ -2792,12 +2792,12 @@ describe('Russian catalog quality', () => {
       'Сохраняет файл как артефакт этого диалога.'
     ],
     [
-      'Access authorization has expired. Reopen the Web link from MedResearch Agent on the host computer, or return to the remote access entry page to pair again.',
-      'Срок действия разрешения на доступ истёк. Снова откройте веб-ссылку из MedResearch Agent на главном компьютере или вернитесь на страницу удалённого доступа для повторного сопряжения.'
+      'Access authorization has expired. Reopen the Web link from Deep Research Agent on the host computer, or return to the remote access entry page to pair again.',
+      'Срок действия разрешения на доступ истёк. Снова откройте веб-ссылку из Deep Research Agent на главном компьютере или вернитесь на страницу удалённого доступа для повторного сопряжения.'
     ],
     [
-      'That folder already contains MedResearch Agent data. Pick an empty folder, or use the default location.',
-      'Эта папка уже содержит данные MedResearch Agent. Выберите пустую папку или используйте расположение по умолчанию.'
+      'That folder already contains Deep Research Agent data. Pick an empty folder, or use the default location.',
+      'Эта папка уже содержит данные Deep Research Agent. Выберите пустую папку или используйте расположение по умолчанию.'
     ],
     [
       'This model is not supported over the Codex Chat Completions bridge. Pick another model for a Codex session.',
@@ -2816,8 +2816,8 @@ describe('Russian catalog quality', () => {
       'Настройте пароль для этого вычислительного узла и повторите попытку.'
     ],
     [
-      'MedResearch Agent maps five relative strengths onto the exact levels accepted by this model.',
-      'MedResearch Agent сопоставляет пять относительных уровней с точными уровнями, поддерживаемыми этой моделью.'
+      'Deep Research Agent maps five relative strengths onto the exact levels accepted by this model.',
+      'Deep Research Agent сопоставляет пять относительных уровней с точными уровнями, поддерживаемыми этой моделью.'
     ],
     [
       'Installed Skill · v{{version}} · include it to bundle a copy.',
@@ -2828,8 +2828,8 @@ describe('Russian catalog quality', () => {
       'Скачано артефактов: {{downloaded}} из {{total}}. Ошибок: {{failed}}.'
     ],
     [
-      'MedResearch Agent exited before this copy finished. Your current data is untouched. Discard the incomplete copy to use this location again.',
-      'MedResearch Agent завершил работу до окончания копирования. Текущие данные не изменены. Удалите неполную копию, чтобы снова использовать это расположение.'
+      'Deep Research Agent exited before this copy finished. Your current data is untouched. Discard the incomplete copy to use this location again.',
+      'Deep Research Agent завершил работу до окончания копирования. Текущие данные не изменены. Удалите неполную копию, чтобы снова использовать это расположение.'
     ],
     ['Publisher: {{publisher}}', 'Издатель: {{publisher}}'],
     ['{{agent}} cannot be accessed.', '{{agent}} недоступен.'],
@@ -2878,8 +2878,8 @@ describe('Russian catalog quality', () => {
       'Инструменты песочницы, которые запускаются без предпросмотра'
     ],
     [
-      'Your research data is in a hidden folder. Moving it into a visible MedResearch Agent folder makes it easy to find and back up — your settings and history stay where they are.',
-      'Ваши исследовательские данные находятся в скрытой папке. Перемещение их в видимую папку MedResearch Agent упростит поиск и резервное копирование — настройки и история останутся на прежнем месте.'
+      'Your research data is in a hidden folder. Moving it into a visible Deep Research Agent folder makes it easy to find and back up — your settings and history stay where they are.',
+      'Ваши исследовательские данные находятся в скрытой папке. Перемещение их в видимую папку Deep Research Agent упростит поиск и резервное копирование — настройки и история останутся на прежнем месте.'
     ],
     ['System Tags stay first', 'Системные теги всегда остаются в начале'],
     ['Reorder {{tag}}', 'Изменить порядок тега {{tag}}'],
@@ -2894,15 +2894,15 @@ describe('Russian catalog quality', () => {
       'Не удалось завершить все фоновые процессы перед обновлением. Повторите попытку.'
     ],
     [
-      'Cancel this update, then use Reveal in Settings → General → Diagnostics to locate the log file. Quit and reopen MedResearch Agent, then try the update again. If the problem returns, review the log for local file paths and give it to a developer or <issueLink>open a GitHub issue</issueLink>.',
-      'Отмените обновление, затем в разделе «Настройки → Общие → Диагностика» нажмите «Показать», чтобы найти файл журнала. Полностью закройте MedResearch Agent, снова откройте приложение и повторите обновление. Если ошибка повторится, проверьте, нет ли в журнале локальных путей к файлам, и передайте его разработчику или <issueLink>создайте обращение на GitHub</issueLink>.'
+      'Cancel this update, then use Reveal in Settings → General → Diagnostics to locate the log file. Quit and reopen Deep Research Agent, then try the update again. If the problem returns, review the log for local file paths and give it to a developer or <issueLink>open a GitHub issue</issueLink>.',
+      'Отмените обновление, затем в разделе «Настройки → Общие → Диагностика» нажмите «Показать», чтобы найти файл журнала. Полностью закройте Deep Research Agent, снова откройте приложение и повторите обновление. Если ошибка повторится, проверьте, нет ли в журнале локальных путей к файлам, и передайте его разработчику или <issueLink>создайте обращение на GitHub</issueLink>.'
     ],
     ['Why this happened', 'Почему это произошло'],
     ['How to fix', 'Как исправить'],
     ['Still stuck? Create an issue for help', 'Проблема не решена? Создать обращение'],
     [
-      'Review and edit the redacted report in MedResearch Agent before opening GitHub.',
-      'Просмотрите и отредактируйте обезличенный отчёт в MedResearch Agent перед открытием GitHub.'
+      'Review and edit the redacted report in Deep Research Agent before opening GitHub.',
+      'Просмотрите и отредактируйте обезличенный отчёт в Deep Research Agent перед открытием GitHub.'
     ],
     ['Skill import menu — 8 states', 'Меню импорта навыков — 8 состояний'],
     ['Import', 'Импортировать'],
@@ -2919,8 +2919,8 @@ describe('Russian catalog quality', () => {
     ['Refresh', 'Обновить'],
     ["Settings panel couldn't be loaded.", 'Не удалось загрузить раздел настроек.'],
     [
-      'Reload MedResearch Agent to try loading this panel again.',
-      'Перезапустите MedResearch Agent, чтобы снова попробовать загрузить этот раздел.'
+      'Reload Deep Research Agent to try loading this panel again.',
+      'Перезапустите Deep Research Agent, чтобы снова попробовать загрузить этот раздел.'
     ],
     ['{{count}} more messages_one', 'Ещё {{count}} сообщение'],
     ['{{count}} more messages_few', 'Ещё {{count}} сообщения'],
@@ -3053,7 +3053,7 @@ describe('Russian catalog quality', () => {
       /\b(?:Claude|Codex) логин/iu,
       /\bAPI ключ/iu,
       /\bMCP инструмент/iu,
-      /MedResearch Agent долж(?:ен|на|но|ны)/iu,
+      /Deep Research Agent долж(?:ен|на|но|ны)/iu,
       /несборн/iu,
       /живые отнош/iu,
       /шаблон вкладки/iu,
@@ -3151,8 +3151,8 @@ describe('Russian catalog quality', () => {
     ['System_language', 'Как в системе'],
     ['System_runtime', 'Системная'],
     [
-      'Pick the agent MedResearch Agent drives, then install it. Only this agent needs to be installed to continue.',
-      'Выберите агента, которым будет управлять MedResearch Agent, затем установите его. Для продолжения достаточно установить только этого агента.'
+      'Pick the agent Deep Research Agent drives, then install it. Only this agent needs to be installed to continue.',
+      'Выберите агента, которым будет управлять Deep Research Agent, затем установите его. Для продолжения достаточно установить только этого агента.'
     ],
     ['Read-only', 'Только чтение'],
     [
@@ -3160,8 +3160,8 @@ describe('Russian catalog quality', () => {
       'Создаёт планы и записывает решения, принятые во время проверки. Это разрешение не утверждает план: каждый план необходимо утверждать отдельно.'
     ],
     [
-      'Remote.It is a third-party service. MedResearch Agent only calls its user-installed desktop CLI and does not include, redistribute, register, or create an account for it.',
-      'Remote.It — сторонний сервис. MedResearch Agent лишь вызывает установленный пользователем настольный CLI-клиент и не включает его в поставку, не распространяет, не регистрирует и не создаёт для него учётную запись.'
+      'Remote.It is a third-party service. Deep Research Agent only calls its user-installed desktop CLI and does not include, redistribute, register, or create an account for it.',
+      'Remote.It — сторонний сервис. Deep Research Agent лишь вызывает установленный пользователем настольный CLI-клиент и не включает его в поставку, не распространяет, не регистрирует и не создаёт для него учётную запись.'
     ],
     ['Incomplete data copy found', 'Обнаружена неполная копия данных'],
     ['Verified data copy found', 'Обнаружена проверенная копия данных'],
@@ -3184,8 +3184,8 @@ describe('Russian catalog quality', () => {
       'Перезапустите приложение, чтобы перейти к новому расположению. До перезапуска ничего не изменится. Чтобы остаться в текущем расположении и удалить копию, выберите «Оставить текущее расположение».'
     ],
     [
-      'This folder already contains MedResearch Agent data. It will be <em>used as-is (not merged)</em> — <em>your current data folder is kept, so you can switch back</em>. The app will restart.',
-      'В этой папке уже есть данные MedResearch Agent. Она будет <em>использована без изменений (без объединения)</em> — <em>текущая папка с данными останется на месте, поэтому к ней можно будет вернуться</em>. Приложение перезапустится.'
+      'This folder already contains Deep Research Agent data. It will be <em>used as-is (not merged)</em> — <em>your current data folder is kept, so you can switch back</em>. The app will restart.',
+      'В этой папке уже есть данные Deep Research Agent. Она будет <em>использована без изменений (без объединения)</em> — <em>текущая папка с данными останется на месте, поэтому к ней можно будет вернуться</em>. Приложение перезапустится.'
     ],
     [
       "Your data folder <path>{{path}}</path> can't be found. It may have been deleted, or it's on a drive that isn't connected.",
@@ -3251,8 +3251,8 @@ describe('Korean safety copy', () => {
       '알림은 다른 앱을 사용하는 동안에만 표시됩니다. 사용자가 취소한 작업과 앱이 자동으로 다시 시도하는 실패는 알림을 표시하지 않습니다. 알림이 처음 표시될 때 운영 체제에서 알림 권한을 요청할 수 있습니다.'
     ],
     [
-      'Remote.It is a third-party service. MedResearch Agent only calls its user-installed desktop CLI and does not include, redistribute, register, or create an account for it.',
-      'Remote.It은 제3자 서비스입니다. MedResearch Agent는 사용자가 설치한 데스크톱 CLI를 호출할 뿐이며, 이를 포함하거나 재배포하지 않고 등록하거나 계정을 생성하지도 않습니다.'
+      'Remote.It is a third-party service. Deep Research Agent only calls its user-installed desktop CLI and does not include, redistribute, register, or create an account for it.',
+      'Remote.It은 제3자 서비스입니다. Deep Research Agent는 사용자가 설치한 데스크톱 CLI를 호출할 뿐이며, 이를 포함하거나 재배포하지 않고 등록하거나 계정을 생성하지도 않습니다.'
     ],
     [
       'This report is posted publicly on GitHub. Edit the error text below to remove anything sensitive before sharing. Your runtime log stays on this device and is never attached automatically.',
@@ -3263,16 +3263,16 @@ describe('Korean safety copy', () => {
       '손상된 대화 {{count}}개를 별도 위치로 옮겼습니다. 영향을 받은 프로젝트 데이터는 상태를 확인할 수 없어 계속 보관할 수 없습니다. 영향을 받은 프로젝트 데이터를 영구 삭제할 수는 있습니다.'
     ],
     [
-      'This will permanently delete "{{name}}" and all of its saved conversations, including any that could not be loaded during recovery. Generated artifacts and uploaded files stored by MedResearch Agent will also be deleted. Files in the project\'s working folder are not deleted. Retained managed Session workspaces remain available in Settings → Storage. This action cannot be undone.',
-      '이 작업을 실행하면 복구 중에 로드하지 못한 대화를 포함하여 “{{name}}”과 저장된 모든 대화가 영구적으로 삭제됩니다. MedResearch Agent가 저장한 생성 아티팩트와 업로드 파일도 삭제됩니다. 프로젝트 작업 폴더의 파일은 삭제되지 않습니다. 보존된 관리형 세션 워크스페이스는 설정 → 저장 공간에서 계속 사용할 수 있습니다. 이 작업은 실행 취소할 수 없습니다.'
+      'This will permanently delete "{{name}}" and all of its saved conversations, including any that could not be loaded during recovery. Generated artifacts and uploaded files stored by Deep Research Agent will also be deleted. Files in the project\'s working folder are not deleted. Retained managed Session workspaces remain available in Settings → Storage. This action cannot be undone.',
+      '이 작업을 실행하면 복구 중에 로드하지 못한 대화를 포함하여 “{{name}}”과 저장된 모든 대화가 영구적으로 삭제됩니다. Deep Research Agent가 저장한 생성 아티팩트와 업로드 파일도 삭제됩니다. 프로젝트 작업 폴더의 파일은 삭제되지 않습니다. 보존된 관리형 세션 워크스페이스는 설정 → 저장 공간에서 계속 사용할 수 있습니다. 이 작업은 실행 취소할 수 없습니다.'
     ],
     [
-      'This will permanently delete "{{name}}" and its {{count}} sessions. Generated artifacts and uploaded files stored by MedResearch Agent will also be deleted. Files in the project\'s working folder are not deleted. Retained managed Session workspaces remain available in Settings → Storage. This action cannot be undone._other',
-      '이 작업을 실행하면 “{{name}}”과 세션 {{count}}개가 영구적으로 삭제됩니다. MedResearch Agent가 저장한 생성 아티팩트와 업로드 파일도 삭제됩니다. 프로젝트 작업 폴더의 파일은 삭제되지 않습니다. 보존된 관리형 세션 워크스페이스는 설정 → 저장 공간에서 계속 사용할 수 있습니다. 이 작업은 실행 취소할 수 없습니다.'
+      'This will permanently delete "{{name}}" and its {{count}} sessions. Generated artifacts and uploaded files stored by Deep Research Agent will also be deleted. Files in the project\'s working folder are not deleted. Retained managed Session workspaces remain available in Settings → Storage. This action cannot be undone._other',
+      '이 작업을 실행하면 “{{name}}”과 세션 {{count}}개가 영구적으로 삭제됩니다. Deep Research Agent가 저장한 생성 아티팩트와 업로드 파일도 삭제됩니다. 프로젝트 작업 폴더의 파일은 삭제되지 않습니다. 보존된 관리형 세션 워크스페이스는 설정 → 저장 공간에서 계속 사용할 수 있습니다. 이 작업은 실행 취소할 수 없습니다.'
     ],
     [
-      'This will permanently delete "{{name}}". Generated artifacts and uploaded files stored by MedResearch Agent will also be deleted. Files in the project\'s working folder are not deleted. Retained managed Session workspaces remain available in Settings → Storage. This action cannot be undone.',
-      '이 작업을 실행하면 “{{name}}”이 영구적으로 삭제됩니다. MedResearch Agent가 저장한 생성 아티팩트와 업로드 파일도 삭제됩니다. 프로젝트 작업 폴더의 파일은 삭제되지 않습니다. 보존된 관리형 세션 워크스페이스는 설정 → 저장 공간에서 계속 사용할 수 있습니다. 이 작업은 실행 취소할 수 없습니다.'
+      'This will permanently delete "{{name}}". Generated artifacts and uploaded files stored by Deep Research Agent will also be deleted. Files in the project\'s working folder are not deleted. Retained managed Session workspaces remain available in Settings → Storage. This action cannot be undone.',
+      '이 작업을 실행하면 “{{name}}”이 영구적으로 삭제됩니다. Deep Research Agent가 저장한 생성 아티팩트와 업로드 파일도 삭제됩니다. 프로젝트 작업 폴더의 파일은 삭제되지 않습니다. 보존된 관리형 세션 워크스페이스는 설정 → 저장 공간에서 계속 사용할 수 있습니다. 이 작업은 실행 취소할 수 없습니다.'
     ],
     [
       'Individual grants remain revocable; Revoke all is disabled until the complete set is known.',
@@ -3375,12 +3375,12 @@ describe('Korean native UI style', () => {
       '현재 데이터</em>과',
       '설명해주세요',
       '에이전트에 표시',
-      'MedResearch Agent 스페셜리스트를',
-      'MedResearch Agent 프로젝트를',
-      'MedResearch Agent 커넥터를',
-      'MedResearch Agent 스킬을',
-      'MedResearch Agent는 커넥터를 로드',
-      'MedResearch Agent는 스킬을 로드',
+      'Deep Research Agent 스페셜리스트를',
+      'Deep Research Agent 프로젝트를',
+      'Deep Research Agent 커넥터를',
+      'Deep Research Agent 스킬을',
+      'Deep Research Agent는 커넥터를 로드',
+      'Deep Research Agent는 스킬을 로드',
       'https://gateway.example/v1.와',
       '호출 커넥터 도구를 원합니다',
       '세션에 대해 에이전트를 중지',
@@ -3391,20 +3391,20 @@ describe('Korean native UI style', () => {
       '자체 포함된',
       '대화 사용하시면',
       '지원되지 않음 파일',
-      'MedResearch Agent 이',
+      'Deep Research Agent 이',
       '모두 스페셜리스트',
       '대형 파일 (',
       '서브에이전트에서 사용됩니다',
-      'MedResearch Agent 전체 현재 보기',
+      'Deep Research Agent 전체 현재 보기',
       '이 기존 검토에는 평가 세부정보',
       '스페셜리스트는 “',
       '새로고침할 수 없습니다 {{',
       '스페셜리스트에 구성됩니다',
       '미리보기 다시 시도해보세요',
       '이에 대한 자유 형식 메모 모델 제공업체',
-      '에이전트 MedResearch Agent 드라이브',
-      '스캔하여 열기 MedResearch Agent',
-      '프록시 환경 MedResearch Agent',
+      '에이전트 Deep Research Agent 드라이브',
+      '스캔하여 열기 Deep Research Agent',
+      '프록시 환경 Deep Research Agent',
       'protocol 뒤에',
       '<lnk>다운로드 Remote.It',
       '미리보기할 수',
@@ -3635,7 +3635,7 @@ describe('Korean binding terminology', () => {
       'Skills and connectors this specialist can use. Anything not chosen here stays invisible and unreachable in its sessions, even when enabled globally.',
       '이 스페셜리스트가 사용할 수 있는 스킬과 커넥터입니다. 여기에서 선택하지 않은 항목은 전역으로 활성화되어 있어도 해당 세션에서 보이지 않으며 접근할 수 없습니다.'
     ],
-    ['Move to MedResearch Agent', 'MedResearch Agent로 이동'],
+    ['Move to Deep Research Agent', 'Deep Research Agent로 이동'],
     ['Official install.ps1', '공식 install.ps1'],
     [
       'Used by host.mcp("{{name}}", …), Specialists, and the generated MCP skill.',
@@ -3717,8 +3717,8 @@ describe('Russian safety copy', () => {
       'Отдельные разрешения по-прежнему можно отзывать; действие «Отозвать все» недоступно, пока не известен полный набор.'
     ],
     [
-      'This message snapshot was created by a newer version of MedResearch Agent. Update the app to view it.',
-      'Этот снимок сообщения создан в более новой версии MedResearch Agent. Обновите приложение, чтобы его просмотреть.'
+      'This message snapshot was created by a newer version of Deep Research Agent. Update the app to view it.',
+      'Этот снимок сообщения создан в более новой версии Deep Research Agent. Обновите приложение, чтобы его просмотреть.'
     ]
   ])('preserves the scope of %s', (key, expected) => {
     expect(catalog('ru')[key]).toBe(expected)
@@ -5016,8 +5016,8 @@ const bareJsxExpressionValues = (source: string): BareCopy[] => {
 // Proper nouns, product names and literal keystrokes. These render identically in every locale, so
 // wrapping them would add a catalog entry that can only ever be copied verbatim.
 const NOT_TRANSLATABLE = new Set([
-  'MedResearch Agent',
-  'MedResearch Agent Remote',
+  'Deep Research Agent',
+  'Deep Research Agent Remote',
   'Remote.It',
   'Discord',
   'GitHub',

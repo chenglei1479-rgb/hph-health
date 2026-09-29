@@ -111,7 +111,7 @@ it.each(['absent', 'existing', 'both', 'development', 'isolated'])(
     expect(inspect).toHaveBeenCalledWith(status.defaultDataRoot)
     await act(async () => {
       const button = Array.from(document.body.querySelectorAll('button')).find((b) =>
-        b.textContent?.includes('Move to MedResearch Agent')
+        b.textContent?.includes('Move data to the default location')
       )!
       button.click()
     })

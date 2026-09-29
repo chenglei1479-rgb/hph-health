@@ -273,16 +273,16 @@ export const projectSafeCodexProviderRoute = (configToml: string): string | unde
   return route ? serializeLegacyCodexProviderRoute(route) : undefined
 }
 
-const IMPORTED_ROUTE_SELECTION_BEGIN = '# MedResearch Agent: begin imported Codex route selection'
-const IMPORTED_ROUTE_SELECTION_END = '# MedResearch Agent: end imported Codex route selection'
-const IMPORTED_ROUTE_PROVIDER_BEGIN = '# MedResearch Agent: begin imported Codex provider'
-const IMPORTED_ROUTE_PROVIDER_END = '# MedResearch Agent: end imported Codex provider'
-const IMPORTED_ROUTE_PRESERVED_LINE = '# MedResearch Agent: preserved Codex config '
+const IMPORTED_ROUTE_SELECTION_BEGIN = '# Deep Research Agent: begin imported Codex route selection'
+const IMPORTED_ROUTE_SELECTION_END = '# Deep Research Agent: end imported Codex route selection'
+const IMPORTED_ROUTE_PROVIDER_BEGIN = '# Deep Research Agent: begin imported Codex provider'
+const IMPORTED_ROUTE_PROVIDER_END = '# Deep Research Agent: end imported Codex provider'
+const IMPORTED_ROUTE_PRESERVED_LINE = '# Deep Research Agent: preserved Codex config '
 const CODEX_FILE_CREDENTIAL_STORE = 'cli_auth_credentials_store = "file"'
-const TRANSPORT_ROUTE_SELECTION_BEGIN = '# MedResearch Agent: begin Codex transport route selection'
-const TRANSPORT_ROUTE_SELECTION_END = '# MedResearch Agent: end Codex transport route selection'
-const TRANSPORT_ROUTE_PROVIDER_BEGIN = '# MedResearch Agent: begin Codex transport provider'
-const TRANSPORT_ROUTE_PROVIDER_END = '# MedResearch Agent: end Codex transport provider'
+const TRANSPORT_ROUTE_SELECTION_BEGIN = '# Deep Research Agent: begin Codex transport route selection'
+const TRANSPORT_ROUTE_SELECTION_END = '# Deep Research Agent: end Codex transport route selection'
+const TRANSPORT_ROUTE_PROVIDER_BEGIN = '# Deep Research Agent: begin Codex transport provider'
+const TRANSPORT_ROUTE_PROVIDER_END = '# Deep Research Agent: end Codex transport provider'
 const CODEX_TRANSPORT_PROVIDER_IDS = [
   'open-science-chatgpt-https',
   'open-science-chatgpt-websocket'
@@ -348,7 +348,7 @@ const serializeCodexFileCredentialStore = (existingConfigToml: string): string =
 // Persisted pre-brand markers remain technical compatibility identities. Match only complete
 // known marker lines; ordinary comments and user TOML values keep their original spelling.
 const legacyMarker = (marker: string): string =>
-  marker.replace('# MedResearch Agent:', '# Open-Science:')
+  marker.replace('# Deep Research Agent:', '# Open-Science:')
 const matchesMarker = (line: string, marker: string): boolean =>
   line === marker || line === legacyMarker(marker)
 
@@ -744,7 +744,7 @@ const readCodexAuthenticationSnapshot = async (
       // (macOS Keychain / Windows Credential Manager / Linux keyring). Name that boundary instead of
       // surfacing a generic import failure that reads like a required second sign-in.
       throw new Error(
-        'MedResearch Agent could not find a file-backed Codex credential to import. Your existing Codex sign-in may be stored in the system credential store, which MedResearch Agent cannot import from. Continue with the MedResearch Agent Codex sign-in instead.'
+        'Deep Research Agent could not find a file-backed Codex credential to import. Your existing Codex sign-in may be stored in the system credential store, which Deep Research Agent cannot import from. Continue with the Deep Research Agent Codex sign-in instead.'
       )
     }
     throw new Error('The selected Codex profile does not contain importable authentication.')
@@ -799,7 +799,7 @@ const writeCodexAuthenticationSnapshot = async (
 
 // Provider setup imports an existing login plus the safe, non-secret subset of its active provider
 // route. Global model defaults, MCP servers, Skills, sessions, memories, hooks, and tokens embedded in
-// provider config remain outside MedResearch Agent.
+// provider config remain outside Deep Research Agent.
 export const importCodexAuthentication = async (
   sourceHome: string,
   destinationHome: string

@@ -220,7 +220,7 @@ const networkApprovalRequest: AcpPermissionRequest = {
   toolCallId: 'app-approval:network-1',
   title: 'Connect to data.example.org?',
   appOwned: true,
-  providerToolName: 'MedResearch Agent',
+  providerToolName: 'Deep Research Agent',
   rawInput: {
     notebookNetworkApproval: {
       hostname: 'data.example.org',
@@ -605,7 +605,7 @@ describe('PermissionApprovalControls', () => {
     )
 
     expect(html).toContain('Artifact save</span>')
-    expect(html).not.toContain('MedResearch Agent Artifacts / Write Artifact File')
+    expect(html).not.toContain('Deep Research Agent Artifacts / Write Artifact File')
     expect(html).toContain('report.md')
   })
 

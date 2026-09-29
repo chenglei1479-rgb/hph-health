@@ -104,7 +104,7 @@ describe('EnvironmentStep', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'passed',
-          summary: 'MedResearch Agent can write to its private data folder.',
+          summary: 'Deep Research Agent can write to its private data folder.',
           detail: '/tmp/de',
           presentation: { kind: 'storage-writable' }
         },
@@ -136,7 +136,7 @@ describe('EnvironmentStep', () => {
     expect(container.textContent).toContain('支持 macOS arm64。')
     expect(container.textContent).toContain('自动设置使用由应用管理的运行时，无需管理员权限。')
     expect(container.textContent).toContain('应用存储权限')
-    expect(container.textContent).toContain('MedResearch Agent 可以写入其专用数据文件夹。')
+    expect(container.textContent).toContain('Deep Research Agent 可以写入其专用数据文件夹。')
     expect(container.textContent).toContain('凭据安全存储')
     expect(container.textContent).toContain('操作系统凭据库可用。')
     expect(container.textContent).toContain('安装所需网络')
@@ -168,7 +168,7 @@ describe('EnvironmentStep', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'failed',
-          summary: 'MedResearch Agent cannot write to its private data folder.',
+          summary: 'Deep Research Agent cannot write to its private data folder.',
           detail: '/locked — EACCES',
           presentation: { kind: 'storage-unwritable' }
         },
@@ -201,7 +201,7 @@ describe('EnvironmentStep', () => {
     )
     expect(container.textContent).toContain('Unsupported platform for managed install')
     expect(container.textContent).toContain(
-      'MedResearch Agent kann nicht in seinen privaten Datenordner schreiben.'
+      'Deep Research Agent kann nicht in seinen privaten Datenordner schreiben.'
     )
     expect(container.textContent).toContain('/locked — EACCES')
     expect(container.textContent).toContain(
@@ -210,7 +210,7 @@ describe('EnvironmentStep', () => {
     expect(container.textContent).toContain(
       'Weder die offizielle Registry noch der für China optimierte Mirror ist erreichbar.'
     )
-    expect(container.textContent).not.toContain('MedResearch Agent cannot write')
+    expect(container.textContent).not.toContain('Deep Research Agent cannot write')
     expect(container.textContent).not.toContain('Neither the official registry')
   })
 

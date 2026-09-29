@@ -451,7 +451,7 @@ describe('settings repository', () => {
       activeProviderId: 'builtin-codex-isolated',
       providers: [
         { id: 'builtin-codex-shared', type: 'codex-shared', name: 'Existing Codex profile' },
-        { id: 'builtin-codex-isolated', type: 'codex-isolated', name: 'MedResearch Agent Codex login' }
+        { id: 'builtin-codex-isolated', type: 'codex-isolated', name: 'Deep Research Agent Codex login' }
       ]
     })
 

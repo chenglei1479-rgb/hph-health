@@ -44,9 +44,9 @@ describe('SkillRegistry', () => {
   it('resolves packaged Skill resources outside app.asar without consulting the cwd', () => {
     expect(
       toUnpackedAsarPath(
-        '/Applications/MedResearch Agent.app/Contents/Resources/app.asar/resources/skills'
+        '/Applications/Deep Research Agent.app/Contents/Resources/app.asar/resources/skills'
       )
-    ).toBe('/Applications/MedResearch Agent.app/Contents/Resources/app.asar.unpacked/resources/skills')
+    ).toBe('/Applications/Deep Research Agent.app/Contents/Resources/app.asar.unpacked/resources/skills')
     expect(toUnpackedAsarPath('/workspace/resources/skills')).toBe('/workspace/resources/skills')
   })
 
@@ -103,7 +103,7 @@ describe('SkillRegistry', () => {
     await mkdir(join(root, 'customize'), { recursive: true })
     await writeFile(
       join(root, 'customize', 'SKILL.md'),
-      '---\nname: customize\ndescription: Customize MedResearch Agent.\n---\nBody.'
+      '---\nname: customize\ndescription: Customize Deep Research Agent.\n---\nBody.'
     )
     await writeFile(
       join(root, 'manifest.json'),

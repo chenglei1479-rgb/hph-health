@@ -297,7 +297,7 @@ describe('classifyDataRoot', () => {
       expect(result).toEqual({
         kind: 'invalid',
         error:
-          'Network folders are not supported as the MedResearch Agent data location on Windows. Choose a folder on a local drive.'
+          'Network folders are not supported for the app data location on Windows. Choose a folder on a local drive.'
       })
     } finally {
       Object.defineProperty(process, 'platform', { value: original, configurable: true })
@@ -339,7 +339,7 @@ describe('classifyDataRoot', () => {
       expect(result).toEqual({
         kind: 'invalid',
         error:
-          'Network folders are not supported as the MedResearch Agent data location on Windows. Choose a folder on a local drive.'
+          'Network folders are not supported for the app data location on Windows. Choose a folder on a local drive.'
       })
       expect(inspectPath).toHaveBeenNthCalledWith(1, emptyParent)
       expect(inspectPath).toHaveBeenNthCalledWith(2, target)
@@ -527,7 +527,8 @@ describe('classifyDataRoot', () => {
 
     expect(result).toEqual({
       kind: 'invalid',
-      error: 'A different folder named MedResearch Agent already exists here. Choose another location.'
+      error:
+        'A folder with the existing app data name already exists here. Choose another location.'
     })
   })
 
@@ -561,7 +562,8 @@ describe('classifyDataRoot', () => {
 
     expect(result).toEqual({
       kind: 'invalid',
-      error: 'A different folder named MedResearch Agent already exists here. Choose another location.'
+      error:
+        'A folder with the existing app data name already exists here. Choose another location.'
     })
   })
   it('classifies a verified marker-bearing staging dir as recoverable, never adoptable', async () => {
@@ -660,7 +662,7 @@ describe('validateNewDataRoot', () => {
 
     expect(result).toEqual({
       ok: false,
-      error: 'The selected folder already contains MedResearch Agent data. Pick an empty folder.'
+      error: 'The selected folder already contains app data. Pick an empty folder.'
     })
   })
 })
@@ -814,7 +816,7 @@ describe('runDataRootMigration (copy phase)', () => {
     expect(result).toEqual({
       ok: false,
       error:
-        'The new data location contains a Notebook cache that MedResearch Agent cannot safely replace. Choose another location or remove that cache first.'
+        'The new data location contains a Notebook cache that the app cannot safely replace. Choose another location or remove that cache first.'
     })
     expect(deps.cleanupRuntimeCache).toHaveBeenCalledWith(join(target, 'runtime'))
     expect(copyAndVerify).not.toHaveBeenCalled()
@@ -872,7 +874,7 @@ describe('runDataRootMigration (copy phase)', () => {
         expect(result).toEqual({
           ok: false,
           error:
-            "MedResearch Agent can't write to this folder. Make sure you have permission to it — on macOS, grant access when prompted, or pick a folder inside your home directory."
+            "The app can't write to this folder. Make sure you have permission to it — on macOS, grant access when prompted, or pick a folder inside your home directory."
         })
         expect(diagnosticRecords(logger)).toContainEqual(
           expect.objectContaining({
@@ -1216,7 +1218,7 @@ describe('runDataRootMigration (copy phase)', () => {
     expect(result).toEqual({
       ok: false,
       error:
-        'The new data location contains runtime data that MedResearch Agent cannot safely replace. Choose another location or remove that data first.'
+        'The new data location contains runtime data that the app cannot safely replace. Choose another location or remove that data first.'
     })
     expect(copyAndVerify).not.toHaveBeenCalled()
     expect(deps.runtime.disconnect).not.toHaveBeenCalled()

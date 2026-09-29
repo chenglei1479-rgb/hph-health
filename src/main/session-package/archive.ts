@@ -19,7 +19,7 @@ import { pacedFileTransform } from '../file-io-pacing'
 import { assertPackageCapacity, packageCapacityChecker } from './capacity'
 
 // Keep this diagnostic stable across the inspection worker's error-message boundary.
-export const PACKAGE_REQUIRES_UPDATE = 'Session package requires a newer version of MedResearch Agent.'
+export const PACKAGE_REQUIRES_UPDATE = 'Session package requires a newer version of Deep Research Agent.'
 const compatibilityHeaderSchema = z.object({
   format: z.literal('open-science-session'),
   schemaVersion: z.number().int().positive(),

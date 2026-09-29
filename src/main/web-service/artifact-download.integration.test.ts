@@ -230,7 +230,7 @@ it.each(['historical', 'native'] as const)(
         applicationEvents: new ApplicationEventHub(),
         tasks,
         bootstrap: {
-          appName: 'MedResearch Agent',
+          appName: 'Deep Research Agent',
           appVersion: 'test',
           configRoot: fixture.storageRoot,
           platform: process.platform,

@@ -47,7 +47,7 @@ import type { StoredProvider, StoredSettings } from './types'
 const CLAUDE_SHARED_AUTH_STATUS_TTL_MS = 5_000
 const SETUP_TOKEN_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000
 const CLAUDE_SHARED_DISCONNECTED_MESSAGE =
-  'Claude is disconnected from MedResearch Agent. Sign in again to use your shared Claude profile.'
+  'Claude is disconnected from Deep Research Agent. Sign in again to use your shared Claude profile.'
 
 type ProviderAuthLifecycleOwnerOptions = {
   repository: SettingsRepository
@@ -269,7 +269,7 @@ class ProviderAuthLifecycleOwner {
       return {
         ok: false,
         category: 'unknown',
-        message: 'No isolated MedResearch Agent Codex login is configured.'
+        message: 'No isolated Deep Research Agent Codex login is configured.'
       }
     }
 
@@ -285,7 +285,7 @@ class ProviderAuthLifecycleOwner {
       return {
         ok: false,
         category: 'unknown',
-        message: 'The MedResearch Agent Codex login could not be removed.'
+        message: 'The Deep Research Agent Codex login could not be removed.'
       }
     }
 
@@ -635,7 +635,7 @@ class ProviderAuthLifecycleOwner {
       message:
         status.message ??
         (status.mode === 'shared'
-          ? 'No existing Codex login was found. Run `codex login` or use the isolated MedResearch Agent login.'
+          ? 'No existing Codex login was found. Run `codex login` or use the isolated Deep Research Agent login.'
           : isolatedFallback)
     }
   }

@@ -137,7 +137,7 @@ const startBudgetTestServer = async (
       authorizeWebSocket: async () => undefined
     },
     bootstrap: {
-      appName: 'MedResearch Agent',
+      appName: 'Deep Research Agent',
       appVersion: '0.0.0',
       configRoot: '/fake/root',
       platform: 'test',
@@ -246,7 +246,7 @@ describe('startWebHttpServer', () => {
         rpc: { channels: () => [channel], invoke },
         externalAccess: manager.webAccess,
         bootstrap: {
-          appName: 'MedResearch Agent',
+          appName: 'Deep Research Agent',
           appVersion: '0.0.0',
           configRoot: root,
           platform: 'test',
@@ -308,7 +308,7 @@ describe('startWebHttpServer', () => {
       permissionApprovalPresence,
       rpc: { channels: () => [], invoke: vi.fn() },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -349,7 +349,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -399,7 +399,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -438,7 +438,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -496,7 +496,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -548,7 +548,7 @@ describe('startWebHttpServer', () => {
         getRun: vi.fn()
       } as never,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -858,7 +858,7 @@ describe('startWebHttpServer', () => {
         dispose: vi.fn()
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -913,7 +913,7 @@ describe('startWebHttpServer', () => {
         }
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1062,7 +1062,7 @@ describe('startWebHttpServer', () => {
       staticRoot: '/unused',
       rpc: { channels: () => ['projects:list'], invoke },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1133,7 +1133,7 @@ describe('startWebHttpServer', () => {
         releaseArtifact: vi.fn()
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1207,7 +1207,7 @@ describe('startWebHttpServer', () => {
         remoteWeb: { commandNames: () => [], rejectedCommandNames: () => [], invoke: vi.fn() }
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1267,7 +1267,7 @@ describe('startWebHttpServer', () => {
             : undefined
       } as never,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1288,7 +1288,7 @@ describe('startWebHttpServer', () => {
     const bootstrap = await fetch(`${base}/api/bootstrap`, { headers: { cookie } })
     expect(Number(bootstrap.headers.get('content-length'))).toBeGreaterThan(0)
     expect(await bootstrap.json()).toMatchObject({
-      appName: 'MedResearch Agent',
+      appName: 'Deep Research Agent',
       configRoot: '/fake/root',
       rpcProtocolVersion: WEB_RPC_PROTOCOL_VERSION,
       rpcCapabilities: WEB_RPC_CAPABILITIES,
@@ -1498,7 +1498,7 @@ describe('startWebHttpServer', () => {
         dispose: vi.fn()
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1579,7 +1579,7 @@ describe('startWebHttpServer', () => {
         dispose: vi.fn()
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1641,7 +1641,7 @@ describe('startWebHttpServer', () => {
         dispose: vi.fn()
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1786,7 +1786,7 @@ describe('startWebHttpServer', () => {
         authorizeWebSocket: async (request) => authorizationFor(request)
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -1922,7 +1922,7 @@ describe('startWebHttpServer', () => {
         authorizeWebSocket: async (request) => authorizationFor(request)
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2010,7 +2010,7 @@ describe('startWebHttpServer', () => {
             : undefined
       } as never,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2106,7 +2106,7 @@ describe('startWebHttpServer', () => {
         dispose: vi.fn()
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2170,7 +2170,7 @@ describe('startWebHttpServer', () => {
       staticRoot: '/unused',
       rpc: { channels: () => [], invoke: vi.fn() },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2203,7 +2203,7 @@ describe('startWebHttpServer', () => {
       staticRoot: '/unused',
       rpc: { channels: () => [], invoke: vi.fn() },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2240,7 +2240,7 @@ describe('startWebHttpServer', () => {
         invoke: vi.fn().mockResolvedValue('x'.repeat(16 * 1024 * 1024))
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2283,7 +2283,7 @@ describe('startWebHttpServer', () => {
       staticRoot: '/unused',
       rpc,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2350,7 +2350,7 @@ describe('startWebHttpServer', () => {
         remoteWeb: { commandNames: () => [], rejectedCommandNames: () => [], invoke: vi.fn() }
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2414,7 +2414,7 @@ describe('startWebHttpServer', () => {
         authorizeWebSocket: vi.fn().mockResolvedValue(undefined)
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2451,7 +2451,7 @@ describe('startWebHttpServer', () => {
       staticRoot: '/unused',
       rpc: { channels: () => ['projects:list'], invoke },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2502,7 +2502,7 @@ describe('startWebHttpServer', () => {
       staticRoot: '/unused',
       rpc: { channels: () => [], invoke: vi.fn() },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2545,7 +2545,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2603,7 +2603,7 @@ describe('startWebHttpServer', () => {
           remoteWeb: { commandNames: () => [], rejectedCommandNames: () => [], invoke: vi.fn() }
         },
         bootstrap: {
-          appName: 'MedResearch Agent',
+          appName: 'Deep Research Agent',
           appVersion: '0.0.0',
           configRoot: '/fake/root',
           platform: 'test',
@@ -2671,7 +2671,7 @@ describe('startWebHttpServer', () => {
         remoteWeb: { commandNames: () => [], rejectedCommandNames: () => [], invoke: vi.fn() }
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2729,7 +2729,7 @@ describe('startWebHttpServer', () => {
         remoteWeb: { commandNames: () => [], rejectedCommandNames: () => [], invoke: vi.fn() }
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2794,7 +2794,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2884,7 +2884,7 @@ describe('startWebHttpServer', () => {
         authorizeWebSocket: vi.fn().mockResolvedValue(undefined)
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -2971,7 +2971,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3075,7 +3075,7 @@ describe('startWebHttpServer', () => {
           authorizeWebSocket: async () => undefined
         },
         bootstrap: {
-          appName: 'MedResearch Agent',
+          appName: 'Deep Research Agent',
           appVersion: '0.0.0',
           configRoot: '/fake/root',
           platform: 'test',
@@ -3133,7 +3133,7 @@ describe('startWebHttpServer', () => {
         authorizeWebSocket: async () => undefined
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3191,7 +3191,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3429,7 +3429,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3518,7 +3518,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3590,7 +3590,7 @@ describe('startWebHttpServer', () => {
         )
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3645,7 +3645,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3683,7 +3683,7 @@ describe('startWebHttpServer', () => {
       },
       onShutdownRequest,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3726,7 +3726,7 @@ describe('startWebHttpServer', () => {
       },
       onShutdownRequest,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3785,7 +3785,7 @@ describe('startWebHttpServer', () => {
       },
       onShutdownRequest,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -3845,7 +3845,7 @@ describe('startWebHttpServer', () => {
           releaseArtifact: vi.fn()
         },
         bootstrap: {
-          appName: 'MedResearch Agent',
+          appName: 'Deep Research Agent',
           appVersion: '0.0.0',
           configRoot: '/fake/root',
           platform: 'test',
@@ -3958,7 +3958,7 @@ describe('startWebHttpServer', () => {
         })
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -4017,7 +4017,7 @@ describe('startWebHttpServer', () => {
         authorizeWebSocket: vi.fn().mockResolvedValue(undefined)
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -4085,7 +4085,7 @@ describe('startWebHttpServer', () => {
         getRun
       } as never,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -4245,7 +4245,7 @@ describe('startWebHttpServer', () => {
       },
       tasks,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -4659,7 +4659,7 @@ describe('startWebHttpServer', () => {
       },
       tasks,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -4728,7 +4728,7 @@ describe('startWebHttpServer', () => {
       },
       tasks,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: '/fake/root',
         platform: 'test',
@@ -4789,7 +4789,7 @@ describe('Web preview reconnect owner contract', () => {
         remoteWeb: { ...dispatcher, rejectedCommandNames: () => [] }
       },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: '0.0.0',
         configRoot: staticRoot,
         platform: 'test',
@@ -4884,7 +4884,7 @@ describe('Connector Task HTTP routes', () => {
       tasks,
       rpc: { channels: () => [], invoke: vi.fn() },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: 'test',
         configRoot: '/fake/root',
         platform: 'test',
@@ -4958,7 +4958,7 @@ describe('Agent runtime Task HTTP routes', () => {
       tasks,
       rpc: { channels: () => [], invoke: vi.fn() },
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: 'test',
         configRoot: '/fake/root',
         platform: 'test',

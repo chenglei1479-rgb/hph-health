@@ -47,7 +47,7 @@ function isNotFound(err: unknown): boolean {
 // so ENCODE requests go through this direct global-fetch wrapper with a plain UA (the same pattern
 // zinc.ts / genes-reactome.ts use). It reproduces the engine's timeout + transient-status retry so
 // ENCODE calls stay as resilient as ctx.fetchJson. JASPAR and UniBind use ctx.fetchJson unchanged.
-const ENCODE_UA = 'MedResearch Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
+const ENCODE_UA = 'Deep Research Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
 const ENCODE_TIMEOUT_MS = 60_000
 const ENCODE_RETRIES = 3
 async function encodeFetchJson(url: string, signal?: AbortSignal): Promise<unknown> {

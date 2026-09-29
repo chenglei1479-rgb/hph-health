@@ -495,7 +495,7 @@ describe('session persistence startup', () => {
     expect(container.querySelector('div')?.dataset.hydrated).toBe('false')
     expect(container.querySelector('div')?.dataset.loading).toBe('false')
     expect(container.querySelector('[data-testid="load-error"]')?.textContent).toBe(
-      'MedResearch Agent could not read saved conversation data. Retry to continue.'
+      'Deep Research Agent could not read saved conversation data. Retry to continue.'
     )
     expect(container.querySelector('[data-testid="load-error"]')?.textContent).not.toContain(
       '/Users/private'
@@ -567,7 +567,7 @@ describe('session persistence startup', () => {
       await Promise.resolve()
     })
     expect(container.querySelector('[data-testid="write-error"]')?.textContent).toBe(
-      'MedResearch Agent could not save the latest conversation changes. Retry before closing the app.'
+      'Deep Research Agent could not save the latest conversation changes. Retry before closing the app.'
     )
     expect(container.querySelector('[data-testid="write-error"]')?.textContent).not.toContain(
       '/Users/private'
@@ -602,7 +602,7 @@ describe('session persistence startup', () => {
       await expect(flushSessionPersistence()).rejects.toThrow('could not write')
     })
     expect(container.querySelector('[data-testid="write-error"]')?.textContent).toContain(
-      'MedResearch Agent could not save'
+      'Deep Research Agent could not save'
     )
 
     writesFail = false
@@ -717,7 +717,7 @@ describe('session persistence startup', () => {
     expect(probe?.dataset.persistenceBlocked).toBe('session-1')
     expect(probe?.dataset.writeRetryable).toBe('true')
     expect(container.querySelector('[data-testid="write-error"]')?.textContent).toBe(
-      'MedResearch Agent could not save the latest conversation changes. Retry before closing the app.'
+      'Deep Research Agent could not save the latest conversation changes. Retry before closing the app.'
     )
 
     ordinaryWriteFails = false
@@ -884,7 +884,7 @@ describe('session persistence startup', () => {
       await Promise.resolve()
     })
     expect(container.querySelector('[data-testid="write-error"]')?.textContent).toBe(
-      'MedResearch Agent could not save the latest conversation changes. Retry before closing the app.'
+      'Deep Research Agent could not save the latest conversation changes. Retry before closing the app.'
     )
     await expect(flushSessionPersistence()).rejects.toThrow('disk full')
 
@@ -1256,7 +1256,7 @@ describe('session persistence startup', () => {
     expect(container.querySelector('div')?.dataset.ready).toBe('false')
     expect(container.querySelector('div')?.dataset.loading).toBe('false')
     expect(container.querySelector('[data-testid="write-error"]')?.textContent).toBe(
-      'MedResearch Agent could not save the latest conversation changes. Retry before closing the app.'
+      'Deep Research Agent could not save the latest conversation changes. Retry before closing the app.'
     )
     expect(reconcilePendingArtifactsApi).not.toHaveBeenCalled()
 

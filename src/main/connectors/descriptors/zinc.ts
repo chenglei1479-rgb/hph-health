@@ -13,7 +13,7 @@ import { withTimeoutSignal } from '../request-policy'
 const BASE_URL = 'https://cartblanche22.docking.org'
 const FILES_BASE_URL = 'https://files.docking.org/zinc22'
 const OUTPUT_FIELDS = 'zinc_id,smiles,tranche_name,catalogs'
-const USER_AGENT = 'MedResearch Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
+const USER_AGENT = 'Deep Research Agent/1.0 (+https://github.com/chenglei1479-rgb/hph-health)'
 
 // Overall submit->result budget (default/clamp mirrors upstream DEFAULT/MIN/MAX_TIMEOUT_S, pulled
 // in a bit under the MCP-style 60s transport ceiling that upstream targets).

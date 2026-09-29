@@ -1,5 +1,5 @@
 appId: com.aipoch.medresearch-agent
-productName: MedResearch Agent
+productName: Deep Research Agent
 copyright: Copyright © 2026 AIPOCH
 directories:
   buildResources: build
@@ -105,14 +105,14 @@ win:
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
     - ext: science
-      name: Medical Research Agent Session package
-      description: Medical Research Agent Session package
+      name: Deep Research Agent Session package
+      description: Deep Research Agent Session package
       mimeType: application/x-open-science-session
       role: Viewer
       rank: Default
   executableName: medresearch-agent
   icon: build/icon.ico
-  artifactName: aipoch-${name}-${version}-win-${arch}.${ext}
+  artifactName: deep-research-agent-${version}-win-${arch}.${ext}
   # AppContainer profiles and firewall rules require a product uninstaller, so Windows ships only
   # through NSIS. A portable ZIP could be deleted without releasing those durable resources.
   target:
@@ -135,7 +135,7 @@ win:
     - from: packages/notebook-network-sandbox/vendor/wsl2/manifest.json
       to: notebook-network-sandbox/wsl2/manifest.json
 nsis:
-  artifactName: aipoch-${name}-${version}-win-${arch}-setup.${ext}
+  artifactName: deep-research-agent-${version}-win-${arch}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -151,8 +151,8 @@ mac:
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
     - ext: science
-      name: Medical Research Agent Session package
-      description: Medical Research Agent Session package
+      name: Deep Research Agent Session package
+      description: Deep Research Agent Session package
       mimeType: application/x-open-science-session
       role: Viewer
       rank: Default
@@ -161,15 +161,15 @@ mac:
   # volume still uses the legacy, explicitly-designed ICNS artwork.
   icon: build/icon.icon
   darkModeSupport: true
-  artifactName: aipoch-${name}-${version}-mac-${arch}.${ext}
+  artifactName: deep-research-agent-${version}-mac-${arch}.${ext}
   # Minimum macOS to run the app (written to Info.plist LSMinimumSystemVersion). macOS 12 (Monterey)
   # and up; below this the OS refuses to launch. Independent of the CI build runner's macOS version.
   minimumSystemVersion: '12.0.0'
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     # Electron locates its Helper bundles using this internal name. Keep it aligned with productName.
-    CFBundleName: MedResearch Agent
-    CFBundleDisplayName: MedResearch Agent
+    CFBundleName: Deep Research Agent
+    CFBundleDisplayName: Deep Research Agent
     NSCameraUsageDescription: Application requests access to the device's camera.
     NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
@@ -182,14 +182,14 @@ mac:
     - from: resources/bin/mac/${arch}/micromamba
       to: micromamba
 dmg:
-  title: MedResearch Agent
+  title: Deep Research Agent
   background: build/dmg-background.png
   iconSize: 88
   iconTextSize: 12
   contents:
     - x: 130
       y: 286
-      name: MedResearch Agent.app
+      name: Deep Research Agent.app
     - x: 530
       y: 286
       type: link
@@ -205,13 +205,13 @@ dmg:
   # Stable macOS releases require a primary signature on the outer DMG in addition to the signed app
   # and notarization ticket. Nightly and certificate-free builds override this to false in build.yml.
   sign: true
-  artifactName: aipoch-${name}-${version}-mac-${arch}.${ext}
+  artifactName: deep-research-agent-${version}-mac-${arch}.${ext}
 linux:
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
     - ext: science
-      name: Medical Research Agent Session package
-      description: Medical Research Agent Session package
+      name: Deep Research Agent Session package
+      description: Deep Research Agent Session package
       mimeType: application/x-open-science-session
       role: Viewer
       rank: Default
@@ -234,13 +234,13 @@ linux:
     - from: build/deb-cli-launcher
       to: medresearch-agent-cli
 appImage:
-  artifactName: aipoch-${name}-${version}-linux-${arch}.${ext}
+  artifactName: deep-research-agent-${version}-linux-${arch}.${ext}
 deb:
   fpm:
     - build/deb-copyright=/usr/share/doc/medresearch-agent/copyright
   afterInstall: build/deb-after-install.tpl
   afterRemove: build/deb-after-remove.tpl
-  artifactName: aipoch-${name}_${version}_${arch}.${ext}
+  artifactName: deep-research-agent-${version}-${arch}.${ext}
   depends:
     - libgtk-3-0
     - libnotify4

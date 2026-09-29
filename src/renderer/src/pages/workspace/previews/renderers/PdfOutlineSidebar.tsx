@@ -1,4 +1,4 @@
-/* Hallmark · component: PDF navigation · genre: modern-minimal · theme: MedResearch Agent tokens */
+/* Hallmark · component: PDF navigation · genre: modern-minimal · theme: Deep Research Agent tokens */
 import { ChevronRight, Files, ListTree, PanelLeft } from 'lucide-react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import {

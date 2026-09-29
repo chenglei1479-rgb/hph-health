@@ -64,7 +64,7 @@ beforeEach(() => {
   document.body.appendChild(container)
   root = createRoot(container)
   useUpdateStore.setState({
-    appInfo: { name: 'MedResearch Agent', version: '0.4.0', copyright: '© 2026 AIPOCH' },
+    appInfo: { name: 'Deep Research Agent', version: '0.4.0', copyright: '© 2026 AIPOCH' },
     status: { state: 'up-to-date', current: '0.4.0', latest: '0.4.0' }
   })
   cliApi = {

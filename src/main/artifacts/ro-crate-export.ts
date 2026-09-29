@@ -156,14 +156,14 @@ const buildArtifactVersionRoCrateMetadata = (
     dateCreated: evidence.created_at,
     version: `v${evidence.version_number}`,
     description: packagedDataPaths.has(evidence.version_id)
-      ? 'Immutable MedResearch Agent Artifact Version payload included in this RO-Crate and verified against its declared size and SHA-256 checksum.'
+      ? 'Immutable Deep Research Agent Artifact Version payload included in this RO-Crate and verified against its declared size and SHA-256 checksum.'
       : source.contentStatus.state === 'unavailable'
-        ? `Immutable MedResearch Agent Artifact Version payload. Payload content is currently unavailable (${source.contentStatus.reason}) from the source installation; the checksum remains the authoritative identity, and the bytes are not included in this crate.`
+        ? `Immutable Deep Research Agent Artifact Version payload. Payload content is currently unavailable (${source.contentStatus.reason}) from the source installation; the checksum remains the authoritative identity, and the bytes are not included in this crate.`
         : omittedDataReasons.has(evidence.version_id)
-          ? `Immutable MedResearch Agent Artifact Version payload. The bytes ${omittedDataReasons.get(evidence.version_id)} and are not included; the checksum remains the authoritative identity.`
+          ? `Immutable Deep Research Agent Artifact Version payload. The bytes ${omittedDataReasons.get(evidence.version_id)} and are not included; the checksum remains the authoritative identity.`
           : profile === 'lightweight'
-            ? 'Immutable MedResearch Agent Artifact Version payload. This lightweight crate references the payload by SHA-256 checksum and does not include the bytes.'
-            : 'Immutable MedResearch Agent Artifact Version payload referenced by SHA-256 checksum; the bytes are not included in this crate.',
+            ? 'Immutable Deep Research Agent Artifact Version payload. This lightweight crate references the payload by SHA-256 checksum and does not include the bytes.'
+            : 'Immutable Deep Research Agent Artifact Version payload referenced by SHA-256 checksum; the bytes are not included in this crate.',
     ...(descriptor.originKind
       ? { additionalProperty: [propertyValue('originKind', descriptor.originKind)] }
       : {})
@@ -196,7 +196,7 @@ const buildArtifactVersionRoCrateMetadata = (
   const agentEntity: RoCrateEntity = {
     '@type': 'SoftwareAgent',
     '@id': agentId,
-    name: evidence.agent_name ?? 'MedResearch Agent agent',
+    name: evidence.agent_name ?? 'Deep Research Agent agent',
     description:
       'Agent that produced the conversation branch in which this Artifact Version was published.'
   }
@@ -388,7 +388,7 @@ const buildArtifactVersionRoCrateMetadata = (
     encodingFormat: 'application/json',
     contentSize: String(Buffer.byteLength(content, 'utf8')),
     sha256: sha256(content),
-    description: 'Verbatim MedResearch Agent provenance record retained alongside the RO-Crate metadata.'
+    description: 'Verbatim Deep Research Agent provenance record retained alongside the RO-Crate metadata.'
   }))
 
   const producerCodeEntity: RoCrateEntity | undefined =
@@ -462,10 +462,10 @@ const buildArtifactVersionRoCrateMetadata = (
     license: 'License information was not provided. This export grants no additional usage rights.',
     description:
       profile === 'lightweight'
-        ? 'MedResearch Agent Artifact Version provenance crate (lightweight profile). Serializes the provenance captured for one immutable Artifact Version — checksums, producer code, execution history, exact input references, environment inventory, message-branch context, and reviewer evidence — as RO-Crate 1.1 metadata. Provenance is an audit and traceability record, not a deterministic replay contract. Data payloads and input files are referenced by SHA-256 checksum and are not included.'
+        ? 'Deep Research Agent Artifact Version provenance crate (lightweight profile). Serializes the provenance captured for one immutable Artifact Version — checksums, producer code, execution history, exact input references, environment inventory, message-branch context, and reviewer evidence — as RO-Crate 1.1 metadata. Provenance is an audit and traceability record, not a deterministic replay contract. Data payloads and input files are referenced by SHA-256 checksum and are not included.'
         : omittedDataReasons.size
-          ? 'MedResearch Agent Artifact Version provenance crate (complete profile). Includes every available data file that passed declared size and SHA-256 verification. Some data files could not be included and remain immutable checksum references, so this crate is not fully self-contained. Provenance is an audit and traceability record, not a deterministic replay contract.'
-          : 'MedResearch Agent Artifact Version provenance crate (complete profile). Includes the Artifact Version payload and exact input file bytes together with their provenance as RO-Crate 1.1 metadata. Provenance is an audit and traceability record, not a deterministic replay contract.',
+          ? 'Deep Research Agent Artifact Version provenance crate (complete profile). Includes every available data file that passed declared size and SHA-256 verification. Some data files could not be included and remain immutable checksum references, so this crate is not fully self-contained. Provenance is an audit and traceability record, not a deterministic replay contract.'
+          : 'Deep Research Agent Artifact Version provenance crate (complete profile). Includes the Artifact Version payload and exact input file bytes together with their provenance as RO-Crate 1.1 metadata. Provenance is an audit and traceability record, not a deterministic replay contract.',
     mainEntity: reference(payloadId),
     conformsTo: reference(profile === 'complete' ? COMPLETE_PROFILE : LIGHTWEIGHT_PROFILE),
     hasPart: [

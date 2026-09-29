@@ -1596,8 +1596,8 @@ it.each(['en', 'zh-Hans'] as const)(
     try {
       const message =
         locale === 'en'
-          ? 'This Session package requires a newer version of MedResearch Agent. Update MedResearch Agent, then try importing it again.'
-          : '此会话研究包需要更新版本的 MedResearch Agent。请更新 MedResearch Agent 后重新导入。'
+          ? 'This Session package requires a newer version of Deep Research Agent. Update Deep Research Agent, then try importing it again.'
+          : '此会话研究包需要更新版本的 Deep Research Agent。请更新 Deep Research Agent 后重新导入。'
       await expect(
         desktop.import(undefined, undefined, { projectName: 'Research' }, archive)
       ).rejects.toThrow(message)

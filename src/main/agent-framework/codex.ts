@@ -89,12 +89,12 @@ const CODEX_MODE_IDS = {
   full: 'agent-full-access'
 } as const satisfies Record<PermissionProfileId, string>
 
-// MedResearch Agent owns delegation lifecycle, authority, permission, and evidence. Keep both the stable
+// Deep Research Agent owns delegation lifecycle, authority, permission, and evidence. Keep both the stable
 // and preview Codex implementations off in every profile so native children cannot bypass that Host
 // contract. This must live in CODEX_CONFIG (rather than only custom model metadata), because trusted
 // bundled models intentionally do not receive an app-authored model catalog.
 const CODEX_DISABLED_NATIVE_FEATURES = Object.freeze({
-  // MedResearch Agent owns the Skill projection and MCP surface. Native Codex plugin/app discovery can
+  // Deep Research Agent owns the Skill projection and MCP surface. Native Codex plugin/app discovery can
   // advertise provider-installed, plugin-qualified Skills that the app runtime cannot load.
   apps: false,
   memories: false,
@@ -259,7 +259,7 @@ const buildCodexConfig = (provider: {
     model_provider: CODEX_PROVIDER_ID,
     model_providers: {
       [CODEX_PROVIDER_ID]: {
-        name: 'MedResearch Agent',
+        name: 'Deep Research Agent',
         wire_api: 'responses',
         ...(baseUrl ? { base_url: baseUrl } : {}),
         ...(provider.key ? { requires_openai_auth: true } : {})
@@ -537,7 +537,7 @@ export const createCodexFramework = ({
     const persistentSystemPrompt =
       ctx.systemPromptAppends?.filter(Boolean).join('\n\n') || undefined
     if (isCodexSubscriptionProvider(provider.type)) {
-      // Every MedResearch Agent subscription session uses the same app-owned home. `codex-shared` is
+      // Every Deep Research Agent subscription session uses the same app-owned home. `codex-shared` is
       // accepted only as a legacy Provider discriminator; it must never select the user's global
       // Codex profile at runtime. Seed the model before session creation to avoid the slow late
       // session/set_config_option switch (issue #277).

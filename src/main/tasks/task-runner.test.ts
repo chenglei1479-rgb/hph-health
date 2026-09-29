@@ -5564,7 +5564,7 @@ describe('TaskRunner', () => {
     expect(recoveredRunner.getRun('crash-window-run')).toMatchObject({
       status: 'failed',
       failureCode: 'process_restarted',
-      error: 'Run interrupted because MedResearch Agent restarted.'
+      error: 'Run interrupted because Deep Research Agent restarted.'
     })
     expect(durableSession).toMatchObject({
       status: 'error',

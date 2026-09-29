@@ -302,7 +302,7 @@ const NetworkPanel = ({
           <div className="rounded-xl border border-border p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm text-foreground">{t('MedResearch Agent domains')}</p>
+                <p className="text-sm text-foreground">{t('Deep Research Agent domains')}</p>
                 <p className="text-xs text-muted-foreground">
                   {t('{{count}} custom domains allowed', {
                     count: notebookNetwork.allowedDomains.length,
@@ -326,7 +326,7 @@ const NetworkPanel = ({
         <SettingsSection
           title={t('Proxy')}
           description={t(
-            'How MedResearch Agent, ACP agents, notebook runtimes, and installers reach the internet.'
+            'How Deep Research Agent, ACP agents, notebook runtimes, and installers reach the internet.'
           )}
           aria-label={t('Proxy')}
           data-settings-anchor="network.proxy"

@@ -98,7 +98,7 @@ export function ConnectorExportView({ id, onDone }: ConnectorExportViewProps): R
               setSaved(false)
             }}
           >
-            {t('MedResearch Agent Connector')}
+            {t('Deep Research Agent Connector')}
           </Button>
           <Button
             type="button"

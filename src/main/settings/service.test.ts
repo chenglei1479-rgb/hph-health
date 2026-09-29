@@ -960,17 +960,17 @@ describe('SettingsService: providers', () => {
     expect(await readFile(join(storageRoot, 'codex-subscription', 'config.toml'), 'utf8')).toBe(
       [
         'cli_auth_credentials_store = "file"',
-        '# MedResearch Agent: begin imported Codex route selection',
+        '# Deep Research Agent: begin imported Codex route selection',
         'model_provider = "subscription-route"',
-        '# MedResearch Agent: end imported Codex route selection',
-        '# MedResearch Agent: begin imported Codex provider',
+        '# Deep Research Agent: end imported Codex route selection',
+        '# Deep Research Agent: begin imported Codex provider',
         '[model_providers."subscription-route"]',
         'name = "OpenAI"',
         'base_url = "http://127.0.0.1:1087/v1"',
         'wire_api = "responses"',
         'requires_openai_auth = true',
         'supports_websockets = false',
-        '# MedResearch Agent: end imported Codex provider',
+        '# Deep Research Agent: end imported Codex provider',
         ''
       ].join('\n')
     )
@@ -1118,7 +1118,7 @@ describe('SettingsService: providers', () => {
     ).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(
       readFile(join(storageRoot, 'codex-subscription', 'config.toml'), 'utf8')
-    ).resolves.not.toContain('MedResearch Agent:')
+    ).resolves.not.toContain('Deep Research Agent:')
     await expect(readFile(join(userCodexDir, 'auth.json'), 'utf8')).resolves.toContain('global')
   })
 
@@ -1415,7 +1415,7 @@ describe('SettingsService: providers', () => {
       ok: false,
       category: 'auth',
       message:
-        'No existing Codex login was found. Run `codex login` or use the isolated MedResearch Agent login.'
+        'No existing Codex login was found. Run `codex login` or use the isolated Deep Research Agent login.'
     })
     expect(codexAuth.getStatus).toHaveBeenCalledWith('shared')
   })
@@ -1668,7 +1668,7 @@ describe('SettingsService: providers', () => {
     expect(result).toEqual({
       ok: false,
       category: 'unknown',
-      message: 'No isolated MedResearch Agent Codex login is configured.'
+      message: 'No isolated Deep Research Agent Codex login is configured.'
     })
     expect(codexAuth.cancelLogin).not.toHaveBeenCalled()
     expect(codexAuth.logoutIsolated).not.toHaveBeenCalled()
@@ -1867,15 +1867,15 @@ describe('SettingsService: providers', () => {
     })
 
     const backend = await resolveActiveBackend(service, {
-      systemPromptAppends: ['Stable MedResearch Agent app guidance.']
+      systemPromptAppends: ['Stable Deep Research Agent app guidance.']
     })
 
-    expect(backend.persistentSystemPrompt).toContain('Stable MedResearch Agent app guidance.')
+    expect(backend.persistentSystemPrompt).toContain('Stable Deep Research Agent app guidance.')
     const appInstructions = await readFile(
       join(storageRoot, 'opencode', 'config', 'opencode', 'instructions', 'open-science.md'),
       'utf8'
     )
-    expect(appInstructions).toContain('Stable MedResearch Agent app guidance.')
+    expect(appInstructions).toContain('Stable Deep Research Agent app guidance.')
     expect(appInstructions).toContain(join(storageRoot, 'skills', 'personal'))
     expect(appInstructions).toContain(join(storageRoot, 'skills', 'imported'))
 
@@ -2960,7 +2960,7 @@ describe('SettingsService: preflight & spawn config', () => {
     vi.stubEnv('OPEN_SCIENCE_AGENT_FRAMEWORK', 'codex')
 
     const backend = await resolveActiveBackend(service, {
-      systemPromptAppends: ['Stable MedResearch Agent developer guidance.']
+      systemPromptAppends: ['Stable Deep Research Agent developer guidance.']
     })
     const selection = await service.captureActiveAgentBackendSelection()
 
@@ -2976,7 +2976,7 @@ describe('SettingsService: preflight & spawn config', () => {
     expect(backend.env.CODEX_API_KEY).toBeUndefined()
     const developerInstructions = JSON.parse(backend.env.CODEX_CONFIG ?? '{}')
       .developer_instructions as string
-    expect(developerInstructions).toContain('Stable MedResearch Agent developer guidance.')
+    expect(developerInstructions).toContain('Stable Deep Research Agent developer guidance.')
     expect(developerInstructions).toContain(
       'Load the matching `mcp-*` skill before the first `host.mcp` call'
     )
@@ -3201,7 +3201,7 @@ describe('SettingsService: preflight & spawn config', () => {
     await service.setActiveProvider(provider.id)
 
     await expect(resolveActiveBackend(service)).rejects.toThrow(
-      'MedResearch Agent Codex ACP adapter not found. Install Codex in settings.'
+      'Deep Research Agent Codex ACP adapter not found. Install Codex in settings.'
     )
   })
 
@@ -8754,9 +8754,9 @@ describe('SettingsService: claude-shared login orchestration', () => {
     ).resolves.toMatchObject({
       ok: false,
       category: 'auth',
-      message: expect.stringContaining('disconnected from MedResearch Agent')
+      message: expect.stringContaining('disconnected from Deep Research Agent')
     })
-    await expect(resolveActiveBackend(service)).rejects.toThrow(/disconnected from MedResearch Agent/)
+    await expect(resolveActiveBackend(service)).rejects.toThrow(/disconnected from Deep Research Agent/)
 
     await expect(service.loginClaudeShared()).resolves.toMatchObject({ ok: true, applied: true })
     await expect(resolveActiveBackend(service)).resolves.toMatchObject({

@@ -2352,13 +2352,13 @@ describe('ACP Runtime Session Plan composition', () => {
       first.call({ projectId: 'project', sessionId: 'session', operation: 'approve' })
     ).rejects.toMatchObject({
       code: 'plan-unavailable',
-      message: expect.stringMatching(/not configured.*not attempted.*MedResearch Agent must provide/)
+      message: expect.stringMatching(/not configured.*not attempted.*Deep Research Agent must provide/)
     })
     await expect(
       first.respond({ projectId: 'project', sessionId: 'session', feedback: 'continue' })
     ).rejects.toMatchObject({
       code: 'plan-unavailable',
-      message: expect.stringMatching(/not configured.*not attempted.*MedResearch Agent must provide/)
+      message: expect.stringMatching(/not configured.*not attempted.*Deep Research Agent must provide/)
     })
   })
 
@@ -2376,7 +2376,7 @@ describe('ACP Runtime Session Plan composition', () => {
     ).rejects.toMatchObject({
       code: 'interaction-mismatch',
       message: expect.stringMatching(
-        /No active prompt interaction.*not attempted.*MedResearch Agent.*active interaction/
+        /No active prompt interaction.*not attempted.*Deep Research Agent.*active interaction/
       )
     })
     expect(harness.generate).not.toHaveBeenCalled()
@@ -2395,7 +2395,7 @@ describe('ACP Runtime Session Plan composition', () => {
     ).rejects.toMatchObject({
       code: 'interaction-mismatch',
       message: expect.stringMatching(
-        /no durable Message identity.*not attempted.*MedResearch Agent must establish/
+        /no durable Message identity.*not attempted.*Deep Research Agent must establish/
       )
     })
     expect(harness.generate).not.toHaveBeenCalled()

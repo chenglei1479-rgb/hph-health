@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
-/* Hallmark · component: import menu button · genre: modern-minimal · theme: MedResearch Agent Settings
+/* Hallmark · component: import menu button · genre: modern-minimal · theme: Deep Research Agent Settings
  * states: default · hover · focus · active · disabled · loading · error · success
  * contrast: pass (semantic Settings tokens)
  */

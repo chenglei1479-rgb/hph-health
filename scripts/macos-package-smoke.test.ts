@@ -25,8 +25,8 @@ describe('macOS package smoke', () => {
   it('selects one DMG and ZIP and derives their shared version', async () => {
     const root = await mkdtemp(join(tmpdir(), 'open-science-macos-artifacts-'))
     roots.push(root)
-    const dmg = join(root, 'aipoch-medresearch-agent-0.12.0-mac-arm64.dmg')
-    const zip = join(root, 'aipoch-medresearch-agent-0.12.0-mac-arm64.zip')
+    const dmg = join(root, 'deep-research-agent-0.12.0-mac-arm64.dmg')
+    const zip = join(root, 'deep-research-agent-0.12.0-mac-arm64.zip')
     await Promise.all([
       writeFile(dmg, ''),
       writeFile(zip, ''),
@@ -62,7 +62,7 @@ describe('macOS package smoke', () => {
   })
 
   it('authenticates the token-free readiness endpoint through the service state contract', async () => {
-    const output = 'MedResearch Agent Web: http://127.0.0.1:3210/'
+    const output = 'Deep Research Agent Web: http://127.0.0.1:3210/'
     expect(parsePackagedAppEndpoint(output)).toEqual({ endpoint: 'http://127.0.0.1:3210' })
     await expect(
       authenticatePackagedAppEndpoint(output, ['/config'], {
@@ -89,7 +89,7 @@ describe('macOS package smoke', () => {
   it('requires the adaptive icon catalog and its legacy ICNS fallback', async () => {
     const root = await mkdtemp(join(tmpdir(), 'open-science-macos-app-'))
     roots.push(root)
-    const appBundle = join(root, 'MedResearch Agent.app')
+    const appBundle = join(root, 'Deep Research Agent.app')
     const executableDirectory = join(appBundle, 'Contents', 'MacOS')
     const resources = join(appBundle, 'Contents', 'Resources')
     const prismaClient = join(resources, 'node_modules', '.prisma', 'client')
@@ -110,7 +110,7 @@ describe('macOS package smoke', () => {
       mkdir(join(processTreeNative, '..'), { recursive: true })
     ])
     await Promise.all([
-      writeFile(join(executableDirectory, 'MedResearch Agent'), ''),
+      writeFile(join(executableDirectory, 'Deep Research Agent'), ''),
       writeFile(join(resources, 'app.asar'), ''),
       writeFile(join(resources, 'micromamba'), ''),
       writeFile(join(resources, 'Assets.car'), ''),
@@ -120,7 +120,7 @@ describe('macOS package smoke', () => {
     ])
 
     await expect(assertPackagedResources(appBundle)).resolves.toEqual({
-      executable: join(executableDirectory, 'MedResearch Agent'),
+      executable: join(executableDirectory, 'Deep Research Agent'),
       micromamba: join(resources, 'micromamba'),
       processTreeNative
     })

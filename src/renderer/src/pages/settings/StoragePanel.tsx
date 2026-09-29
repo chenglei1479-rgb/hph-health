@@ -392,7 +392,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
       {storageRepairActive && storageCheck ? (
         <SettingsSection
           title={t('Application storage')}
-          description={t('MedResearch Agent needs write access to its private configuration directory.')}
+          description={t('Deep Research Agent needs write access to its private configuration directory.')}
           aria-label={t('Application storage')}
         >
           {/* Keep the failure visibly actionable, then remove the warning treatment as soon as a
@@ -467,7 +467,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
         data-settings-anchor="storage.location"
         title={t('Data location')}
         description={t(
-          'Where MedResearch Agent stores your projects, artifacts, and other app data on this device.'
+          'Where Deep Research Agent stores your projects, artifacts, and other app data on this device.'
         )}
         aria-label={t('Data location')}
         action={
@@ -596,7 +596,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
                 {kind === 'adopt' ? (
                   <p className="mt-2 text-xs text-muted-foreground">
                     <Trans
-                      i18nKey="This folder already contains MedResearch Agent data. It will be <em>used as-is (not merged)</em> — <em>your current data folder is kept, so you can switch back</em>. The app will restart."
+                      i18nKey="This folder already contains app data. It will be <em>used as-is (not merged)</em> — <em>your current data folder is kept, so you can switch back</em>. The app will restart."
                       components={{ em: <strong className="font-semibold text-foreground" /> }}
                     />
                   </p>
@@ -894,7 +894,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
 
             <div className={dialogBodyClassName}>
               <AlertDialog.Description className={dialogDescriptionClassName}>
-                {t("You can move MedResearch Agent's data to another folder on this device.")}
+                {t("You can move Deep Research Agent's data to another folder on this device.")}
               </AlertDialog.Description>
               <div className="mt-3">
                 <DataRootWarning />
@@ -952,7 +952,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
               <pre className={PATH_PILL}>{inspection?.dataRoot ?? trimmedNewPath}</pre>
               <AlertDialog.Description className={cn(dialogDescriptionClassName, 'mt-3')}>
                 <Trans
-                  i18nKey="MedResearch Agent will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>"
+                  i18nKey="Deep Research Agent will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>"
                   components={{ em: <strong className="font-semibold text-text-000" /> }}
                 />
               </AlertDialog.Description>

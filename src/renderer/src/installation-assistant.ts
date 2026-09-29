@@ -38,15 +38,15 @@ const start = (): void => {
 
   title.textContent =
     reason === 'update'
-      ? t('Install MedResearch Agent before updating')
-      : t('Finish installing MedResearch Agent')
+      ? t('Install Deep Research Agent before updating')
+      : t('Finish installing Deep Research Agent')
   description.textContent = t(
-    'Drag MedResearch Agent to Applications. You can continue using this copy without installing.'
+    'Drag Deep Research Agent to Applications. You can continue using this copy without installing.'
   )
   applicationsLabel.textContent = t('Applications')
   continueButton.textContent = t('Continue using')
   installButton.textContent = t('Install in Applications')
-  sourceIcon.setAttribute('aria-label', t('Drag MedResearch Agent to Applications'))
+  sourceIcon.setAttribute('aria-label', t('Drag Deep Research Agent to Applications'))
   targetItem.setAttribute('aria-label', t('Applications'))
   let primaryAction: 'install' | 'reveal' | 'restart' = 'install'
 
@@ -59,9 +59,9 @@ const start = (): void => {
     const result = await window.installationAssistant.install()
     if (result.status === 'installed') {
       motionStage.classList.add('is-installed')
-      title.textContent = t('MedResearch Agent is installed')
+      title.textContent = t('Deep Research Agent is installed')
       description.textContent = t(
-        'Quit this copy and reopen MedResearch Agent from Applications to enable updates.'
+        'Quit this copy and reopen Deep Research Agent from Applications to enable updates.'
       )
       status.textContent = t('Installed in Applications')
       installButton.disabled = false
@@ -71,7 +71,7 @@ const start = (): void => {
     }
 
     status.textContent = t(
-      'MedResearch Agent could not be installed in Applications. Drag it there in Finder, or continue using this copy.'
+      'Deep Research Agent could not be installed in Applications. Drag it there in Finder, or continue using this copy.'
     )
     status.dataset.tone = 'error'
     installButton.disabled = false
@@ -89,7 +89,7 @@ const start = (): void => {
     else void install()
   })
   sourceIcon.addEventListener('dragstart', (event) => {
-    event.dataTransfer?.setData('text/plain', 'MedResearch Agent')
+    event.dataTransfer?.setData('text/plain', 'Deep Research Agent')
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy'
   })
   targetItem.addEventListener('dragover', (event) => {

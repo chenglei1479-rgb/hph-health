@@ -830,7 +830,7 @@ export function ComputeHostDetail({
         className="mt-5"
         title={t('Details')}
         description={t(
-          'Free-form notes about this provider. MedResearch Agent reads and adds to them as it learns.'
+          'Free-form notes about this provider. Deep Research Agent reads and adds to them as it learns.'
         )}
         action={
           !isEditingDetails ? (

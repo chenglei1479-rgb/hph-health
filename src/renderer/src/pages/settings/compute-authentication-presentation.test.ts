@@ -54,7 +54,7 @@ describe('Compute authentication presentation', () => {
     ],
     [
       'host_key_unknown',
-      'Verify this Host key in a terminal before connecting from MedResearch Agent.',
+      'Verify this Host key in a terminal before connecting from Deep Research Agent.',
       'Review Host settings'
     ],
     [

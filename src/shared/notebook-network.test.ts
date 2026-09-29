@@ -43,7 +43,7 @@ describe('disabled automatic domain access', () => {
 })
 
 describe('notebook network policy', () => {
-  it('enables every MedResearch Agent domain group by default', () => {
+  it('enables every Deep Research Agent domain group by default', () => {
     const policy = buildNotebookNetworkPolicy(DEFAULT_NOTEBOOK_NETWORK_SETTINGS)
 
     expect(policy.allowedDomains).toContain('pypi.org')

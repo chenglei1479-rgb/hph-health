@@ -196,10 +196,10 @@ const DataRootMissingDialog = ({
             <p className="text-xs text-muted-foreground">
               {isRemoteWebSurface
                 ? t(
-                    'To choose another location or continue with an empty folder, use MedResearch Agent on the home computer.'
+                    'To choose another location or continue with an empty folder, use Deep Research Agent on the home computer.'
                   )
                 : t(
-                    "MedResearch Agent will recreate the folder as you use it. Files from the old location won't be available until it's reconnected."
+                    "Deep Research Agent will recreate the folder as you use it. Files from the old location won't be available until it's reconnected."
                   )}
             </p>
           </div>

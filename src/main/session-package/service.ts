@@ -143,7 +143,7 @@ const importJournalSchema = sessionPackageRequestSchema
 type ImportJournal = z.infer<typeof importJournalSchema>
 
 const PACKAGE_README =
-  '# MedResearch Agent Session package\n\nMedResearch Agent can inspect and import this archive as read-only research history. Import does not execute code or restore account credentials. Checksums verify bytes, not scientific claims or the identity of the sender.\n'
+  '# Deep Research Agent Session package\n\nDeep Research Agent can inspect and import this archive as read-only research history. Import does not execute code or restore account credentials. Checksums verify bytes, not scientific claims or the identity of the sender.\n'
 
 type PackageOptions = {
   storageRoot: string

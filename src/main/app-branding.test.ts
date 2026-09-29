@@ -4,11 +4,11 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const projectRoot = resolve(__dirname, '../..')
-const displayName = 'MedResearch Agent'
+const displayName = 'Deep Research Agent'
 const appId = 'com.aipoch.medresearch-agent'
 
 describe('app display branding', () => {
-  it('uses the MedResearch Agent display name in shell and workspace surfaces', () => {
+  it('uses the Deep Research Agent display name in shell and workspace surfaces', () => {
     const mainSource = readFileSync(resolve(projectRoot, 'src/main/index.ts'), 'utf8')
     const windowsSource = readFileSync(resolve(projectRoot, 'src/main/windows.ts'), 'utf8')
     const rendererHtmlSource = readFileSync(resolve(projectRoot, 'src/renderer/index.html'), 'utf8')
@@ -27,14 +27,14 @@ describe('app display branding', () => {
     expect(builderSource).toContain(`productName: ${displayName}`)
     expect(builderSource).toContain(`CFBundleName: ${displayName}`)
     // Finder uses the installation label; CFBundleName stays aligned with Electron Helpers.
-    expect(builderSource).toContain('CFBundleDisplayName: MedResearch Agent')
-    expect(builderSource).toContain('name: MedResearch Agent.app')
+    expect(builderSource).toContain('CFBundleDisplayName: Deep Research Agent')
+    expect(builderSource).toContain('name: Deep Research Agent.app')
     expect(packageSource).toContain(`"productName": "${displayName}"`)
     expect(appConfigSource).toContain(`name: '${displayName}'`)
     expect(homePageSource).toContain('APP.name')
   })
 
-  it('uses the MedResearch Agent app identifier for packaged and window integration metadata', () => {
+  it('uses the stable app identifier for packaged and window integration metadata', () => {
     const mainSource = readFileSync(resolve(projectRoot, 'src/main/index.ts'), 'utf8')
     const builderSource = readFileSync(resolve(projectRoot, 'electron-builder.yml'), 'utf8')
 

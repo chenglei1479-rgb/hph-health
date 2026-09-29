@@ -53,7 +53,7 @@ type CacheMarker = { schema?: number; canonicalRoot?: string; userIdentity?: str
 
 type TempParentMarker = { schema?: number; kind?: string; userIdentity?: string }
 
-const WINDOWS_TEMP_PARENT = 'MedResearch AgentTmp'
+const WINDOWS_TEMP_PARENT = 'Deep Research AgentTmp'
 const LEGACY_WINDOWS_TEMP_PARENT = 'MedResearchAgentTmp'
 const TEMP_PARENT_MARKER_FILE = '.open-science-temp.json'
 const TEMP_PARENT_MARKER_KIND = 'micromamba-working-cache-parent'

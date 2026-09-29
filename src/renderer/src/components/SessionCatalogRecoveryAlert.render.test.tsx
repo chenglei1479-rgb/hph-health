@@ -174,9 +174,9 @@ describe('SessionCatalogRecoveryAlert', () => {
       )
     )
 
-    expect(container.textContent).toContain('MedResearch Agent update required')
+    expect(container.textContent).toContain('Deep Research Agent update required')
     expect(container.textContent).toContain(
-      'A saved conversation requires a newer version of MedResearch Agent'
+      'A saved conversation requires a newer version of Deep Research Agent'
     )
     expect(container.textContent).toContain('files stay unchanged')
     expect(container.querySelector('[data-testid="session-persistence-retry"]')).toBeNull()

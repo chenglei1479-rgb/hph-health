@@ -76,8 +76,8 @@ describe('remote-compute-ssh saved-id result guidance', () => {
     const skill = await readFile(skillPath, 'utf8')
 
     expect(skill).toContain('You may set the scheduler allocation limit with')
-    expect(skill).toContain('MedResearch Agent derives a default allocation')
-    expect(skill).not.toContain('MedResearch Agent owns the Slurm time')
+    expect(skill).toContain('Deep Research Agent derives a default allocation')
+    expect(skill).not.toContain('Deep Research Agent owns the Slurm time')
   })
 })
 

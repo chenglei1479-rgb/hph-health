@@ -216,7 +216,7 @@ const installApi = (): void => {
     logs: {
       getStatus: vi.fn().mockResolvedValue({
         configured: true,
-        path: '/Users/x/Library/Logs/MedResearch Agent/main.log',
+        path: '/Users/x/Library/Logs/Deep Research Agent/main.log',
         existing: true,
         lastWriteSucceeded: true,
         lastFailureCategory: null
@@ -2587,7 +2587,7 @@ describe('SettingsPage layout', () => {
     ).api.logs
     logs.getStatus.mockResolvedValueOnce({
       configured: true,
-      path: '/Users/x/Library/Logs/MedResearch Agent/main.log',
+      path: '/Users/x/Library/Logs/Deep Research Agent/main.log',
       existing: false,
       lastWriteSucceeded: null,
       lastFailureCategory: null
@@ -4880,7 +4880,7 @@ describe('SettingsPage layout', () => {
           {
             id: 'official',
             kind: 'official',
-            name: 'MedResearch Agent Marketplace',
+            name: 'Deep Research Agent Marketplace',
             repositoryUrl: 'https://github.com/aipoch/marketplace',
             ref: 'published',
             trust: 'official',
@@ -4892,7 +4892,7 @@ describe('SettingsPage layout', () => {
         specialists: [
           {
             sourceId: 'official',
-            sourceName: 'MedResearch Agent Marketplace',
+            sourceName: 'Deep Research Agent Marketplace',
             sourceTrust: 'official',
             id: 'example-specialist',
             displayName: 'Example Specialist',
@@ -4964,7 +4964,7 @@ describe('SettingsPage layout', () => {
           id: 'storage' as const,
           label: 'App storage permission',
           status: 'failed' as const,
-          summary: 'MedResearch Agent cannot write to its private data folder.'
+          summary: 'Deep Research Agent cannot write to its private data folder.'
         }
       ],
       ready: false,
@@ -4980,7 +4980,7 @@ describe('SettingsPage layout', () => {
           id: 'storage' as const,
           label: 'App storage permission',
           status: 'passed' as const,
-          summary: 'MedResearch Agent can write to its private data folder.'
+          summary: 'Deep Research Agent can write to its private data folder.'
         },
         {
           id: 'agent' as const,

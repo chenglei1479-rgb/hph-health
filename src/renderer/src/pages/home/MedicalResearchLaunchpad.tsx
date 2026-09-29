@@ -4,14 +4,19 @@ import {
   ChartNoAxesCombined,
   ClipboardCheck,
   FilePenLine,
+  Languages,
+  Search,
   ShieldCheck,
   type LucideIcon
 } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
+import { Textarea } from '@/components/ui/textarea'
 
-export type MedicalResearchWorkflow = 'evidence' | 'protocol' | 'analysis' | 'manuscript'
+export type MedicalResearchWorkflow =
+  'novelty' | 'evidence' | 'protocol' | 'analysis' | 'manuscript' | 'academic-english'
 
 type WorkflowCard = {
   id: MedicalResearchWorkflow
@@ -22,110 +27,146 @@ type WorkflowCard = {
 }
 
 type MedicalResearchLaunchpadProps = {
-  onSelectWorkflow: (workflow: MedicalResearchWorkflow) => void
+  onSelectWorkflow: (workflow: MedicalResearchWorkflow, theme: string) => void
 }
 
 const MedicalResearchLaunchpad = ({
   onSelectWorkflow
 }: MedicalResearchLaunchpadProps): React.JSX.Element => {
   const { t } = useTranslation()
+  const [researchTheme, setResearchTheme] = useState('')
+  const exampleTheme = t(
+    'I want to study the treatment effect of immune checkpoint inhibitors in patients with lung cancer.'
+  )
   const workflows: WorkflowCard[] = [
     {
+      id: 'novelty',
+      title: t('Research novelty check'),
+      description: t(
+        'Search existing studies and ongoing trials, then map potential research gaps with source links and coverage limits.'
+      ),
+      icon: Search,
+      iconClassName: 'bg-[#f5eee7] text-[#965749]'
+    },
+    {
       id: 'evidence',
-      title: t('Evidence synthesis'),
+      title: t('Literature review'),
       description: t('Frame a PICO question and build a traceable evidence table.'),
       icon: BookOpenCheck,
       iconClassName: 'bg-[#eef3f4] text-[#315b67]'
     },
     {
       id: 'protocol',
-      title: t('Study protocol'),
+      title: t('Study planning'),
       description: t('Turn a research question into an editable study protocol.'),
       icon: ClipboardCheck,
       iconClassName: 'bg-[#f5eee7] text-[#965749]'
     },
     {
       id: 'analysis',
-      title: t('Statistical analysis'),
-      description: t('Plan a reproducible analysis and preserve the raw data.'),
+      title: t('Data analysis'),
+      description: t(
+        'Upload an anonymized CSV, review variables and missingness, approve a statistical plan, then create reproducible tables, figures, and code.'
+      ),
       icon: ChartNoAxesCombined,
       iconClassName: 'bg-[#eef2e9] text-[#58744b]'
     },
     {
       id: 'manuscript',
-      title: t('Manuscript drafting'),
+      title: t('Manuscript writing'),
       description: t('Draft from verified sources and real study results.'),
       icon: FilePenLine,
       iconClassName: 'bg-[#f3edf1] text-[#78576e]'
+    },
+    {
+      id: 'academic-english',
+      title: t('Academic English writing'),
+      description: t(
+        'Turn Japanese research notes into section-aware academic English; preserve meaning and flag missing context.'
+      ),
+      icon: Languages,
+      iconClassName: 'bg-[#edf0f7] text-[#58668a]'
     }
   ]
 
   return (
     <section className="mt-8 space-y-4" aria-label={t('Medical research workflows')}>
       <div className="relative isolate overflow-hidden rounded-[26px] border border-[#ddd9cf] bg-[linear-gradient(120deg,#f8f7f1_0%,#f1f5f3_58%,#edf2f2_100%)] px-5 py-6 shadow-card sm:px-8 sm:py-7">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-8 -top-16 -z-10 hidden size-64 rounded-full border border-[#bf5145]/15 sm:block"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute right-7 top-5 -z-10 hidden size-44 rounded-full border border-[#bf5145]/15 sm:block"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute right-[78px] top-[42px] -z-10 hidden size-20 items-center justify-center rounded-full border border-[#bd4c40]/25 bg-[#fbf7f0] font-serif text-4xl font-light text-[#bd4c40] sm:flex"
-        >
-          日
-        </div>
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 right-0 -z-10 hidden h-24 w-72 text-[#6c8990]/20 sm:block"
-          viewBox="0 0 288 96"
-          fill="none"
-        >
-          <path d="M0 72C36 48 72 48 108 72s72 24 108 0 54-24 72-12" stroke="currentColor" />
-          <path d="M0 84c36-24 72-24 108 0s72 24 108 0 54-24 72-12" stroke="currentColor" />
-          <path d="M0 60c36-24 72-24 108 0s72 24 108 0 54-24 72-12" stroke="currentColor" />
-        </svg>
-
         <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#536970]">
           <span>{t('Medical research workspace')}</span>
           <span className="size-1 rounded-full bg-[#bf5145]" aria-hidden="true" />
           <span className="tracking-[0.08em] text-[#9a5046]">{t('Research use only')}</span>
         </div>
         <h1 className="mt-3 max-w-[680px] font-serif text-[28px] font-medium leading-[1.18] tracking-[-0.025em] text-[#20343a] sm:text-[34px]">
-          {t('From clinical question to traceable evidence.')}
+          {t('Enter your research theme')}
         </h1>
         <p className="mt-2 max-w-[620px] text-sm leading-6 text-[#5a6b6c] sm:text-[15px]">
-          {t('A focused workspace for medical literature, study design, analysis, and writing.')}
+          {t('Describe the clinical question, then choose where to begin.')}
         </p>
-        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#d5dfdc] bg-white/65 px-3 py-1.5 text-xs font-medium text-[#405c5f]">
-          <span aria-hidden="true" className="font-serif text-sm text-[#bd4c40]">
-            波
-          </span>
-          {t('Local-first · Chinese and Japanese · Reviewable at every step')}
+        <div className="mt-5 max-w-3xl">
+          <label
+            htmlFor="medical-research-theme"
+            className="mb-1.5 block text-xs font-semibold text-[#405c5f]"
+          >
+            {t('Research theme')}
+          </label>
+          <Textarea
+            id="medical-research-theme"
+            value={researchTheme}
+            onChange={(event) => setResearchTheme(event.target.value)}
+            placeholder={t('Type a clinical question or research topic…')}
+            maxLength={2000}
+            rows={2}
+            className="min-h-[88px] resize-y rounded-xl border-[#d5dfdc] bg-white/80 px-3.5 py-3 text-sm leading-6 placeholder:text-[#829092] focus-visible:border-[#8ea9a7]"
+          />
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs leading-5 text-[#687a7b]">
+            <span className="shrink-0">{t('Try this example:')}</span>
+            <button
+              type="button"
+              onClick={() => setResearchTheme(exampleTheme)}
+              className="cursor-pointer text-left font-medium text-[#42686e] underline decoration-[#a9bcba] underline-offset-2 hover:text-[#244a50] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            >
+              {exampleTheme}
+            </button>
+          </div>
         </div>
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#d5dfdc] bg-white/65 px-3 py-1.5 text-xs font-medium text-[#405c5f]">
+          {t('Local-first · Reviewable at every step')}
+        </div>
+        <p className="mt-2 max-w-3xl text-xs leading-5 text-[#687a7b]">
+          {t(
+            'Each project has its own Research Memory. With Memory on, DRA can recall confirmed study facts and decisions in later sessions; review them in Settings > Memory.'
+          )}
+        </p>
       </div>
 
       <div className="flex items-end justify-between gap-3 px-1">
         <div>
           <h2 className="text-[17px] font-medium leading-6 text-text-000">
-            {t('Choose a research workflow')}
+            {t('Choose where to begin')}
           </h2>
-          <p className="mt-0.5 text-xs text-text-300">{t('Start with a structured, editable task draft.')}</p>
+          <p className="mt-0.5 text-xs text-text-300">
+            {t('Each stage pauses for researcher confirmation before the workflow continues.')}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {workflows.map(({ id, title, description, icon: Icon, iconClassName }) => (
           <button
             key={id}
             type="button"
-            onClick={() => onSelectWorkflow(id)}
-            className="group flex min-h-[136px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            disabled={!researchTheme.trim()}
+            onClick={() => onSelectWorkflow(id, researchTheme.trim())}
+            className="group flex min-h-[136px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-200/70 disabled:hover:bg-bg-000"
           >
             <span className="flex w-full items-start justify-between gap-3">
-              <span className={cn('inline-flex size-9 items-center justify-center rounded-xl', iconClassName)}>
+              <span
+                className={cn(
+                  'inline-flex size-9 items-center justify-center rounded-xl',
+                  iconClassName
+                )}
+              >
                 <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
               </span>
               <ArrowUpRight
@@ -141,8 +182,16 @@ const MedicalResearchLaunchpad = ({
       </div>
 
       <div className="flex items-start gap-2.5 rounded-xl border border-[#e4ded2] bg-[#faf8f2] px-3.5 py-3 text-xs leading-5 text-[#635f56]">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#7d8066]" strokeWidth={1.8} aria-hidden="true" />
-        <p>{t('For academic research only; not for diagnosis or treatment. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.')}</p>
+        <ShieldCheck
+          className="mt-0.5 size-4 shrink-0 text-[#7d8066]"
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+        <p>
+          {t(
+            'For academic research only; not for diagnosis or treatment. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.'
+          )}
+        </p>
       </div>
     </section>
   )

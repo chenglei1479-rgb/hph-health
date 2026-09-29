@@ -385,7 +385,7 @@ describe('ConnectorDetailView', () => {
     })
 
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
-      'MedResearch Agent could not load this Connector.'
+      'Deep Research Agent could not load this Connector.'
     )
     const retry = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
       (button) => button.textContent?.trim() === 'Retry'

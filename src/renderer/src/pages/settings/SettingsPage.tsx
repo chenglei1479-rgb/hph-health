@@ -5,7 +5,7 @@ import type { PreviewFileItem } from '@/stores/preview-workbench-store'
 import { Notice } from '@/components/notice'
 import { ErrorNotice } from '@/components/error-notice'
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
-/* Hallmark · component: settings side rail · genre: modern-minimal · theme: existing MedResearch Agent tokens · slop: pass */
+/* Hallmark · component: settings side rail · genre: modern-minimal · theme: existing Deep Research Agent tokens · slop: pass */
 import {
   AlertTriangle,
   Loader2,

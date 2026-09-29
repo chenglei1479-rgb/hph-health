@@ -80,7 +80,7 @@ describe('DataRootWarning', () => {
     render(<DataRootWarning />)
 
     // The app name is a product noun and stays Latin in every locale.
-    expect(container.textContent).toContain('MedResearch Agent')
+    expect(container.textContent).toContain('Deep Research Agent')
     expect(container.textContent).toContain('不要移动、重命名或删除其中的文件')
   })
 })

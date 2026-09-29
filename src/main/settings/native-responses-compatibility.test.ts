@@ -402,7 +402,7 @@ describe('native Responses compatibility', () => {
         {
           type: 'namespace',
           name: 'mcp__open_science_notebook',
-          description: 'MedResearch Agent notebook tools.',
+          description: 'Deep Research Agent notebook tools.',
           tools: [
             {
               type: 'function',
@@ -441,7 +441,7 @@ describe('native Responses compatibility', () => {
       {
         type: 'function',
         name: 'mcp__open_science_notebook__repl_execute',
-        description: 'MedResearch Agent notebook tools.\n\nRun control-plane JavaScript.',
+        description: 'Deep Research Agent notebook tools.\n\nRun control-plane JavaScript.',
         parameters: { type: 'object' },
         strict: false
       },

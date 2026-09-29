@@ -59,7 +59,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'MedResearch Agent could not open its database.',
+          message: 'Deep Research Agent could not open its database.',
           retryable: true
         }
       })
@@ -69,7 +69,7 @@ describe('DatabaseStartupGate', () => {
     const application = screen.getByText('Business application')
     await act(async () => resolveRetry({ phase: 'starting' }))
     expect(screen.queryByText('Business application')).toBe(application)
-    expect(screen.queryByText('Starting MedResearch Agent…')).toBeNull()
+    expect(screen.queryByText('Starting Deep Research Agent…')).toBeNull()
   })
 
   it.each(['ready', 'blocked'] as const)(
@@ -93,7 +93,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'MedResearch Agent could not open its database.',
+          message: 'Deep Research Agent could not open its database.',
           retryable: true
         }
       }
@@ -101,7 +101,9 @@ describe('DatabaseStartupGate', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
       act(() => publish(phase === 'ready' ? { phase } : blocked))
       await act(async () => rejectRetry(new Error('late failure')))
-      expect(screen.queryByText('MedResearch Agent could not finish checking its database.')).toBeNull()
+      expect(
+        screen.queryByText('Deep Research Agent could not finish checking its database.')
+      ).toBeNull()
       expect(
         screen.getByText(phase === 'ready' ? 'Business application' : blocked.error.message)
       ).toBeTruthy()
@@ -128,7 +130,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'MedResearch Agent could not open its database.',
+          message: 'Deep Research Agent could not open its database.',
           retryable: true
         }
       })
@@ -167,19 +169,19 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'MedResearch Agent could not open its database.',
+          message: 'Deep Research Agent could not open its database.',
           retryable: true
         }
       })
     )
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     await act(async () => resolveRetry({ phase: 'starting' }))
-    expect(screen.getByText('Starting MedResearch Agent…')).toBeTruthy()
+    expect(screen.getByText('Starting Deep Research Agent…')).toBeTruthy()
     act(() => publish({ phase: 'ready' }))
     expect(screen.getByText('Business application')).toBeTruthy()
     view.unmount()
     act(() => publish({ phase: 'starting' }))
-    expect(screen.queryByText('Starting MedResearch Agent…')).toBeNull()
+    expect(screen.queryByText('Starting Deep Research Agent…')).toBeNull()
   })
 
   it('ignores a retry from an unmounted StrictMode gate after a new gate is ready', async () => {
@@ -202,7 +204,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'MedResearch Agent could not open its database.',
+          message: 'Deep Research Agent could not open its database.',
           retryable: true
         }
       })
@@ -222,7 +224,7 @@ describe('DatabaseStartupGate', () => {
     const application = screen.getByText('New application')
     await act(async () => resolveRetry({ phase: 'starting' }))
     expect(screen.getByText('New application')).toBe(application)
-    expect(screen.queryByText('Starting MedResearch Agent…')).toBeNull()
+    expect(screen.queryByText('Starting Deep Research Agent…')).toBeNull()
   })
 
   it('reuses the branded startup loader while checking and migrating the database', () => {
@@ -246,15 +248,15 @@ describe('DatabaseStartupGate', () => {
     const updatingLabel = screen.getByText('Updating database…')
     expect(updatingLabel.tagName).toBe('SPAN')
     expect(updatingLabel.className).toBe(checkingLabel.className)
-    expect(screen.getByText('Keep MedResearch Agent open while this finishes.')).toBeTruthy()
+    expect(screen.getByText('Keep Deep Research Agent open while this finishes.')).toBeTruthy()
     expect(screen.getByTestId('open-science-logo-loader')).toBe(startupLoader)
 
     act(() => publish({ phase: 'starting' }))
 
-    const startingLabel = screen.getByText('Starting MedResearch Agent…')
+    const startingLabel = screen.getByText('Starting Deep Research Agent…')
     expect(startingLabel.tagName).toBe('SPAN')
     expect(startingLabel.className).toBe(checkingLabel.className)
-    expect(screen.getByText('Keep MedResearch Agent open while this finishes.')).toBeTruthy()
+    expect(screen.getByText('Keep Deep Research Agent open while this finishes.')).toBeTruthy()
     expect(screen.queryByText('Checking database…')).toBeNull()
     expect(screen.getByTestId('open-science-logo-loader')).toBe(startupLoader)
   })
@@ -274,13 +276,13 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_newer_than_app',
-          message: 'This database was updated by a newer version of MedResearch Agent.',
+          message: 'This database was updated by a newer version of Deep Research Agent.',
           migrationId: '0002_future_schema',
           retryable: false
         }
       })
     )
-    expect(screen.getByText("MedResearch Agent couldn't start")).toBeTruthy()
+    expect(screen.getByText("Deep Research Agent couldn't start")).toBeTruthy()
     expect(screen.getByText(/database_newer_than_app/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
 
@@ -311,9 +313,11 @@ describe('DatabaseStartupGate', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("MedResearch Agent couldn't start")).toBeTruthy()
+      expect(screen.getByText("Deep Research Agent couldn't start")).toBeTruthy()
     })
-    expect(screen.getByText('MedResearch Agent could not finish checking its database.')).toBeTruthy()
+    expect(
+      screen.getByText('Deep Research Agent could not finish checking its database.')
+    ).toBeTruthy()
     expect(screen.getByText(/database_startup_unavailable/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Quit' })).toBeTruthy()
@@ -340,7 +344,7 @@ describe('DatabaseStartupGate', () => {
     })
 
     expect(screen.getByText('Business application')).toBeTruthy()
-    expect(screen.queryByText("MedResearch Agent couldn't start")).toBeNull()
+    expect(screen.queryByText("Deep Research Agent couldn't start")).toBeNull()
   })
 
   it('restores retry after a retry IPC rejection', async () => {
@@ -358,7 +362,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'MedResearch Agent could not open its database.',
+          message: 'Deep Research Agent could not open its database.',
           retryable: true
         }
       })
@@ -366,8 +370,10 @@ describe('DatabaseStartupGate', () => {
 
     await act(async () => screen.getByRole('button', { name: 'Retry' }).click())
 
-    expect(screen.getByText("MedResearch Agent couldn't start")).toBeTruthy()
-    expect(screen.getByText('MedResearch Agent could not finish checking its database.')).toBeTruthy()
+    expect(screen.getByText("Deep Research Agent couldn't start")).toBeTruthy()
+    expect(
+      screen.getByText('Deep Research Agent could not finish checking its database.')
+    ).toBeTruthy()
     expect(screen.getByText(/database_startup_unavailable/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
     expect(screen.queryByText('Checking database…')).toBeNull()
@@ -393,7 +399,7 @@ describe('DatabaseStartupGate', () => {
     })
 
     expect(screen.getByText('Business application')).toBeTruthy()
-    expect(screen.queryByText("MedResearch Agent couldn't start")).toBeNull()
+    expect(screen.queryByText("Deep Research Agent couldn't start")).toBeNull()
     expect(getState).toHaveBeenCalledOnce()
   })
 
@@ -407,14 +413,16 @@ describe('DatabaseStartupGate', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('MedResearch Agent could not finish checking its database.')).toBeTruthy()
+      expect(
+        screen.getByText('Deep Research Agent could not finish checking its database.')
+      ).toBeTruthy()
     })
 
     await act(async () => {
       await i18next.changeLanguage('zh-Hans')
     })
 
-    expect(screen.getByText('MedResearch Agent 无法完成数据库检查。')).toBeTruthy()
+    expect(screen.getByText('Deep Research Agent 无法完成数据库检查。')).toBeTruthy()
     expect(screen.getByRole('button', { name: '重试' })).toBeTruthy()
     expect(screen.queryByText('Business application')).toBeNull()
   })
@@ -431,7 +439,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'MedResearch Agent could not open its database.',
+          message: 'Deep Research Agent could not open its database.',
           retryable: true
         }
       })
@@ -453,7 +461,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_newer_than_app',
-          message: 'The database was updated by a newer version of MedResearch Agent.',
+          message: 'The database was updated by a newer version of Deep Research Agent.',
           migrationId: '0009_vision_evidence',
           retryable: false,
           diagnostics: 'App version: 0.9.2 (darwin-arm64)\n\nError: boom'
@@ -512,7 +520,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'MedResearch Agent could not open its database.',
+          message: 'Deep Research Agent could not open its database.',
           retryable: true
         }
       })
@@ -520,7 +528,7 @@ describe('DatabaseStartupGate', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
     expect(
       screen.getByText(
-        'Quit other copies of MedResearch Agent, check free disk space and folder permissions, then retry.'
+        'Quit other copies of Deep Research Agent, check free disk space and folder permissions, then retry.'
       )
     ).toBeTruthy()
     expect(screen.queryByText(/Part of the stored data doesn't match/)).toBeNull()

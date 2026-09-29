@@ -8,6 +8,12 @@
       "updatedAt": "2026-07-14T00:00:00.000Z"
     },
     {
+      "id": "biomedical-discovery",
+      "name": "Biomedical Discovery",
+      "source": "featured",
+      "updatedAt": "2026-09-29T00:00:00.000Z"
+    },
+    {
       "id": "boltz",
       "name": "Boltz",
       "source": "featured",

@@ -53,9 +53,9 @@ describe('Windows micromamba cache preparation', () => {
       deps
     )
 
-    expect(cache.path).toMatch(/^D:\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(cache.path).toMatch(/^D:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
     expect(hardenOwnership).toHaveBeenCalledTimes(2)
-    expect(hardenOwnership).toHaveBeenNthCalledWith(1, 'D:\\MedResearch AgentTmp')
+    expect(hardenOwnership).toHaveBeenNthCalledWith(1, 'D:\\Deep Research AgentTmp')
     expect(hardenOwnership).toHaveBeenNthCalledWith(2, cache.path)
     expect(hardenOwnership.mock.invocationCallOrder[0]).toBeLessThan(
       fsMocks.writeFileSync.mock.invocationCallOrder[0]
@@ -67,7 +67,7 @@ describe('Windows micromamba cache preparation', () => {
 
   it('verifies the shared parent but skips a second ACL read for a securely hardened cache child', () => {
     const hardenOwnership = vi.fn(() => true)
-    const verifyOwnership = vi.fn((path: string) => path === 'D:\\MedResearch AgentTmp')
+    const verifyOwnership = vi.fn((path: string) => path === 'D:\\Deep Research AgentTmp')
 
     const cache = selectMicromambaCache(
       'D:\\OpenScience\\runtime',
@@ -82,10 +82,10 @@ describe('Windows micromamba cache preparation', () => {
       }
     )
 
-    expect(cache.path).toMatch(/^D:\\MedResearch AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(cache.path).toMatch(/^D:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
     expect(hardenOwnership).toHaveBeenCalledTimes(2)
     expect(verifyOwnership).toHaveBeenCalledOnce()
-    expect(verifyOwnership).toHaveBeenCalledWith('D:\\MedResearch AgentTmp', 'alice')
+    expect(verifyOwnership).toHaveBeenCalledWith('D:\\Deep Research AgentTmp', 'alice')
   })
 
   it('removes newly created candidates when ACL hardening fails', () => {
@@ -105,10 +105,10 @@ describe('Windows micromamba cache preparation', () => {
     ).toThrow(/temporary parent ACL could not be hardened \(Set-Acl denied\)/)
 
     expect(hardenOwnership).toHaveBeenCalledTimes(2)
-    expect(fsMocks.rmdirSync).toHaveBeenCalledWith('D:\\MedResearch AgentTmp')
+    expect(fsMocks.rmdirSync).toHaveBeenCalledWith('D:\\Deep Research AgentTmp')
     expect(fsMocks.rmdirSync).toHaveBeenCalledWith('C:\\Users\\alice\\os-tmp')
     expect(fsMocks.rmSync).not.toHaveBeenCalledWith(
-      expect.stringMatching(/(?:MedResearch AgentTmp|os-tmp)$/),
+      expect.stringMatching(/(?:Deep Research AgentTmp|os-tmp)$/),
       expect.objectContaining({ recursive: true })
     )
   })
@@ -144,15 +144,15 @@ describe('Windows micromamba cache preparation', () => {
       })
     ).not.toThrow()
 
-    expect(fsMocks.rmSync).toHaveBeenCalledWith(expect.stringMatching(/^D:\\MedResearch AgentTmp\\m-/), {
+    expect(fsMocks.rmSync).toHaveBeenCalledWith(expect.stringMatching(/^D:\\Deep Research AgentTmp\\m-/), {
       recursive: true,
       force: true
     })
     expect(fsMocks.rmSync).not.toHaveBeenCalledWith(
-      'D:\\MedResearch AgentTmp',
+      'D:\\Deep Research AgentTmp',
       expect.objectContaining({ recursive: true })
     )
-    expect(fsMocks.rmdirSync).not.toHaveBeenCalledWith('D:\\MedResearch AgentTmp')
+    expect(fsMocks.rmdirSync).not.toHaveBeenCalledWith('D:\\Deep Research AgentTmp')
   })
 
   it('does not harden or take over an existing marked candidate', () => {
@@ -191,7 +191,7 @@ describe('Windows micromamba cache preparation', () => {
       }
     )
 
-    expect(cache.path).toMatch(/^D:\\MedResearch AgentTmp\\m-/)
+    expect(cache.path).toMatch(/^D:\\Deep Research AgentTmp\\m-/)
     expect(hardenOwnership).not.toHaveBeenCalled()
   })
 

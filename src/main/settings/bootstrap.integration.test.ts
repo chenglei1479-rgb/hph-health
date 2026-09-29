@@ -192,7 +192,7 @@ it('bootstraps through real local HTTP, restarts the profile, and submits a pers
       applicationEvents: events,
       tasks: api,
       bootstrap: {
-        appName: 'MedResearch Agent',
+        appName: 'Deep Research Agent',
         appVersion: 'test',
         configRoot: root,
         platform: process.platform,

@@ -120,7 +120,7 @@ export type StoredProvider = {
   // "unverified" warning survives a restart.
   lastValidationFailure?: ProviderValidationFailure
   // claude-shared credentials live in the user's global profile and cannot be removed safely by the
-  // app. This timestamp records an app-local disconnect so MedResearch Agent stops using that profile
+  // app. This timestamp records an app-local disconnect so Deep Research Agent stops using that profile
   // until the user explicitly signs in again.
   disconnectedAt?: number
 }
@@ -317,7 +317,7 @@ export type StoredSettings = {
   // Absent means it still needs to run (or a previous attempt failed and should retry).
   pathsNormalizedAt?: number
   // Set once the user has answered the one-time "move your legacy .open-science data into the
-  // visible MedResearch Agent folder" prompt (by moving, choosing another folder, or declining). Absent
+  // visible Deep Research Agent folder" prompt (by moving, choosing another folder, or declining). Absent
   // means it has never been answered, so an eligible legacy install may still be offered the prompt.
   legacyDataMovePromptDismissedAt?: number
   // Per-language v4 environment enablement: an explicit per-env enabled override map plus the separate

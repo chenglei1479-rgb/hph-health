@@ -495,12 +495,12 @@ describe('ProvidersPanel: claude-shared actions', () => {
 
     render()
     const disconnect = document.body.querySelector<HTMLButtonElement>(
-      '[aria-label="Disconnect from MedResearch Agent"]'
+      '[aria-label="Disconnect from Deep Research Agent"]'
     )
     await act(async () => disconnect?.click())
 
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      'Could not disconnect Claude from MedResearch Agent.'
+      'Could not disconnect Claude from Deep Research Agent.'
     )
   })
 })

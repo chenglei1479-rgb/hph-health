@@ -10,7 +10,7 @@ const parseWebPort = (value: string): number => {
   const normalized = value.trim()
   const port = Number(normalized)
   if (!/^\d+$/.test(normalized) || !Number.isInteger(port) || port < 0 || port > 65535) {
-    throw new Error(`Invalid MedResearch Agent web port: ${value}`)
+    throw new Error(`Invalid Deep Research Agent web port: ${value}`)
   }
   return port
 }

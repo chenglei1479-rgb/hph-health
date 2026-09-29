@@ -8,15 +8,15 @@ import type { CliLauncherStatus } from '../../shared/cli'
 import { defaultFileDurability } from '../storage/file-durability'
 
 const MANAGED_LAUNCHER_HEADER_V1 =
-  'MedResearch Agent command-line launcher. Managed by the app. Format version: 1.'
+  'Deep Research Agent command-line launcher. Managed by the app. Format version: 1.'
 const LEGACY_POSIX_HEADER =
-  '# MedResearch Agent command-line launcher. Managed by the app (Settings -> General -> Command line'
+  '# Deep Research Agent command-line launcher. Managed by the app (Settings -> General -> Command line'
 const LEGACY_POSIX_BODIES = new Set([
   "# tool); edits will be overwritten on reinstall. Runs the app's Electron in Node mode.",
   '# tool); edits will be overwritten on reinstall. Mounts the AppImage for this CLI process.'
 ])
 const LEGACY_WINDOWS_HEADER =
-  'rem MedResearch Agent command-line launcher. Managed by the app; edits are overwritten on reinstall.'
+  'rem Deep Research Agent command-line launcher. Managed by the app; edits are overwritten on reinstall.'
 
 // Everything the launcher planner needs, injected so the pure path/shim logic is testable without
 // Electron or the real filesystem. The IPC wrapper fills these from `app`/`process` at call time.
@@ -96,7 +96,7 @@ const posixShim = (env: CliLauncherEnv): string => {
       '# Edits are overwritten on reinstall. Mounts the AppImage for this CLI process.',
       `app_image=${quote(env.appImagePath!)}`,
       'mount_output=$(mktemp "${TMPDIR:-/tmp}/medresearch-agent-cli.XXXXXX") || {',
-      "  echo 'MedResearch Agent could not create a temporary file for the AppImage mount.' >&2",
+      "  echo 'Deep Research Agent could not create a temporary file for the AppImage mount.' >&2",
       '  exit 1',
       '}',
       'mount_pid=',
@@ -118,7 +118,7 @@ const posixShim = (env: CliLauncherEnv): string => {
       '    wait "$mount_pid"',
       '    mount_status=$?',
       '    if [ "$mount_status" -eq 0 ]; then mount_status=1; fi',
-      "    echo 'MedResearch Agent AppImage exited before reporting its mount point.' >&2",
+      "    echo 'Deep Research Agent AppImage exited before reporting its mount point.' >&2",
       '    exit "$mount_status"',
       '  fi',
       '  sleep 0.05',
@@ -127,7 +127,7 @@ const posixShim = (env: CliLauncherEnv): string => {
       `app_exec="$mount_dir"/${quote(executable)}`,
       `cli_entry="$mount_dir"/${quote(cliEntry)}`,
       'if [ ! -x "$app_exec" ] || [ ! -f "$cli_entry" ]; then',
-      "  echo 'MedResearch Agent AppImage is missing its executable or CLI entry.' >&2",
+      "  echo 'Deep Research Agent AppImage is missing its executable or CLI entry.' >&2",
       '  exit 1',
       'fi',
       'OPEN_SCIENCE_APP_PATH="$app_image" ELECTRON_RUN_AS_NODE=1 \\',
@@ -193,7 +193,7 @@ const defaultRunCommand: CommandRunner = (command, args) => {
 
 const WINDOWS_PATH_PENDING_NAME = '.medresearch-agent-path-pending'
 const WINDOWS_PATH_RECEIPT_NAME = '.medresearch-agent-path-receipt'
-const WINDOWS_PATH_RECEIPT_OWNER = 'MedResearch Agent Windows PATH entry. Managed by the app.'
+const WINDOWS_PATH_RECEIPT_OWNER = 'Deep Research Agent Windows PATH entry. Managed by the app.'
 const LEGACY_WINDOWS_PATH_RECEIPT_OWNER = 'Open-Science Windows PATH entry. Managed by the app.'
 // The file name is the journal state: pending is flushed before the registry mutation, then renamed
 // to the owned receipt as the commit step. The snapshots let a later run reconcile a crash safely.
@@ -261,7 +261,7 @@ export const buildWindowsPathCommand = (binDir: string): { command: string; args
     '}',
     'function Read-PathJournal($path) {',
     '  try { $journal = [IO.File]::ReadAllText($path) | ConvertFrom-Json }',
-    "  catch { throw 'The PATH ownership journal is not managed by MedResearch Agent.' }",
+    "  catch { throw 'The PATH ownership journal is not managed by Deep Research Agent.' }",
     '  $beforeIsValid = $null -eq $journal.beforePath -or $journal.beforePath -is [string]',
     "  $expectedAfter = (@(Get-PathParts $journal.beforePath) + $binDir) -join ';'",
     "  if ($journal.version -ne 1 -or ($journal.owner -cne $receiptOwner -and $journal.owner -cne 'Open-Science Windows PATH entry. Managed by the app.') -or",
@@ -269,7 +269,7 @@ export const buildWindowsPathCommand = (binDir: string): { command: string; args
     '      -not $beforeIsValid -or (Get-MatchCount $journal.beforePath) -ne 0 -or',
     '      $journal.afterPath -isnot [string] -or',
     '      $journal.afterPath -cne $expectedAfter) {',
-    "    throw 'The PATH ownership journal is not managed by MedResearch Agent.'",
+    "    throw 'The PATH ownership journal is not managed by Deep Research Agent.'",
     '  }',
     '  return $journal',
     '}',
@@ -344,7 +344,7 @@ const buildWindowsPathRemovalCommand = (
     `$receiptOwner = ${powershellLiteral(WINDOWS_PATH_RECEIPT_OWNER)}`,
     `$state = ${powershellLiteral(state)}`,
     'try { $journal = [IO.File]::ReadAllText($journalPath) | ConvertFrom-Json }',
-    "catch { throw 'The PATH ownership journal is not managed by MedResearch Agent.' }",
+    "catch { throw 'The PATH ownership journal is not managed by Deep Research Agent.' }",
     '  $beforeIsValid = $null -eq $journal.beforePath -or $journal.beforePath -is [string]',
     "$beforeParts = @($journal.beforePath -split ';' | Where-Object { $_ -ne '' })",
     "$normalizedBinDir = $binDir.TrimEnd([char[]]'\\/')",
@@ -357,7 +357,7 @@ const buildWindowsPathRemovalCommand = (
     '    -not $beforeIsValid -or $beforeMatchCount -ne 0 -or',
     '    $journal.afterPath -isnot [string] -or',
     '    $journal.afterPath -cne $expectedAfter) {',
-    "  throw 'The PATH ownership journal is not managed by MedResearch Agent.'",
+    "  throw 'The PATH ownership journal is not managed by Deep Research Agent.'",
     '}',
     '$beforePath = $journal.beforePath',
     '$afterPath = $journal.afterPath',
@@ -385,7 +385,7 @@ class UnmanagedCliLauncherError extends Error {}
 
 const refuseUnmanagedCliLauncher = (target: string): never => {
   throw new UnmanagedCliLauncherError(
-    `Refusing to modify ${target} because it is not managed by MedResearch Agent. ` +
+    `Refusing to modify ${target} because it is not managed by Deep Research Agent. ` +
       'Move or rename the existing file, then try again.'
   )
 }
@@ -494,8 +494,8 @@ const isManagedCliLauncher = (content: string): boolean => {
   const lines = content.split(/\r?\n/)
   // New shims use the new brand, while both historical ownership generations remain repairable.
   const header = lines[1]?.replace(
-    'MedResearch Agent command-line launcher.',
-    'MedResearch Agent command-line launcher.'
+    'Deep Research Agent command-line launcher.',
+    'Deep Research Agent command-line launcher.'
   )
   if (lines[0] === '#!/bin/sh') {
     return (

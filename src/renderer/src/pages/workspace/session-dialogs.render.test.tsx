@@ -228,7 +228,7 @@ describe('workspace session dialogs behavior wiring', () => {
       onCancel: vi.fn(),
       onConfirmDelete: vi.fn()
     })
-    expect(getTextContent(tree)).toContain('the next time MedResearch Agent starts')
+    expect(getTextContent(tree)).toContain('the next time Deep Research Agent starts')
     expect(getTextContent(tree)).toContain('references cannot be verified')
     expect(getTextContent(tree)).toContain('Exported .science files are not deleted.')
     expect(getTextContent(tree)).not.toContain('Artifacts created in this session will remain')
@@ -317,7 +317,7 @@ describe('workspace session dialogs behavior wiring', () => {
     )
 
     expect(getTextContent(alert)).toBe(
-      "The agent was stopped, but MedResearch Agent couldn't delete the saved Session. The Session, draft, and attachments were kept. Please try again."
+      "The agent was stopped, but Deep Research Agent couldn't delete the saved Session. The Session, draft, and attachments were kept. Please try again."
     )
     expect(getTextContent(tree)).not.toContain('disk locked')
     ;(retryButton?.props.onClick as () => void)()
@@ -335,7 +335,7 @@ describe('workspace session dialogs behavior wiring', () => {
       (element) => element.props.role === 'alert'
     )
     expect(getTextContent(runtimeAlert)).toBe(
-      "MedResearch Agent couldn't stop the agent for this Session. The Session was not deleted. Please try again."
+      "Deep Research Agent couldn't stop the agent for this Session. The Session was not deleted. Please try again."
     )
   })
 })

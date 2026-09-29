@@ -39,7 +39,7 @@ const statusReasonLabel = (
     case 'trustBundleInvalid':
       return t('The configured CA bundle could not be read or is not a valid PEM bundle.')
     case 'windowsHostMissing':
-      return t('The Windows sandbox component is missing. Reinstall MedResearch Agent.')
+      return t('The Windows sandbox component is missing. Reinstall Deep Research Agent.')
     case 'windowsGatewayPortUnavailable':
       return t('The Windows sandbox gateway port is unavailable. Set up the sandbox again.')
     case 'windowsLoopbackMissing':
@@ -265,8 +265,8 @@ const NotebookNetworkDomainsForm = (): React.JSX.Element => {
         </div>
       </section>
 
-      <section aria-label={t('MedResearch Agent domains')}>
-        <h3 className="mb-1 text-sm font-semibold text-foreground">{t('MedResearch Agent domains')}</h3>
+      <section aria-label={t('Deep Research Agent domains')}>
+        <h3 className="mb-1 text-sm font-semibold text-foreground">{t('Deep Research Agent domains')}</h3>
         <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
           {t(
             'Turning off a built-in domain removes automatic access. Exact hostnames in Allowed domains remain allowed.'

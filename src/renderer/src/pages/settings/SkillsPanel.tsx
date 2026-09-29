@@ -98,7 +98,7 @@ const SOURCE_GROUPS = [
   {
     source: 'imported',
     labelKey: 'Imported',
-    subtitleKey: 'Skills you imported into MedResearch Agent.'
+    subtitleKey: 'Skills you imported into Deep Research Agent.'
   },
   {
     source: 'personal',
@@ -391,7 +391,7 @@ const SkillsPanel = ({
         <SettingsLoadNotice
           state={catalogState === 'error' ? 'error' : 'loading'}
           loadingLabel={t('Loading Skills…')}
-          errorMessage={t('MedResearch Agent could not load Skills.')}
+          errorMessage={t('Deep Research Agent could not load Skills.')}
           onRetry={retryCatalog}
         />
       </div>
@@ -523,7 +523,7 @@ const SkillsPanel = ({
         <SettingsLoadNotice
           state="error"
           loadingLabel={t('Loading Skills…')}
-          errorMessage={t('MedResearch Agent could not load Skills.')}
+          errorMessage={t('Deep Research Agent could not load Skills.')}
           onRetry={retryCatalog}
           className="mb-3"
         />
@@ -859,7 +859,7 @@ const SkillsPanel = ({
       <SettingsSection
         data-settings-anchor="skills.conversation-imports"
         title={t('Conversation imports')}
-        description={t('Choose what conversations can import into MedResearch Agent.')}
+        description={t('Choose what conversations can import into Deep Research Agent.')}
         aria-label={t('Conversation imports')}
         className="mt-8 border-t border-border pt-4"
         contentClassName="mt-1"

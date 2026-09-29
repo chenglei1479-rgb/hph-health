@@ -112,8 +112,8 @@ describe('localizeProviderResourceMessage', () => {
       '请从基础 URL 中移除凭据，改用 API 密钥字段。'
     ],
     [
-      'MedResearch Agent could not find a file-backed Codex credential to import. Your existing Codex sign-in may be stored in the system credential store, which MedResearch Agent cannot import from. Continue with the MedResearch Agent Codex sign-in instead.',
-      'MedResearch Agent 未找到可导入的基于文件的 Codex 凭据。你已有的 Codex 登录可能存储在系统凭据库中，MedResearch Agent 无法从中导入。请改用 MedResearch Agent 的 Codex 登录继续。'
+      'Deep Research Agent could not find a file-backed Codex credential to import. Your existing Codex sign-in may be stored in the system credential store, which Deep Research Agent cannot import from. Continue with the Deep Research Agent Codex sign-in instead.',
+      'Deep Research Agent 未找到可导入的基于文件的 Codex 凭据。你已有的 Codex 登录可能存储在系统凭据库中，Deep Research Agent 无法从中导入。请改用 Deep Research Agent 的 Codex 登录继续。'
     ]
   ])('localizes a custom provider Base URL error', (message, expected) => {
     expect(localizeProviderResourceMessage(message, i18next.getFixedT('zh-Hans'))).toBe(expected)

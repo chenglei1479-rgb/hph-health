@@ -127,4 +127,4 @@ export const formatBytes = (bytes: number): string => {
 
 // Actionable installation prerequisite, shared by both update strategies and renderer surfaces.
 export const UPDATE_INSTALLATION_REQUIRED =
-  'MedResearch Agent is running on a read-only disk. Drag it to Applications, quit this copy, and reopen it from Applications before updating.'
+  'Deep Research Agent is running on a read-only disk. Drag it to Applications, quit this copy, and reopen it from Applications before updating.'

@@ -324,7 +324,7 @@ describe('ProviderList', () => {
       })
     ])
 
-    expect(container.textContent).toContain('Authentication imported into MedResearch Agent')
+    expect(container.textContent).toContain('Authentication imported into Deep Research Agent')
     expect(buttonByLabel('Check Codex login')).toBeDefined()
     expect(buttonByLabel('Edit')).toBeDefined()
     expect(buttonByLabel('Delete')).toBeDefined()
@@ -345,7 +345,7 @@ describe('ProviderList', () => {
     })
     renderList([imported], undefined, undefined, { onReimport })
 
-    expect(container.textContent).toContain('Authentication imported into MedResearch Agent')
+    expect(container.textContent).toContain('Authentication imported into Deep Research Agent')
     expect(buttonByLabel('Check Codex login')).toBeDefined()
     act(() => buttonByLabel('Re-import Codex login')?.click())
     expect(onReimport).toHaveBeenCalledWith(imported)
@@ -369,7 +369,7 @@ describe('ProviderList', () => {
       provider({
         id: 'builtin-codex-isolated',
         type: 'codex-isolated',
-        name: 'MedResearch Agent Codex login'
+        name: 'Deep Research Agent Codex login'
       })
     ])
 
@@ -384,7 +384,7 @@ describe('ProviderList', () => {
     const isolated = provider({
       id: 'builtin-codex-isolated',
       type: 'codex-isolated',
-      name: 'MedResearch Agent Codex login',
+      name: 'Deep Research Agent Codex login',
       models: [],
       model: undefined,
       maskedKey: undefined,
@@ -494,7 +494,7 @@ describe('ProviderList', () => {
 
     // Signed in (verified): sign-in actions go away, app-local disconnect is offered.
     renderList([{ ...shared, lastValidatedAt: 1 }], undefined, undefined, { onLogoutSharedClaude })
-    act(() => buttonByLabel('Disconnect from MedResearch Agent')?.click())
+    act(() => buttonByLabel('Disconnect from Deep Research Agent')?.click())
     expect(onLogoutSharedClaude).toHaveBeenCalledOnce()
     expect(buttonByLabel('Sign in with browser')).toBeUndefined()
   })

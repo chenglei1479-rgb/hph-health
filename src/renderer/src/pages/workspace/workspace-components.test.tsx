@@ -65,8 +65,8 @@ describe('workspace page component boundaries', () => {
       "import { WorkspaceSidebarContainer } from './WorkspaceSidebarContainer'"
     )
     expect(workspacePageSource).toContain('<WorkspaceSidebarContainer')
-    expect(workspaceSidebarContainerSource).toContain('starNudgeKey={projectId}')
-    expect(workspaceSidebarSource).toContain('nudgeKey={activeStarNudgeKey}')
+    expect(workspaceSidebarContainerSource).not.toContain('starNudgeKey')
+    expect(workspaceSidebarSource).not.toContain('GitHubStarBadge')
 
     expect(workspacePageSource).toContain(
       "import { WorkspacePanelLayout } from './workspace-panel-layout'"

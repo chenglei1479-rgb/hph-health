@@ -7,7 +7,7 @@ import type {
 } from './provider-turn-adapter'
 
 // Unknown future origins stay eligible so a new user-driven lane does not silently under-report
-// model turns before MedResearch Agent knows its name.
+// model turns before Deep Research Agent knows its name.
 const CLAUDE_AUTONOMOUS_RESULT_ORIGINS = new Set([
   'task-notification',
   'peer',

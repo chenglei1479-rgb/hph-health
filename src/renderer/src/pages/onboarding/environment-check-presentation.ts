@@ -81,13 +81,13 @@ const localizeHostEnvironmentCheck = (
       return {
         ...check,
         label: localizedLabel(check, t),
-        summary: t('MedResearch Agent can write to its private data folder.')
+        summary: t('Deep Research Agent can write to its private data folder.')
       }
     case 'storage-unwritable':
       return {
         ...check,
         label: localizedLabel(check, t),
-        summary: t('MedResearch Agent cannot write to its private data folder.')
+        summary: t('Deep Research Agent cannot write to its private data folder.')
       }
     case 'file-credential-storage':
       return {
