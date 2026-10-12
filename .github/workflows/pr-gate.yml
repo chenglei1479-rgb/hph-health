@@ -59,7 +59,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
 
@@ -390,7 +390,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
       - name: Review dependency changes
@@ -451,7 +451,7 @@ jobs:
           min-severity: medium
           version: v1.30.1
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -624,7 +624,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -664,7 +664,7 @@ jobs:
           --outputFile=vitest-reports/blob-${{ matrix.shard }}.json
       - name: Upload full-suite blob report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: unit-portable-blob-${{ matrix.shard }}
           path: vitest-reports/
@@ -701,7 +701,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -724,7 +724,7 @@ jobs:
         run: npm run test:affected -- --base "$BASE_SHA" --head "$HEAD_SHA" --coverage-changed "$BASE_SHA"
       - name: Download full-suite blob reports
         if: ${{ needs.unit_shard.result != 'skipped' }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: unit-portable-blob-*
           path: vitest-reports
@@ -751,7 +751,7 @@ jobs:
       - name: Upload Module coverage report
         if: ${{ always() && (steps.unit_macos_related.outcome != 'skipped' || steps.unit_macos_full.outcome != 'skipped' || steps.unit_macos_related_merge.outcome != 'skipped') }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-report
           path: coverage/
@@ -796,7 +796,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -839,7 +839,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -868,7 +868,7 @@ jobs:
       - name: Upload rebuilt Windows sandbox native host
         if: ${{ steps.windows_sandbox_build.outcome == 'success' }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: windows-sandbox-host-x64
           path: packages/notebook-network-sandbox/vendor/windows/x64/notebook-appcontainer-host.exe
@@ -1000,7 +1000,7 @@ jobs:
           persist-credentials: false
       - name: Setup Node
         id: node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -1016,7 +1016,7 @@ jobs:
         run: node scripts/ci/e2e-setup-snapshot.mjs pack "$RUNNER_TEMP/e2e-setup"
       - name: Upload E2E setup
         id: upload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: e2e-setup-macos-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/e2e-setup/
@@ -1040,7 +1040,7 @@ jobs:
           persist-credentials: false
       - name: Setup Node
         id: node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -1055,7 +1055,7 @@ jobs:
         run: node scripts/ci/e2e-setup-snapshot.mjs pack "$RUNNER_TEMP/e2e-setup"
       - name: Upload E2E setup
         id: upload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: e2e-setup-windows-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/e2e-setup/
@@ -1080,7 +1080,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ needs.macos_e2e_setup.outputs.node_version || '22' }}
           cache: ${{ (fromJSON(needs.preflight.outputs.plan).macosProfile == 'smoke' || (fromJSON(needs.preflight.outputs.plan).macosProfile == 'expanded' && contains(fromJSON(needs.preflight.outputs.plan).lanes, 'e2e_smoke_macos'))) && 'npm' || '' }}
@@ -1095,7 +1095,7 @@ jobs:
       # Artifact IDs survive failed-job reruns without selecting another producer attempt.
       - name: Download E2E setup
         if: ${{ !(fromJSON(needs.preflight.outputs.plan).macosProfile == 'smoke' || (fromJSON(needs.preflight.outputs.plan).macosProfile == 'expanded' && contains(fromJSON(needs.preflight.outputs.plan).lanes, 'e2e_smoke_macos'))) }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           artifact-ids: ${{ needs.macos_e2e_setup.outputs.artifact_id }}
           path: ${{ runner.temp }}/e2e-setup/
@@ -1154,7 +1154,7 @@ jobs:
       - name: Upload functional failure artifacts
         if: ${{ steps.e2e_functional_macos.outcome == 'failure' }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: functional-e2e-macos-${{ matrix.group }}-failure
           path: |
@@ -1173,7 +1173,7 @@ jobs:
       - name: Upload workspace failure artifacts
         if: ${{ steps.e2e_workspace_macos.outcome == 'failure' }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: workspace-e2e-macos-${{ matrix.group }}-failure
           path: |
@@ -1218,7 +1218,7 @@ jobs:
       - name: Upload accessibility diagnostics
         if: ${{ steps.e2e_accessibility_macos.outcome != 'skipped' }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: accessibility-macos-${{ matrix.group }}-diagnostics
           path: |
@@ -1237,7 +1237,7 @@ jobs:
       - name: Upload visual failure artifacts
         if: ${{ steps.e2e_visual_macos.outcome == 'failure' }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: visual-regression-macos-${{ matrix.group }}-failure
           path: |
@@ -1248,7 +1248,7 @@ jobs:
       - name: Upload E2E timing and blob reports
         if: ${{ always() }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: e2e-reports-macos-${{ matrix.group }}
           overwrite: true
@@ -1318,12 +1318,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ needs.windows_e2e_setup.outputs.node_version }}
           package-manager-cache: false
       - name: Download E2E setup
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           artifact-ids: ${{ needs.windows_e2e_setup.outputs.artifact_id }}
           path: ${{ runner.temp }}/e2e-setup/
@@ -1346,7 +1346,7 @@ jobs:
       - name: Upload functional failure artifacts
         if: ${{ steps.e2e_functional_windows.outcome == 'failure' }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: functional-e2e-windows-failure-${{ matrix.shard }}
           path: |
@@ -1357,7 +1357,7 @@ jobs:
       - name: Upload E2E timing and blob reports
         if: ${{ always() }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: e2e-reports-windows-${{ matrix.shard }}
           overwrite: true
@@ -1389,19 +1389,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
       - name: Install report tools
         run: npm ci --ignore-scripts --no-audit --fund=false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           pattern: e2e-reports-*
           path: test-results/downloaded-e2e
       - name: Summarize timing and merge reports
         run: node scripts/ci/merge-e2e-reports.mjs
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: ${{ always() }}
         with:
           name: e2e-combined-report
@@ -1438,7 +1438,7 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.base.sha || needs.preflight.outputs.base }}
       - name: Setup Node
         if: ${{ needs.preflight.result == 'success' }}
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
       - name: Evaluate deterministic gate from trusted base
