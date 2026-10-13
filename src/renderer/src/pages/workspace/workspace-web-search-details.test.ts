@@ -76,7 +76,7 @@ describe('workspace web search details', () => {
               content: {
                 type: 'text',
                 text: [
-                  '[MedResearch Agent Framework](https://osf.io)',
+                  '[DRA Framework](https://osf.io)',
                   'Registry result',
                   'https://example.com/registry'
                 ].join('\n')
@@ -90,7 +90,7 @@ describe('workspace web search details', () => {
       resultCount: 2,
       results: [
         {
-          title: 'MedResearch Agent Framework',
+          title: 'DRA Framework',
           url: 'https://osf.io'
         },
         {
@@ -188,7 +188,7 @@ describe('workspace web search details', () => {
           type: 'content',
           content: {
             type: 'text',
-            text: 'MedResearch Agent Framework (https://osf.io)'
+            text: 'DRA Framework (https://osf.io)'
           }
         }
       ]
@@ -199,7 +199,7 @@ describe('workspace web search details', () => {
       resultCount: 1,
       results: [
         {
-          title: 'MedResearch Agent Framework',
+          title: 'DRA Framework',
           url: 'https://osf.io'
         }
       ]

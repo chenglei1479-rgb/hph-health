@@ -1,7 +1,7 @@
 vi.mock('./credential-identity/bootstrap', () => ({
   selectStartupCredentialIdentity: () => ({
     backend: 'mac-keychain',
-    appName: 'MedResearch Agent (DEV)',
+    appName: 'DRA (DEV)',
     exists: true
   }),
   prepareCredentialValidation: () => () => {}

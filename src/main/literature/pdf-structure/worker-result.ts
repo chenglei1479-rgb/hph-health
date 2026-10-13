@@ -4,7 +4,11 @@ import { join } from 'node:path'
 import sharp from 'sharp'
 import { z } from 'zod'
 import { readFileWithinLimit } from '../../storage/durable-json-file'
-import { checkPdfStructureDecodingBudget, pdfTextRunsSchema } from '../../../shared/pdf-structure'
+import {
+  checkPdfStructureDecodingBudget,
+  pdfTextRunsSchema,
+  pdfTableSourceItemsSchema
+} from '../../../shared/pdf-structure'
 import {
   parsePdfStructureResult,
   type PdfStructureIdentity,
@@ -18,7 +22,16 @@ const rect = z.tuple([
   z.number().finite()
 ])
 const caption = z
-  .object({ text: z.string(), rect, page: z.number().int().positive().optional() })
+  .object({
+    text: z.string(),
+    rect,
+    page: z.number().int().positive().optional(),
+    regions: z
+      .array(z.object({ page: z.number().int().positive(), rect }))
+      .min(1)
+      .max(2)
+      .optional()
+  })
   .optional()
 const candidate = z.object({
   id: z.string().regex(/^[a-z0-9-]{1,80}$/),
@@ -41,6 +54,7 @@ const rawTableData = z.object({
         colSpan: z.number(),
         text: z.string(),
         textRuns: pdfTextRunsSchema.optional(),
+        sourceItems: pdfTableSourceItemsSchema.optional(),
         sourceRects: z.array(rect)
       })
     )
@@ -84,6 +98,27 @@ const rawSchema = z.object({
   })
 })
 
+// Called only for the byte-bounded worker JSON or the result built from it.
+// Drop all optional origins together if they alone prevent an otherwise valid preview.
+// Shape/identity validation still runs afterwards; cached results remain strictly decoded.
+function fitSourceMetadataBudget(input: unknown): unknown {
+  const check = (value: unknown): void => {
+    checkPdfStructureDecodingBudget(value)
+    if (Buffer.byteLength(JSON.stringify(value)) > 8 * 1024 ** 2)
+      throw new Error('PDF structure exceeds manifest byte budget.')
+  }
+  try {
+    check(input)
+    return input
+  } catch {
+    const withoutOrigins: unknown = JSON.parse(
+      JSON.stringify(input, (key, value) => (key === 'sourceItems' ? undefined : value))
+    )
+    check(withoutOrigins)
+    return withoutOrigins
+  }
+}
+
 export const readWorkerResult = async (
   root: string,
   identity: PdfStructureIdentity,
@@ -101,8 +136,7 @@ export const readWorkerResult = async (
   const input: unknown = JSON.parse(
     await readFileWithinLimit(join(root, 'structure.json'), 8 * 1024 ** 2)
   )
-  checkPdfStructureDecodingBudget(input)
-  const raw = rawSchema.parse(input)
+  const raw = rawSchema.parse(fitSourceMetadataBudget(input))
   if (raw.sourceSha256 !== identity.sourceChecksum) throw new Error('PDF worker source changed.')
   for (const pages of [raw.requestedPages, raw.processedPages]) {
     if (JSON.stringify(pages) !== JSON.stringify(identity.requestedPages))
@@ -164,9 +198,17 @@ export const readWorkerResult = async (
       const page = raw.pages.find((p) => p.page === item.page)
       if (!page || item.thumbnail !== `thumbnails/${item.id}.png`)
         throw new Error('PDF worker thumbnail identity mismatch.')
-      const captionPage =
-        item.caption && raw.pages.find((p) => p.page === (item.caption?.page ?? item.page))
-      if (item.caption && !captionPage) throw new Error('PDF worker caption page is missing.')
+      const captionRegions = item.caption
+        ? (
+            item.caption.regions ?? [
+              { page: item.caption.page ?? item.page, rect: item.caption.rect }
+            ]
+          ).map((part) => {
+            const source = raw.pages.find((p) => p.page === part.page)
+            if (!source) throw new Error('PDF worker caption page is missing.')
+            return region(part.page, part.rect, source.width, source.height)
+          })
+        : []
       const path = join(root, 'thumbnails', `${item.id}.png`)
       const stat = await lstat(path)
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 4 * 1024 ** 2)
@@ -199,14 +241,7 @@ export const readWorkerResult = async (
           ? {
               caption: {
                 text: item.caption.text,
-                regions: [
-                  region(
-                    captionPage!.page,
-                    item.caption.rect,
-                    captionPage!.width,
-                    captionPage!.height
-                  )
-                ]
+                regions: captionRegions
               }
             }
           : {}),
@@ -235,6 +270,7 @@ export const readWorkerResult = async (
             columnSpan: cell.colSpan,
             text: cell.text,
             ...(cell.textRuns ? { textRuns: cell.textRuns } : {}),
+            ...(cell.sourceItems ? { sourceItems: cell.sourceItems } : {}),
             regions: cell.sourceRects.map((box) =>
               region(item.page, box, data.sourceViewport.width, data.sourceViewport.height)
             )
@@ -268,7 +304,7 @@ export const readWorkerResult = async (
     }
   }
   return parsePdfStructureResult(
-    {
+    fitSourceMetadataBudget({
       schemaVersion: 1,
       ...identity,
       pageCount: raw.pageCount,
@@ -280,7 +316,7 @@ export const readWorkerResult = async (
       thumbnails: inventory,
       navigation: raw.navigation.entries,
       issues
-    },
+    }),
     identity
   )
 }

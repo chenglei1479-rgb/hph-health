@@ -28,6 +28,7 @@ type IpcHandlerRegistry = {
 }
 
 type IpcHandlerRegistryDiagnostics = {
+  authorize?: (channel: string) => void
   log?: IpcRejectionLogger
   now?: () => number
 }
@@ -141,6 +142,7 @@ const createIpcHandlerRegistry = (
         channel,
         callerContext: diagnosticCallerContextForEvent(event),
         invoke: () => {
+          diagnostics.authorize?.(channel)
           // Electron always supplies an invoke event. Isolated handler registrars historically call
           // their injected target without Electron, so keep that pure test seam lease-neutral.
           const invokedEvent = event as IpcMainInvokeEvent | undefined
@@ -209,7 +211,13 @@ const createIpcHandlerRegistry = (
   }
 }
 
-const defaultRegistry = createIpcHandlerRegistry(ipcMain)
+let authorizationGuard: ((channel: string) => void) | undefined
+export const setIpcAuthorizationGuard = (guard?: (channel: string) => void): void => {
+  authorizationGuard = guard
+}
+const defaultRegistry = createIpcHandlerRegistry(ipcMain, {
+  authorize: (channel) => authorizationGuard?.(channel)
+})
 
 const ipcMainHandle = defaultRegistry.ipcMainHandle
 const disposeIpcHandlerRegistry = (): void => defaultRegistry.dispose()

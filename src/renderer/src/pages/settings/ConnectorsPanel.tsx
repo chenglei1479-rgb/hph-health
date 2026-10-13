@@ -21,7 +21,7 @@ import {
   Trash2,
   X
 } from 'lucide-react'
-import { AlertDialog } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -506,7 +506,7 @@ export function ConnectorsPanel({
                           <span className="block truncate text-sm text-foreground">
                             {connector.displayName}
                           </span>
-                          <span className="block truncate text-xs text-muted-foreground">
+                          <span className="block line-clamp-2 text-xs leading-5 text-muted-foreground">
                             {connectorDescription(connector, t)}
                           </span>
                         </button>
@@ -592,7 +592,7 @@ export function ConnectorsPanel({
         <SettingsLoadNotice
           state={catalogState === 'error' ? 'error' : 'loading'}
           loadingLabel={t('Loading Connectors…')}
-          errorMessage={t('MedResearch Agent could not load Connectors.')}
+          errorMessage={t('DRA could not load Connectors.')}
           onRetry={retryCatalog}
         />
       </div>
@@ -605,7 +605,7 @@ export function ConnectorsPanel({
         <SettingsLoadNotice
           state="error"
           loadingLabel={t('Loading Connectors…')}
-          errorMessage={t('MedResearch Agent could not load Connectors.')}
+          errorMessage={t('DRA could not load Connectors.')}
           onRetry={retryCatalog}
           className="mb-4"
         />
@@ -846,7 +846,7 @@ export function ConnectorsPanel({
                               <span className="block truncate text-sm text-foreground">
                                 {server.displayName}
                               </span>
-                              <span className="block truncate text-xs text-muted-foreground">
+                              <span className="block line-clamp-2 text-xs leading-5 text-muted-foreground">
                                 {server.name}
                                 {server.description ? ` · ${server.description}` : ''}
                               </span>

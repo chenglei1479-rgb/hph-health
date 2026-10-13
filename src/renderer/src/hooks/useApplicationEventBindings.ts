@@ -14,6 +14,7 @@ import { useLifecycleSync } from '@/hooks/useLifecycleSync'
 import { useUnreadTaskViewSync } from '@/hooks/useUnreadTaskViewSync'
 import { useWebEventConnection } from '@/hooks/useWebEventConnection'
 import { useWindowFindAppearanceSync } from '@/hooks/useWindowFindAppearanceSync'
+import { useWindowsTitleBarCommands } from '@/components/windows-titlebar-context'
 import type { StartupView } from '@/pages/onboarding/startup-gate'
 import { useComputeStore } from '@/stores/compute-store'
 import { useNavigationStore, type NavigationView } from '@/stores/navigation-store'
@@ -49,6 +50,7 @@ type ApplicationEventBindingsInput = Readonly<{
   hasDataRootRecovery: boolean
   hasLegacyDataMove: boolean
   closeActiveSettingsPane: () => void
+  requestSettingsLeave: (leave: () => void) => void
 }>
 
 type ApplicationEventProjection = Readonly<{
@@ -67,6 +69,7 @@ type ApplicationEventProjection = Readonly<{
   globalSearch: Readonly<{
     open: () => void
     setOpen: (open: boolean) => void
+    openRecovery: () => void
   }>
   closeConfirmation: Readonly<{
     setOpen: (open: boolean) => void
@@ -85,7 +88,8 @@ const useApplicationEventBindings = ({
   sessionPersistence,
   hasDataRootRecovery,
   hasLegacyDataMove,
-  closeActiveSettingsPane
+  closeActiveSettingsPane,
+  requestSettingsLeave
 }: ApplicationEventBindingsInput): ApplicationEventProjection => {
   const view = useNavigationStore((state) => state.view)
   const isSettingsOpen = useSettingsStore((state) => state.isSettingsOpen)
@@ -222,6 +226,19 @@ const useApplicationEventBindings = ({
     if (presentation.allowsShortcut('globalSearch')) setIsGlobalSearchOpen(true)
   }, [presentation])
   const setGlobalSearchOpen = useCallback((open: boolean): void => setIsGlobalSearchOpen(open), [])
+  const openTitleBarSettings = useCallback((): void => {
+    if (presentation.allowsShortcut('settings')) openSettings()
+  }, [presentation, openSettings])
+  useWindowsTitleBarCommands({
+    settingsEnabled: presentation.allowsShortcut('settings'),
+    searchEnabled: presentation.allowsShortcut('globalSearch'),
+    openSettings: openTitleBarSettings,
+    openSearch: openGlobalSearch
+  })
+  const openSearchRecovery = useCallback((): void => {
+    setIsGlobalSearchOpen(false)
+    openSettingsToPanel('archived')
+  }, [openSettingsToPanel])
   const setCloseConfirmationOpen = useCallback(
     (open: boolean): void => setIsCloseConfirmOpen(open),
     []
@@ -232,16 +249,20 @@ const useApplicationEventBindings = ({
         .getState()
         .sessions.some((session) => session.id === sessionId)
       if (!sessionExists) return
-      let completed = false
-      const completeOpen = (): void => {
-        if (completed) return
-        completed = true
-        closeSettings()
-      }
-      const opened = useNavigationStore.getState().openSessionById(sessionId, 'user', completeOpen)
-      if (opened) completeOpen()
+      requestSettingsLeave(() => {
+        let completed = false
+        const completeOpen = (): void => {
+          if (completed) return
+          completed = true
+          closeSettings()
+        }
+        const opened = useNavigationStore
+          .getState()
+          .openSessionById(sessionId, 'user', completeOpen)
+        if (opened) completeOpen()
+      })
     },
-    [closeSettings]
+    [closeSettings, requestSettingsLeave]
   )
 
   useEffect(() => {
@@ -493,7 +514,11 @@ const useApplicationEventBindings = ({
     },
     allowsArchiveUndoShortcut,
     navigation: { view },
-    globalSearch: { open: openGlobalSearch, setOpen: setGlobalSearchOpen },
+    globalSearch: {
+      open: openGlobalSearch,
+      setOpen: setGlobalSearchOpen,
+      openRecovery: openSearchRecovery
+    },
     closeConfirmation: { setOpen: setCloseConfirmationOpen },
     settings: {
       close: closeSettings,

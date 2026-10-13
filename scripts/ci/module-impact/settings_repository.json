@@ -49,6 +49,8 @@
       "src/shared/renderer-contract-catalog.test.ts"
     ],
     "consumer": [
+      "src/main/composition/notebook-environment.test.ts",
+      "src/main/composition/reviewer.test.ts",
       "src/main/settings/service.test.ts",
       "src/main/compute/ipc.test.ts",
       "src/main/compute/permission-grant-adapter.test.ts",
@@ -207,6 +209,7 @@
       "src/main/settings/session-details-model-owner.test.ts",
       "src/main/settings/skill-catalog.python-availability.test.ts",
       "src/main/settings/skill-catalog.registered-helpers.test.ts",
+      "src/main/settings/validate.test.ts",
       "src/main/settings/workflows.test.ts",
       "src/main/settings/workflows/connectors-diagnostic.test.ts",
       "src/main/settings/xai-provider-account-owner.test.ts",
@@ -244,7 +247,10 @@
       "src/main/settings/classification-settings.test.ts",
       "src/main/compute/cancellation-runtime.integration.test.ts",
       "src/main/notebook/runtime-service.rpc-retirement.test.ts",
-      "src/main/notebook/runtime-service.macos-isolation.integration.test.ts"
+      "src/main/notebook/runtime-service.macos-isolation.integration.test.ts",
+      "src/main/session-persistence/ipc.test.ts",
+      "src/main/acp/approved-handoff-outcome.integration.test.ts",
+      "src/main/acp/approved-handoff-outcome.test.ts"
     ]
   },
   "capabilityOverlays": ["windows_sensitive", "e2e_regressions", "e2e_delegation"],

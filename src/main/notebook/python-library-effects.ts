@@ -82,6 +82,15 @@ const annDataFileReaders: Record<string, PythonLibraryMethodEffect> = Object.fro
   ])
 )
 
+// Zarr stores are directory-backed collections rather than single files.  The
+// dependency analyzer supplies the conservative directory-root handling, but
+// the return type still needs to survive into later cells.
+const annDataZarrReader: PythonLibraryMethodEffect = {
+  effect: 'read',
+  returnType: 'anndata.AnnData',
+  file: { kind: 'read', position: 0, keywords: ['store', 'filename'] }
+}
+
 const medicalSingleFileSuffixes = [
   '.nii',
   '.nii.gz',
@@ -93,6 +102,73 @@ const medicalSingleFileSuffixes = [
   '.tif',
   '.tiff'
 ]
+
+// Scanpy exposes its analysis namespaces as module properties (``sc.pp`` and
+// ``sc.tl``).  These calls commonly update AnnData in place, but most of them
+// also offer ``copy``/``inplace`` switches.  Keep the effect conservative: a
+// possible mutation is useful dependency evidence without claiming that every
+// invocation rewrites the input object.
+const scanpyAnnDataAnalysisMethods = Object.fromEntries(
+  [
+    'calculate_qc_metrics',
+    'filter_cells',
+    'filter_genes',
+    'highly_variable_genes',
+    'log1p',
+    'normalize_total',
+    'neighbors',
+    'regress_out',
+    'scale'
+  ].map((name) => [
+    name,
+    { effect: 'read', possiblyMutatesPositionalArgument: 0 } satisfies PythonLibraryMethodEffect
+  ])
+)
+
+const scanpyToolsMethods = Object.fromEntries(
+  ['leiden', 'louvain', 'pca', 'rank_genes_groups', 'score_genes', 'tsne', 'umap'].map((name) => [
+    name,
+    { effect: 'read', possiblyMutatesPositionalArgument: 0 } satisfies PythonLibraryMethodEffect
+  ])
+)
+
+const scanpyPlotMethods = Object.fromEntries(
+  ['dotplot', 'embedding', 'heatmap', 'matrixplot', 'spatial', 'tracksplot', 'umap', 'violin'].map(
+    (name) => [name, { effect: 'read', plottingState: 'read' } satisfies PythonLibraryMethodEffect]
+  )
+)
+
+const matplotlibPyplotPlotMethods = Object.fromEntries(
+  [
+    'axhline',
+    'axvline',
+    'axis',
+    'bar',
+    'barh',
+    'boxplot',
+    'errorbar',
+    'fill_between',
+    'hist',
+    'imshow',
+    'legend',
+    'plot',
+    'scatter',
+    'stackplot',
+    'step',
+    'stem',
+    'text',
+    'violinplot',
+    'xlabel',
+    'xlim',
+    'xticks',
+    'ylabel',
+    'ylim',
+    'yticks'
+  ].map((name) => [
+    name,
+    { effect: 'read', plottingState: 'read' } satisfies PythonLibraryMethodEffect
+  ])
+)
 
 // Static effects are deliberately limited to stable, documented behavior used by ordinary
 // scientific Notebook code. Unknown methods continue through the conservative receiver-call path.
@@ -166,6 +242,41 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       )
     )
   },
+  gzip: {
+    kind: 'module',
+    methods: {
+      open: { effect: 'read', returnType: 'gzip.GzipFile' }
+    }
+  },
+  'gzip.GzipFile': {
+    kind: 'type',
+    iterationTypes: ['python.string'],
+    methods: {
+      read: { effect: 'read', returnType: 'python.string' },
+      close: { effect: 'read' }
+    }
+  },
+  sqlite3: {
+    kind: 'module',
+    methods: {
+      connect: { effect: 'read', returnType: 'sqlite3.Connection' }
+    }
+  },
+  shutil: {
+    kind: 'module',
+    methods: {
+      // File lineage is recorded by the source-access analyzer below; these
+      // calls are otherwise ordinary local library operations.
+      copy: { effect: 'read' },
+      copy2: { effect: 'read' },
+      copyfile: { effect: 'read' },
+      copytree: {
+        effect: 'read',
+        callbackKeywords: ['ignore', 'copy_function'],
+        callbackPositionalKeywords: { 3: 'ignore', 4: 'copy_function' }
+      }
+    }
+  },
   'pathlib.PurePath': {
     kind: 'type',
     unknownMethodsHaveExternalState: true,
@@ -179,13 +290,41 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       as_posix: { effect: 'read' },
       is_absolute: { effect: 'read' },
       is_relative_to: { effect: 'read' },
+      // Notebook agents commonly create local output directories before writing
+      // their artifacts. Treat this setup call as scoped filesystem scaffolding;
+      // concrete files are still captured by the subsequent writer.
+      mkdir: { effect: 'read' },
       relative_to: { effect: 'read', returnType: 'pathlib.PurePath' },
+      // Glob expansion observes directory contents. The source-file analyzer
+      // records the pattern as an input while keeping the run partial because
+      // the concrete members depend on the runtime directory.
+      glob: { effect: 'read', externalState: true },
       open: { effect: 'read' },
       // These do not mutate the path object. The file parser captures their receiver path.
       read_text: { effect: 'read' },
       read_bytes: { effect: 'read' },
       write_text: { effect: 'read' },
       write_bytes: { effect: 'read' }
+    }
+  },
+  'sqlite3.Connection': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      cursor: { effect: 'read', returnType: 'sqlite3.Cursor' },
+      // SQL can mutate the database even when its result is an iterable cursor.
+      execute: { effect: 'mutate', externalState: true, returnType: 'sqlite3.Cursor' },
+      close: { effect: 'read' }
+    }
+  },
+  'sqlite3.Cursor': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    iterationTypes: ['python.object'],
+    methods: {
+      execute: { effect: 'mutate', externalState: true, returnType: 'sqlite3.Cursor' },
+      fetchall: { effect: 'read', returnType: 'python.container' },
+      close: { effect: 'read' }
     }
   },
   importlib: {
@@ -244,6 +383,67 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
         file: { kind: 'read', position: 0, keywords: ['name'] }
       }
     }
+  },
+  // HDF5 handles are long-lived notebook resources. Modeling their common
+  // close/read/write methods keeps a normal dataset handoff precise without
+  // treating every method on the handle as filesystem state.
+  'h5py.File': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      close: { effect: 'read' },
+      keys: { effect: 'read', returnType: 'python.container' },
+      __enter__: { effect: 'read', returnType: 'h5py.File' },
+      __exit__: { effect: 'read' },
+      flush: { effect: 'mutate' },
+      create_dataset: { effect: 'mutate', returnType: 'h5py.Dataset' },
+      require_dataset: { effect: 'mutate', returnType: 'h5py.Dataset' },
+      get: { effect: 'read', returnType: 'h5py.Dataset' }
+    }
+  },
+  'h5py.Dataset': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      astype: { effect: 'read', returnType: 'h5py.Dataset' },
+      resize: { effect: 'mutate' },
+      read_direct: { effect: 'read', possiblyMutatesFirstArgument: true },
+      write_direct: { effect: 'mutate' }
+    }
+  },
+  // Rasterio readers and writers are the common GeoTIFF handoff in remote
+  // sensing notebooks.  The open call's mode controls file access; the
+  // handle contract keeps band reads and profile metadata connected to the
+  // downstream array/write cell while conservatively treating unmodeled
+  // DatasetReader methods as opaque external state.
+  rasterio: {
+    kind: 'module',
+    methods: {
+      open: {
+        effect: 'read',
+        returnType: 'rasterio.io.DatasetReader'
+      }
+    }
+  },
+  'rasterio.io.DatasetReader': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      '@profile': { effect: 'read', returnType: 'python.container' },
+      '@meta': { effect: 'read', returnType: 'python.container' },
+      read: {
+        effect: 'read',
+        returnType: 'numpy.ndarray'
+      },
+      read_masks: { effect: 'read', returnType: 'numpy.ndarray' },
+      window: { effect: 'read', returnType: 'rasterio.windows.Window' },
+      write: { effect: 'mutate' },
+      close: { effect: 'read' }
+    }
+  },
+  'rasterio.windows.Window': {
+    kind: 'type',
+    methods: {}
   },
   'dask.dataframe': {
     kind: 'module',
@@ -362,19 +562,17 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       DictReader: {
         effect: 'read',
         returnType: 'csv.DictReader',
-        possiblyMutatesFirstArgument: true,
         firstArgumentKeyword: 'f'
       },
       reader: {
         effect: 'read',
         returnType: 'csv.reader',
-        possiblyMutatesFirstArgument: true,
         firstArgumentKeyword: 'csvfile'
       }
     }
   },
-  'csv.DictReader': { kind: 'type', methods: {} },
-  'csv.reader': { kind: 'type', methods: {} },
+  'csv.DictReader': { kind: 'type', methods: {}, iterationTypes: ['python.mapping'] },
+  'csv.reader': { kind: 'type', methods: {}, iterationTypes: ['python.object'] },
   io: {
     kind: 'module',
     methods: {
@@ -873,6 +1071,34 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       }
     }
   },
+  'pyarrow.dataset': {
+    kind: 'module',
+    methods: {
+      dataset: {
+        effect: 'read',
+        returnType: 'pyarrow.dataset.Dataset'
+      }
+    }
+  },
+  'pyarrow.dataset.Dataset': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      to_table: { effect: 'read', returnType: 'pyarrow.Table' },
+      scanner: { effect: 'read', returnType: 'pyarrow.dataset.Scanner' },
+      head: { effect: 'read', returnType: 'pyarrow.Table' },
+      count_rows: { effect: 'read' }
+    }
+  },
+  'pyarrow.dataset.Scanner': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      to_table: { effect: 'read', returnType: 'pyarrow.Table' },
+      head: { effect: 'read', returnType: 'pyarrow.Table' },
+      count_rows: { effect: 'read' }
+    }
+  },
   pyfaidx: {
     kind: 'module',
     methods: {
@@ -881,6 +1107,44 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
         returnType: 'pyfaidx.Fasta',
         file: { kind: 'read', position: 0, keywords: ['filename'] }
       }
+    }
+  },
+  // FITS is a single-file astronomy container. Model the stable public entry
+  // points so an HDUList can be carried into a later cell without being
+  // treated as an opaque external-state object.
+  'astropy.io.fits': {
+    kind: 'module',
+    methods: {
+      open: {
+        effect: 'read',
+        returnType: 'astropy.io.fits.HDUList',
+        file: { kind: 'read', position: 0, keywords: ['name', 'file', 'filename'] }
+      },
+      getdata: {
+        effect: 'read',
+        returnType: 'numpy.ndarray',
+        file: { kind: 'read', position: 0, keywords: ['name', 'filename', 'file'] }
+      },
+      getheader: {
+        effect: 'read',
+        returnType: 'astropy.io.fits.Header',
+        file: { kind: 'read', position: 0, keywords: ['name', 'filename', 'file'] }
+      },
+      writeto: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['name', 'filename', 'file'] }
+      }
+    }
+  },
+  'astropy.io.fits.HDUList': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      writeto: {
+        effect: 'mutate',
+        file: { kind: 'write', position: 0, keywords: ['name', 'filename', 'file'] }
+      },
+      close: { effect: 'mutate' }
     }
   },
   pyranges: {
@@ -893,6 +1157,14 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
   'scipy.stats': {
     kind: 'module',
     methods: {
+      bootstrap: {
+        // Statistic callbacks can perform arbitrary I/O or mutate inputs/captures.
+        effect: 'unknown',
+        scopedOpaque: true,
+        externalState: true,
+        callbackKeywords: ['statistic'],
+        callbackPositionalKeywords: { 1: 'statistic' }
+      },
       chi2_contingency: { effect: 'read' },
       mannwhitneyu: { effect: 'read' },
       pearsonr: { effect: 'read' },
@@ -900,6 +1172,181 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       ttest_1samp: { effect: 'read' },
       ttest_ind: { effect: 'read' },
       ttest_rel: { effect: 'read' }
+    }
+  },
+  'scipy.integrate': {
+    kind: 'module',
+    methods: {
+      solve_ivp: {
+        // RHS, event and Jacobian callbacks can perform arbitrary I/O.
+        // Preserve every known event capture without certifying solver outputs.
+        effect: 'unknown',
+        scopedOpaque: true,
+        externalState: true,
+        callbackKeywords: ['fun', 'events', 'jac'],
+        callbackPositionalKeywords: { 0: 'fun', 6: 'events' },
+        callbackContainerKeywords: ['events']
+      }
+    }
+  },
+  'scipy.ndimage': {
+    kind: 'module',
+    methods: {
+      generic_filter: {
+        // The neighborhood callback can read files or mutate captured state.
+        // Output may be an array or dtype: retain unknown argument effects
+        // without certifying return ownership or definite output mutation.
+        effect: 'unknown',
+        scopedOpaque: true,
+        externalState: true,
+        callbackKeywords: ['function'],
+        callbackPositionalKeywords: { 1: 'function' }
+      }
+    }
+  },
+  'scipy.signal': {
+    kind: 'module',
+    methods: {
+      welch: {
+        // Detrend callbacks may access files or mutate captured state.
+        // Preserve dependencies without certifying output types or ownership.
+        effect: 'unknown',
+        scopedOpaque: true,
+        externalState: true,
+        callbackKeywords: ['detrend'],
+        callbackPositionalKeywords: { 6: 'detrend' }
+      },
+      periodogram: {
+        effect: 'read',
+        destructuredReturnTypes: ['numpy.ndarray', 'numpy.ndarray'],
+        returnsFreshValue: true,
+        callbackKeywords: ['detrend'],
+        callbackPositionalKeywords: { 4: 'detrend' }
+      }
+    }
+  },
+  'scipy.optimize': {
+    kind: 'module',
+    methods: {
+      curve_fit: {
+        // Model and Jacobian callbacks may perform I/O or mutate captures.
+        // Preserve their dependencies without certifying solver purity or
+        // assigning types to its option-dependent return tuple.
+        effect: 'unknown',
+        scopedOpaque: true,
+        externalState: true,
+        callbackKeywords: ['f', 'jac'],
+        callbackPositionalKeywords: { 0: 'f', 9: 'jac' }
+      },
+      least_squares: {
+        // The residual, Jacobian, loss and execution callbacks can perform
+        // arbitrary I/O or mutate arguments. A result type does not establish
+        // purity of the solver call or completeness of its external inputs.
+        effect: 'unknown',
+        scopedOpaque: true,
+        externalState: true,
+        returnType: 'scipy.optimize.OptimizeResult',
+        callbackKeywords: ['fun', 'jac', 'loss', 'callback', 'workers'],
+        callbackPositionalKeywords: { 0: 'fun', 2: 'jac', 9: 'loss', 19: 'callback', 20: 'workers' }
+      }
+    }
+  },
+  'scipy.optimize.OptimizeResult': {
+    kind: 'type',
+    methods: {
+      '@x': { effect: 'read', returnType: 'numpy.ndarray', returnsPossibleAliasOf: 'receiver' },
+      '@success': { effect: 'read', returnType: 'python.scalar' },
+      '@status': { effect: 'read', returnType: 'python.scalar' },
+      '@message': { effect: 'read', returnType: 'python.string' },
+      '@nfev': { effect: 'read', returnType: 'python.scalar' }
+      // jac can be dense, sparse or LinearOperator; other solvers also vary in
+      // their result fields. Leave those properties untyped rather than
+      // incorrectly enabling ndarray operations on them.
+    }
+  },
+  'scipy.sparse': {
+    kind: 'module',
+    methods: {
+      load_npz: {
+        effect: 'read',
+        returnType: 'scipy.sparse.spmatrix',
+        file: { kind: 'read', position: 0, keywords: ['file'] }
+      },
+      save_npz: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['file'] }
+      },
+      csr_matrix: { effect: 'read', returnType: 'scipy.sparse.spmatrix' },
+      csc_matrix: { effect: 'read', returnType: 'scipy.sparse.spmatrix' },
+      coo_matrix: { effect: 'read', returnType: 'scipy.sparse.spmatrix' },
+      // Sparse composition is a value-preserving operation for lineage: the
+      // returned matrix still carries the inputs' sparse type into a later
+      // save_npz call. Keep the contract limited to the pure constructors;
+      // format conversion helpers with callbacks remain conservative.
+      vstack: { effect: 'read', returnType: 'scipy.sparse.spmatrix' },
+      hstack: { effect: 'read', returnType: 'scipy.sparse.spmatrix' },
+      block_diag: { effect: 'read', returnType: 'scipy.sparse.spmatrix' }
+    }
+  },
+  'scipy.sparse.spmatrix': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      astype: { effect: 'read', returnType: 'scipy.sparse.spmatrix' },
+      multiply: { effect: 'read', returnType: 'scipy.sparse.spmatrix' },
+      toarray: { effect: 'read', returnType: 'numpy.ndarray' }
+    }
+  },
+  'mne.io': {
+    kind: 'module',
+    methods: {
+      read_raw_fif: {
+        effect: 'read',
+        returnType: 'mne.io.Raw',
+        file: { kind: 'read', position: 0, keywords: ['fname', 'filename'] }
+      }
+    }
+  },
+  'mne.io.Raw': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      copy: { effect: 'read', returnType: 'mne.io.Raw' },
+      filter: { effect: 'mutate', returnType: 'mne.io.Raw' },
+      resample: { effect: 'mutate', returnType: 'mne.io.Raw' },
+      notch_filter: { effect: 'mutate', returnType: 'mne.io.Raw' },
+      get_data: { effect: 'read', returnType: 'numpy.ndarray' },
+      save: {
+        effect: 'mutate',
+        file: { kind: 'write', position: 0, keywords: ['fname', 'filename'] }
+      },
+      close: { effect: 'mutate' }
+    }
+  },
+  'rdkit.Chem': {
+    kind: 'module',
+    methods: {
+      MolFromMolFile: {
+        effect: 'read',
+        returnType: 'rdkit.Chem.Mol',
+        file: { kind: 'read', position: 0, keywords: ['filename'] }
+      },
+      MolFromSmiles: { effect: 'read', returnType: 'rdkit.Chem.Mol' },
+      MolToMolFile: {
+        effect: 'read',
+        file: { kind: 'write', position: 1, keywords: ['filename'] }
+      },
+      AddHs: { effect: 'read', returnType: 'rdkit.Chem.Mol' },
+      RemoveHs: { effect: 'read', returnType: 'rdkit.Chem.Mol' }
+    }
+  },
+  'rdkit.Chem.Mol': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      GetNumAtoms: { effect: 'read', returnType: 'python.scalar' },
+      GetNumBonds: { effect: 'read', returnType: 'python.scalar' },
+      GetProp: { effect: 'read', returnType: 'python.string' }
     }
   },
   'scipy.io.wavfile': {
@@ -1022,9 +1469,13 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
           'strip',
           'lstrip',
           'rstrip',
+          'split',
           'replace',
           'format'
-        ].map((name) => [name, { effect: 'read', returnType: 'python.string' }])
+        ].map((name) => [
+          name,
+          { effect: 'read', returnType: name === 'split' ? 'python.strings' : 'python.string' }
+        ])
       )
     }
   },
@@ -1041,6 +1492,16 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
     kind: 'type',
     methods: containerMethods,
     iterationTypes: ['python.object']
+  },
+  'python.mapping': {
+    kind: 'type',
+    methods: {
+      get: { effect: 'read', returnType: 'python.string' },
+      items: { effect: 'read', returnType: 'python.container' },
+      keys: { effect: 'read', returnType: 'python.container' },
+      values: { effect: 'read', returnType: 'python.container' },
+      __getitem__: { effect: 'read', returnType: 'python.string' }
+    }
   },
   'pandas.ExcelFile': {
     kind: 'type',
@@ -1298,6 +1759,13 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       sum: { effect: 'read', returnType: 'pandas.DataFrame' }
     }
   },
+  'pandas.core.groupby.SeriesGroupBy': {
+    kind: 'type',
+    methods: {
+      mean: { effect: 'read', returnType: 'pandas.Series' },
+      sum: { effect: 'read', returnType: 'pandas.Series' }
+    }
+  },
   'pandas.Series': {
     kind: 'type',
     methods: {
@@ -1435,7 +1903,8 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
         effect: 'read',
         returnType: 'numpy.ndarray',
         possiblyMutatesFirstArgument: true,
-        firstArgumentKeyword: 'fname'
+        firstArgumentKeyword: 'fname',
+        file: { kind: 'read', position: 0, keywords: ['fname'] }
       }
     }
   },
@@ -1446,7 +1915,12 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
         effect: 'read',
         returnType: 'numpy.ndarray',
         possiblyMutatesFirstArgument: true,
-        firstArgumentKeyword: 'uri'
+        firstArgumentKeyword: 'uri',
+        file: { kind: 'read', position: 0, keywords: ['uri'] }
+      },
+      imwrite: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['uri'] }
       }
     }
   },
@@ -1457,8 +1931,56 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
         effect: 'read',
         returnType: 'numpy.ndarray',
         possiblyMutatesFirstArgument: true,
-        firstArgumentKeyword: 'fname'
+        firstArgumentKeyword: 'fname',
+        file: { kind: 'read', position: 0, keywords: ['fname'] }
+      },
+      imsave: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['fname'] }
       }
+    }
+  },
+  // tifffile is a common microscopy and quantitative-imaging handoff.  Keep
+  // both the convenience functions and the TiffFile handle typed so a later
+  // cell can carry image-array lineage after a multi-page TIFF is opened.
+  tifffile: {
+    kind: 'module',
+    methods: {
+      imread: {
+        effect: 'read',
+        returnType: 'numpy.ndarray',
+        file: { kind: 'read', position: 0, keywords: ['file', 'filename'] }
+      },
+      imwrite: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['file', 'filename'] }
+      },
+      TiffFile: {
+        effect: 'read',
+        returnType: 'tifffile.TiffFile',
+        file: { kind: 'read', position: 0, keywords: ['file', 'filename'] }
+      }
+    }
+  },
+  'tifffile.TiffFile': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      '@pages': { effect: 'read', returnType: 'tifffile.TiffPageSequence' },
+      asarray: { effect: 'read', returnType: 'numpy.ndarray' },
+      close: { effect: 'mutate' }
+    }
+  },
+  'tifffile.TiffPageSequence': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {}
+  },
+  'tifffile.TiffPage': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      asarray: { effect: 'read', returnType: 'numpy.ndarray' }
     }
   },
   cv2: {
@@ -1470,6 +1992,7 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
   'PIL.Image': {
     kind: 'module',
     methods: {
+      fromarray: { effect: 'read', returnType: 'PIL.Image.Image' },
       open: {
         effect: 'read',
         returnType: 'PIL.Image.Image',
@@ -1494,23 +2017,50 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
   },
   anndata: {
     kind: 'module',
-    methods: annDataFileReaders
+    methods: { ...annDataFileReaders, read_zarr: annDataZarrReader }
   },
   'anndata.io': {
     kind: 'module',
-    methods: annDataFileReaders
+    methods: {
+      ...annDataFileReaders,
+      read_zarr: annDataZarrReader,
+      write_zarr: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['store', 'filename'] }
+      }
+    }
   },
   scanpy: {
     kind: 'module',
     methods: {
       ...annDataFileReaders,
+      read_zarr: annDataZarrReader,
+      '@pp': { effect: 'read', returnType: 'scanpy.pp' },
+      '@pl': { effect: 'read', returnType: 'scanpy.pl' },
+      '@tl': { effect: 'read', returnType: 'scanpy.tl' },
       read_10x_h5: { effect: 'read', returnType: 'anndata.AnnData' },
-      read_10x_mtx: { effect: 'read', returnType: 'anndata.AnnData' }
+      read_10x_mtx: { effect: 'read', returnType: 'anndata.AnnData' },
+      read_visium: { effect: 'read', returnType: 'anndata.AnnData' }
     }
   },
+  'scanpy.pp': { kind: 'module', methods: scanpyAnnDataAnalysisMethods },
+  'scanpy.pl': { kind: 'module', methods: scanpyPlotMethods },
+  'scanpy.tl': { kind: 'module', methods: scanpyToolsMethods },
   'anndata.AnnData': {
     kind: 'type',
     methods: {
+      '@X': { effect: 'read', returnType: 'anndata.ArrayLike' },
+      '@layers': { effect: 'read', returnType: 'anndata.Layers' },
+      '@obs': { effect: 'read', returnType: 'pandas.DataFrame' },
+      '@obs_names': { effect: 'read', returnType: 'pandas.Index' },
+      '@obsm': { effect: 'read', returnType: 'anndata.AxisArrays' },
+      '@obsp': { effect: 'read', returnType: 'anndata.PairwiseArrays' },
+      '@raw': { effect: 'read', returnType: 'anndata.Raw' },
+      '@shape': { effect: 'read', returnType: 'python.container' },
+      '@uns': { effect: 'read', returnType: 'anndata.Unstructured' },
+      '@var': { effect: 'read', returnType: 'pandas.DataFrame' },
+      '@var_names': { effect: 'read', returnType: 'pandas.Index' },
+      '@varm': { effect: 'read', returnType: 'anndata.AxisArrays' },
       copy: { effect: 'read', returnType: 'anndata.AnnData' },
       obs_names_make_unique: { effect: 'mutate' },
       var_names_make_unique: { effect: 'mutate' },
@@ -1524,9 +2074,43 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
         mutatesReceiverUnlessKeywordFalse: 'convert_strings_to_categoricals'
       },
       write_loom: { effect: 'read' },
-      write_zarr: { effect: 'read' }
+      write_zarr: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['store', 'filename'] },
+        mutatesReceiverUnlessKeywordFalse: 'convert_strings_to_categoricals'
+      }
     }
   },
+  'anndata.AnnDataBacked': {
+    kind: 'type',
+    methods: {
+      '@X': { effect: 'read', returnType: 'anndata.ArrayLike' },
+      '@layers': { effect: 'read', returnType: 'anndata.BackedLayers' },
+      '@obs': { effect: 'read', returnType: 'pandas.DataFrame' },
+      '@obsm': { effect: 'read', returnType: 'anndata.BackedAxisArrays' },
+      '@obsp': { effect: 'read', returnType: 'anndata.BackedPairwiseArrays' },
+      '@raw': { effect: 'read', returnType: 'anndata.Raw' },
+      '@uns': { effect: 'read', returnType: 'anndata.Unstructured' },
+      '@var': { effect: 'read', returnType: 'pandas.DataFrame' },
+      '@varm': { effect: 'read', returnType: 'anndata.BackedAxisArrays' }
+    }
+  },
+  'anndata.ArrayLike': { kind: 'type', methods: {} },
+  'anndata.BackedAxisArrays': { kind: 'type', methods: {} },
+  'anndata.BackedLayers': { kind: 'type', methods: {} },
+  'anndata.BackedPairwiseArrays': { kind: 'type', methods: {} },
+  'anndata.AxisArrays': { kind: 'type', methods: {} },
+  'anndata.Layers': { kind: 'type', methods: {} },
+  'anndata.PairwiseArrays': { kind: 'type', methods: {} },
+  'anndata.Raw': {
+    kind: 'type',
+    methods: {
+      '@X': { effect: 'read', returnType: 'anndata.ArrayLike' },
+      '@var': { effect: 'read', returnType: 'pandas.DataFrame' },
+      '@var_names': { effect: 'read', returnType: 'pandas.Index' }
+    }
+  },
+  'anndata.Unstructured': { kind: 'type', methods: {} },
   openslide: {
     kind: 'module',
     methods: {
@@ -1705,6 +2289,14 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
           singleFileSuffixes: medicalSingleFileSuffixes
         }
       },
+      // A series reader is assembled across cells in common DICOM workflows:
+      // discover the slice paths, configure the reader, then Execute() in a
+      // later cell. Keep the handle typed so that the final image retains the
+      // reader cell as a dependency.
+      ImageSeriesReader: {
+        effect: 'read',
+        returnType: 'SimpleITK.ImageSeriesReader'
+      },
       WriteTransform: {
         effect: 'read',
         file: { kind: 'write', position: 1, keywords: ['transformFileName'] }
@@ -1728,6 +2320,20 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       GetImageFromArray: { effect: 'read', returnType: 'SimpleITK.Image' }
     }
   },
+  'SimpleITK.ImageSeriesReader': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      GetGDCMSeriesFileNames: {
+        effect: 'read',
+        returnType: 'python.container'
+      },
+      SetFileNames: { effect: 'mutate' },
+      Execute: { effect: 'read', returnType: 'SimpleITK.Image', externalState: true },
+      GetMetaDataKeys: { effect: 'read', returnType: 'python.container' },
+      GetMetaData: { effect: 'read', returnType: 'python.string' }
+    }
+  },
   'SimpleITK.Image': {
     kind: 'type',
     methods: {
@@ -1746,6 +2352,47 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       CopyInformation: { effect: 'mutate' }
     }
   },
+  // pydicom is the common DICOM handoff in medical-imaging notebooks.  A
+  // Dataset keeps the source file identity while pixel_array materializes a
+  // NumPy value; model both boundaries so later normalization and export
+  // cells retain input lineage without treating the Dataset as an opaque
+  // custom object.
+  pydicom: {
+    kind: 'module',
+    methods: {
+      dcmread: {
+        effect: 'read',
+        returnType: 'pydicom.Dataset',
+        file: { kind: 'read', position: 0, keywords: ['fp', 'filename'] }
+      },
+      dcmwrite: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['filename'] }
+      }
+    }
+  },
+  'pydicom.Dataset': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      '@pixel_array': {
+        effect: 'read',
+        returnType: 'numpy.ndarray',
+        returnsPossibleAliasOf: 'receiver'
+      },
+      copy: {
+        effect: 'read',
+        returnType: 'pydicom.Dataset',
+        returnsPossibleAliasOf: 'receiver'
+      },
+      save_as: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['filename'] }
+      },
+      decompress: { effect: 'mutate', externalState: true },
+      compress: { effect: 'mutate', externalState: true }
+    }
+  },
   nibabel: {
     kind: 'module',
     methods: {
@@ -1762,7 +2409,14 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
         returnsPossibleAliasOf: 'receiver'
       },
       set_data_dtype: { effect: 'mutate' },
-      to_filename: { effect: 'read' },
+      // Nibabel's image writer persists the in-memory image to the supplied
+      // NIfTI/MGH path.  Recording the file effect here lets a later cell
+      // consume the generated image through the normal producer lineage,
+      // instead of treating the method as an opaque object mutation.
+      to_filename: {
+        effect: 'read',
+        file: { kind: 'write', position: 0, keywords: ['filename'] }
+      },
       update_header: { effect: 'mutate' }
     }
   },
@@ -1807,8 +2461,70 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
       }
     }
   },
+  // netCDF4 Dataset handles are common in climate and earth-observation
+  // notebooks.  Keep the constructor's file contract in sync with the
+  // source-access analyzer while leaving unmodelled backend/plugin options
+  // conservative at the Dataset boundary.
+  netCDF4: {
+    kind: 'module',
+    methods: {
+      Dataset: {
+        effect: 'read',
+        returnType: 'netCDF4.Dataset',
+        file: { kind: 'read', position: 0, keywords: ['filename'] }
+      }
+    }
+  },
+  'netCDF4.Dataset': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      '@variables': { effect: 'read', returnType: 'netCDF4.VariableMap' },
+      '@dimensions': { effect: 'read', returnType: 'netCDF4.DimensionMap' },
+      close: { effect: 'mutate' },
+      sync: { effect: 'mutate' },
+      createDimension: { effect: 'mutate' },
+      createVariable: { effect: 'mutate', returnType: 'netCDF4.Variable' },
+      createCompoundType: { effect: 'mutate' },
+      createVLType: { effect: 'mutate' },
+      createEnumType: { effect: 'mutate' },
+      setncattr: { effect: 'mutate' },
+      setncatts: { effect: 'mutate' },
+      getncattr: { effect: 'read' },
+      ncattrs: { effect: 'read' },
+      filepath: { effect: 'read', returnType: 'python.string' },
+      renameDimension: { effect: 'mutate' },
+      renameVariable: { effect: 'mutate' }
+    }
+  },
+  'netCDF4.VariableMap': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {}
+  },
+  'netCDF4.DimensionMap': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {}
+  },
+  'netCDF4.Variable': {
+    kind: 'type',
+    unknownMethodsHaveExternalState: true,
+    methods: {
+      assignValue: { effect: 'mutate' },
+      getValue: { effect: 'read' },
+      ncattrs: { effect: 'read' },
+      getncattr: { effect: 'read' },
+      setncattr: { effect: 'mutate' },
+      setncatts: { effect: 'mutate' }
+    }
+  },
   'xarray.Dataset': {
     kind: 'type',
+    // Dask-backed datasets may materialize remote or lazy stores through
+    // methods that are not listed here (for example persist/rechunk). Keep
+    // those calls conservative until their backend access is observed.
+    unknownMethodsHaveExternalState: true,
     methods: {
       close: { effect: 'mutate' },
       compute: { effect: 'read', returnType: 'xarray.Dataset' },
@@ -1839,6 +2555,7 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
   },
   'xarray.DataArray': {
     kind: 'type',
+    unknownMethodsHaveExternalState: true,
     methods: {
       close: { effect: 'mutate' },
       compute: { effect: 'read', returnType: 'xarray.DataArray' },
@@ -1869,6 +2586,7 @@ const PYTHON_LIBRARY_EFFECTS: PythonLibraryEffects = {
   'matplotlib.pyplot': {
     kind: 'module',
     methods: {
+      ...matplotlibPyplotPlotMethods,
       close: { effect: 'read' },
       '@rcParams': { effect: 'read', returnType: 'matplotlib.RcParams' },
       '@style': { effect: 'read', returnType: 'matplotlib.style' },

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { ActionToast } from '@/components/ActionToast'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import { useLocaleStore } from '@/stores/locale-store'
 import {
   LANGUAGE_PREFERENCES,
@@ -53,9 +54,9 @@ const LanguageSaveError = ({ className }: { className?: string }): React.JSX.Ele
   )
 }
 
-// Language picker for Settings > Appearance. A Select rather than a segmented control: ten options
-// with localized labels overflow the row width the theme control fits into.
-export const LanguageSelect = (): React.JSX.Element => {
+// Shared language picker for Settings and the home header. A Select rather than a segmented
+// control: ten options with localized labels overflow the row width the theme control fits into.
+export const LanguageSelect = ({ compact = false }: { compact?: boolean }): React.JSX.Element => {
   const { t } = useTranslation()
   const preference = useLocaleStore((state) => state.preference)
   const setPreference = useLocaleStore((state) => state.setPreference)
@@ -63,12 +64,15 @@ export const LanguageSelect = (): React.JSX.Element => {
   const active = options.find((option) => option.value === preference) ?? options[0]
 
   return (
-    <div className="min-w-0">
+    <div className={cn('min-w-0', compact && 'w-[120px]')}>
       <Select
         value={preference}
         onValueChange={(value) => setPreference(value as LanguagePreference)}
       >
-        <SelectTrigger aria-label={t('Interface language')}>
+        <SelectTrigger
+          className={cn(compact && 'h-8 px-2 text-xs')}
+          aria-label={t('Interface language')}
+        >
           <span>{active.label}</span>
         </SelectTrigger>
         <SelectContent>

@@ -24,6 +24,70 @@ import {
 } from './provider-registry'
 
 describe('provider registry', () => {
+  it('excludes context suffix aliases from every bundled official catalog', () => {
+    for (const vendor of OFFICIAL_VENDORS) {
+      for (const model of vendor.models) {
+        expect(model.id, vendor.id).not.toMatch(/\[1m\]$/i)
+      }
+    }
+  })
+
+  it.each(['anthropic', 'deepseek', 'minimax'] as const)(
+    'excludes context suffix aliases from the refreshed %s catalog without rewriting the cache',
+    (vendorId) => {
+      const fetched = ['live-model', 'live-model[1m]', 'other-model[1M]']
+      const models = getOfficialVendorModelIds(vendorId, undefined, fetched)
+      expect(models).toContain('live-model')
+      expect(models.some((model) => /\[1m\]$/i.test(model))).toBe(false)
+      expect(fetched).toEqual(['live-model', 'live-model[1m]', 'other-model[1M]'])
+    }
+  )
+
+  it.each(['anthropic', 'deepseek', 'minimax'] as const)(
+    'falls back to the bundled %s catalog when discovery contains only suffix aliases',
+    (vendorId) => {
+      expect(getOfficialVendorModelIds(vendorId, undefined, ['removed[1m]'])).toEqual(
+        getOfficialVendorModelIds(vendorId)
+      )
+    }
+  )
+
+  it.each([
+    ['anthropic', 'claude-opus-4-8'],
+    ['deepseek', 'deepseek-v4-pro'],
+    ['minimax', 'MiniMax-M3']
+  ] as const)('retains the 1M context window on %s/%s', (vendorId, model) => {
+    expect(getOfficialVendorModelIds(vendorId)).toContain(model)
+    expect(resolveModelContextWindow(vendorId, model)).toBe(1_000_000)
+  })
+
+  it('offers GPT-6.1 Sol with its published capabilities and preserves the default', () => {
+    expect(getOfficialVendorModelIds('openai')).toContain('gpt-6.1-sol')
+    expect(defaultVendorModel('openai')).toBe('gpt-5.6-sol')
+    expect(resolveModelContextWindow('openai', 'gpt-6.1-sol')).toBe(1_050_000)
+    expect(isVendorModelMultimodal('openai', 'gpt-6.1-sol')).toBe(true)
+    expect(resolveVendorModelApiEndpoints('openai', 'gpt-6.1-sol')).toEqual(['responses'])
+    expect(resolveVendorModelReasoningEffort('openai', 'gpt-6.1-sol')).toEqual({
+      supported: true,
+      slots: ['low', 'medium', 'high', 'xhigh', 'max']
+    })
+  })
+
+  it.each(['claude-sonnet-5-5', 'claude-haiku-5-5'])(
+    'offers %s with its published capabilities and preserves the default',
+    (model) => {
+      expect(getOfficialVendorModelIds('anthropic')).toContain(model)
+      expect(defaultVendorModel('anthropic')).toBe('claude-opus-5')
+      expect(resolveModelContextWindow('anthropic', model)).toBe(1_000_000)
+      expect(isVendorModelMultimodal('anthropic', model)).toBe(true)
+      expect(resolveVendorModelApiEndpoints('anthropic', model)).toEqual(['anthropic'])
+      expect(resolveVendorModelReasoningEffort('anthropic', model)).toEqual({
+        supported: true,
+        slots: ['low', 'medium', 'high', 'xhigh', 'max']
+      })
+    }
+  )
+
   it('defines exactly one of baseUrl or regions per vendor, with a non-empty catalog', () => {
     for (const vendor of OFFICIAL_VENDORS) {
       const hasBaseUrl = Boolean(vendor.baseUrl)
@@ -52,6 +116,7 @@ describe('provider registry', () => {
     expect(isOfficialVendorId('tencentcodingplan')).toBe(true)
     expect(isOfficialVendorId('tencenttokenplan')).toBe(true)
     expect(isOfficialVendorId('nvidia')).toBe(true)
+    expect(isOfficialVendorId('requesty')).toBe(true)
     expect(isOfficialVendorId(undefined)).toBe(false)
     expect(isOfficialVendorId(42)).toBe(false)
   })
@@ -112,12 +177,17 @@ describe('provider registry', () => {
     expect(zenModels).toEqual([
       'kimi-k2.7-code',
       'gpt-6-astra',
+      'gpt-6.1-sol',
+      'gpt-6-sol',
+      'gpt-6-luna',
       'gpt-5.6-sol',
       'gpt-5.6-terra',
       'gpt-5.6-luna',
       'claude-fable-5-1',
       'claude-fable-5',
+      'claude-opus-5-5',
       'claude-opus-5',
+      'claude-sonnet-5-5',
       'claude-sonnet-5',
       'grok-4.7',
       'grok-4.6',
@@ -144,6 +214,7 @@ describe('provider registry', () => {
       'grok-build-0.1',
       'muse-spark-1.3',
       'muse-spark-1.2',
+      'qwen3.8-max',
       'qwen3.8-flash',
       'qwen3.7-max',
       'qwen3.7-plus',
@@ -151,6 +222,7 @@ describe('provider registry', () => {
       'kimi-k3',
       'kimi-k2.6',
       'deepseek-v4.1-flash',
+      'deepseek-v4-flash-vision-exp',
       'deepseek-v4-flash',
       'deepseek-v4-pro',
       'minimax-m3',
@@ -188,6 +260,28 @@ describe('provider registry', () => {
     expect(resolveVendorModelApiEndpoints('opencode', 'minimax-m3')).toEqual(['openai'])
     expect(isVendorModelMultimodal('opencode-go', 'glm-5.3-flash')).toBe(true)
     expect(isVendorModelMultimodal('opencode', 'gpt-5.3-codex-spark')).toBe(false)
+  })
+
+  it.each([
+    ['gpt-6.1-sol', 'responses', 1_050_000, ['low', 'medium', 'high', 'xhigh', 'max']],
+    ['gpt-6-sol', 'responses', 1_050_000, ['none', 'low', 'medium', 'high', 'max']],
+    ['gpt-6-luna', 'responses', 1_050_000, ['none', 'low', 'medium', 'high', 'max']],
+    ['claude-opus-5-5', 'anthropic', 1_000_000, ['low', 'medium', 'high', 'xhigh', 'max']],
+    ['claude-sonnet-5-5', 'anthropic', 1_000_000, ['low', 'medium', 'high', 'xhigh', 'max']],
+    ['qwen3.8-max', 'openai', 262_144, ['none', 'high', 'high', 'high', 'high']],
+    ['deepseek-v4-flash-vision-exp', 'openai', 1_000_000, ['low', 'high', 'max', 'max', 'max']]
+  ] as const)('exposes the verified Zen capabilities for %s', (model, endpoint, context, slots) => {
+    // Protocol: opencode.ai/docs/zen; availability: opencode.ai/zen/v1/models;
+    // context, vision, effort, and Sonnet 5.5 SDK: models.dev/api.json (opencode), 2026-10-03.
+    expect(resolveVendorModelApiEndpoints('opencode', model)).toEqual([endpoint])
+    expect(resolveModelContextWindow('opencode', model)).toBe(context)
+    expect(resolveVendorModelReasoningEffort('opencode', model)).toEqual({
+      supported: true,
+      slots
+    })
+    expect(isVendorModelMultimodal('opencode', model)).toBe(true)
+    expect(getOfficialVendor('opencode')?.models.map(({ id }) => id)).not.toContain('jev-1.13')
+    expect(getOfficialVendor('opencode')?.models.map(({ id }) => id)).not.toContain('jev-1.13-free')
   })
 
   it('exposes the 2026-09 OpenCode Zen additions with their documented capabilities', () => {
@@ -360,7 +454,6 @@ describe('provider registry', () => {
     const fetched = ['deepseek-flash', 'deepseek-v4-pro', 'future-model']
     expect(getOfficialVendorModelIds('deepseek', undefined, fetched)).toEqual([
       ...fetched,
-      'deepseek-v4-pro[1m]',
       'deepseek-v4-flash',
       'deepseek-v4-flash-vision-exp'
     ])
@@ -389,7 +482,6 @@ describe('provider registry', () => {
       getOfficialVendor('deepseek')?.models.map(({ id, contextWindow }) => ({ id, contextWindow }))
     ).toEqual([
       { id: 'deepseek-v4-pro', contextWindow: 1_000_000 },
-      { id: 'deepseek-v4-pro[1m]', contextWindow: 1_000_000 },
       { id: 'deepseek-flash', contextWindow: 1_000_000 },
       { id: 'deepseek-v4-flash', contextWindow: 1_000_000 },
       { id: 'deepseek-v4-flash-vision-exp', contextWindow: 1_000_000 }
@@ -416,6 +508,25 @@ describe('provider registry', () => {
     // Unknown / missing region falls back to the first region's OpenAI base.
     expect(resolveVendorOpenAiBaseUrl('minimax')).toBe('https://api.minimax.io/v1')
     expect(resolveVendorOpenAiBaseUrl('minimax', 'nope')).toBe('https://api.minimax.io/v1')
+  })
+
+  it('offers the MiniMax M3.1 Token Plan preview without replacing the pay-as-you-go default', () => {
+    const model = 'MiniMax-M3.1-Flash-Preview'
+    for (const region of ['global', 'china']) {
+      expect(getOfficialVendorModelIds('minimax', region)).toContain(model)
+      expect(defaultVendorModel('minimax', region)).toBe('MiniMax-M3')
+    }
+    expect(resolveModelContextWindow('minimax', model)).toBe(1_000_000)
+    expect(isVendorModelMultimodal('minimax', model)).toBe(true)
+    expect(resolveVendorModelApiEndpoints('minimax', model)).toEqual([
+      'anthropic',
+      'openai',
+      'responses'
+    ])
+    expect(resolveVendorModelReasoningEffort('minimax', model)).toEqual({
+      supported: true,
+      slots: ['low', 'medium', 'high', 'xhigh', 'max']
+    })
   })
 
   it('routes GLM to Z.AI overseas and BigModel in China, on both endpoints', () => {
@@ -598,9 +709,10 @@ describe('provider registry', () => {
     })
     expect(
       resolveVendorModelReasoningEffort('openrouter', 'google/gemini-3.1-pro-preview')
-    ).toEqual({ supported: false })
+    ).toEqual({ supported: true, slots: ['low', 'medium', 'high', 'high', 'high'] })
     expect(resolveVendorModelReasoningEffort('openrouter', 'x-ai/grok-4.5')).toEqual({
-      supported: false
+      supported: true,
+      slots: ['low', 'medium', 'high', 'high', 'high']
     })
     expect(resolveVendorModelReasoningEffort('openrouter', 'qwen/qwen3.7-max')).toEqual({
       supported: true,
@@ -641,6 +753,100 @@ describe('provider registry', () => {
     // Curated (300+ live ids would flood the picker), so refresh-from-vendor is hidden.
     expect(resolveVendorModelsUrl('openrouter')).toBeUndefined()
     expect(defaultVendorModel('openrouter')).toBe('anthropic/claude-opus-5')
+  })
+
+  it('routes Requesty through both APIs after OpenRouter with a curated catalog', () => {
+    const openRouterIndex = OFFICIAL_VENDORS.findIndex((vendor) => vendor.id === 'openrouter')
+
+    expect(OFFICIAL_VENDORS[openRouterIndex + 1]?.id).toBe('requesty')
+    expect(resolveVendorApiEndpoints('requesty')).toEqual(['anthropic', 'openai'])
+    expect(resolveVendorBaseUrl('requesty')).toBe('https://router.requesty.ai')
+    expect(resolveVendorOpenAiBaseUrl('requesty')).toBe('https://router.requesty.ai/v1')
+    expect(resolveVendorApiKeyUrl('requesty')).toBe('https://app.requesty.ai/api-keys')
+    expect(resolveVendorModelsUrl('requesty')).toBeUndefined()
+    expect(usesVendorAnthropicApiKeyHeader('requesty')).toBe(false)
+    expect(defaultVendorModel('requesty')).toBe('anthropic/claude-sonnet-5')
+    expect(resolveModelContextWindow('requesty', 'openai/gpt-5.4-mini')).toBe(400_000)
+    expect(isVendorModelMultimodal('requesty', 'google/gemini-3.5-flash')).toBe(true)
+    expect(isVendorModelMultimodal('requesty', 'somevendor/unknown-model')).toBe(false)
+    expect(resolveVendorModelReasoningEffort('requesty', 'openai/gpt-5.5')).toEqual({
+      supported: true,
+      slots: ['none', 'low', 'medium', 'high', 'xhigh']
+    })
+    expect(resolveVendorModelReasoningEffort('requesty', 'anthropic/claude-haiku-4-5')).toEqual({
+      supported: false
+    })
+  })
+
+  it.each([
+    ['openrouter', 'anthropic/claude-opus-5.5', 1_000_000, true],
+    ['openrouter', 'anthropic/claude-sonnet-5.5', 1_000_000, true],
+    ['openrouter', 'anthropic/claude-fable-5.1', 1_000_000, true],
+    ['openrouter', 'openai/gpt-6.1-sol', 1_050_000, true],
+    ['openrouter', 'openai/gpt-6.1-sol-pro', 1_050_000, true],
+    ['openrouter', 'openai/gpt-6-astra', 1_050_000, true],
+    ['openrouter', 'openai/gpt-6-astra-pro', 1_050_000, true],
+    ['openrouter', 'openai/gpt-6-luna', 1_050_000, true],
+    ['openrouter', 'openai/gpt-6-luna-pro', 1_050_000, true],
+    ['openrouter', 'x-ai/grok-4.7', 500_000, true],
+    ['openrouter', 'deepseek/deepseek-v4.1-flash', 1_048_576, true],
+    ['openrouter', 'z-ai/glm-5.3', 1_048_576, false],
+    ['openrouter', 'z-ai/glm-5.3-flash', 1_048_576, true],
+    ['openrouter', 'qwen/qwen3.8-max-0902', 1_000_000, true],
+    ['openrouter', 'minimax/minimax-m3', 1_048_576, true],
+    ['openrouter', 'xiaomi/mimo-v2.6-pro', 1_050_000, true],
+    ['openrouter', 'xiaomi/mimo-v2.6-flash', 1_050_000, true],
+    ['requesty', 'anthropic/claude-sonnet-5-5', 1_000_000, true],
+    ['requesty', 'anthropic/claude-fable-5.1', 1_000_000, true],
+    ['requesty', 'openai/gpt-6.1-sol', 1_050_000, true],
+    ['requesty', 'openai/gpt-6-astra', 1_050_000, true],
+    ['requesty', 'openai/gpt-6-luna', 1_050_000, true],
+    ['requesty', 'google/gemini-3.6-flash', 1_048_576, true],
+    ['requesty', 'xai/grok-4.7', 500_000, true],
+    ['requesty', 'deepseek/deepseek-v4.1-flash', 1_000_000, true],
+    ['requesty', 'zai/glm-5.3', 1_000_000, true],
+    ['requesty', 'zai/glm-5.3-flash', 1_000_000, true],
+    ['requesty', 'xiaomi/mimo-v2.6-pro', 1_048_576, true],
+    ['requesty', 'xiaomi/mimo-v2.6-flash', 1_048_576, true]
+  ] as const)(
+    'offers %s %s with gateway-specific capabilities',
+    (vendor, model, context, vision) => {
+      expect(getOfficialVendorModelIds(vendor)).toContain(model)
+      expect(resolveModelContextWindow(vendor, model)).toBe(context)
+      expect(isVendorModelMultimodal(vendor, model)).toBe(vision)
+      expect(resolveVendorModelApiEndpoints(vendor, model)).toEqual(['anthropic', 'openai'])
+    }
+  )
+
+  it.each([
+    ['openrouter', 'openai/gpt-6.1-sol', ['low', 'medium', 'high', 'xhigh', 'max']],
+    ['openrouter', 'openai/gpt-6-luna', ['none', 'low', 'medium', 'high', 'max']],
+    ['openrouter', 'x-ai/grok-4.7', ['low', 'medium', 'high', 'xhigh', 'xhigh']],
+    ['openrouter', 'deepseek/deepseek-v4.1-flash', ['none', 'low', 'high', 'max', 'max']],
+    ['openrouter', 'z-ai/glm-5.3', ['low', 'high', 'max', 'max', 'max']],
+    ['openrouter', 'qwen/qwen3.8-max-0902', ['low', 'medium', 'high', 'xhigh', 'xhigh']],
+    ['openrouter', 'google/gemini-3.5-flash', ['minimal', 'low', 'medium', 'high', 'high']],
+    ['requesty', 'openai/gpt-6.1-sol', ['low', 'medium', 'high', 'xhigh', 'xhigh']],
+    ['requesty', 'openai/gpt-6-astra', ['low', 'medium', 'high', 'xhigh', 'xhigh']],
+    ['requesty', 'openai/gpt-6-luna', ['low', 'medium', 'high', 'xhigh', 'xhigh']],
+    ['requesty', 'anthropic/claude-sonnet-5-5', ['low', 'medium', 'high', 'max', 'max']],
+    ['requesty', 'google/gemini-3.6-flash', ['low', 'medium', 'high', 'high', 'high']]
+  ] as const)('uses gateway effort semantics for %s %s', (vendor, model, slots) => {
+    expect(resolveVendorModelReasoningEffort(vendor, model)).toEqual({ supported: true, slots })
+  })
+
+  it.each([
+    ['openrouter', 'minimax/minimax-m3'],
+    ['openrouter', 'xiaomi/mimo-v2.6-pro'],
+    ['openrouter', 'xiaomi/mimo-v2.6-flash'],
+    ['requesty', 'xai/grok-4.7'],
+    ['requesty', 'deepseek/deepseek-v4.1-flash'],
+    ['requesty', 'zai/glm-5.3'],
+    ['requesty', 'zai/glm-5.3-flash'],
+    ['requesty', 'xiaomi/mimo-v2.6-pro'],
+    ['requesty', 'xiaomi/mimo-v2.6-flash']
+  ] as const)('hides undocumented effort controls for %s %s', (vendor, model) => {
+    expect(resolveVendorModelReasoningEffort(vendor, model)).toEqual({ supported: false })
   })
 
   it('routes Xiaomi MIMO through both APIs with a live model list', () => {
@@ -1131,7 +1337,6 @@ describe('provider registry', () => {
       expect(isVendorModelMultimodal('anthropic', 'claude-opus-4-8')).toBe(true)
       expect(isVendorModelMultimodal('anthropic', 'claude-sonnet-5')).toBe(true)
       expect(isVendorModelMultimodal('anthropic', 'claude-haiku-4-5-20251001')).toBe(true)
-      expect(isVendorModelMultimodal('anthropic', 'claude-opus-4-8[1m]')).toBe(true)
       expect(isVendorModelMultimodal('anthropic', 'claude-opus-5-5')).toBe(true)
     })
 
@@ -1192,7 +1397,7 @@ describe('provider registry', () => {
 
     it('returns true only for MiniMax M3 models', () => {
       expect(isVendorModelMultimodal('minimax', 'MiniMax-M3')).toBe(true)
-      expect(isVendorModelMultimodal('minimax', 'MiniMax-M3[1m]')).toBe(true)
+      expect(isVendorModelMultimodal('minimax', 'MiniMax-M3[1m]')).toBe(false)
       expect(isVendorModelMultimodal('minimax', 'MiniMax-M2.7')).toBe(false)
       expect(isVendorModelMultimodal('minimax', 'MiniMax-M2.5')).toBe(false)
     })
@@ -1255,7 +1460,8 @@ describe('provider registry', () => {
     })
 
     it('returns false for OpenRouter text-only models', () => {
-      expect(isVendorModelMultimodal('openrouter', 'openai/gpt-5.3-codex')).toBe(false)
+      expect(isVendorModelMultimodal('openrouter', 'openai/gpt-5.3-codex')).toBe(true)
+      expect(isVendorModelMultimodal('openrouter', 'qwen/qwen3.7-max')).toBe(false)
       expect(isVendorModelMultimodal('openrouter', 'deepseek/deepseek-v4-pro')).toBe(false)
       expect(isVendorModelMultimodal('openrouter', 'z-ai/glm-5.2')).toBe(false)
     })
@@ -1284,7 +1490,7 @@ describe('provider registry', () => {
 
     it('returns true for every bundled DeepSeek V4 model', () => {
       expect(isVendorModelResponsesSupported('deepseek', 'deepseek-v4-pro')).toBe(true)
-      expect(isVendorModelResponsesSupported('deepseek', 'deepseek-v4-pro[1m]')).toBe(true)
+      expect(isVendorModelResponsesSupported('deepseek', 'deepseek-v4-pro[1m]')).toBe(false)
       expect(isVendorModelResponsesSupported('deepseek', 'deepseek-v4-flash')).toBe(true)
       expect(isVendorModelResponsesSupported('deepseek', 'deepseek-v4-flash-vision-exp')).toBe(true)
       expect(resolveVendorModelApiEndpoints('deepseek', 'deepseek-v4-pro')).toEqual([
@@ -1320,11 +1526,11 @@ describe('provider registry', () => {
       }
     })
 
-    it('keeps 1m bundled variants explicit and recognizes the suffix for unknown live models', () => {
-      expect(resolveModelContextWindow('anthropic', 'claude-opus-4-8[1m]')).toBe(1_000_000)
-      expect(resolveModelContextWindow('deepseek', 'deepseek-v4-pro[1m]')).toBe(1_000_000)
-      expect(resolveModelContextWindow('minimax', 'MiniMax-M3[1m]')).toBe(1_000_000)
-      expect(resolveModelContextWindow('anthropic', 'future-claude[1m]')).toBe(1_000_000)
+    it('does not infer context limits from removed or unknown suffix aliases', () => {
+      expect(resolveModelContextWindow('anthropic', 'claude-opus-4-8[1m]')).toBe(200_000)
+      expect(resolveModelContextWindow('deepseek', 'deepseek-v4-pro[1m]')).toBe(200_000)
+      expect(resolveModelContextWindow('minimax', 'MiniMax-M3[1m]')).toBe(200_000)
+      expect(resolveModelContextWindow('anthropic', 'future-claude[1m]')).toBe(200_000)
     })
 
     it('resolves shipped models with vendor-published per-model limits', () => {

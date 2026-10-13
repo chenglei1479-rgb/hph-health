@@ -1,0 +1,9 @@
+{
+  "mode": "test",
+  "issuer": "https://dev-s0savnzm2r5rtdvt.us.auth0.com/",
+  "clientId": "Rh2MZp3aNDrmGLuI3VHsnNI1mG4SPUqf",
+  "callbackPort": 49174,
+  "connections": {
+    "google": "google-oauth2"
+  }
+}

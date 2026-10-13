@@ -396,6 +396,10 @@ describe('codexFramework', () => {
 
     const codexConfigs = configurations.map(({ env }) => JSON.parse(env?.CODEX_CONFIG ?? '{}'))
 
+    expect(codexConfigs.map(({ agents }) => agents)).toEqual(
+      configurations.map(() => ({ enabled: false }))
+    )
+
     expect(codexConfigs.map(({ features }) => features)).toEqual(
       configurations.map((_configuration, index) => ({
         apps: false,
@@ -533,7 +537,11 @@ describe('codexFramework', () => {
     expect(JSON.parse(config.env?.CODEX_CONFIG ?? '')).not.toHaveProperty('model_catalog_json')
   })
 
-  it('adds local metadata when the active official model is not bundled by Codex', () => {
+  it.each([
+    ['gpt-6-astra', '0.144.6'],
+    ['gpt-6.1-sol', '0.144.6'],
+    ['gpt-6.1-sol', CODEX_VERSION]
+  ])('adds local metadata for unbundled official model %s on Codex %s', (model, nativeVersion) => {
     const framework = createCodexFramework()
     const config = framework.prepareModelConfig(
       {
@@ -541,14 +549,15 @@ describe('codexFramework', () => {
         vendorId: 'openai',
         apiEndpoints: ['responses'],
         baseUrl: 'https://api.openai.com/v1',
-        model: 'gpt-6-astra',
+        model,
         contextWindow: 1_050_000,
+        supportsImageInput: true,
         key: 'sk-plaintext-secret'
       },
       {
         storageRoot: '/data',
         executablePath: '/runtime/codex-acp',
-        nativeVersion: '0.144.6',
+        nativeVersion,
         reasoningEffort: 'max',
         reasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max']
       }
@@ -560,9 +569,13 @@ describe('codexFramework', () => {
     )
     expect(JSON.parse(modelCatalogFile?.content ?? '').models).toEqual([
       expect.objectContaining({
-        slug: 'gpt-6-astra',
+        slug: model,
         context_window: 1_050_000,
-        default_reasoning_level: 'max'
+        default_reasoning_level: 'max',
+        input_modalities: ['text', 'image'],
+        supported_reasoning_levels: ['low', 'medium', 'high', 'xhigh', 'max'].map((effort) =>
+          expect.objectContaining({ effort })
+        )
       })
     ])
   })
@@ -807,7 +820,7 @@ describe('codexFramework', () => {
           visibility: 'list',
           supported_in_api: true,
           base_instructions: expect.stringContaining(
-            'inside MedResearch Agent through the Agent Client Protocol'
+            'inside DRA through the Agent Client Protocol'
           ),
           include_skills_usage_instructions: true,
           default_reasoning_level: 'none',
@@ -974,6 +987,7 @@ describe('codexFramework', () => {
         HOME: join('/data', 'codex-subscription'),
         CODEX_HOME: join('/data', 'codex-subscription'),
         CODEX_CONFIG: JSON.stringify({
+          agents: { enabled: false },
           features: {
             apps: false,
             memories: false,
@@ -1002,6 +1016,7 @@ describe('codexFramework', () => {
         HOME: join('/data', 'codex-subscription'),
         CODEX_HOME: join('/data', 'codex-subscription'),
         CODEX_CONFIG: JSON.stringify({
+          agents: { enabled: false },
           features: {
             apps: false,
             memories: false,
@@ -1155,7 +1170,7 @@ describe('codexFramework', () => {
     })
   })
 
-  it('delivers MedResearch Agent session guidance as persistent developer instructions', () => {
+  it('delivers DRA session guidance as persistent developer instructions', () => {
     const framework = createCodexFramework()
 
     const config = framework.prepareModelConfig(
@@ -1200,6 +1215,43 @@ describe('codexFramework', () => {
       developer_instructions: 'Stable subscription guidance.'
     })
     expect(config.persistentSystemPrompt).toBe('Stable subscription guidance.')
+  })
+
+  it('adds only read-write granted local roots to Codex writable roots', () => {
+    const framework = createCodexFramework()
+    const grantedLocalRoots = [
+      { path: 'D:\\OpenScience\\read-write', access: 'rw' as const },
+      { path: 'D:\\OpenScience\\read-only', access: 'ro' as const },
+      { path: 'D:\\OpenScience\\read-write', access: 'rw' as const }
+    ]
+    const apiConfig = framework.prepareModelConfig(
+      {
+        type: 'custom',
+        apiEndpoints: ['responses'],
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-5.6-sol'
+      },
+      {
+        storageRoot: '/data',
+        executablePath: '/runtime/codex-acp',
+        grantedLocalRoots
+      }
+    )
+    const subscriptionConfig = framework.prepareModelConfig(
+      { type: 'codex-isolated', apiEndpoints: ['responses'], model: 'gpt-5.6-terra' },
+      {
+        storageRoot: '/data',
+        executablePath: '/runtime/codex-acp',
+        grantedLocalRoots
+      }
+    )
+
+    expect(JSON.parse(apiConfig.env?.CODEX_CONFIG ?? '{}')).toMatchObject({
+      sandbox_workspace_write: { writable_roots: ['D:\\OpenScience\\read-write'] }
+    })
+    expect(JSON.parse(subscriptionConfig.env?.CODEX_CONFIG ?? '{}')).toMatchObject({
+      sandbox_workspace_write: { writable_roots: ['D:\\OpenScience\\read-write'] }
+    })
   })
 
   it.each([
@@ -1259,7 +1311,7 @@ describe('codexFramework', () => {
   it('runs an app-managed JavaScript adapter with Electron as Node', () => {
     const spawnProcess = vi.fn().mockReturnValue(fakeChild)
     const framework = createCodexFramework({
-      execPath: '/Applications/MedResearch Agent/Electron',
+      execPath: '/Applications/DRA/Electron',
       platform: 'darwin',
       spawnProcess
     })
@@ -1272,7 +1324,7 @@ describe('codexFramework', () => {
       })
     ).toBe(fakeChild)
     expect(spawnProcess).toHaveBeenCalledWith(
-      '/Applications/MedResearch Agent/Electron',
+      '/Applications/DRA/Electron',
       ['/data/codex-acp/dist/index.js', '--flag'],
       expect.objectContaining({
         env: expect.objectContaining({

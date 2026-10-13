@@ -1,0 +1,75 @@
+<!doctype html><meta charset="utf-8"><title>BBJ MR Notebook 预览</title><style>body{max-width:1000px;margin:40px auto;font:17px/1.6 system-ui;padding:20px}pre{white-space:pre-wrap;background:#f3f5f6;padding:20px;border-radius:8px}h1{font-size:28px}</style><h1>BBJ MR Notebook · 模板预览</h1><p>未在 Jupyter kernel 执行；此页展示完整 Markdown 与代码。</p><pre># BBJ 汇总统计与两样本 MR 模板
+
+**状态：模板已生成；未执行真实 BBJ MR。** 默认仅检查配置，不下载、不转换、不估计效应。
+
+本 Notebook 连接 NBDC/JENGER 的汇总统计导入、GRCh37/38 SNP 转换、jMorp 日本人群 AF 注释与本地 LD clumping 的 MR 流程。请与同目录的 Python/R 文件一并保存，使用 Python 3 kernel。
+</pre><pre>## 1. 数据来源与范围
+
+- [NBDC BBJ hum0014 v28](https://humandbs.dbcls.jp/en/research/hum0014/v28)：开放 NHA 汇总统计与受控个体数据应分开处理。DRA 工具 `bbj_summary_statistics` 只发现开放汇总统计条目。
+- [JENGER](http://jenger.riken.jp/en/result)：官方 BBJ 汇总统计目录；本次网页探测失败，下载可用性待实测。工具调用失败不会替换成其他研究。
+- [jMorp 数据指南](https://jmorp.megabank.tohoku.ac.jp/docs/guide-en/overview/access_to_datasets/) 与 [下载页](https://jmorp.megabank.tohoku.ac.jp/downloads)：手动选择有明确版本、GRCh build 和 AF 定义的 VCF。8.3KJPN 与较新面板使用的 build 不同，不能混用。
+- [UCSC chain 文件](https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/)：[反向 chain](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/)。chain SHA256、方向与目标 FASTA/.fai 必须确认。
+- [TwoSampleMR 方法说明](https://mrcieu.github.io/TwoSampleMR/articles/perform_mr.html)：效应对齐、IVW、MR-Egger、weighted median 与敏感性分析。
+
+该模板只自动处理双等位 SNP。INDEL/结构变异进入拒绝日志，需要 variant-aware liftover 与标准化后另行纳入。不同 BBJ 文件格式需逐一映射；REF/ALT 不能从效应等位基因顺序猜测。若文件不提供 REF/ALT，先用其 build 的参考变异数据核对。
+</pre><pre>## 2. 配置与依赖
+
+将 `config.example.json` 复制为 `config.json`，填写暴露/结局性状、文件、数据集 URL、build、原始列名映射、效应尺度与 jMorp 版本。OR 的 SE 必须是 log(OR) 的 SE。缺失 EAF 可移除列映射，不用 jMorp AF 填补。
+
+Python 准备脚本只依赖标准库。MR 另需 Rscript、TwoSampleMR、ieugwasr、jsonlite、digest、PLINK 和日本/东亚 LD 参考；Jupyter kernel 的安装由运行环境管理。该 Notebook 不自动安装依赖。
+</pre><pre>from pathlib import Path
+import json, shutil, subprocess, sys
+import bbj_pipeline
+
+CONFIG_PATH = Path(&quot;config.json&quot;)
+PREPARED_DIR = Path(&quot;prepared_bbj&quot;)  # 必须是尚不存在的目录，避免覆盖前次分析
+RUN_DOWNLOAD = False
+RUN_PREPARATION = False
+RUN_MR = False
+config = json.loads(CONFIG_PATH.read_text(encoding=&quot;utf-8&quot;)) if CONFIG_PATH.exists() else None
+print(&quot;配置已读取&quot; if config else &quot;模板状态：请先填写 config.json；真实数据分析尚未执行&quot;)
+</pre><pre>## 3. 可选下载
+
+从具体数据集页面取得真实文件 URL，阅读使用条件后再设置 `TERMS_REVIEWED=True` 和 `RUN_DOWNLOAD=True`。NBDC 返回的 NHA 链接可能是数据集详情页，不能直接当成数据文件。需要登录、DTA 或申请的来源请使用已获准的本地文件。HTTP JENGER 下载缺少传输完整性保证，应对照提供方校验值。
+</pre><pre>DOWNLOAD_URL = &quot;&quot;
+DOWNLOAD_PATH = Path(&quot;data/selected_summary.tsv.gz&quot;)
+TERMS_REVIEWED = False
+if RUN_DOWNLOAD:
+    DOWNLOAD_PATH.parent.mkdir(parents=True, exist_ok=True)
+    receipt = bbj_pipeline.download(DOWNLOAD_URL, DOWNLOAD_PATH, TERMS_REVIEWED)
+    print(receipt)
+else:
+    print(&quot;下载未运行&quot;)
+</pre><pre>## 4. 自动 SNP 坐标转换与 jMorp AF
+
+原始 POS 使用 1-based；chain 内部使用 0-based 半开区间。唯一映射才可进入结果，反向链会互补 REF/ALT/EA/OA，但不改变效应方向。目标 REF 不匹配、未映射、多映射、非法统计量与不支持的变异写入拒绝日志。
+
+jMorp AF 匹配同 build 的 CHR/POS/REF/ALT；支持拆分多等位 VCF 频率，重复命中不任取值。输出 `JMORP_ALT_AF` 和 `JMORP_EA_AF`，不将其替代 BBJ 研究的 EAF。整个 VCF 顺序扫描适用于本地离线处理，较大面板耗时可能较长。
+</pre><pre>if RUN_PREPARATION:
+    if config is None:
+        raise ValueError(&quot;请先配置 config.json&quot;)
+    manifest = bbj_pipeline.run(config, PREPARED_DIR)
+    print(json.dumps(manifest[&quot;counts&quot;], ensure_ascii=False, indent=2))
+else:
+    print(&quot;准备与坐标转换未运行&quot;)
+</pre><pre>## 5. 研究者确认后执行 MR
+
+确认研究问题、工具变量假设、祖源/LD 匹配、样本重叠与结果尺度后，在配置中记录 `researcher_approved`、`overlap_reviewed` 和 `overlap_notes`。暴露与结局均取自 BBJ 时不能假定互不重叠；严重重叠可能需要更换数据或方法。
+
+R 脚本选 P&lt;5e-8、F≥10 的 SNP，使用本地 JPN/EAS 参考做 10Mb/r²=0.001 clumping，保守排除所有回文 SNP，再对齐等位基因。要求至少三个独立 SNP 才运行 IVW、MR-Egger、weighted median、Q 异质性、Egger 截距、leave-one-out 与单 SNP 分析。MR-Egger 的统计效能仍取决于 SNP 数量与假设。
+</pre><pre>if RUN_MR:
+    if config is None:
+        raise ValueError(&quot;请先配置 config.json&quot;)
+    rscript = shutil.which(&quot;Rscript&quot;)
+    if rscript is None:
+        raise RuntimeError(&quot;未找到 Rscript：请配置 R 环境与所需包&quot;)
+    subprocess.run([rscript, &quot;bbj_mr.R&quot;, str(CONFIG_PATH), str(PREPARED_DIR)], check=True)
+    print(&quot;MR 已执行；请审阅结果与诊断文件&quot;)
+else:
+    print(&quot;MR 未运行：无效应估计、置信区间或因果结论&quot;)
+</pre><pre>## 6. 检查与交付
+
+准备阶段输出两份规范 TSV、拒绝日志与 SHA256 manifest。MR 阶段输出对齐审计、clumping 排除记录、三种方法结果、敏感性分析 CSV、诊断 PDF、LD 文件校验值和 R session 信息。
+
+准备成功不能证明 MR 已运行；MR 已运行也不等于因果假设已满足。结论须与性状单位、二分类结局 logOR 尺度、样本重叠和多重检验范围一起审阅。Steiger 方向性、共定位、多变量 MR 与重叠偏倚修正不在本模板自动执行范围。
+</pre>

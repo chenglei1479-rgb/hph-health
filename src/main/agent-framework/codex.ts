@@ -33,6 +33,7 @@ import { CODEX_SUBSCRIPTION_PROVIDER_ID, isCodexSubscriptionProvider } from '../
 import { prepareCodexRuntimeHomeAuthentication } from '../settings/codex-auth'
 import { codexStorageDir, codexSubscriptionStorageDir } from '../settings/codex-paths'
 import { CODEX_VERSION, spawnCodexWithInstallAdmission } from '../settings/managed-codex'
+import type { GrantedLocalRoot } from '../../shared/local-fs'
 import { clearSystemProxyEnvironment } from '../settings/system-proxy'
 import { registerOwnedPosixProcessGroup } from '../process-tree'
 import codexNativeModelInstructions from './codex-native-model-instructions.md?raw'
@@ -89,12 +90,12 @@ const CODEX_MODE_IDS = {
   full: 'agent-full-access'
 } as const satisfies Record<PermissionProfileId, string>
 
-// MedResearch Agent owns delegation lifecycle, authority, permission, and evidence. Keep both the stable
+// DRA owns delegation lifecycle, authority, permission, and evidence. Keep both the stable
 // and preview Codex implementations off in every profile so native children cannot bypass that Host
 // contract. This must live in CODEX_CONFIG (rather than only custom model metadata), because trusted
 // bundled models intentionally do not receive an app-authored model catalog.
 const CODEX_DISABLED_NATIVE_FEATURES = Object.freeze({
-  // MedResearch Agent owns the Skill projection and MCP surface. Native Codex plugin/app discovery can
+  // DRA owns the Skill projection and MCP surface. Native Codex plugin/app discovery can
   // advertise provider-installed, plugin-qualified Skills that the app runtime cannot load.
   apps: false,
   memories: false,
@@ -230,6 +231,22 @@ const buildCodexModelOptions = (input: {
   }
 }
 
+const codexSandboxWriteConfig = (
+  grantedLocalRoots: readonly Pick<GrantedLocalRoot, 'path' | 'access'>[] | undefined
+): Record<string, unknown> => {
+  const writableRoots = [
+    ...new Set(
+      (grantedLocalRoots ?? [])
+        .filter((root) => root.access === 'rw')
+        .map((root) => root.path.trim())
+        .filter(Boolean)
+    )
+  ]
+  return writableRoots.length > 0
+    ? { sandbox_workspace_write: { writable_roots: writableRoots } }
+    : {}
+}
+
 const buildCodexConfig = (provider: {
   baseUrl?: string
   preserveBaseUrl?: boolean
@@ -237,6 +254,7 @@ const buildCodexConfig = (provider: {
   contextWindow?: number
   key?: string
   reasoningEffort?: ModelReasoningEffort
+  grantedLocalRoots?: readonly Pick<GrantedLocalRoot, 'path' | 'access'>[]
 }): Record<string, unknown> => {
   const baseUrl = normalizeResponsesBaseUrl(provider.baseUrl, {
     appendVersionPath: !provider.preserveBaseUrl
@@ -246,6 +264,9 @@ const buildCodexConfig = (provider: {
 
   return {
     ...buildCodexModelOptions(provider),
+    // Model metadata can enable native delegation even when both feature flags are off.
+    // Codex 0.157.1 config::multi_agent_version_override requires agents.enabled=false.
+    agents: { enabled: false },
     features: CODEX_DISABLED_NATIVE_FEATURES,
     memories: CODEX_DISABLED_NATIVE_MEMORY,
     ...(contextWindow
@@ -256,10 +277,11 @@ const buildCodexConfig = (provider: {
           )
         }
       : {}),
+    ...codexSandboxWriteConfig(provider.grantedLocalRoots),
     model_provider: CODEX_PROVIDER_ID,
     model_providers: {
       [CODEX_PROVIDER_ID]: {
-        name: 'MedResearch Agent',
+        name: 'DRA',
         wire_api: 'responses',
         ...(baseUrl ? { base_url: baseUrl } : {}),
         ...(provider.key ? { requires_openai_auth: true } : {})
@@ -537,7 +559,7 @@ export const createCodexFramework = ({
     const persistentSystemPrompt =
       ctx.systemPromptAppends?.filter(Boolean).join('\n\n') || undefined
     if (isCodexSubscriptionProvider(provider.type)) {
-      // Every MedResearch Agent subscription session uses the same app-owned home. `codex-shared` is
+      // Every DRA subscription session uses the same app-owned home. `codex-shared` is
       // accepted only as a legacy Provider discriminator; it must never select the user's global
       // Codex profile at runtime. Seed the model before session creation to avoid the slow late
       // session/set_config_option switch (issue #277).
@@ -547,8 +569,12 @@ export const createCodexFramework = ({
       })
       const codexConfig = {
         ...modelOptions,
+        // Model metadata can enable native delegation even when both feature flags are off.
+        // Codex 0.157.1 config::multi_agent_version_override requires agents.enabled=false.
+        agents: { enabled: false },
         features: CODEX_DISABLED_NATIVE_FEATURES,
         memories: CODEX_DISABLED_NATIVE_MEMORY,
+        ...codexSandboxWriteConfig(ctx.grantedLocalRoots),
         ...(persistentSystemPrompt ? { developer_instructions: persistentSystemPrompt } : {})
       }
       const codexConfigJson =
@@ -619,7 +645,8 @@ export const createCodexFramework = ({
         baseUrl: responsesBaseUrl,
         preserveBaseUrl: Boolean(provider.responsesBaseUrl?.trim()) && !useLocalResponsesEndpoint,
         key: useLocalResponsesEndpoint ? undefined : provider.key,
-        reasoningEffort: ctx.reasoningEffort
+        reasoningEffort: ctx.reasoningEffort,
+        grantedLocalRoots: ctx.grantedLocalRoots
       }),
       ...(useChatBridge ? { features: CODEX_CHAT_BRIDGE_FEATURES } : {}),
       ...(modelCatalogPath ? { model_catalog_json: modelCatalogPath } : {}),

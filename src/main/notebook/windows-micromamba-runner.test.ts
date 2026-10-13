@@ -407,7 +407,7 @@ describe('createProductionMicromambaRunner', () => {
 
 it.each([
   { packaged: false, suffix: 'override' },
-  { packaged: true, suffix: 'local/MedResearch Agent' }
+  { packaged: true, suffix: 'local/Deep Research Agent' }
 ])(
   'uses the same brand config rules for actual tool writes ($packaged)',
   async ({ packaged, suffix }) => {

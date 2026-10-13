@@ -1,3 +1,7 @@
+import { captureDiscussionSendContext } from './discussion-send-context'
+import type { SessionDiscussionCapture } from './replay/replay-context'
+import type { SessionReadingContext } from '../../../../shared/session-reading'
+import { replayAnnotationTarget } from '../../../../shared/replay-reference'
 import { useTranslation } from 'react-i18next'
 import {
   composerDraftStorageFailed,
@@ -26,6 +30,7 @@ import {
 import {
   isSessionSizeLimitError,
   MAX_SESSION_PDF_CONTEXTS,
+  type LiteratureReference,
   type MessagePdfContextSnapshot,
   type PdfReadingPosition,
   type SessionPdfBinding,
@@ -43,6 +48,7 @@ import {
 import { useWorkspaceComposerDrafts } from './workspace-composer-drafts'
 import type { ComposerUploadTransfer } from './composer-upload-transfer'
 import {
+  appendLiteratureMentions,
   docIsEmpty,
   docToPdfContextSources,
   docToText,
@@ -72,11 +78,47 @@ type ComposerHistoryNavigation = {
 type ComposerSessionContext = {
   id: string
   projectId: string
-  runtimeContext?: { revision: number; pdfContext?: SessionPdfContext }
+  isPending?: boolean
+  messages?: readonly { id: string; pdfContext?: MessagePdfContextSnapshot }[]
+  runtimeContext?: {
+    revision: number
+    pdfContext?: SessionPdfContext
+    sessionContext?: SessionReadingContext
+  }
 }
 
 type ComposerReadingContextBinding =
   SessionPdfBinding | { bindingId: string; name: string; draftSelection: true }
+
+type ComposerAdmissionProjection = {
+  draftKey: string
+  projectId: string
+  version: number
+  messageId?: string
+  annotations: Annotation[]
+  readingBindings: ComposerReadingContextBinding[]
+  automaticAttachments: { id: string; name: string }[]
+}
+
+// Session binding replaces the pending ID; the submitted prompt stays on the active branch.
+const admissionMatchesSession = (
+  projection: ComposerAdmissionProjection,
+  session: ComposerSessionContext | undefined
+): boolean =>
+  session?.projectId === projection.projectId &&
+  projection.messageId !== undefined &&
+  (session.messages?.some((message) => message.id === projection.messageId) ?? false)
+
+// Binding publishes the prepared prompt, including its PDF snapshot. An empty snapshot is
+// authoritative too: single-page uploads remain attachments rather than Reading bindings.
+const admissionHasNoLinkedPdfs = (
+  projection: ComposerAdmissionProjection,
+  session: ComposerSessionContext | undefined
+): boolean => {
+  if (!admissionMatchesSession(projection, session) || session?.isPending !== false) return false
+  const prompt = session.messages?.find((message) => message.id === projection.messageId)
+  return Boolean(prompt && (prompt.pdfContext?.bindings.length ?? 0) === 0)
+}
 
 type ReadingMutationRuntime = {
   revision: number
@@ -94,12 +136,14 @@ const samePdfContextSources = (
   left.every((source, index) => pdfContextSourceKey(source) === pdfContextSourceKey(right[index]))
 
 export type ComposerSendSnapshot = {
+  retrySessionOwner?: ComposerDraft['retrySessionOwner']
   setupSessionToken?: string
   queuedEdit?: ComposerDraft['queuedEdit']
   draftKey: string
   version: number
   doc: ComposerDoc
   annotations: Annotation[]
+  discussionFocus?: SessionDiscussionCapture
   attachments: UploadedAttachment[]
   automaticReadingEnabled?: boolean
   pdfContext?: MessagePdfContextSnapshot
@@ -158,11 +202,13 @@ type WorkspaceComposerController = {
       pendingBindingId: string | undefined
       isPending: boolean
       automaticAttachmentCount: number
+      automaticAttachments: { id: string; name: string }[]
     }
   }
   actions: {
     cancelQueuedEdit?: () => void
     discardWslSetupDraft: () => boolean
+    appendLiterature: (draftKey: string, references: readonly LiteratureReference[]) => boolean
     changeDoc: (doc: ComposerDoc, caret?: ComposerCaretPosition) => void
     addAnnotation: (annotation: Annotation) => AnnotationValidationError | undefined
     updateAnnotationNote: (id: string, note: string) => AnnotationValidationError | undefined
@@ -188,9 +234,19 @@ type WorkspaceComposerController = {
   }
   lifecycle: {
     captureSend: (includeReadingContext?: boolean) => ComposerSendSnapshot
+    preserveAdmissionContext: (snapshot: ComposerSendSnapshot) => void
+    bindAdmissionContext: (
+      snapshot: ComposerSendSnapshot,
+      message: { sessionId: string; messageId: string }
+    ) => void
     captureRevision: (doc: ComposerDoc, annotations: Annotation[]) => ComposerSendSnapshot
     clearDraft: (draftKey: string, expectedVersion?: number) => boolean
-    restoreFailedSend: (snapshot: ComposerSendSnapshot, preserveOnConflict?: boolean) => boolean
+    restoreFailedSend: (
+      snapshot: ComposerSendSnapshot,
+      preserveOnConflict?: boolean,
+      boundDraftKey?: string,
+      reportConflict?: boolean
+    ) => boolean
     discardSnapshot: (snapshot: ComposerSendSnapshot) => void
     hasUnfinishedTransfers: (draftKey: string) => boolean
     beginSessionDeletion: (draftKey: string) => boolean
@@ -258,6 +314,7 @@ const useWorkspaceComposerController = ({
   )
   const [queuedEdit, setQueuedEdit] = useState(initialDraft.queuedEdit)
   const queuedEditRef = useRef<ComposerDraft['queuedEdit']>(initialDraft.queuedEdit)
+  const retrySessionOwnerRef = useRef(initialDraft.retrySessionOwner)
   const setupSessionTokenRef = useRef(initialDraft.setupSessionToken)
   const setupSessionTokenStore = useMemo(
     () => new SetupSessionTokenStore(initialDraft.setupSessionToken),
@@ -305,6 +362,21 @@ const useWorkspaceComposerController = ({
   const automaticReadingEnabledRef = useRef(initialDraft.automaticReadingEnabled)
   const historyRef = useRef<Record<string, ComposerHistoryNavigation>>({})
   const caretRequestKeyRef = useRef(0)
+  const [admissionProjection, setAdmissionProjection] = useState<
+    ComposerAdmissionProjection | undefined
+  >(undefined)
+  const admissionProjectionRef = useRef<ComposerAdmissionProjection | undefined>(undefined)
+  const clearAdmissionProjection = useCallback((): void => {
+    admissionProjectionRef.current = undefined
+    setAdmissionProjection(undefined)
+  }, [])
+  const setAdmissionProjectionState = useCallback(
+    (projection: ComposerAdmissionProjection): void => {
+      admissionProjectionRef.current = projection
+      setAdmissionProjection(projection)
+    },
+    []
+  )
   const durableReadingContext = activeSession?.runtimeContext?.pdfContext
   const durableReadingBindings = useMemo(
     () => durableReadingContext?.bindings ?? [],
@@ -418,6 +490,7 @@ const useWorkspaceComposerController = ({
       const draftKey = activeDraftKeyRef.current
       if (!deletedDraftKeys.has(draftKey)) {
         drafts[draftKey] = {
+          retrySessionOwner: retrySessionOwnerRef.current,
           doc: history[draftKey]?.scratch ?? docRef.current,
           annotations: annotationsRef.current,
           ...captureDraftAttachments(),
@@ -530,14 +603,17 @@ const useWorkspaceComposerController = ({
       }),
     [attachments, pendingReadingSelections, previewItems]
   )
-  const readingContexts: ComposerReadingContextBinding[] =
-    durableReadingBindings.length > 0
-      ? [...durableReadingBindings]
-      : pendingReadingItems.map(({ selection, name }) => ({
-          bindingId: pendingPdfContextBindingId(selection),
-          name,
-          draftSelection: true
-        }))
+  const readingContexts = useMemo<ComposerReadingContextBinding[]>(
+    () =>
+      durableReadingBindings.length > 0
+        ? [...durableReadingBindings]
+        : pendingReadingItems.map(({ selection, name }) => ({
+            bindingId: pendingPdfContextBindingId(selection),
+            name,
+            draftSelection: true
+          })),
+    [durableReadingBindings, pendingReadingItems]
+  )
   const activePreviewItemId = usePreviewWorkbenchStore((state) => state.activeItemId)
   const activeReadingBinding =
     durableReadingBindings.find(
@@ -797,6 +873,7 @@ const useWorkspaceComposerController = ({
         (selection) => pendingPdfContextBindingId(selection) === bindingId
       )
       if (pending && activeProjectId && !activeSession) {
+        markChanged()
         usePreviewWorkbenchStore.getState().clearPdfReadingPosition(bindingId)
         usePreviewWorkbenchStore.getState().clearPendingPdfContext(activeProjectId, pending)
         return
@@ -825,7 +902,8 @@ const useWorkspaceComposerController = ({
       beginReadingContextUndo,
       durableReadingBindings,
       pendingReadingSelections,
-      reconcileReadingContextSources
+      reconcileReadingContextSources,
+      markChanged
     ]
   )
   const dismissAutomaticReading = useCallback((): void => {
@@ -889,6 +967,7 @@ const useWorkspaceComposerController = ({
       delete draftsRef.current[previousDraftKey]
     } else {
       draftsRef.current[previousDraftKey] = {
+        retrySessionOwner: retrySessionOwnerRef.current,
         setupSessionToken: setupSessionTokenRef.current,
         doc: outgoingHistory?.scratch ?? doc,
         annotations,
@@ -916,10 +995,12 @@ const useWorkspaceComposerController = ({
     activateDraftAttachments(nextDraft)
     setActiveAutomaticReadingEnabled(nextDraft.automaticReadingEnabled)
     setActiveQueuedEdit(nextDraft.queuedEdit)
+    retrySessionOwnerRef.current = nextDraft.retrySessionOwner
     setActiveSetupSessionToken(nextDraft.setupSessionToken)
     activeDraftKeyRef.current = currentDraftKey
     delete draftsRef.current[currentDraftKey]
   }, [
+    activeSession,
     activeProjectId,
     annotations,
     attachments,
@@ -936,6 +1017,19 @@ const useWorkspaceComposerController = ({
     transfers,
     retryMessage
   ])
+
+  useLayoutEffect(() => {
+    const projection = admissionProjectionRef.current
+    if (!projection || !admissionMatchesSession(projection, activeSession)) return
+    const readingReady =
+      (projection.readingBindings.length === 0 && projection.automaticAttachments.length === 0) ||
+      durableReadingBindings.length > 0 ||
+      admissionHasNoLinkedPdfs(projection, activeSession)
+    const discussionReady =
+      projection.annotations.length === 0 ||
+      (activeSession?.runtimeContext?.sessionContext?.bindings.length ?? 0) > 0
+    if (readingReady && discussionReady) clearAdmissionProjection()
+  }, [activeSession, clearAdmissionProjection, durableReadingBindings.length])
 
   // Save the outgoing draft and activate the target before applying its prefill.
   useLayoutEffect(() => {
@@ -963,6 +1057,7 @@ const useWorkspaceComposerController = ({
     clearPastedTextUndo(currentDraftKey)
     clearUndo(currentDraftKey)
     markChanged(currentDraftKey)
+    retrySessionOwnerRef.current = undefined
     setActiveDoc(pendingConversationPrefill.doc)
     if (pendingConversationPrefill.kind === 'wsl-support') {
       setActiveSetupSessionToken(pendingConversationPrefill.setupSessionToken)
@@ -1189,7 +1284,7 @@ const useWorkspaceComposerController = ({
                   : []
               )
           : []),
-        ...docToPdfContextSources(docRef.current)
+        ...(automaticReadingEnabledRef.current ? docToPdfContextSources(docRef.current) : [])
       ]
       const pendingPdfContextVersions = candidates
         .filter((source) => {
@@ -1199,12 +1294,20 @@ const useWorkspaceComposerController = ({
           return true
         })
         .slice(0, Math.max(0, MAX_SESSION_PDF_CONTEXTS - includedDurableBindings.length))
-      return {
+      const snapshot = {
+        retrySessionOwner: retrySessionOwnerRef.current,
         setupSessionToken: setupSessionTokenRef.current,
         draftKey: activeDraftKeyRef.current,
         version: versionsRef.current[activeDraftKeyRef.current] ?? 0,
         doc: docRef.current,
         annotations: [...annotationsRef.current],
+        discussionFocus: captureDiscussionSendContext(
+          annotationsRef.current,
+          includeReadingContext
+            ? activeSession?.runtimeContext?.sessionContext?.bindings.at(-1)
+            : undefined,
+          activeSession?.id
+        ),
         attachments,
         queuedEdit: queuedEditRef.current,
         automaticReadingEnabled: automaticReadingEnabledRef.current,
@@ -1242,9 +1345,11 @@ const useWorkspaceComposerController = ({
         ...(pendingPdfContextAttachmentIds.length > 0 ? { pendingPdfContextAttachmentIds } : {}),
         ...(pendingPdfContextVersions.length > 0 ? { pendingPdfContextVersions } : {})
       }
+      return snapshot
     },
     [
       attachments,
+      activeSession,
       activeReadingBinding,
       activePendingReading,
       automaticStagedReadingContexts,
@@ -1257,6 +1362,41 @@ const useWorkspaceComposerController = ({
       stagedReadingContexts,
       versionsRef
     ]
+  )
+  const preserveAdmissionContext = useCallback(
+    (snapshot: ComposerSendSnapshot): void => {
+      const discussionAnnotations = snapshot.annotations.filter(replayAnnotationTarget)
+      const automaticAttachments = automaticReadingEnabledRef.current
+        ? automaticStagedReadingContexts.map((attachment) => ({
+            id: attachment.id,
+            name: attachment.originalName || attachment.name
+          }))
+        : []
+      if (
+        discussionAnnotations.length === 0 &&
+        readingContexts.length === 0 &&
+        automaticAttachments.length === 0
+      )
+        return
+      setAdmissionProjectionState({
+        draftKey: snapshot.draftKey,
+        projectId: projectIdRef.current,
+        version: snapshot.version,
+        annotations: discussionAnnotations,
+        readingBindings: [...readingContexts],
+        automaticAttachments
+      })
+    },
+    [automaticStagedReadingContexts, readingContexts, setAdmissionProjectionState]
+  )
+  const bindAdmissionContext = useCallback(
+    (snapshot: ComposerSendSnapshot, message: { sessionId: string; messageId: string }): void => {
+      const projection = admissionProjectionRef.current
+      if (projection?.draftKey !== snapshot.draftKey || projection.version !== snapshot.version)
+        return
+      setAdmissionProjectionState({ ...projection, messageId: message.messageId })
+    },
+    [setAdmissionProjectionState]
   )
   const clearDraft = useCallback(
     (draftKey: string, expectedVersion?: number): boolean => {
@@ -1272,6 +1412,7 @@ const useWorkspaceComposerController = ({
         blank()
       )
       if (activeDraftKeyRef.current !== draftKey) return true
+      retrySessionOwnerRef.current = undefined
       setActiveSetupSessionToken(undefined)
       setActiveDoc(emptyDoc)
       setActiveQueuedEdit(undefined)
@@ -1296,45 +1437,90 @@ const useWorkspaceComposerController = ({
       setError
     ]
   )
+  const reportNewerDraftKept = useCallback(
+    (snapshot: ComposerSendSnapshot): void => {
+      setError(
+        t(
+          'Sending failed. Your newer draft was kept. Copy the earlier draft from the details below.'
+        ),
+        [
+          docToText(snapshot.doc),
+          ...snapshot.annotations.map((annotation) => JSON.stringify(annotation)),
+          ...snapshot.attachments.map((attachment) => attachment.originalName || attachment.name)
+        ].join('\n')
+      )
+      releaseHistoryResources([{ attachments: snapshot.attachments, attachmentTransfers: [] }])
+    },
+    [releaseHistoryResources, setError, t]
+  )
   const restoreFailedSend = useCallback(
-    (snapshot: ComposerSendSnapshot, preserveOnConflict = false): boolean => {
-      if (deletedDraftKeysRef.current.has(snapshot.draftKey)) {
+    (
+      snapshot: ComposerSendSnapshot,
+      preserveOnConflict = false,
+      boundDraftKey?: string,
+      reportConflict = false
+    ): boolean => {
+      const projection = admissionProjectionRef.current
+      if (projection?.draftKey === snapshot.draftKey && projection.version === snapshot.version)
+        clearAdmissionProjection()
+      const draftKey = boundDraftKey ?? snapshot.draftKey
+      if (deletedDraftKeysRef.current.has(draftKey)) {
         if (!preserveOnConflict)
           releaseHistoryResources([{ attachments: snapshot.attachments, attachmentTransfers: [] }])
         return false
       }
-      if (
-        preserveOnConflict &&
-        (activeDraftKeyRef.current !== snapshot.draftKey ||
-          !docIsEmpty(docRef.current) ||
-          annotationsRef.current.length > 0 ||
-          attachments.length > 0 ||
-          transfers.length > 0 ||
-          queuedEditRef.current)
-      )
+      // Read live draft content: callers may hold this callback from submit time, before the
+      // composer was cleared.
+      const liveDraft = captureDraftAttachments()
+      const activeDraftConflicts =
+        !docIsEmpty(docRef.current) ||
+        annotationsRef.current.length > 0 ||
+        liveDraft.attachments.length > 0 ||
+        liveDraft.attachmentTransfers.length > 0 ||
+        Boolean(queuedEditRef.current)
+      if (preserveOnConflict && (activeDraftKeyRef.current !== draftKey || activeDraftConflicts)) {
+        const retainIfEmpty = (key: string): void => {
+          const previous = draftsRef.current[key]
+          if (
+            !previous ||
+            (docIsEmpty(previous.doc) &&
+              !previous.annotations.length &&
+              !previous.attachments.length &&
+              !previous.attachmentTransfers.length &&
+              !previous.queuedEdit)
+          ) {
+            draftsRef.current[key] = {
+              retrySessionOwner: snapshot.retrySessionOwner,
+              setupSessionToken: snapshot.setupSessionToken,
+              queuedEdit: snapshot.queuedEdit,
+              doc: snapshot.doc,
+              annotations: [...snapshot.annotations],
+              attachments: snapshot.attachments,
+              attachmentTransfers: [],
+              automaticReadingEnabled: snapshot.automaticReadingEnabled !== false
+            }
+            markChanged(key)
+          }
+        }
+        if (activeDraftKeyRef.current !== draftKey) retainIfEmpty(draftKey)
+        else if (boundDraftKey && boundDraftKey !== snapshot.draftKey)
+          retainIfEmpty(snapshot.draftKey)
+        else if (reportConflict) reportNewerDraftKept(snapshot)
         return false
+      }
       if (
         !preserveOnConflict &&
         (versionsRef.current[snapshot.draftKey] ?? 0) !== snapshot.version
       ) {
-        setError(
-          t(
-            'Sending failed. Your newer draft was kept. Copy the earlier draft from the details below.'
-          ),
-          [
-            docToText(snapshot.doc),
-            ...snapshot.annotations.map((annotation) => JSON.stringify(annotation)),
-            ...snapshot.attachments.map((attachment) => attachment.originalName || attachment.name)
-          ].join('\n')
-        )
-        releaseHistoryResources([{ attachments: snapshot.attachments, attachmentTransfers: [] }])
+        reportNewerDraftKept(snapshot)
         return false
       }
-      if (preserveOnConflict) markChanged(snapshot.draftKey)
-      clearUndo(snapshot.draftKey)
-      clearPastedTextUndo(snapshot.draftKey)
-      clearHistory(snapshot.draftKey)
-      if (activeDraftKeyRef.current === snapshot.draftKey) {
+      if (preserveOnConflict) markChanged(draftKey)
+      clearUndo(draftKey)
+      clearPastedTextUndo(draftKey)
+      clearHistory(draftKey)
+      if (activeDraftKeyRef.current === draftKey) {
+        retrySessionOwnerRef.current = snapshot.retrySessionOwner
         setActiveSetupSessionToken(snapshot.setupSessionToken)
         setActiveQueuedEdit(snapshot.queuedEdit)
         setActiveDoc(snapshot.doc)
@@ -1343,19 +1529,22 @@ const useWorkspaceComposerController = ({
         setActiveAutomaticReadingEnabled(snapshot.automaticReadingEnabled !== false)
         return true
       }
-      draftsRef.current[snapshot.draftKey] = {
+      draftsRef.current[draftKey] = {
+        retrySessionOwner: snapshot.retrySessionOwner,
         setupSessionToken: snapshot.setupSessionToken,
         queuedEdit: snapshot.queuedEdit,
         doc: snapshot.doc,
         annotations: [...snapshot.annotations],
         attachments: snapshot.attachments,
-        attachmentTransfers: draftsRef.current[snapshot.draftKey]?.attachmentTransfers ?? [],
+        attachmentTransfers: draftsRef.current[draftKey]?.attachmentTransfers ?? [],
         automaticReadingEnabled: snapshot.automaticReadingEnabled !== false
       }
       return true
     },
     [
-      attachments.length,
+      captureDraftAttachments,
+      clearAdmissionProjection,
+      reportNewerDraftKept,
       draftsRef,
       versionsRef,
       deletedDraftKeysRef,
@@ -1369,10 +1558,7 @@ const useWorkspaceComposerController = ({
       setActiveAttachments,
       setActiveAnnotations,
       setActiveDoc,
-      setActiveAutomaticReadingEnabled,
-      transfers.length,
-      setError,
-      t
+      setActiveAutomaticReadingEnabled
     ]
   )
 
@@ -1391,7 +1577,21 @@ const useWorkspaceComposerController = ({
   // receives, so an inline closure here would defeat that memo on every composer re-render.
   const addAnnotation = useCallback(
     (annotation: Annotation): AnnotationValidationError | undefined => {
-      const next = [...annotationsRef.current, annotation]
+      const source = replayAnnotationTarget(annotation)
+      const retained = source
+        ? annotationsRef.current.filter((item) => {
+            const previous = replayAnnotationTarget(item)
+            return (
+              !previous ||
+              (previous.projectId === source.projectId &&
+                previous.sourceSessionId === source.sourceSessionId &&
+                previous.scope !== 'session' &&
+                source.scope !== 'session' &&
+                (previous.branchId !== source.branchId || previous.stepId !== source.stepId))
+            )
+          })
+        : annotationsRef.current
+      const next = [...retained, annotation]
       const validation = validateAnnotations(next, docToText(docRef.current))
       if (validation) return validation
       clearPastedTextUndo()
@@ -1404,11 +1604,47 @@ const useWorkspaceComposerController = ({
     [captureUndo, clearHistory, clearPastedTextUndo, markChanged, setActiveAnnotations]
   )
 
+  const admissionProjectionActive =
+    admissionProjection !== undefined &&
+    (admissionMatchesSession(admissionProjection, activeSession) ||
+      (!activeSession &&
+        admissionProjection.messageId === undefined &&
+        admissionProjection.draftKey === currentDraftKey &&
+        admissionProjection.projectId === (activeProjectId ?? 'default-project')))
+  const visibleAnnotations =
+    admissionProjectionActive &&
+    (activeSession?.runtimeContext?.sessionContext?.bindings.length ?? 0) === 0
+      ? [
+          ...annotations,
+          ...admissionProjection.annotations.filter(
+            (annotation) => !annotations.some((current) => current.id === annotation.id)
+          )
+        ]
+      : annotations
+  const visibleReadingContexts =
+    admissionProjectionActive && durableReadingBindings.length === 0
+      ? admissionHasNoLinkedPdfs(admissionProjection, activeSession)
+        ? readingContexts
+        : admissionProjection.readingBindings
+      : readingContexts
+
+  const automaticReadingAttachments = admissionProjectionActive
+    ? durableReadingBindings.length > 0 ||
+      admissionHasNoLinkedPdfs(admissionProjection, activeSession)
+      ? []
+      : admissionProjection.automaticAttachments
+    : automaticReadingEnabled
+      ? automaticStagedReadingContexts.map((attachment) => ({
+          id: attachment.id,
+          name: attachment.originalName || attachment.name
+        }))
+      : []
+
   return {
     view: {
       queuedEdit,
       doc,
-      annotations,
+      annotations: visibleAnnotations,
       attachments,
       transfers,
       error,
@@ -1421,12 +1657,11 @@ const useWorkspaceComposerController = ({
       // The live reading position stays out of the view: the chip no longer displays it, and
       // captureSend snapshots it straight from the store.
       readingContext: {
-        bindings: readingContexts,
+        bindings: visibleReadingContexts,
         pendingBindingId: pdfContextPendingBindingId,
-        isPending: isPdfContextPending,
-        automaticAttachmentCount: automaticReadingEnabled
-          ? automaticStagedReadingContexts.length
-          : 0
+        isPending: isPdfContextPending || admissionProjectionActive,
+        automaticAttachmentCount: automaticReadingAttachments.length,
+        automaticAttachments: automaticReadingAttachments
       }
     },
     actions: {
@@ -1441,6 +1676,13 @@ const useWorkspaceComposerController = ({
         return clearDraft(activeDraftKeyRef.current)
       },
       changeDoc,
+      appendLiterature: (draftKey, references): boolean => {
+        if (activeDraftKeyRef.current !== draftKey || !canStageAttachments) return false
+        const next = appendLiteratureMentions(docRef.current, references)
+        if (!next) return false
+        changeDoc(next)
+        return true
+      },
       addAnnotation,
       updateAnnotationNote: (id, note): AnnotationValidationError | undefined => {
         const next = annotationsRef.current.map((annotation) =>
@@ -1485,6 +1727,8 @@ const useWorkspaceComposerController = ({
     },
     lifecycle: {
       captureSend,
+      preserveAdmissionContext,
+      bindAdmissionContext,
       captureRevision,
       clearDraft,
       restoreFailedSend,

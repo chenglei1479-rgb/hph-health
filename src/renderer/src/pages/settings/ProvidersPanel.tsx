@@ -2,7 +2,7 @@ import { useRetainedDialogValue } from '@/components/ui/use-retained-dialog-valu
 import { Notice } from '@/components/notice'
 import type { TFunction } from 'i18next'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertDialog } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
 import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -98,7 +98,7 @@ const providerErrorCopy = (error: ProviderPanelError, t: TFunction): string => {
     case 'claude-sign-out':
       return t('Could not sign out of Claude.')
     case 'claude-disconnect':
-      return t('Could not disconnect Claude from MedResearch Agent.')
+      return t('Could not disconnect Claude from DRA.')
     case 'xai-sign-in':
       return t('Could not sign in to xAI.')
     case 'xai-sign-out':
@@ -390,7 +390,9 @@ const ProvidersPanel = ({
     try {
       const result = await logoutSharedClaude()
       if (!result.ok) {
-        setProviderTestError(result.message ?? t('Could not disconnect Claude from MedResearch Agent.'))
+        setProviderTestError(
+          result.message ?? t('Could not disconnect Claude from DRA.')
+        )
       }
     } catch (error) {
       setProviderTestError({ action: 'claude-disconnect', detail: errorDetail(error) })
@@ -655,7 +657,7 @@ const ProvidersPanel = ({
                       ) : null}
                     </>
                   ) : (
-                    t('This provider will be removed from MedResearch Agent.')
+                    t('This provider will be removed from DRA.')
                   )}
                 </div>
               </AlertDialog.Description>

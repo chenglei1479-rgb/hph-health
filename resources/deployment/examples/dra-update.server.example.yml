@@ -1,0 +1,7 @@
+# TEMPLATE ONLY: replace the host and publisher before enabling.
+enabled: true
+provider: generic
+url: https://updates.REPLACE_WITH_DRA_DOMAIN.invalid/stable/
+manifestUrl: https://updates.REPLACE_WITH_DRA_DOMAIN.invalid/stable/version.json
+publisherName: REPLACE_WITH_EXACT_CERTIFICATE_PUBLISHER
+channel: latest

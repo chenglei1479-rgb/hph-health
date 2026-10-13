@@ -73,8 +73,24 @@ export type PreviewFileItem = PreviewItemBase & {
 export type PreviewToolItem = PreviewItemBase & {
   type: 'tool'
   sideChatId?: string
+  // A message chip can request a transient Library scope without changing the durable tab format.
+  libraryScopeRequest?: { section?: 'inbox'; collectionId?: string; collectionName?: string }
   toolKind?:
-    'notebook' | 'files' | 'library' | 'compute' | 'reviewer' | 'plan' | 'subagents' | 'side-chat'
+    | 'notebook'
+    | 'files'
+    | 'library'
+    | 'compute'
+    | 'reviewer'
+    | 'plan'
+    | 'subagents'
+    | 'side-chat'
+    | 'replay'
+  // A replay tab retains its source when the left-hand discussion selects another Session.
+  replaySourceProjectId?: string
+  replaySourceSessionId?: string
+  replayStepId?: string
+  replayBranchId?: string
+  replayRevealRequest?: number
   notebook?: NotebookSessionReference
   notebookRunId?: string
   notebookRunFocusRequest?: number
@@ -443,12 +459,15 @@ const createProjectFilesPreviewItem = (): PreviewToolItem => ({
   title: 'Files'
 })
 
-const createProjectLibraryPreviewItem = (): PreviewToolItem => ({
+const createProjectLibraryPreviewItem = (
+  libraryScopeRequest?: PreviewToolItem['libraryScopeRequest']
+): PreviewToolItem => ({
   id: PROJECT_LIBRARY_PREVIEW_ID,
   sessionId: '__project_library__',
   type: 'tool',
   toolKind: 'library',
-  title: 'Library'
+  title: 'Library',
+  ...(libraryScopeRequest ? { libraryScopeRequest } : {})
 })
 
 const createProjectComputePreviewItem = (): PreviewToolItem => ({

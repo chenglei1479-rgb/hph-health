@@ -1,5 +1,5 @@
 import { storageErrorMessage } from '@/lib/storage-error'
-import { AlertDialog } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
 import { FolderInput, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
@@ -196,10 +196,10 @@ const DataRootMissingDialog = ({
             <p className="text-xs text-muted-foreground">
               {isRemoteWebSurface
                 ? t(
-                    'To choose another location or continue with an empty folder, use MedResearch Agent on the home computer.'
+                    'To choose another location or continue with an empty folder, use DRA on the home computer.'
                   )
                 : t(
-                    "MedResearch Agent will recreate the folder as you use it. Files from the old location won't be available until it's reconnected."
+                    "DRA will recreate the folder as you use it. Files from the old location won't be available until it's reconnected."
                   )}
             </p>
           </div>

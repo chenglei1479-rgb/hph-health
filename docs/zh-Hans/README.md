@@ -49,7 +49,9 @@ AIPOCH Open-Science 是面向科学家和研究人员的 AI 研究工作台，�
 
 AIPOCH Open-Science 支持机器学习、统计学、生命科学、化学、材料科学、物理学和环境科学等领域的计算密集型与数据密集型研究。它覆盖从文献综述、假设构建到代码执行、数据分析、仿真、可视化以及生成可追溯研究成果的完整研究流程。
 
-> 💡 **[AIPOCH Open-Science v0.33.3 已发布](https://github.com/aipoch/open-science/releases/latest)** _（最后更新于 2026 年 9 月）_。AIPOCH Open-Science v0.33.3 升级文档预览：Office 文档支持带搜索的分页阅读，PowerPoint 支持分页审阅；基因连接器新增 Enrichr 基因集富集工具；工作区带来紧凑的图书馆预览。Windows 签名现已覆盖所有捆绑的可执行文件，文献筛选新增"放弃评估"操作，会话包支持自适应速度传输。详情请查看[最新发行说明](https://github.com/aipoch/open-science/releases/latest)。
+已完成的研究会话还可以导出为可移植的 `.science` 研究包，用于审阅、交接和归档，并携带所选的对话分支、文件版本、Notebook 记录和验证证据。
+
+> 💡 **[AIPOCH Open-Science v0.36.0 已发布](https://github.com/aipoch/open-science/releases/latest)** _（最后更新于 2026 年 10 月）_。AIPOCH Open-Science v0.36.0 新增可按次审查风险的 Notebook 执行、支持原文/译文/对照阅读模式的可续传共享 PDF 全文翻译；科学数据连接器再扩容——新增面向癌症蛋白质组学研究的 PDC 连接器，基因组连接器支持按人群查询连锁不平衡，并新增 Claude Haiku 5.5 模型支持。修复内容包括：保留科学 PDF 原生排版、清理官方模型目录、空会话中恢复查找功能，以及文件提及、Remote Web 市场浏览与编辑器标签样式等可靠性问题。详情请查看[最新发行说明](https://github.com/aipoch/open-science/releases/latest)。
 
 <p align="center">
  <img width="1920" height="1140" alt="AIPOCH Open-Science 首屏横幅：Science, Open to All——开源、模型无关、可自托管的科学 AI 研究工作台" src="../images/readme/open-science-banner.png" />
@@ -59,6 +61,7 @@ AIPOCH Open-Science 支持机器学习、统计学、生命科学、化学、材
 
 - [快速开始](#-快速开始)
 - [产品导览](#产品导览)
+- [AIPOCH Open-Science `.science` 研究包](#aipoch-open-science-science-研究包)
 - [基准测试表现](#基准测试表现)
 - [核心能力](#核心能力)
 - [模型服务商](#模型服务商)
@@ -154,6 +157,18 @@ Windows 重装会保留研究数据；如需彻底清理，请参阅[数据重�
   <img src="../images/readme/product-tour-provenance.jpg" alt="AIPOCH Open-Science 研究产物预览，其中包含用于追溯生成结果的 Provenance 入口" width="900">
 </p>
 
+## AIPOCH Open-Science `.science` 研究包
+
+将已完成的研究会话导出为可移植的 `.science` 研究包，用于审阅、交接和归档。选择要纳入的对话分支、文件版本、Notebook 记录和验证证据，然后将研究包导入其他项目或计算机。
+
+**导出 → 传递 → 检查**
+
+1. 导出已完成的会话，并选择要纳入的内容。
+2. 将 `.science` 文件传递给协作者，或转移到另一台计算机。
+3. 将它导入项目，检查只读历史、所含文件、Notebook 记录和验证证据。
+
+导入的研究包为只读内容，不会执行代码或恢复凭据。后续工作请在新会话中继续。若要重新运行结果，仍需要完整配方、必要输入和可用运行环境。
+
 ## 基准测试表现
 
 ### 🏆 BiomniBench-DA Public 50 第一名
@@ -224,7 +239,7 @@ AIPOCH Open-Science 是使用 React、TypeScript、Prisma/SQLite 和基于 ACP �
 
 源代码开发前提条件：
 
-- Node.js 22（参见 [`.nvmrc`](../../.nvmrc)）及 npm
+- Node.js 24（参见 [`.nvmrc`](../../.nvmrc)）及 npm
 - Git
 - Notebook 执行为可选功能，可使用应用管理的 Python/R 环境或自行配置的兼容解释器。
 
@@ -321,7 +336,7 @@ AIPOCH Open-Science 通过 GitHub、Discord、X 和 AIPOCH 网站接收缺陷报
 
 > ⭐ **Star 仓库：** 如果本项目对你有帮助，欢迎在 GitHub 上 Star。Star 仓库可以鼓励项目持续开发，只需片刻，却会对项目产生切实影响。
 
-已交付、部分实现和计划能力见[能力地图](../../ROADMAP.md#capability-map)。
+已交付、部分实现和计划能力见[能力地图](../ROADMAP.md#capability-map)。
 
 ## 许可证
 

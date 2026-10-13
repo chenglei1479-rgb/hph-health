@@ -241,6 +241,51 @@ describe('pull request change classification', () => {
     )
   })
 
+  it.each([
+    ['packages/open-science/CLI.md', 'cli_sdk'],
+    ['packages/open-science/README.md', 'cli_sdk'],
+    ['packages/notebook-network-sandbox/README.md', 'notebook_network_sandbox']
+  ])('keeps documentation and package checks without full fallback for %s', (path, owner) => {
+    const changes = [{ path, status: 'modified' }]
+    const plan = classifyChanges(changes)
+    const manifest = readManifest()
+    manifest.rules = manifest.rules.filter(({ id }: { id: string }) => id !== 'documentation')
+    const packagePlan = classifyChanges(changes, manifest)
+
+    expect(plan.mode).toBe('selective')
+    expect(plan.roots).toEqual(expect.arrayContaining(['documentation', owner]))
+    expect(plan.lanes).toEqual(expect.arrayContaining(['docs', ...packagePlan.lanes]))
+    expect(plan.roots).not.toContain('owner_ambiguity')
+    const tests = createAffectedTestPlan(changes, {
+      status: 'unavailable-manifest-only',
+      testFiles: []
+    })
+    expect(tests.mode).toBe('selective')
+    if (owner === 'cli_sdk') {
+      // CLI tests execute in their dedicated static lane, not the portable module bundle.
+      expect(plan.lanes).toContain('cli_sdk')
+      expect(tests.testFiles).toEqual([])
+    } else {
+      expect(tests.modules).toContain(owner)
+      expect(tests.testFiles.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('retains real package-owner ambiguity when documentation also matches', () => {
+    const manifest = readManifest()
+    const path = 'packages/open-science/README.md'
+    manifest.rules.push({
+      id: 'another_package_owner',
+      role: 'owner',
+      paths: [path],
+      capabilities: ['cli_sdk']
+    })
+
+    const plan = classifyChanges([{ path, status: 'modified' }], manifest)
+    expect(plan.mode).toBe('full')
+    expect(plan.roots).toContain('owner_ambiguity')
+  })
+
   it.each(['yml', 'yaml'])('keeps issue-template .%s changes on static checks', (extension) => {
     const changes = [
       { path: `.github/ISSUE_TEMPLATE/reproducibility_case.${extension}`, status: 'added' },
@@ -287,7 +332,7 @@ describe('pull request change classification', () => {
     manifest.rules.push({
       id: 'notebook_runtime',
       role: 'owner',
-      paths: ['src/main/notebook/runtime-service.ts'],
+      paths: ['src/main/notebook/source-file-access-analysis.ts'],
       capabilities: ['notebook_runtime']
     })
     manifest.capabilities.notebook_runtime = {
@@ -296,7 +341,7 @@ describe('pull request change classification', () => {
     }
 
     const plan = classifyChanges(
-      [{ path: 'src/main/notebook/runtime-service.ts', status: 'modified' }],
+      [{ path: 'src/main/notebook/source-file-access-analysis.ts', status: 'modified' }],
       manifest
     )
 
@@ -470,7 +515,7 @@ describe('pull request change classification', () => {
 
   it('does not add focused Windows lanes for platform-neutral Main changes', () => {
     const plan = classifyChanges([
-      { path: 'src/main/notebook/runtime-service.ts', status: 'modified' }
+      { path: 'src/main/notebook/source-file-access-analysis.ts', status: 'modified' }
     ])
 
     expect(plan.roots).not.toContain('windows_sensitive')
@@ -658,6 +703,13 @@ describe('pull request change classification', () => {
   it.each([
     'package-lock.json',
     'vitest.config.ts',
+    'test/config/vitest.config.test.ts',
+    'test/config/electron.vite.config.test.ts',
+    'test/config/playwright.config.test.ts',
+    'test/config/vite.browser-test.config.test.ts',
+    'e2e/playwright.browser.config.ts',
+    'e2e/playwright.accessibility.config.ts',
+    'e2e/vite.browser-test.config.ts',
     'scripts/ci/change-impact.json',
     '.github/workflows/pr-gate.yml'
   ])('selects the declared full plan for global gate input %s', (path) => {
@@ -693,7 +745,7 @@ describe('pull request change classification', () => {
 
   it('selects one macOS Module-test lane without duplicate coverage or Renderer lanes', () => {
     const plan = classifyChanges([
-      { path: 'src/main/notebook/runtime-service.ts', status: 'modified' }
+      { path: 'src/main/notebook/source-file-access-analysis.ts', status: 'modified' }
     ])
 
     expect(plan.mode).toBe('selective')
@@ -705,10 +757,15 @@ describe('pull request change classification', () => {
     expect(plan.lanes).not.toContain('e2e_workspace_windows')
   })
 
-  it('adds Windows GUI consumers only for a Windows-sensitive source change', () => {
-    const plan = classifyChanges([
-      { path: 'src/main/notebook/windows-shell.ts', status: 'modified' }
-    ])
+  it.each([
+    'src/main/notebook/windows-shell.ts',
+    'src/main/notebook/code-risk-analysis.ts',
+    'src/main/notebook/runtime-service.ts',
+    'src/shared/tool-detail-sanitizer.ts',
+    'src/shared/renderer-contract-catalog.ts',
+    'src/shared/renderer-contracts/settings-preferences.ts'
+  ])('adds Windows GUI consumers for Windows-sensitive source %s', (path) => {
+    const plan = classifyChanges([{ path, status: 'modified' }])
 
     expect(plan.lanes).toEqual(
       expect.arrayContaining([

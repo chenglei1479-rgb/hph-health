@@ -631,10 +631,10 @@ describe('ProviderStep', () => {
     expect(resolveVendorModelApiEndpoints('opencode', model)).toContain('anthropic')
   })
 
-  // Switches the auth picker to the isolated "Sign in with MedResearch Agent" mode — the only path that
+  // Switches the auth picker to the isolated "Sign in with DRA" mode — the only path that
   // runs the browser login (loginIsolatedCodex).
   const switchToIsolatedSignIn = async (): Promise<void> => {
-    await selectOption('Codex authentication', 'Sign in with MedResearch Agent')
+    await selectOption('Codex authentication', 'Sign in with DRA')
   }
 
   it('runs the isolated Codex sign-in then advances', async () => {

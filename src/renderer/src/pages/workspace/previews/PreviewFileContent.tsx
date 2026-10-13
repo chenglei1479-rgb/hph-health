@@ -8,6 +8,7 @@ import type { PreviewFileRendererProps } from './preview-types'
 export const PreviewFileContent = ({
   item,
   presentation,
+  readOnly,
   downloadVersionContext,
   onRetry,
   annotationVersionId,
@@ -20,7 +21,8 @@ export const PreviewFileContent = ({
   onUndoAnnotation,
   onRedoAnnotation,
   onAnnotationError,
-  onPdfReadingPositionChange
+  onPdfReadingPositionChange,
+  onPdfTranslationChange
 }: PreviewFileRendererProps & {
   downloadVersionContext?: PreviewDownloadVersionContext
   onRetry?: () => Promise<void>
@@ -28,6 +30,7 @@ export const PreviewFileContent = ({
   const content = renderPreviewFile({
     item,
     presentation,
+    readOnly,
     annotationVersionId,
     annotationBlockedByHistoricalVersion,
     annotationVersionPending,
@@ -38,7 +41,8 @@ export const PreviewFileContent = ({
     onUndoAnnotation,
     onRedoAnnotation,
     onAnnotationError,
-    onPdfReadingPositionChange
+    onPdfReadingPositionChange,
+    onPdfTranslationChange
   })
 
   return (

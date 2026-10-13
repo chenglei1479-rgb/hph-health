@@ -2,6 +2,7 @@ import { createRequire } from 'node:module'
 import { resolve } from 'path'
 import { nativeLocaleAssets } from './scripts/native-locale-assets'
 import { defineConfig } from 'electron-vite'
+import { normalizePath } from 'vite'
 import { fileViewerRenderers } from '@file-viewer/vite-plugin'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -49,8 +50,25 @@ export default defineConfig(({ command }) => ({
     }
   },
   renderer: {
-    // Regenerate lazy optimized chunks so a persisted Electron page cannot request stale hashes.
-    optimizeDeps: { force: true },
+    // Dev scanning must reach lazy Workers before their first use triggers a dependency reload.
+    // This prepares dependencies without executing Workers or changing production build entries.
+    optimizeDeps:
+      command === 'serve'
+        ? {
+            // Regenerate lazy chunks so a persisted Electron page cannot request stale hashes.
+            force: true,
+            entries: [
+              '*.html',
+              'src/**/*.worker.ts',
+              'src/**/*-worker.ts',
+              normalizePath(
+                createRequire(import.meta.url).resolve(
+                  '@file-viewer/renderer-spreadsheet/worker/sheetjs/sheet.worker'
+                )
+              )
+            ]
+          }
+        : undefined,
     // Spreadsheet parsing now splits Worker modules; Vite's default IIFE format cannot emit chunks.
     worker: { format: 'es' },
     resolve: {
@@ -64,6 +82,10 @@ export default defineConfig(({ command }) => ({
       }
     },
     server: {
+      // Electron-vite uses the resolved server host in ELECTRON_RENDERER_URL. Explicit IPv4
+      // avoids localhost resolving to ::1 in restricted environments where IPv6 loopback cannot
+      // bind, which otherwise leaves the isolated dev window without a renderer page.
+      host: '127.0.0.1',
       // Don't watch git worktrees under .claude/worktrees — full source copies would trigger
       // needless rescans/HMR churn during dev.
       watch: { ignored: ['**/.claude/**'] }

@@ -363,6 +363,56 @@ describe('PreviewFileSurface header', () => {
   })
 })
 
+describe('PreviewFileSurface file mentions', () => {
+  let previousNavigation: ReturnType<typeof useNavigationStore.getState>
+  beforeEach(() => {
+    previousNavigation = useNavigationStore.getState()
+    useNavigationStore.setState({
+      view: 'workspace',
+      activeProjectId: 'project-1',
+      pendingArtifactMention: undefined,
+      artifactMentionAvailability: { projectId: 'project-1', canMention: true }
+    })
+    useSessionStore.setState({
+      sessions: [
+        {
+          id: 'session-1',
+          projectId: 'project-1',
+          title: 'Session',
+          cwd: '/workspace',
+          status: 'idle',
+          messages: [],
+          createdAt: 1,
+          updatedAt: 1
+        }
+      ],
+      selectedSessionId: 'session-1'
+    })
+  })
+  afterEach(() => useNavigationStore.setState(previousNavigation))
+
+  it('keeps the preview open and displays an error when mention inspection fails', async () => {
+    const close = vi.fn()
+    await act(async () =>
+      root.render(<PreviewFileSurface item={managedUploadItem} onClose={close} />)
+    )
+    await click(container.querySelector('[aria-label="Mention README.md"]'))
+    expect(container.textContent).toContain('Could not resolve file version.')
+    expect(close).not.toHaveBeenCalled()
+    expect(useNavigationStore.getState().pendingArtifactMention).toBeUndefined()
+  })
+
+  it('disables the preview mention when Web has no inspection API', async () => {
+    window.api.managedFileVersions = undefined as unknown as Window['api']['managedFileVersions']
+    await act(async () =>
+      root.render(<PreviewFileSurface item={managedUploadItem} onClose={vi.fn()} />)
+    )
+    expect(
+      container.querySelector<HTMLButtonElement>('[aria-label="Mention README.md"]')?.disabled
+    ).toBe(true)
+  })
+})
+
 describe('PreviewFileSurface managed text versions', () => {
   beforeEach(() => {
     window.api.managedFileVersions.inspect = vi
@@ -1386,7 +1436,7 @@ describe('PreviewFileSurface managed text versions', () => {
     },
     {
       code: 'PERMISSION_DENIED' as const,
-      message: 'MedResearch Agent does not have permission to save this file.'
+      message: 'DRA does not have permission to save this file.'
     },
     {
       code: 'OUT_OF_SPACE' as const,
@@ -2285,6 +2335,82 @@ describe('PreviewFileSurface managed text versions', () => {
       selectedVersionId: 'upload-v1'
     })
     expect(container.querySelector('textarea')).toBeNull()
+  })
+
+  it('guards a running PDF translation, retains progress on dismissal, and cancels only on confirmation', async () => {
+    const surfaceRef = createRef<{ requestLeave: (action: () => boolean | void) => boolean }>()
+    const scope = 'dialog:project-1:translation'
+    const cancel = vi.fn()
+    const close = vi.fn()
+    await act(async () => {
+      root.render(
+        <PreviewFileSurface ref={surfaceRef} item={item} onClose={close} leaveGuardScope={scope} />
+      )
+    })
+    const report = previewContentSpy.mock.lastCall![0].onPdfTranslationChange
+    const confirmation = (): HTMLElement | null =>
+      document.body.querySelector('[data-testid="stop-pdf-translation-confirmation"]')
+    await act(async () => report({ done: 3, total: 16, cancel }))
+    for (const dismiss of ['button', 'escape', 'outside']) {
+      await act(async () => {
+        expect(surfaceRef.current!.requestLeave(close)).toBe(false)
+      })
+      expect(confirmation()?.textContent).toContain('3 / 16')
+      if (dismiss === 'button') {
+        await click(confirmation()!.querySelector('button'))
+      } else if (dismiss === 'escape') {
+        await act(async () => {
+          confirmation()!.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+          )
+        })
+      } else {
+        await act(async () => {
+          confirmation()!.previousElementSibling!.dispatchEvent(
+            new Event('pointerdown', { bubbles: true })
+          )
+        })
+      }
+      expect(confirmation()).toBeNull()
+      expect(cancel).not.toHaveBeenCalled()
+      expect(close).not.toHaveBeenCalled()
+    }
+    await act(async () => {
+      surfaceRef.current!.requestLeave(() => previewLeaveGuards.request(scope, close))
+    })
+    await act(async () => report({ done: 4, total: 16, cancel }))
+    expect(confirmation()?.textContent).toContain('4 / 16')
+    await click(confirmation()!.querySelectorAll('button')[1])
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(confirmation()).toBeNull()
+  })
+
+  it('dismisses an obsolete translation warning on completion and allows closing directly', async () => {
+    const surfaceRef = createRef<{ requestLeave: (action: () => boolean | void) => boolean }>()
+    const cancel = vi.fn()
+    const close = vi.fn()
+    await act(async () =>
+      root.render(<PreviewFileSurface ref={surfaceRef} item={item} onClose={close} />)
+    )
+    const report = previewContentSpy.mock.lastCall![0].onPdfTranslationChange
+    await act(async () => report({ done: 15, total: 16, cancel }))
+    await act(async () => {
+      surfaceRef.current!.requestLeave(close)
+    })
+    expect(
+      document.body.querySelector('[data-testid="stop-pdf-translation-confirmation"]')
+    ).not.toBeNull()
+    await act(async () => report(undefined))
+    expect(
+      document.body.querySelector('[data-testid="stop-pdf-translation-confirmation"]')
+    ).toBeNull()
+    expect(close).not.toHaveBeenCalled()
+    expect(cancel).not.toHaveBeenCalled()
+    await act(async () => {
+      expect(surfaceRef.current!.requestLeave(close)).toBe(true)
+    })
+    expect(close).toHaveBeenCalledTimes(1)
   })
 
   it('runs an approved deferred workbench mutation without a second confirmation', async () => {
@@ -3422,6 +3548,37 @@ describe('PreviewFileSurface PDF context action matrix', () => {
     ]
   }
 
+  it.each([false, true])(
+    'hides PDF context actions in imported history (already linked: %s)',
+    async (linked) => {
+      selectPdfContextSession(linked ? linkedPdfContext : undefined)
+      useSessionStore.setState((state) => ({
+        sessions: state.sessions.map((session) => ({
+          ...session,
+          packageOrigin: {
+            importId: 'import-1',
+            sourceProjectId: 'source-project',
+            sourceSessionId: 'source-session',
+            importedAt: 1,
+            manifestChecksum: 'a'.repeat(64)
+          }
+        }))
+      }))
+      const { linkPdfContext, unlinkPdfContext } = installPdfContextApi()
+      await act(async () => {
+        root.render(<PreviewFileSurface item={pdfItem} onClose={vi.fn()} />)
+        await Promise.resolve()
+      })
+      expect(container.textContent).not.toContain('Read with agent')
+      expect(container.textContent).not.toContain('Remove PDF from context')
+      expect(linkPdfContext).not.toHaveBeenCalled()
+      expect(unlinkPdfContext).not.toHaveBeenCalled()
+      expect(useSessionStore.getState().sessions[0].runtimeContext?.pdfContext).toEqual(
+        linked ? linkedPdfContext : undefined
+      )
+    }
+  )
+
   it('adds an Artifact PDF Version to the active Session context from the header action', async () => {
     selectPdfContextSession()
     const { linkPdfContext } = installPdfContextApi()
@@ -3591,6 +3748,51 @@ describe('PreviewFileSurface PDF context action matrix', () => {
       expect(headerAction()).toBeNull()
     }
   )
+
+  it.each([false, true])('gates Add to Literature for package PDFs (%s)', async (packageOrigin) => {
+    selectPdfContextSession()
+    installPdfContextApi()
+    vi.mocked(window.api.managedFileVersions.inspect).mockResolvedValue({
+      ok: true,
+      value: {
+        ...managedInspect,
+        displayName: 'paper.pdf',
+        versions: managedInspect.versions.map((version) => ({
+          ...version,
+          displayName: 'paper.pdf',
+          contentType: 'application/pdf'
+        }))
+      }
+    })
+    useSessionStore.setState((state) => ({
+      sessions: [
+        ...state.sessions,
+        {
+          ...state.sessions[0],
+          id: 'session-1',
+          ...(packageOrigin ? { packageOrigin: {} } : {})
+        } as ChatSession
+      ]
+    }))
+    await act(async () => {
+      root.render(
+        <PreviewFileSurface
+          item={{ ...managedUploadItem, name: 'paper.pdf', title: 'paper.pdf', format: 'pdf' }}
+          onClose={vi.fn()}
+        />
+      )
+    })
+    act(() => {
+      container
+        .querySelector('[data-testid="preview-file-content-surface"]')
+        ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 80, clientY: 120 }))
+    })
+    await act(async () => Promise.resolve())
+    const menu = document.body.querySelector('[data-testid="preview-content-context-menu"]')
+    expect(menu).not.toBeNull()
+    expect(menu?.textContent?.includes('Add to Literature')).toBe(!packageOrigin)
+    expect(menu?.textContent).toContain('Download')
+  })
 
   it.each([undefined, 1, 2])(
     'gates the PDF content-menu reading entry for %s pages',
@@ -3926,6 +4128,30 @@ describe('PreviewFileSurface PDF context action matrix', () => {
       sourceVersionId: 'version-1',
       previewItemId: 'artifact-1'
     })
+  })
+
+  it('routes removal of draft Reading through the composer owner', async () => {
+    installPdfContextApi()
+    usePreviewWorkbenchStore.getState().setPendingPdfContext('project-1', {
+      kind: 'version',
+      sourceKind: 'artifact-version',
+      sourceFileId: 'artifact-1',
+      sourceVersionId: 'version-1',
+      previewItemId: 'artifact-1'
+    })
+    const onUnlinkReadingContext = vi.fn()
+    await act(async () => {
+      root.render(
+        <PreviewFileSurface
+          item={pdfItem}
+          onClose={vi.fn()}
+          onUnlinkReadingContext={onUnlinkReadingContext}
+        />
+      )
+    })
+    await openMenu(container.querySelector('[data-testid="pdf-context-status"]'))
+    await clickMenuItem('Remove PDF from context')
+    expect(onUnlinkReadingContext).toHaveBeenCalledWith('version:artifact-version:version-1')
   })
 
   it('preserves other draft PDFs when removing one and enforces the three PDF limit', async () => {

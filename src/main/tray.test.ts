@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Menu template item shape captured from Menu.buildFromTemplate.
-type MenuTemplateItem = { label?: string; type?: string; click?: () => void }
+type MenuTemplateItem = {
+  label?: string
+  type?: string
+  enabled?: boolean
+  click?: () => void
+  submenu?: MenuTemplateItem[]
+}
 
 // A nativeImage stand-in that records template-image flagging so tests can assert the macOS branch.
 type FakeImage = {
@@ -209,13 +215,78 @@ describe('createAppTray', () => {
     })
 
     expect(tray).toBeDefined()
-    expect(lastTray?.tooltip).toBe('MedResearch Agent')
+    expect(lastTray?.tooltip).toBe('DRA')
     expect(lastTray?.contextMenu?.template).toBe(lastTemplate)
     expect(lastTemplate?.filter((item) => item.label).map((item) => item.label)).toEqual([
       'Show',
       'Hide',
       'Quit'
     ])
+  })
+
+  it('loads running, pinned, and recent sessions into the desktop menu', async () => {
+    const onOpenSession = vi.fn()
+    createAppTray({
+      iconPath: '/icons/tray.png',
+      onShow: vi.fn(),
+      onHide: vi.fn(),
+      onQuit: vi.fn(),
+      getNavigationSessions: async () => [
+        { id: 'running', title: 'Running task', projectName: 'Alpha', updatedAt: 3, pinned: false },
+        { id: 'pinned', title: 'Pinned task', projectName: 'Beta', updatedAt: 2, pinned: true },
+        { id: 'recent', title: 'Recent task', projectName: 'Gamma', updatedAt: 1, pinned: false }
+      ],
+      getRunningSessions: () => [{ projectId: 'alpha', sessionId: 'running', kind: 'agent' }],
+      onOpenSession
+    })
+
+    await vi.waitFor(() =>
+      expect(lastTemplate?.some((item) => item.label === 'Running sessions')).toBe(true)
+    )
+    expect(lastTemplate?.filter((item) => item.label).map((item) => item.label)).toEqual([
+      'Show',
+      'Running sessions',
+      'Running task — Alpha',
+      'Pinned sessions',
+      'Pinned task — Beta',
+      'Recent items',
+      'Recent task — Gamma',
+      'Hide',
+      'Quit'
+    ])
+
+    const runningItem = lastTemplate?.find((item) => item.label === 'Running task — Alpha')
+    runningItem?.click?.()
+    expect(onOpenSession).toHaveBeenCalledWith('running')
+  })
+
+  it('keeps the native menu-bar menu on macOS and opens a selected session', async () => {
+    setPlatform('darwin')
+    const onOpenSession = vi.fn()
+    createAppTray({
+      iconPath: '/icons/tray.png',
+      templateIconPath: '/icons/tray-template.png',
+      onShow: vi.fn(),
+      onHide: vi.fn(),
+      onQuit: vi.fn(),
+      getNavigationSessions: async () => [
+        {
+          id: 'mac-session',
+          title: 'Mac task',
+          projectName: 'Mac project',
+          updatedAt: 1,
+          pinned: false
+        }
+      ],
+      onOpenSession
+    })
+
+    await vi.waitFor(() =>
+      expect(lastTemplate?.some((item) => item.label === 'Recent items')).toBe(true)
+    )
+    expect(lastTray?.contextMenu).toBeDefined()
+    lastTemplate?.find((item) => item.label === 'Mac task — Mac project')?.click?.()
+    expect(onOpenSession).toHaveBeenCalledWith('mac-session')
   })
 
   it('rebuilds menu labels when the process locale changes', () => {
@@ -269,7 +340,7 @@ describe('createAppTray', () => {
       onCopyWebUrl
     })
 
-    expect(lastTray?.tooltip).toBe('MedResearch Agent (Web)')
+    expect(lastTray?.tooltip).toBe('DRA (Web)')
     expect(lastTemplate?.filter((item) => item.label).map((item) => item.label)).toEqual([
       'Open Web UI',
       'Copy URL',

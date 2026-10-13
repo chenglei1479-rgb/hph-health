@@ -1,10 +1,10 @@
 import { PdfAnnotationRepository } from '../pdf-annotations/repository'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { copyFile, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import type { PrismaClient } from '@prisma/client'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
   createLiteratureIdentifierUrl,
@@ -16,7 +16,7 @@ import {
   type LiteratureCandidateInput
 } from '../../shared/literature'
 import { toCslItem } from '../../shared/literature-csl'
-import { buildLiteratureMergeItem } from '../../renderer/src/pages/literature/literature-merge'
+import { buildLiteratureMergeItem } from '../../renderer/src/pages/literature/duplicates/literature-merge'
 import { migrateApplicationDatabase } from '../database/migration-service'
 import { createProjectDbClient } from '../projects/prisma-client'
 import { LiteratureCatalog, normalizeIdentifier } from './catalog'
@@ -73,6 +73,20 @@ const candidate = (
   })
 
 describe('LiteratureCatalog', () => {
+  let schemaRoot: string
+  beforeAll(async () => {
+    schemaRoot = await mkdtemp(join(tmpdir(), 'open-science-literature-schema-'))
+    const schemaClient = createProjectDbClient(schemaRoot)
+    try {
+      await migrateApplicationDatabase(schemaClient)
+    } finally {
+      // Close SQLite before copying, including its WAL checkpoint.
+      await schemaClient.$disconnect()
+    }
+  })
+  afterAll(async () => {
+    if (schemaRoot) await rm(schemaRoot, { recursive: true, force: true })
+  })
   let storageRoot: string | undefined
   let client: PrismaClient | undefined
 
@@ -83,11 +97,58 @@ describe('LiteratureCatalog', () => {
 
   const setup = async (): Promise<LiteratureCatalog> => {
     storageRoot = await mkdtemp(join(tmpdir(), 'open-science-literature-catalog-'))
+    // Migration history is covered by the database module; each catalog case gets a pristine,
+    // independently writable copy of the current schema produced by the real migration service.
+    await copyFile(join(schemaRoot, 'open-science.db'), join(storageRoot, 'open-science.db'))
     client = createProjectDbClient(storageRoot)
-    await migrateApplicationDatabase(client)
     await client.project.create({ data: { id: 'project-1', name: 'Research' } })
     return new LiteratureCatalog(async () => client!)
   }
+
+  it('creates one reference for concurrent Add PDF requests and rolls back a failed new reference', async () => {
+    const catalog = await setup()
+    const checksum = 'd'.repeat(64)
+    await client!.contentBlob.create({
+      data: {
+        id: 'add-blob',
+        checksum,
+        storageKey: 'add.pdf',
+        sizeBytes: 128n,
+        contentType: 'application/pdf',
+        state: 'available',
+        verifiedAt: new Date()
+      }
+    })
+    const input = {
+      itemId: 'new-one',
+      contentBlobId: 'add-blob',
+      filename: 'paper.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 128,
+      checksum
+    }
+    const item = literatureItemInputSchema.parse({ itemType: 'journalArticle', title: 'New paper' })
+    await expect(
+      catalog.attachContent(
+        input,
+        async () => {
+          throw new Error('rollback')
+        },
+        item
+      )
+    ).rejects.toThrow('rollback')
+    expect(await client!.literatureItem.count()).toBe(0)
+    const results = await Promise.all([
+      catalog.attachContent(input, undefined, item),
+      catalog.attachContent({ ...input, itemId: 'new-two' }, undefined, item)
+    ])
+    expect(results[0].versionId).toBe(results[1].versionId)
+    expect(await client!.literatureItem.count()).toBe(1)
+    expect(await client!.literatureAttachmentVersion.count()).toBe(1)
+    await expect(
+      catalog.attachContent({ ...input, contentBlobId: 'missing' }, undefined, item)
+    ).rejects.toThrow('content authority')
+  })
 
   it('searches PDF notes and quotes under Library with stable mixed pagination and active source scopes', async () => {
     const catalog = await setup()
@@ -1462,7 +1523,10 @@ describe('LiteratureCatalog', () => {
       await expect(catalog.importItems([incoming], undefined, 'separate')).resolves.toMatchObject({
         createdCount: 1
       })
-    }
+    },
+    // Two import paths each migrate and write a SQLite fixture; hosted Windows I/O can exceed
+    // one minute.
+    process.platform === 'win32' ? 120_000 : 60_000
   )
 
   it('reuses consistent identifiers and restores a unique Trash match', async () => {
@@ -3675,6 +3739,56 @@ describe('LiteratureCatalog', () => {
     expect(await catalog.getMetadataCommitReceipt(input.operationId)).not.toBeNull()
     await catalog.transact({ kind: 'delete-items-permanently', itemIds: [before.id] })
     expect(await catalog.getMetadataCommitReceipt(input.operationId)).toBeNull()
+  })
+
+  it('commits all metadata sources atomically and does not duplicate them on retry', async () => {
+    const catalog = await setup()
+    const created = await catalog.transact({ kind: 'create-item', item: candidate().item })
+    const before = (await catalog.get(created.id))!
+    const sources = [
+      candidate().source,
+      {
+        provider: 'europe-pmc',
+        externalId: '12345',
+        sourceUrl: 'https://europepmc.org/article/MED/12345',
+        rawMetadata: { abstractText: 'Verified abstract' }
+      }
+    ]
+    const input = {
+      operationId: 'multi-source',
+      itemId: before.id,
+      expectedMetadataRevision: before.metadataRevision,
+      item: { ...before.item, abstract: 'Verified abstract' },
+      source: sources[0],
+      sources
+    }
+    await catalog.applyMetadata(input)
+    await catalog.applyMetadata(input)
+    expect(await client!.literatureSourceRecord.count({ where: { itemId: before.id } })).toBe(2)
+    expect((await catalog.get(before.id))?.item.abstract).toBe('Verified abstract')
+  })
+
+  it('rolls back the item and first source if a later metadata source cannot be written', async () => {
+    const catalog = await setup()
+    const created = await catalog.transact({ kind: 'create-item', item: candidate().item })
+    const before = (await catalog.get(created.id))!
+    const sources = [
+      candidate().source,
+      { provider: 'europe-pmc', rawMetadata: { invalid: BigInt(1) } }
+    ]
+    await expect(
+      catalog.applyMetadata({
+        operationId: 'multi-source-failure',
+        itemId: before.id,
+        expectedMetadataRevision: before.metadataRevision,
+        item: { ...before.item, abstract: 'Must roll back' },
+        source: sources[0],
+        sources
+      })
+    ).rejects.toThrow()
+    expect(await catalog.get(before.id)).toEqual(before)
+    expect(await client!.literatureSourceRecord.count()).toBe(0)
+    expect(await catalog.getMetadataCommitReceipt('multi-source-failure')).toBeNull()
   })
 
   it('rolls back metadata when its commit receipt cannot be written', async () => {

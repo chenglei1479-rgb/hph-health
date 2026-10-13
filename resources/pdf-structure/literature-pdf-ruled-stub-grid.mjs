@@ -1,12 +1,21 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { clusterTableRulePositions, classifyTableRuleEdge } from './literature-pdf-table-rules.mjs'
 import { captionKind } from './literature-pdf-caption-group.mjs'
-import { tableSourceItems } from './literature-pdf-source-records.mjs'
+import {
+  tableSourceItems,
+  readSourceRow,
+  groupSourceRowsWithScripts,
+  hasUniqueRecordTokens,
+  recoverRuledHeaderBands
+} from './literature-pdf-source-records.mjs'
+import { union } from './literature-pdf-table-geometry.mjs'
 
 // A closed two-tier header supplies its own columns, including parent spans.
 // Reuse the same face traversal as ruled stubs; require individually enclosed
 // numeric body cells before overriding a detector's extra or missing column.
 export function recoverRuledHeaderGrid(table, items, captions, rules) {
+  const underlined = recoverUnboxedUnderlinedGrid(table, items, captions, rules)
+  if (underlined) return underlined
   const samples = recoverClosedSampleGrid(table, items, captions, rules)
   if (samples) return samples
   const cohort = recoverClosedCohortGrid(table, items, captions, rules)
@@ -18,8 +27,8 @@ export function recoverRuledHeaderGrid(table, items, captions, rules) {
   const heights = native.map((i) => i.height).sort((a, b) => a - b)
   const font = heights[Math.floor(heights.length / 2)]
   crop[3] += font * 1.5
-  crop[0] -= font * 1.5
-  crop[2] += font * 1.5
+  crop[0] -= font * 2.5
+  crop[2] += font * 2.5
   let local = rules.filter(
     (r) => r[0] >= crop[0] && r[1] >= crop[1] && r[2] <= crop[2] && r[3] <= crop[3]
   )
@@ -42,7 +51,7 @@ export function recoverRuledHeaderGrid(table, items, captions, rules) {
         (r) =>
           r[0] === x &&
           vertical.some(
-            (p) => p[0] === group[0] && Math.abs(p[1] - r[1]) < 1 && Math.abs(p[3] - r[3]) < 1
+            (p) => p[0] === group[0] && Math.abs(p[1] - r[1]) < 3 && Math.abs(p[3] - r[3]) < 3
           )
       ).length >= Math.max(4, vertical.filter((r) => r[0] === x).length * 0.8)
     )
@@ -59,6 +68,39 @@ export function recoverRuledHeaderGrid(table, items, captions, rules) {
       ? [normalized.get(r[0]), r[1], normalized.get(r[0]), r[3]]
       : [snap(r[0]), r[1], snap(r[2]), r[3]]
   )
+  // A double outer border can also appear as several parallel horizontal
+  // segments. Collapse its empty strip only when both strokes have matching
+  // endpoints; an actual narrow row with text remains a separate face.
+  const horizontal = local.filter((r) => r[1] === r[3])
+  const ordinates = [...new Set(horizontal.map((r) => r[1]))].sort((a, b) => a - b)
+  const bands = []
+  for (const y of ordinates) {
+    const band = bands.at(-1)
+    if (
+      band &&
+      y - band[0] <= Math.min(3.5, font * 0.22) &&
+      !sourceInStrip(band[0], y) &&
+      horizontal.filter(
+        (r) =>
+          r[1] === y &&
+          horizontal.some(
+            (p) => p[1] === band[0] && Math.abs(p[0] - r[0]) < 3 && Math.abs(p[2] - r[2]) < 3
+          )
+      ).length >= 2
+    )
+      band.push(y)
+    else bands.push([y])
+  }
+  function sourceInStrip(top, bottom) {
+    return native.some(
+      (i) => (i.rect[1] + i.rect[3]) / 2 > top && (i.rect[1] + i.rect[3]) / 2 < bottom
+    )
+  }
+  const snapY = (y) => {
+    const band = bands.find((b) => b.length > 1 && y >= b[0] - 1 && y <= b.at(-1) + 1)
+    return band ? (band[0] + band.at(-1)) / 2 : y
+  }
+  local = local.map((r) => [r[0], snapY(r[1]), r[2], snapY(r[3])])
   rules = local
   const xs = clusterTableRulePositions(local.filter((r) => r[0] === r[2]).map((r) => r[0]))
   const ys = local.filter((r) => r[1] === r[3]).map((r) => r[1])
@@ -67,7 +109,15 @@ export function recoverRuledHeaderGrid(table, items, captions, rules) {
   if (!narrative && !captions.some((c) => captionKind(c.lines[0]) === 'table')) return
   const top = Math.min(...ys),
     bottom = Math.max(...ys)
-  if (native.some((i) => (i.rect[1] + i.rect[3]) / 2 > bottom)) return
+  if (
+    native.some(
+      (i) =>
+        (i.rect[1] + i.rect[3]) / 2 > bottom ||
+        (i.rect[0] + i.rect[2]) / 2 < xs[0] ||
+        (i.rect[0] + i.rect[2]) / 2 > xs.at(-1)
+    )
+  )
+    return
   const columns = xs.slice(1).map((x, c) => ({ rect: [xs[c], top, x, bottom] }))
   // Font boxes can straddle a horizontal stroke; cell assignment uses their
   // centers, while full horizontal containment keeps neighboring prose out.
@@ -131,6 +181,53 @@ export function recoverRuledHeaderGrid(table, items, captions, rules) {
   const grouped = Boolean(grid)
   if (!grid) {
     grid = readRuledGrid(crop, columns, source, rules, 'records')
+    // Enclosed nested stubs can span many records. Their data columns must
+    // remain independent numeric faces, and every nonempty stub must contain
+    // text. The source borders, not model spans, define the hierarchy.
+    const cellText = (c) =>
+      source
+        .filter(
+          (i) =>
+            (i.rect[0] + i.rect[2]) / 2 > c.rect[0] &&
+            (i.rect[0] + i.rect[2]) / 2 < c.rect[2] &&
+            (i.rect[1] + i.rect[3]) / 2 > c.rect[1] &&
+            (i.rect[1] + i.rect[3]) / 2 < c.rect[3]
+        )
+        .map((i) => i.text)
+        .join(' ')
+        .trim()
+    const stubWidth =
+      grid &&
+      Math.min(
+        ...grid.cells.filter((c) => c.row === 0 && /\p{L}/u.test(cellText(c))).map((c) => c.column)
+      )
+    const nestedStubs =
+      grid &&
+      stubWidth >= 2 &&
+      stubWidth <= 3 &&
+      columns.length - stubWidth >= 2 &&
+      grid.cells.some((c) => c.row > 0 && c.column < stubWidth && c.rowSpan > 1) &&
+      grid.cells.every((c) => {
+        const text = cellText(c)
+        if (c.row === 0)
+          return c.rowSpan === 1 && (c.column < stubWidth ? !text : /\p{L}/u.test(text))
+        if (c.column < stubWidth) return c.column + c.colSpan <= stubWidth && /\p{L}/u.test(text)
+        return (
+          (c.rowSpan === 1 || c.column === columns.length - 1) &&
+          c.colSpan === 1 &&
+          /^[<>≤≥−+-]?\s*\d[\d\s.,()%±–−+*-]*$/.test(text)
+        )
+      })
+    if (nestedStubs)
+      return {
+        cropRect: [xs[0], top, xs.at(-1), bottom],
+        rows: grid.ys.slice(1).map((y, r) => [xs[0], grid.ys[r], xs.at(-1), y]),
+        columns: columns.map((c) => c.rect),
+        headerRows: [0],
+        spans: grid.cells.filter((c) => c.rowSpan > 1 || c.colSpan > 1),
+        completeSpans: true,
+        ownedTokens: new Set(source)
+      }
     const statistical =
       grid &&
       columns.length === 4 &&
@@ -596,5 +693,102 @@ function recoverClosedSampleGrid(table, items, captions, rules) {
     spans: grid.cells.filter((c) => c.rowSpan > 1),
     completeSpans: true,
     ownedTokens: new Set(source)
+  }
+}
+
+// Independent parent underlines can describe a complete header without a full
+// divider. Complete native leaf bands and source-disjoint numeric records
+// corroborate their topology; a partial title alone cannot override the model.
+function recoverUnboxedUnderlinedGrid(table, items, captions, rules) {
+  if (!captions.some((c) => captionKind(c.lines[0]) === 'table')) return
+  const crop = table.cropRect
+  const columns = table.structure.objects
+    .filter((o) => o.label === 'table column')
+    .sort((a, b) => a.rect[0] - b.rect[0])
+  if (columns.length < 9 || columns.length > 14) return
+  const source = tableSourceItems(items, crop)
+  if (!source.length) return
+  const heights = source.map((i) => i.height).sort((a, b) => a - b)
+  const height = heights[Math.floor(heights.length / 2)]
+  const parents = rules
+    .filter(
+      (r) =>
+        r[1] === r[3] &&
+        r[1] > crop[1] &&
+        r[1] < crop[1] + height * 5 &&
+        r[0] >= crop[0] &&
+        r[2] <= crop[2] &&
+        r[2] - r[0] > height * 6 &&
+        r[2] - r[0] < (crop[2] - crop[0]) * 0.5
+    )
+    .sort((a, b) => a[0] - b[0])
+  if (
+    parents.length < 2 ||
+    parents.some(
+      (r, n) => Math.abs(r[1] - parents[0][1]) > height * 0.1 || (n && r[0] < parents[n - 1][2])
+    )
+  )
+    return
+  const split = parents[0][1]
+  const cuts = [
+    crop[0],
+    ...columns.slice(1).map((c, n) => crop[0] + (columns[n].rect[2] + c.rect[0]) / 2),
+    crop[2]
+  ]
+  const lower = groupSourceRowsWithScripts(
+    source.filter((i) => i.rect[1] > split),
+    height,
+    0.35
+  )
+  if (!lower) return
+  const leaf = lower.find((g) => {
+    const values = readSourceRow(g, cuts)
+    return (
+      values &&
+      values.slice(1).every(Boolean) &&
+      values.slice(1).filter((v) => /\p{L}/u.test(v)).length >= (columns.length - 1) / 2
+    )
+  })
+  if (!leaf || union(leaf)[3] - split > height * 3) return
+  const leafBottom = union(leaf)[3]
+  const body = lower.filter((g) => union(g)[1] > leafBottom)
+  if (body.length < 4) return
+  let records = 0
+  const sections = []
+  for (const g of body) {
+    const values = readSourceRow(g, cuts)
+    if (!values || !/\p{L}/u.test(values[0])) return
+    if (values.slice(1).every((v) => !v)) sections.push(g)
+    else if (values.slice(1).every((v) => /\d/.test(v) && !/\p{L}/u.test(v.replace(/to/g, ''))))
+      records++
+    else return
+  }
+  if (records < 4) return
+  const header = source.filter((i) => i.rect[3] <= leafBottom)
+  if (!hasUniqueRecordTokens(source, [header, ...body])) return
+  const bounds = body.map(union)
+  if (bounds.some((r, n) => n && r[1] <= bounds[n - 1][3])) return
+  const headerBottom = (leafBottom + bounds[0][1]) / 2
+  const bands = recoverRuledHeaderBands(header, cuts, parents, crop[1], headerBottom)
+  if (
+    bands?.rows.length !== 2 ||
+    bands.spans.filter((s) => s.colSpan >= 2).length !== parents.length
+  )
+    return
+  const ys = [headerBottom, ...bounds.slice(1).map((r, n) => (bounds[n][3] + r[1]) / 2), crop[3]]
+  return {
+    rows: [...bands.rows, ...body.map((_, n) => [crop[0], ys[n], crop[2], ys[n + 1]])],
+    columns: cuts.slice(1).map((x, n) => [cuts[n], crop[1], x, crop[3]]),
+    headerRows: [0, 1],
+    spans: [
+      ...bands.spans,
+      ...sections.map((g) => ({
+        row: 2 + body.indexOf(g),
+        column: 0,
+        rowSpan: 1,
+        colSpan: columns.length
+      }))
+    ],
+    completeSpans: true
   }
 }

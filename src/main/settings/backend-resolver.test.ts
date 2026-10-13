@@ -882,6 +882,34 @@ describe('AgentBackendResolver configured and explicit targets', () => {
     }
   })
 
+  it.each(['resolveActiveSpawnConfig', 'resolveActiveBackend'] as const)(
+    '%s isolates shared Claude settings while preserving the login directory',
+    async (method) => {
+      const provider: StoredProvider = {
+        id: 'claude-shared',
+        type: 'claude-shared',
+        name: 'Claude'
+      }
+      const harness = makeHarness({
+        settings: makeSettings({ providers: [provider], activeProviderId: provider.id })
+      })
+
+      const config = await harness.resolver[method]()
+
+      expect(config.sessionOptions).toMatchObject({
+        settingSources: [],
+        strictMcpConfig: true,
+        permissionMode: 'default',
+        settings: {
+          disableBundledSkills: true,
+          permissions: { deny: ['Read(//storage/claude-private/**)'] }
+        }
+      })
+      const env = 'envOverrides' in config ? config.envOverrides : config.env
+      expect(env).toHaveProperty('CLAUDE_CONFIG_DIR', '/user/.claude')
+    }
+  )
+
   it.each([
     {
       providerType: 'claude-shared' as const,
@@ -945,21 +973,21 @@ describe('AgentBackendResolver configured and explicit targets', () => {
         model: { kind: 'required', id: 'model-a' },
         reasoningEffort: 'high'
       },
-      { systemPromptAppends: ['Stable MedResearch Agent app guidance.'] }
+      { systemPromptAppends: ['Stable DRA app guidance.'] }
     )
 
     expect(backend.systemPromptAppends?.join('\n')).toContain(
       join('/storage', 'skills', 'personal')
     )
     expect(backend.systemPromptAppends?.join('\n')).not.toContain(
-      'Stable MedResearch Agent app guidance.'
+      'Stable DRA app guidance.'
     )
     await backend.anthropicBridgeLease?.release()
   })
 
   it('persists application guidance before user Skill directories for OpenCode', async () => {
     const harness = makeHarness()
-    const applicationGuidance = 'Stable MedResearch Agent app guidance.'
+    const applicationGuidance = 'Stable DRA app guidance.'
 
     const backend = await harness.resolver.resolveExplicitTarget(
       {
@@ -1017,7 +1045,7 @@ describe('AgentBackendResolver configured and explicit targets', () => {
       expect(instructions).toBe(restrictedPrompt)
     }
     expect(instructions).not.toContain('<open_science_user_skill_directories>')
-    expect(instructions).not.toContain('# MedResearch Agent data connector conventions')
+    expect(instructions).not.toContain('# DRA data connector conventions')
     expect(harness.runtime.materializeAgentSkills).not.toHaveBeenCalled()
     if (testCase.frameworkId === 'claude-code') {
       expect(harness.runtime.provisionClaudeRuntimeConfig).toHaveBeenCalledWith(
@@ -1936,7 +1964,7 @@ describe('AgentBackendResolver bridge predicates', () => {
         })
       })
 
-      const applicationGuidance = 'Stable MedResearch Agent app guidance.'
+      const applicationGuidance = 'Stable DRA app guidance.'
       const backend = await harness.resolver.resolveExplicitTarget(
         {
           frameworkId: 'codex',
@@ -1952,7 +1980,7 @@ describe('AgentBackendResolver bridge predicates', () => {
       expect(developerInstructions).toBeDefined()
       const userSkillIndex = developerInstructions?.indexOf('<open_science_user_skill_directories>')
       const connectorIndex = developerInstructions?.indexOf(
-        '# MedResearch Agent data connector conventions'
+        '# DRA data connector conventions'
       )
       expect(developerInstructions?.indexOf(applicationGuidance)).toBeGreaterThanOrEqual(0)
       expect(userSkillIndex).toBeGreaterThan(
@@ -2198,3 +2226,58 @@ describe('AgentBackendResolver bridge cleanup', () => {
     }
   )
 })
+
+describe('direct provider resolution', () => {
+  it.each(['claude-code', 'opencode', 'codex', 'codebuddy'] as const)(
+    'resolves the pinned provider without starting the %s framework or a bridge',
+    async (frameworkId) => {
+      const harness = makeHarness()
+      const result = await harness.resolver.resolveExplicitDirectProvider({
+        frameworkId,
+        providerId: 'provider-a',
+        model: { kind: 'required', id: 'model-a' },
+        reasoningEffort: 'default'
+      })
+      expect(result).toMatchObject({ providerId: 'provider-a', provider: { model: 'model-a' } })
+      expect(harness.createResponsesBridge).not.toHaveBeenCalled()
+      expect(harness.createAnthropicProviderBridge).not.toHaveBeenCalled()
+      expect(harness.createOpenAiProviderBridge).not.toHaveBeenCalled()
+      expect(harness.createNativeResponsesProxy).not.toHaveBeenCalled()
+      expect(harness.runtime.resolveClaudeExecutable).not.toHaveBeenCalled()
+      expect(harness.runtime.resolveCodexExecutable).not.toHaveBeenCalled()
+      expect(harness.runtime.resolveOpencodeExecutable).not.toHaveBeenCalled()
+      expect(harness.runtime.resolveCodeBuddyExecutable).not.toHaveBeenCalled()
+    }
+  )
+})
+
+it.each([undefined, 'unsupported', 'none-high'] as const)(
+  'direct providers retain explicit thinking capabilities without guessing an unconfigured gateway (%s)',
+  async (reasoningEffortPreset) => {
+    const provider: StoredProvider = {
+      id: 'provider-a',
+      type: 'custom',
+      name: 'Gateway',
+      model: 'model-a',
+      baseUrl: 'https://api.example',
+      apiEndpoints: ['openai'],
+      reasoningEffortPreset
+    }
+    const profile =
+      reasoningEffortPreset === 'none-high'
+        ? { supported: true as const, slots: ['none', 'high', 'high', 'high', 'high'] as const }
+        : { supported: false as const }
+    const harness = makeHarness({
+      settings: makeSettings({ providers: [provider] }),
+      targetOverride: () => ({ reasoningEffortProfile: profile })
+    })
+    const result = await harness.resolver.resolveExplicitDirectProvider({
+      frameworkId: 'claude-code',
+      providerId: 'provider-a',
+      model: { kind: 'required', id: 'model-a' },
+      reasoningEffort: 'high'
+    })
+    expect(result.reasoningEffortProfile).toEqual(profile)
+    expectRuntimeNotStarted(harness.runtime)
+  }
+)

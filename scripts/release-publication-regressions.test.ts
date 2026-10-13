@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -21,6 +22,8 @@ import { buildManifest } from './generate-version-manifest.mjs'
 
 const repo = process.cwd()
 const require = createRequire(join(repo, 'package.json'))
+const builderRequire = createRequire(require.resolve('electron-builder/package.json'))
+const appBuilderRequire = createRequire(builderRequire.resolve('app-builder-lib/package.json'))
 const directories: string[] = []
 const temporaryDirectory = (): string => {
   const dir = mkdtempSync(join(tmpdir(), 'release-publication-'))
@@ -47,7 +50,7 @@ const installer = (name: string, digest?: string): string => {
 }
 
 it('excludes local worktrees and tool state through the real packaging filter', () => {
-  const { getMainFileMatchers } = require('app-builder-lib/out/fileMatcher')
+  const { getMainFileMatchers } = builderRequire('app-builder-lib/out/fileMatcher')
   const filter = getMainFileMatchers(
     repo,
     join(temporaryDirectory(), 'out'),
@@ -76,20 +79,23 @@ it('excludes local worktrees and tool state through the real packaging filter', 
   }
 })
 
-it('includes the AppImage filename produced by the installed builder', () => {
-  const { Arch, getArtifactArchName } = require('builder-util')
-  const { expandMacro } = require('app-builder-lib/out/util/macroExpander')
-  const name = expandMacro(
-    config.appImage.artifactName,
-    getArtifactArchName(Arch.x64, 'AppImage'),
-    { name: 'open-science', version: '0.27.0' },
-    { ext: 'AppImage', os: 'linux' }
-  )
-  expect(manifest(installer(name)).downloads['linux-x64-appimage']).toMatchObject({
-    size: Buffer.byteLength('synthetic installer'),
-    sha256: sha256('synthetic installer')
-  })
-})
+it.each(['x64', 'arm64'] as const)(
+  'includes the %s AppImage filename produced by the installed builder',
+  (arch) => {
+    const { Arch, getArtifactArchName } = appBuilderRequire('builder-util')
+    const { expandMacro } = builderRequire('app-builder-lib/out/util/macroExpander')
+    const name = expandMacro(
+      config.appImage.artifactName,
+      getArtifactArchName(Arch[arch], 'AppImage'),
+      { name: 'open-science', version: '0.27.0' },
+      { ext: 'AppImage', os: 'linux' }
+    )
+    expect(manifest(installer(name)).downloads[`linux-${arch}-appimage`]).toMatchObject({
+      size: Buffer.byteLength('synthetic installer'),
+      sha256: sha256('synthetic installer')
+    })
+  }
+)
 
 it('rejects an installer from a different release version', () => {
   const dir = installer('aipoch-open-science-0.26.0-win-x64-setup.exe')
@@ -129,7 +135,63 @@ it('does not successfully publish a macOS feed with only one architecture', () =
   expect(merge(dir).status).not.toBe(0)
 })
 
-type Workflow = { jobs: Record<string, { steps: Array<{ name: string; run?: string }> }> }
+type Workflow = {
+  jobs: Record<string, { steps: Array<{ name?: string; id?: string; if?: string; run?: string }> }>
+}
+
+it.skipIf(process.platform === 'win32')(
+  'resolves native ARM64 build/staging matrices and prunes x64 engines',
+  () => {
+    const output = join(temporaryDirectory(), 'output')
+    const build = load(readFileSync(join(repo, '.github/workflows/build.yml'), 'utf8')) as Workflow
+    const staging = load(
+      readFileSync(join(repo, '.github/workflows/stage-runtime-bundle.yml'), 'utf8')
+    ) as Workflow
+    for (const [document, selection] of [
+      [build, { PLATFORM_NAME: 'linux-arm64' }],
+      [staging, { SUBDIR: 'linux-aarch64' }]
+    ] as const) {
+      writeFileSync(output, '')
+      const script = document.jobs.setup.steps[0].run!.replaceAll('${{ inputs.mac_only }}', 'false')
+      const result = spawnSync('bash', ['-eu', '-c', script], {
+        env: { ...process.env, ...selection, GITHUB_OUTPUT: output },
+        encoding: 'utf8'
+      })
+      expect(result.status, result.stderr).toBe(0)
+      const { include } = JSON.parse(
+        readFileSync(output, 'utf8')
+          .trim()
+          .replace(/^matrix=/, '')
+      )
+      expect(include).toHaveLength(1)
+      expect(include[0]).toMatchObject({ os: 'ubuntu-24.04-arm', subdir: 'linux-aarch64' })
+      if (document === build)
+        expect(include[0]).toMatchObject({ eb_args: '--linux --arm64', bin_arch: 'arm64' })
+    }
+    const cwd = temporaryDirectory()
+    const engines = join(cwd, 'node_modules/.prisma/client')
+    mkdirSync(engines, { recursive: true })
+    const keep = 'libquery_engine-linux-arm64-openssl-3.0.x.so.node'
+    for (const engine of [
+      keep,
+      'libquery_engine-rhel-openssl-3.0.x.so.node',
+      'libquery_engine-darwin.dylib.node'
+    ])
+      writeFileSync(join(engines, engine), '')
+    const prune = workflowStep('build.yml', 'build', 'Prune foreign Prisma engines').replaceAll(
+      '${{ matrix.engine_keep }}',
+      'linux-arm64-openssl-3.0.x.so.node'
+    )
+    const result = spawnSync('bash', ['-eu', '-c', prune], { cwd, encoding: 'utf8' })
+    expect(result.status, result.stderr).toBe(0)
+    expect(readdirSync(engines)).toEqual([keep])
+    for (const name of ['Configure AWS credentials', 'Upload bundle to CDN']) {
+      expect(staging.jobs.stage.steps.find((step) => step.name === name)?.if).toBe(
+        '${{ !inputs.dry_run }}'
+      )
+    }
+  }
+)
 const workflowStep = (filename: string, job: string, name: string): string => {
   const workflow = load(readFileSync(join(repo, '.github/workflows', filename), 'utf8')) as Workflow
   const script = workflow.jobs[job].steps.find((step) => step.name === name)?.run
@@ -180,9 +242,9 @@ fs.mkdirSync(path.dirname(target), {recursive:true}); fs.copyFileSync(source, ta
   }
 }
 
-it.skipIf(process.platform === 'win32')(
-  'preserves published runtime bytes when the same version is restaged',
-  () => {
+it.skipIf(process.platform === 'win32').each(['linux-64', 'linux-aarch64'])(
+  'preserves published %s runtime bytes when the same version is restaged',
+  (subdir) => {
     const { cwd, remote, env } = objectStore()
     const workflow = load(
       readFileSync(join(repo, '.github/workflows/stage-runtime-bundle.yml'), 'utf8')
@@ -192,7 +254,7 @@ it.skipIf(process.platform === 'win32')(
     )!
     const script = workflowStep('stage-runtime-bundle.yml', job, 'Upload bundle to CDN').replaceAll(
       '${{ matrix.subdir }}',
-      'linux-64'
+      subdir
     )
     const local = join(cwd, 'resources/default-envs')
     mkdirSync(local, { recursive: true })
@@ -204,7 +266,7 @@ it.skipIf(process.platform === 'win32')(
     }
     expect(
       readFileSync(
-        join(remote, 'test-bucket/open-science/runtime-bundle/1/linux-64/python-3.12.tar.zst'),
+        join(remote, `test-bucket/open-science/runtime-bundle/1/${subdir}/python-3.12.tar.zst`),
         'utf8'
       )
     ).toBe('original archive')
@@ -264,7 +326,7 @@ for (const file of args.slice(3, args.indexOf('--repo'))) {
 
 it('packages required runtime files without local tool directories in a harmless ASAR sample', async () => {
   const { cpSync, existsSync } = await import('node:fs')
-  const { createPackage, listPackage } = require('@electron/asar')
+  const { createPackage, listPackage } = appBuilderRequire('@electron/asar')
   const source = temporaryDirectory(),
     staged = temporaryDirectory(),
     dest = join(temporaryDirectory(), 'app.asar')
@@ -280,7 +342,7 @@ it('packages required runtime files without local tool directories in a harmless
     mkdirSync(join(source, name, '..'), { recursive: true })
     writeFileSync(join(source, name), 'harmless test fixture')
   }
-  const { getMainFileMatchers } = require('app-builder-lib/out/fileMatcher')
+  const { getMainFileMatchers } = builderRequire('app-builder-lib/out/fileMatcher')
   const filter = getMainFileMatchers(
     source,
     staged,

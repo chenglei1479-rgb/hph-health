@@ -426,6 +426,8 @@ describe('Reviewer orchestrator architecture', () => {
         'src/main/reviewer/bridge-tools.ts',
         'src/main/reviewer/correction-context.test.ts',
         'src/main/reviewer/correction-context.ts',
+        'src/main/reviewer/correction-resume.ts',
+        'src/main/reviewer/correction-resume.test.ts',
         'src/main/reviewer/correction-owner.test.ts',
         'src/main/reviewer/correction.test.ts',
         'src/main/reviewer/fix-loop.test.ts',
@@ -493,7 +495,12 @@ describe('Reviewer orchestrator architecture', () => {
         'src/main/reviewer/stale-reviews.ts',
         'src/main/reviewer/turn-evidence.ts'
       ],
-      consumerModules: ['workspace_runtime', 'workspace_page', 'artifact_provenance'],
+      consumerModules: [
+        'workspace_runtime',
+        'workspace_page',
+        'artifact_provenance',
+        'session_replay'
+      ],
       testFiles: {
         owner: [
           'src/main/reviewer/reviewer-orchestrator.architecture.test.ts',
@@ -508,6 +515,7 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/reviewer/fix-loop.test.ts',
           'src/main/reviewer/reviewer-fix-loop-owner.test.ts',
           'src/main/reviewer/correction-context.test.ts',
+          'src/main/reviewer/correction-resume.test.ts',
           'src/main/reviewer/correction.test.ts',
           'src/main/reviewer/correction-owner.test.ts',
           'src/main/reviewer/paged-preview-electron.test.ts',
@@ -547,6 +555,10 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/uploads/attachment-media.pdf-preview.test.ts'
         ],
         consumer: [
+          'src/main/storage/wsl-npm-migration.integration.test.ts',
+          'src/main/composition/notebook-environment.test.ts',
+          'src/main/composition/reviewer.test.ts',
+          'src/main/literature/command-owner.test.ts',
           'src/main/session-persistence/runtime-session-owner.test.ts',
           'src/main/session-plan/adversarial-session-plan.test.ts',
           'packages/open-science/cli.test.ts',
@@ -804,9 +816,9 @@ describe('Reviewer orchestrator architecture', () => {
           'src/renderer/src/components/ReviewerCard.render.test.tsx',
           'src/renderer/src/hooks/useLifecycleSync.test.tsx',
           'src/renderer/src/lib/acp/useWorkspaceAgentRuntime.test.ts',
-          'src/renderer/src/pages/literature/LiteratureFullTextLookup.render.test.tsx',
+          'src/renderer/src/pages/literature/detail/LiteratureFullTextLookup.render.test.tsx',
           'src/renderer/src/pages/literature/LiteratureLibraryPage.render.test.tsx',
-          'src/renderer/src/pages/literature/LiteratureMetadataEditor.test.tsx',
+          'src/renderer/src/pages/literature/detail/LiteratureMetadataEditor.test.tsx',
           'src/renderer/src/pages/workspace/artifact-publication-preview.integration.test.tsx',
           'src/renderer/src/pages/workspace/previews/preview-pagination-contract.test.tsx',
           'src/shared/renderer-surface-inventory.test.ts',
@@ -829,7 +841,17 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/notebook/runtime-service.rpc-retirement.test.ts',
           'src/main/literature/smart-collections.test.ts',
           'src/main/notebook/runtime-service.macos-isolation.integration.test.ts',
-          'src/main/acp/library-auto-policy.test.ts'
+          'src/main/acp/library-auto-policy.test.ts',
+          'src/main/literature/journal-attributes.test.ts',
+          'src/main/session-persistence/reconciliation-renderer-parity.test.ts',
+          'src/main/session-persistence/turn-outcome-reconciliation.test.ts',
+          'src/main/session-persistence/missing-runtime-session-repro.test.ts',
+          'src/main/session-persistence/prompt-preparation-restart.test.ts',
+          'src/main/session-persistence/terminal-commit-scheduler.test.ts',
+          'src/main/session-persistence/attention-projection.test.ts',
+          'src/main/acp/approved-handoff-outcome.integration.test.ts',
+          'src/main/acp/approved-handoff-outcome.test.ts',
+          'src/main/literature/pdf-translation/checkpoints.test.ts'
         ]
       },
       capabilityOverlays: ['windows_sensitive', 'e2e_regressions', 'e2e_delegation'],

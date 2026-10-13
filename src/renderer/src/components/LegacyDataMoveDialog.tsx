@@ -1,5 +1,5 @@
 import { storageErrorMessage } from '@/lib/storage-error'
-import { AlertDialog } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
 import { FolderInput, FolderOpen, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -34,7 +34,7 @@ type LegacyDataMoveDialogProps = {
 }
 
 // One-time, non-forced upgrade prompt for a pre-§20 legacy install whose data still sits in the
-// hidden config root. Offers to move it into the visible MedResearch Agent folder (default or a folder the
+// hidden config root. Offers to move it into the visible application data folder (default or a folder the
 // user picks), or to keep it where it is - the last choice is remembered so it never re-appears.
 // Accepting reuses the ordinary relocation flow (StorageMigrationModal): a reversible copy, then a
 // restart. Moving sets settings.dataRoot, which by itself disqualifies the prompt on the next launch,
@@ -53,7 +53,7 @@ const LegacyDataMoveDialog = ({
     selection?: DataRootSelection
     recoveryStatus?: DataRootRecoveryStatus
   } | null>(null)
-  // The exact target "Move to MedResearch Agent" would use, normally <home>/MedResearch Agent. Resolved via
+  // The exact target the app-data action would use, normally <home>/MedResearch Agent. Resolved via
   // inspectDataRoot(defaultDataRoot) rather than getInfo's dataRoot, which for a legacy install is the
   // hidden config root itself.
   const [defaultInspectionState, setDefaultInspectionState] = useState<
@@ -123,7 +123,7 @@ const LegacyDataMoveDialog = ({
     setOperationError(
       defaultInspection.kind === 'adopt'
         ? t(
-            'That folder already contains MedResearch Agent data. Pick an empty folder, or use the default location.'
+            'That folder already contains DRA data. Pick an empty folder, or use the default location.'
           )
         : (storageErrorMessage(defaultInspection.error, t) ??
             t('That folder can’t be used. Pick another one.'))
@@ -152,7 +152,7 @@ const LegacyDataMoveDialog = ({
       setOperationError(
         inspection.kind === 'adopt'
           ? t(
-              'That folder already contains MedResearch Agent data. Pick an empty folder, or use the default location.'
+              'That folder already contains DRA data. Pick an empty folder, or use the default location.'
             )
           : (storageErrorMessage(inspection.error, t) ??
               t('That folder can’t be used. Pick another one.'))
@@ -209,7 +209,7 @@ const LegacyDataMoveDialog = ({
           <div className={cn(dialogBodyClassName, 'space-y-4')}>
             <AlertDialog.Description className={dialogDescriptionClassName}>
               {t(
-                'Your research data is in a hidden folder. Moving it into a visible MedResearch Agent folder makes it easy to find and back up — your settings and history stay where they are.'
+                'Your research data is in a hidden folder. Moving it into a visible DRA folder makes it easy to find and back up — your settings and history stay where they are.'
               )}
             </AlertDialog.Description>
             <div>
@@ -254,7 +254,7 @@ const LegacyDataMoveDialog = ({
               ) : (
                 <FolderInput aria-hidden="true" />
               )}
-              {defaultInspectionFailed ? t('Try again') : t('Move to MedResearch Agent')}
+              {defaultInspectionFailed ? t('Try again') : t('Move data to the default location')}
             </Button>
             <Button
               type="button"

@@ -67,7 +67,7 @@ test('persists editable memory across an application restart', async ({ app }) =
   await page.reload({ waitUntil: 'domcontentloaded' })
 
   const openMemory = async (): Promise<Locator> => {
-    await page.getByRole('button', { name: 'Model settings' }).click()
+    await page.getByRole('button', { name: 'Settings' }).click()
     const settings = page.getByRole('dialog', { name: 'Settings' })
     await settings
       .getByRole('navigation', { name: 'Settings' })
@@ -229,7 +229,7 @@ test('contains long memory lists and layers destructive confirmations above sett
   })
   await page.reload({ waitUntil: 'domcontentloaded' })
 
-  await page.getByRole('button', { name: 'Model settings' }).click()
+  await page.getByRole('button', { name: 'Settings' }).click()
   const settings = page.getByRole('dialog', { name: 'Settings' })
   await settings
     .getByRole('navigation', { name: 'Settings' })
@@ -297,7 +297,7 @@ test('contains long memory lists and layers destructive confirmations above sett
     .locator('[data-slot="memory-entry"]')
     .filter({ hasText: 'Overflow note 24' })
   await lastNoteRow.hover()
-  await expect(settings).toHaveCSS('z-index', '50')
+  await expect(settings).toHaveCSS('z-index', '60')
   await lastNoteRow.getByRole('button', { name: 'Delete note' }).click()
   const noteDialog = page.getByRole('alertdialog', { name: 'Delete note?' })
   await expect(noteDialog).toBeVisible()
@@ -408,7 +408,7 @@ test('preserves Memory drafts and shows externally saved values on conflict', as
     })
   })
   await page.reload({ waitUntil: 'domcontentloaded' })
-  await page.getByRole('button', { name: 'Model settings' }).click()
+  await page.getByRole('button', { name: 'Settings' }).click()
   const settings = page.getByRole('dialog', { name: 'Settings' })
   await settings
     .getByRole('navigation', { name: 'Settings' })

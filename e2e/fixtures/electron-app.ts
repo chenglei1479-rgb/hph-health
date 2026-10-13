@@ -26,6 +26,11 @@ import {
   type RuntimeProfileResult,
   type RuntimeResourceProfilerOptions
 } from '../../scripts/performance/runtime-resource-profiler'
+import {
+  startElectronContentTrace,
+  stopElectronContentTrace,
+  type ElectronContentTraceArtifact
+} from '../../scripts/performance/electron-content-trace'
 import { terminateProcessTree } from '../../src/main/process-tree'
 import {
   readProcessTable,
@@ -33,6 +38,9 @@ import {
   selectProcessTree
 } from '../../scripts/performance/process-snapshot'
 import { createProjectDbClient } from '../../src/main/projects/prisma-client'
+import { NotebookRunRepository } from '../../src/main/notebook/repository'
+import { createRootNotebookLane } from '../../src/main/notebook/lane-identity'
+import type { NotebookRunRecord } from '../../src/shared/notebook'
 import { RendererFailureGate } from './renderer-failure-gate'
 import type { ConversationSkillImportApprovalRequest } from '../../src/shared/settings'
 import type { UpdateStatus } from '../../src/shared/update'
@@ -46,22 +54,6 @@ const FAKE_AGENT_PATH = resolve(APP_ROOT, 'e2e', 'fixtures', 'fake-opencode.mjs'
 const FAKE_REMOTEIT_PATH = resolve(APP_ROOT, 'e2e', 'fixtures', 'fake-remoteit.cjs')
 const FAKE_PROVIDER_NAME = 'Electron E2E provider'
 type E2eWindowMode = 'hidden' | 'normal'
-
-// Keep in sync with GitHubStarBadge. Workspace variant waits 5s, then opens a popover that can
-// swallow the next pointer click (revision navigation, project menus) on macOS and Windows CI.
-const STAR_NUDGE_LAST_SHOWN_STORAGE_KEY = 'open-science:github-star-nudge-last-shown-at'
-
-const recordStarNudgeCooldown = (storageKey: string): void => {
-  try {
-    window.localStorage.setItem(storageKey, String(Date.now()))
-  } catch {
-    // Isolated source-preview documents and opaque origins deny localStorage.
-  }
-}
-
-const suppressWorkspaceStarNudge = async (page: Pick<Page, 'evaluate'>): Promise<void> => {
-  await page.evaluate(recordStarNudgeCooldown, STAR_NUDGE_LAST_SHOWN_STORAGE_KEY)
-}
 
 const electronLaunchTarget = (
   userDataRoot: string,
@@ -311,6 +303,13 @@ type BrandState = {
   title: string
   menus: string[]
 }
+type NativeMenuProbe = {
+  anchor: { x: number | undefined; y: number | undefined; zoom: number } | null
+  shown: boolean
+  closed: boolean
+  close: () => void
+  dispose: () => void
+}
 type ElectronApp = {
   captureBrandState: () => Promise<BrandState>
   restartWithBrandFixture: (
@@ -319,6 +318,7 @@ type ElectronApp = {
 
   readonly page: Page
   openAdditionalRenderer: () => Promise<Page>
+  readNotebookFixtureRuns: (projectId: string, sessionId: string) => Promise<NotebookRunRecord[]>
   authenticatedWebUrl: () => Promise<string>
   allowRendererConsoleError: (text: string) => void
   captureMainLog: (name: string) => Promise<string>
@@ -343,8 +343,10 @@ type ElectronApp = {
   emitUpdateStatus: (status: UpdateStatus) => Promise<void>
   enableFakeRemoteIt: () => Promise<Page>
   findOverlayIsVisible: () => Promise<boolean>
+  captureFindOverlay: () => Promise<Buffer>
   launchSecondInstance: () => Promise<Page>
   mainWindowState: () => Promise<{ minimized: boolean; visible: boolean }>
+  observeMainWindowMenuPopup: (offset: number) => Promise<JSHandle<NativeMenuProbe>>
   trustSourcePreviewCertificate: (certificate: string) => Promise<void>
   setDefaultSessionCookie: (url: string) => Promise<void>
   readClipboardText: () => Promise<string>
@@ -360,7 +362,10 @@ type ElectronApp = {
   restart: (options?: { resourceProfilePhase?: string }) => Promise<Page>
   restartAfterCrash: (options?: { force?: boolean }) => Promise<Page>
   restartWithCorruptHistoricalSessionFile: (projectId: string) => Promise<Page>
-  restartWithSessionFixture: (session: PersistedChatSession) => Promise<Page>
+  restartWithSessionFixture: (
+    session: PersistedChatSession,
+    notebookRuns?: NotebookRunRecord[]
+  ) => Promise<Page>
   sabotageDelegatedHandoffCleanup: (childName: string) => Promise<void>
   recordResourceTiming: (name: string, durationMs: number) => void
   captureResourceTimings: (prefix?: string) => Promise<void>
@@ -396,6 +401,12 @@ const launchEnvironment = (
   environment.OPEN_SCIENCE_E2E_STORAGE_ROOT = storageRoot
   environment.OPEN_SCIENCE_E2E_HANDOFF_CAPTURE_ROOT = join(storageRoot, 'e2e-handoff-captures')
   environment.OPEN_SCIENCE_E2E_WINDOW_MODE = windowMode
+  if (environment.OPEN_SCIENCE_WINDOWS_APPCONTAINER_CERT === '1') {
+    environment.OPEN_SCIENCE_E2E_APPCONTAINER_DENIED_FILE = join(
+      dirname(storageRoot),
+      'outside-granted-roots.txt'
+    )
+  }
   if (process.platform === 'win32' && environment.OPEN_SCIENCE_E2E_MICROMAMBA_EVENTS) {
     // The production runner caches resolved tools under LocalAppData. Keep the controlled process
     // fixture isolated from any micromamba selected by an ordinary Open-Science session.
@@ -574,13 +585,15 @@ const openMainWindow = async (
   await rendererFailures.observe(page)
   await waitForRendererReady(page)
   await onFirstReady?.(page)
-  // Writing the cooldown after first paint does not cancel a timer GitHubStarBadge already
-  // scheduled. Reload so the workspace variant remounts with the cooldown already set.
-  await suppressWorkspaceStarNudge(page)
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  await applyHiddenWindowPresentation(page, windowMode)
-  await waitForRendererReady(page)
   return page
+}
+
+const enableRendererRuntimeProfiling = async (page: Page): Promise<void> => {
+  await page.evaluate(() => {
+    ;(globalThis as typeof globalThis & { __OPEN_SCIENCE_PERF_PROFILE__?: boolean })[
+      '__OPEN_SCIENCE_PERF_PROFILE__'
+    ] = true
+  })
 }
 
 class ElectronAppHarness implements ElectronApp {
@@ -593,6 +606,11 @@ class ElectronAppHarness implements ElectronApp {
   private fakeRemoteItEnabled = false
   private readonly rendererFailures = new RendererFailureGate()
   private resourceProfiler: RuntimeResourceProfiler | undefined
+  private rendererRuntimeProfilingArmed = false
+  private electronTraceArmed = false
+  private electronTraceSequence = 0
+  private electronTrace: { heapProfile: boolean } | undefined
+  private readonly electronTraceArtifacts: ElectronContentTraceArtifact[] = []
   private readonly sabotagedDelegatedHandoffs = new Map<string, string>()
 
   private constructor(
@@ -605,7 +623,14 @@ class ElectronAppHarness implements ElectronApp {
     windowMode: E2eWindowMode,
     testInfo: Pick<TestInfo, 'attach'>
   ): Promise<ElectronAppHarness> {
-    const testRoot = await mkdtemp(join(tmpdir(), 'open-science-electron-e2e-'))
+    const testRoot = await mkdtemp(
+      join(
+        tmpdir(),
+        process.env.OPEN_SCIENCE_WINDOWS_APPCONTAINER_CERT === '1'
+          ? 'open-science-electron-e2e-程序-한글-'
+          : 'open-science-electron-e2e-'
+      )
+    )
     const harness = new ElectronAppHarness(
       testRoot,
       {
@@ -619,6 +644,9 @@ class ElectronAppHarness implements ElectronApp {
     )
     try {
       await mkdir(harness.roots.storageRoot, { recursive: true })
+      if (process.env.OPEN_SCIENCE_WINDOWS_APPCONTAINER_CERT === '1') {
+        await writeFile(join(testRoot, 'outside-granted-roots.txt'), 'isolation witness', 'utf8')
+      }
       await writeFile(harness.roots.fakeRemoteItState, JSON.stringify({ services: [] }), 'utf8')
       await writeFakeAgentLauncher(harness.roots.fakeAgentBinRoot)
       await writeFakeRemoteItCommands(harness.roots.fakeRemoteItRoot)
@@ -670,6 +698,10 @@ class ElectronAppHarness implements ElectronApp {
 
   async beginResourceProfile(options: RuntimeResourceProfilerOptions = {}): Promise<void> {
     if (this.resourceProfiler) throw new Error('Runtime resource profiling is already active.')
+    const traceRequested = process.env.OPEN_SCIENCE_PERF_ELECTRON_TRACE === '1'
+    const heapProfileRequested = process.env.OPEN_SCIENCE_PERF_ELECTRON_HEAP_PROFILE === '1'
+    this.electronTraceArmed = traceRequested || heapProfileRequested
+    this.rendererRuntimeProfilingArmed = true
     const profileDataRoot = join(this.testRoot, 'profile-data')
     await mkdir(profileDataRoot, { recursive: true })
     await this.close()
@@ -724,13 +756,20 @@ class ElectronAppHarness implements ElectronApp {
         'open-science:persistence-runtime-lookup-catalog',
         'open-science:persistence-runtime-lookup-ownership',
         'open-science:persistence-runtime-lookup-read',
-        'open-science:persistence-runtime-lookup-targeted'
+        'open-science:persistence-runtime-lookup-targeted',
+        'open-science:startup-imports',
+        'open-science:renderer-runtime-event-batch',
+        'open-science:renderer-runtime-event-apply'
       ])
       const timings = performance
         .getEntriesByType('measure')
-        .filter((entry) => names.has(entry.name))
+        .filter(
+          (entry) => names.has(entry.name) || entry.name.startsWith('open-science:ipc-surface:')
+        )
         .map(({ name, duration }) => ({ name, duration }))
-      for (const name of names) performance.clearMeasures(name)
+      for (const name of new Set([...names, ...timings.map(({ name }) => name)])) {
+        performance.clearMeasures(name)
+      }
       for (const entry of performance.getEntriesByType('paint')) {
         if (entry.name === 'first-paint' || entry.name === 'first-contentful-paint') {
           timings.push({ name: entry.name, duration: entry.startTime })
@@ -753,9 +792,16 @@ class ElectronAppHarness implements ElectronApp {
   async finishResourceProfile(): Promise<RuntimeProfileResult> {
     const profiler = this.resourceProfiler
     if (!profiler) throw new Error('Runtime resource profiling is not active.')
+    await this.stopElectronTrace()
     this.resourceProfiler = undefined
     profiler.detach()
-    return profiler.finish()
+    const result = await profiler.finish()
+    await Promise.all(
+      this.electronTraceArtifacts.map(async ({ path }, index) =>
+        copyFile(path, join(result.outputDirectory, `electron-trace-${index + 1}.json`))
+      )
+    )
+    return result
   }
 
   // Keep real renderer/preload navigation while replacing the external SSH directory read.
@@ -811,6 +857,16 @@ class ElectronAppHarness implements ElectronApp {
     await page.waitForFunction(() => Boolean(window.api?.databaseStartup))
     await waitForRendererReady(page)
     return page
+  }
+
+  async readNotebookFixtureRuns(
+    projectId: string,
+    sessionId: string
+  ): Promise<NotebookRunRecord[]> {
+    const dataRoot = await this.page.evaluate(
+      async () => (await window.api.storage.getInfo()).dataRoot
+    )
+    return new NotebookRunRepository(dataRoot).readSessionRuns(projectId, sessionId)
   }
 
   async authenticatedWebUrl(): Promise<string> {
@@ -1002,6 +1058,39 @@ class ElectronAppHarness implements ElectronApp {
     })
   }
 
+  async observeMainWindowMenuPopup(offset: number): Promise<JSHandle<NativeMenuProbe>> {
+    return this.runningApplication.evaluateHandle(({ BrowserWindow, Menu, screen }, nextOffset) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      const area = screen.getDisplayMatching(window.getBounds()).workArea
+      window.setPosition(area.x + nextOffset, area.y + nextOffset)
+      const original = Menu.prototype.popup
+      const probe: NativeMenuProbe = {
+        anchor: null,
+        shown: false,
+        closed: false,
+        close: () => undefined,
+        dispose: () => {
+          Menu.prototype.popup = original
+          probe.close()
+        }
+      }
+      Menu.prototype.popup = function (options = {}) {
+        Menu.prototype.popup = original
+        probe.anchor = { x: options.x, y: options.y, zoom: window.webContents.getZoomFactor() }
+        this.once('menu-will-show', () => {
+          probe.shown = true
+        })
+        this.once('menu-will-close', () => {
+          probe.closed = true
+        })
+        probe.close = () => this.closePopup(options.window)
+        // Observe the production call while still opening and closing a real native popup.
+        return original.call(this, options)
+      }
+      return probe
+    }, offset)
+  }
+
   async auditSourceAttachments(): Promise<JSHandle<boolean[]>> {
     return this.runningApplication.evaluateHandle(({ BrowserWindow }) => {
       const decisions: boolean[] = []
@@ -1060,6 +1149,39 @@ class ElectronAppHarness implements ElectronApp {
       if (!mainWindow) throw new Error('Open Science main window was not found.')
       mainWindow.webContents.send('skills:conversation-import-request', nextRequest)
     }, request)
+  }
+
+  async captureFindOverlay(): Promise<Buffer> {
+    // Capture the child WebContentsView with Electron's native API. The CDP screenshot
+    // path can fail for this independently composited view on macOS runners.
+    const capture = (): Promise<string> =>
+      this.runningApplication.evaluate(async ({ webContents }) => {
+        const overlay = webContents
+          .getAllWebContents()
+          .find(
+            (contents) => !contents.isDestroyed() && contents.getURL().includes('/find-overlay/')
+          )
+        if (!overlay) throw new Error('Find overlay was not found.')
+        const image = await overlay.capturePage(undefined, { stayHidden: true, stayAwake: true })
+        if (image.isEmpty()) throw new Error('Find overlay capture was empty.')
+        return image.toPNG().toString('base64')
+      })
+    // Viz may reject a copy during a compositor update even after the DOM is ready.
+    // Retry only that native capture error; persistent or unrelated failures still fail.
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return Buffer.from(await capture(), 'base64')
+      } catch (error) {
+        if (
+          attempt >= 2 ||
+          !(error instanceof Error) ||
+          !error.message.includes('UnknownVizError')
+        ) {
+          throw error
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    }
   }
 
   async showMainWindow(): Promise<void> {
@@ -1303,6 +1425,7 @@ class ElectronAppHarness implements ElectronApp {
       process.platform === 'win32' && child.pid !== undefined
         ? await readProcessTree(child.pid)
         : undefined
+    await this.stopElectronTrace(application)
     const result = await terminateProcessTree(child, options.force ? 'SIGKILL' : undefined)
     let reaped = result.reaped
     // Windows termination is asynchronous even when taskkill succeeds. Playwright's child is
@@ -1331,10 +1454,16 @@ class ElectronAppHarness implements ElectronApp {
     return this.page
   }
 
-  async restartWithSessionFixture(session: PersistedChatSession): Promise<Page> {
+  async restartWithSessionFixture(
+    session: PersistedChatSession,
+    notebookRuns: NotebookRunRecord[] = []
+  ): Promise<Page> {
     if (![session.projectId, session.id].every((id) => /^[a-zA-Z0-9_-]+$/.test(id))) {
       throw new Error('Invalid E2E Session fixture identity.')
     }
+    const dataRoot = notebookRuns.length
+      ? await this.page.evaluate(async () => (await window.api.storage.getInfo()).dataRoot)
+      : undefined
     await this.close()
     const directory = join(this.roots.storageRoot, 'sessions', session.projectId)
     await mkdir(directory, { recursive: true })
@@ -1342,6 +1471,28 @@ class ElectronAppHarness implements ElectronApp {
       join(directory, `${session.id}.json`),
       JSON.stringify(createSessionFile(session))
     )
+    if (dataRoot && notebookRuns.length) {
+      if (session.packageOrigin)
+        await mkdir(
+          join(dataRoot, 'artifacts', session.projectId, session.id, '.session-package'),
+          { recursive: true }
+        )
+      const repository = new NotebookRunRepository(dataRoot)
+      const lane = createRootNotebookLane(session.projectId, session.id, `root-frame-${session.id}`)
+      await repository.loadOrCreate({
+        projectId: session.projectId,
+        sessionId: session.id,
+        workspaceCwd: session.cwd,
+        lane
+      })
+      for (const run of notebookRuns)
+        await repository.appendRun({
+          projectId: session.projectId,
+          sessionId: session.id,
+          lane,
+          run
+        })
+    }
     // Rebuild the catalog from the fixture file, just as the historical-session fixture does.
     const client = createProjectDbClient(this.roots.storageRoot)
     try {
@@ -1428,6 +1579,17 @@ class ElectronAppHarness implements ElectronApp {
       this.resourceProfiler !== undefined,
       packagePath
     )
+    if (this.electronTraceArmed) {
+      const heapProfile = process.env.OPEN_SCIENCE_PERF_ELECTRON_HEAP_PROFILE === '1'
+      try {
+        await startElectronContentTrace(this.application, { heapProfile })
+        this.electronTrace = { heapProfile }
+      } catch (error) {
+        process.stderr.write(
+          `Electron content trace could not start; continuing without trace capture: ${error instanceof Error ? error.message : String(error)}\n`
+        )
+      }
+    }
     await this.resourceProfiler?.attach(this.application)
     try {
       if (process.env.OPEN_SCIENCE_E2E_EXECUTABLE) {
@@ -1452,9 +1614,12 @@ class ElectronAppHarness implements ElectronApp {
         this.application,
         this.rendererFailures,
         this.windowMode,
-        this.resourceProfiler
+        this.rendererRuntimeProfilingArmed || this.resourceProfiler
           ? async (page) => {
               this.currentPage = page
+              if (this.rendererRuntimeProfilingArmed) {
+                await enableRendererRuntimeProfiling(page)
+              }
               this.recordResourceTiming('first-' + timingName, performance.now() - launchStartedAt)
               await this.captureResourceTimings(
                 timingName === 'recovery-startup-ready' ? 'first-recovery:' : 'first:'
@@ -1543,6 +1708,7 @@ class ElectronAppHarness implements ElectronApp {
 
     const application = this.application
     const page = this.currentPage
+    await this.stopElectronTrace(application)
     this.resourceProfiler?.detach(application)
     this.application = undefined
     this.currentPage = undefined
@@ -1578,6 +1744,26 @@ class ElectronAppHarness implements ElectronApp {
       this.stopFlushDiagnostics?.()
       this.stopFlushDiagnostics = undefined
     })
+  }
+
+  private async stopElectronTrace(application = this.application): Promise<void> {
+    const trace = this.electronTrace
+    if (!trace || !application) return
+    this.electronTrace = undefined
+    const destination = join(
+      this.testRoot,
+      'electron-traces',
+      `trace-${String(++this.electronTraceSequence).padStart(2, '0')}.json`
+    )
+    try {
+      this.electronTraceArtifacts.push(
+        await stopElectronContentTrace(application, destination, trace)
+      )
+    } catch (error) {
+      process.stderr.write(
+        `Electron content trace could not be saved: ${error instanceof Error ? error.message : String(error)}\n`
+      )
+    }
   }
 }
 
@@ -1628,8 +1814,6 @@ export {
   electronLaunchTarget,
   launchEnvironment,
   removeTreeForCleanup,
-  STAR_NUDGE_LAST_SHOWN_STORAGE_KEY,
-  suppressWorkspaceStarNudge,
   test
 }
 export type { ElectronApp }

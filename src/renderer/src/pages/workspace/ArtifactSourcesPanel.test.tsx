@@ -216,7 +216,7 @@ describe('ArtifactSourcesPanel', () => {
                 creators: [
                   {
                     nameMode: 'organization',
-                    literalName: 'MedResearch Agent Consortium',
+                    literalName: 'DRA Consortium',
                     creatorType: 'author'
                   }
                 ]
@@ -226,7 +226,7 @@ describe('ArtifactSourcesPanel', () => {
         }}
       />
     )
-    expect(screen.getByText('MedResearch Agent Consortium')).not.toBeNull()
+    expect(screen.getByText('DRA Consortium')).not.toBeNull()
     expect(screen.getByText('2024 · arXiv')).not.toBeNull()
   })
 

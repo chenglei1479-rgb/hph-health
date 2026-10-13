@@ -184,6 +184,26 @@ const EXPECTED_MIGRATION_LEDGER = [
   {
     id: '0045_literature_smart_pause_run',
     checksum: '04e286e7cfb90cf3cdb1045bb5f8191b7b4edee0fc272c4b042910314485de68'
+  },
+  {
+    id: '0046_journal_attributes',
+    checksum: '6faaa28accbf9297ba56586f0fa647adfca287a92d2bed7b08218323142d0992'
+  },
+  {
+    id: '0047_session_replay',
+    checksum: 'f76aff6bd97c42cabd744f87f0c37241259ffb1c45c5feef2a3643babcef2f91'
+  },
+  {
+    id: '0048_pdf_annotation_sharing',
+    checksum: '4d346933fd6779e0e7b15e1c51bb97043690230b40d29fb2d7c9dacc19f25e52'
+  },
+  {
+    id: '0049_pascalcase_table_names',
+    checksum: 'ed46c378adfcd3e7f0f0d434797a4e775121fa6fce021a4c89b19f2c383b91ad'
+  },
+  {
+    id: '0050_literature_translation',
+    checksum: 'ae3a17741c698765b69e4d651dffea6b46e3e06d5e7e6dce92aefa96a1d6337f'
   }
 ]
 const LEGACY_PROJECT_ID = 'package-smoke-legacy-project'

@@ -11,13 +11,16 @@ const EXPECTED_IDS = [
   'gwas_search_studies',
   'gwas_get_study',
   'gwas_get_variant',
+  'gwas_get_summary_statistics',
   'eqtl_list_datasets',
   'eqtl_associations',
   'phewas_instances',
   'phewas_variant',
   'phewas_finngen_gene',
   'phewas_list_phenotypes',
-  'phewas_search_phenotypes'
+  'phewas_search_phenotypes',
+  'bbj_summary_statistics',
+  'bbj_notebook_workflow'
 ]
 
 describe('human-genetics / aggregate', () => {

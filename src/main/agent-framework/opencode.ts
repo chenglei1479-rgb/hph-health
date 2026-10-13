@@ -78,12 +78,10 @@ export const opencodeTransportProviderId = (providerId: string, model: string): 
     .digest('hex')
     .slice(0, 16)}`
 
-// The opencode provider block used for each endpoint. Anthropic /v1/messages maps to opencode's
-// built-in `anthropic` provider; OpenAI /v1/chat/completions maps to a custom provider backed by the
-// `@ai-sdk/openai-compatible` package. opencode drives both, so the endpoint is chosen from the
-// provider's apiType (preferring OpenAI when it offers both).
+// Pin the SDK for both protocols: app-generated provider ids do not inherit OpenCode's
+// built-in Anthropic driver. The endpoint prefers OpenAI when the provider offers both.
 const OPENCODE_ENDPOINT_PROVIDER: Record<'anthropic' | 'openai', { id: string; npm?: string }> = {
-  anthropic: { id: 'anthropic' },
+  anthropic: { id: 'anthropic', npm: '@ai-sdk/anthropic' },
   openai: { id: 'openai-compatible', npm: '@ai-sdk/openai-compatible' }
 }
 
@@ -111,8 +109,8 @@ const opencodeApiKeyEnv = (provider: ResolvedProvider): string =>
     : OPENCODE_API_KEY_ENV
 
 // The app's permission policy for opencode: every side-effecting/MCP tool must ASK the ACP client (the
-// app's broker then enforces the selected profile); safe read-only tools and OpenCode's native skill
-// loader run silently (parity with other Agent frameworks). The `*` catch-all covers unlisted tools
+// app's broker then enforces the selected profile); safe read-only tools run silently; Skill
+// loading delegates to the app's shared, revocable Skill grants. The `*` catch-all covers unlisted tools
 // (MCP artifact/notebook/connectors, etc.),
 // and the sensitive built-ins are pinned to `ask` explicitly so a lower-precedence config that sets one
 // of those keys to `allow` is overridden rather than winning. Enforced via the OPENCODE_CONFIG_CONTENT
@@ -137,7 +135,7 @@ const OPENCODE_PERMISSION_RULES: Record<string, 'ask' | 'allow' | 'deny'> = {
   task: 'deny',
   // Skill loading only reads definitions already provisioned into the isolated OpenCode config.
   // Permission for creating/editing/enabling those definitions remains app-owned elsewhere.
-  skill: 'allow',
+  skill: 'ask',
   webfetch: 'ask',
   websearch: 'ask',
   external_directory: 'deny'

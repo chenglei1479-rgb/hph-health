@@ -20,6 +20,69 @@ export type ConnectorMeta = {
 // Static connector metadata for the settings UI (tool lists come from the registry).
 export const CONNECTOR_CATALOG: ConnectorMeta[] = [
   {
+    id: "japan-research",
+    displayName: "Japan Research",
+    aliases: ["J-STAGE", "CiNii", "KAKEN", "NBDC", "医中誌", "UMIN-CTR", "jRCT", "NDB", "JMDC", "jMorp", "ToMMo", "日本文献", "日本臨床試験"],
+    description: "Japanese literature search and public registry export search, with explicit access requirements.",
+    useWhen: "Search J-STAGE, CiNii Research and indexed KAKEN or NBDC metadata; search supplied public jRCT or UMIN-CTR exports and the BioBank Japan GWAS download catalogue. Check access modes before use. Institutional databases are not connected automatically.",
+    sources: ["J-STAGE", "CiNii Research", "KAKEN (CiNii)", "NBDC (CiNii)", "jRCT (export)", "UMIN-CTR (export)", "BioBank Japan"],
+    requiresNcbi: false,
+    group: "directory",
+    termsUrl: "https://www.jstage.jst.go.jp/static/pages/WebAPI/-char/ja"
+  },
+  {
+    id: 'pdc',
+    displayName: 'PDC',
+    aliases: ['Proteomic Data Commons', 'CPTAC proteomics'],
+    description:
+      'Cancer proteomics studies, sample and aliquot mappings, and file discovery from PDC.',
+    useWhen:
+      'Use for NCI Proteomic Data Commons (PDC) cancer proteomics and CPTAC study discovery: search study names and versions, inspect assay metadata, map aliquots to samples and cases, and discover quantitative reports and supplementary files. Pin study UUIDs for reproducibility; PDC study accessions select the latest version. Preserve named external references when linking to GDC or TCIA; PDC case UUIDs are not GDC case UUIDs. Public read-only GraphQL requires no credentials for these metadata queries. Follow PDC data use guidelines, cite PDC and the primary study publication, and acknowledge CPTAC. This connector does not accept agreements, download files, or retrieve clinical outcomes or quantitative matrices.',
+    sources: ['PDC'],
+    termsUrl: 'https://pdc.cancer.gov/pdc/data-use-guidelines',
+    requiresNcbi: false,
+    group: 'directory'
+  },
+  {
+    id: 'iedb',
+    displayName: 'IEDB',
+    aliases: ['Immune Epitope Database', 'immune epitopes', 'immunology assays', 'TCR', 'BCR'],
+    description:
+      'Immune epitopes, T/B cell and MHC assays, TCR/BCR receptors, antigens and literature evidence from IEDB.',
+    useWhen:
+      'Use for experimental immunology evidence in the Immune Epitope Database (IEDB): search epitopes, T cell responses, B cell antibody assays, MHC binding and ligand elution experiments, TCR/BCR receptor groups and CDR3 sequences, host species, antigen sources and references. Preserve methods, quantitative measurements, units, inequalities and negative results. These are database observations, not predictions. Parent UniProt antigens can differ from the curated antigen sequence. Follow explicit UniProt accessions through Genes & Ontologies and PDB identifiers through Structures & Interactions; follow PMIDs through PubMed. Public read-only IQ-API; no credentials required.',
+    sources: ['IEDB'],
+    termsUrl: 'https://www.iedb.org/',
+    requiresNcbi: false,
+    group: 'directory'
+  },
+  {
+    id: 'monarch',
+    displayName: 'Monarch Initiative',
+    aliases: ['Monarch', 'phenotype evidence', 'disease phenotype associations'],
+    description:
+      'Disease and gene phenotype associations with evidence sources via Monarch Initiative.',
+    useWhen:
+      'Use to query disease–phenotype or gene–phenotype associations for Monarch canonical CURIEs and inspect relation types, evidence codes, publications, provenance, negation and qualifiers. Source database IDs and aliases are not automatically converted; a zero total means no match for the supplied identifier and filters, not absence of phenotype evidence. Direct identifier matching is the default, not a claim of experimental evidence; inspect knowledge_level and agent_type. Resolve ontology terms with OLS in Genes & Ontologies and use Alliance for model-organism gene summaries, orthology and annotations. This read-only public API requires no authentication.',
+    sources: ['Monarch Initiative'],
+    termsUrl: 'https://monarch-app.monarchinitiative.org/Licensing/',
+    requiresNcbi: false,
+    group: 'directory'
+  },
+  {
+    id: 'alliance',
+    displayName: 'Alliance Genome Resources',
+    aliases: ['Alliance', 'AGR', 'model organism genes', 'model organism genomics'],
+    description:
+      'Model-organism and human gene knowledge via the Alliance of Genome Resources — gene summaries, orthology, disease models, phenotypes, alleles and expression.',
+    useWhen:
+      'Use when you need cross-species model-organism gene knowledge from the Alliance of Genome Resources — search or summarize genes from human, mouse, rat, fly, worm, zebrafish, yeast and frog; retrieve orthologs, disease models, phenotype annotations, alleles/variants, or developmental and anatomical expression; or find genes associated with a Disease Ontology term. The public API is read-only and does not require authentication.',
+    sources: ['Alliance of Genome Resources'],
+    termsUrl: 'https://www.alliancegenome.org/terms-of-use',
+    requiresNcbi: false,
+    group: 'directory'
+  },
+  {
     id: 'chemistry',
     displayName: 'Chemistry',
     description: 'Small-molecule chemistry via PubChem, ChEBI, Rhea and BindingDB.',
@@ -75,6 +138,18 @@ export const CONNECTOR_CATALOG: ConnectorMeta[] = [
     requiresNcbi: false
   },
   {
+    id: 'pathway-commons',
+    displayName: 'Pathway Commons',
+    aliases: ['Pathway Commons', 'PC2', 'BioPAX pathways', 'pathway network'],
+    description:
+      'Integrated pathway and molecular interaction network queries via the Pathway Commons PC2 v14 REST API, including Reactome-filtered pathways, gene neighborhoods, paths between gene sets, and BioPAX/GSEA/SIF exports.',
+    useWhen:
+      'Use for Pathway Commons BioPAX discovery and network analysis — search pathways, genes, proteins, and interactions; find top-level pathways; query a gene neighborhood, paths between source genes, directed paths from source to target genes, or common streams; and export pathway subsets as BioPAX, JSON-LD, GSEA GMT, SIF, TXT, or SBGN. Use datasource filters such as Reactome when a cross-source pathway view is needed; use the Protein Annotation connector for STRING-specific networks.',
+    sources: ['Pathway Commons', 'Reactome'],
+    termsUrl: 'https://www.pathwaycommons.org/pc2/',
+    requiresNcbi: false
+  },
+  {
     id: 'genomes',
     displayName: 'Genomes',
     description:
@@ -88,12 +163,12 @@ export const CONNECTOR_CATALOG: ConnectorMeta[] = [
   {
     id: 'variants',
     displayName: 'Variants',
-    aliases: ['gnomAD', 'ClinVar', 'dbSNP', 'genetic variant'],
+    aliases: ['gnomAD', 'ClinVar', 'dbSNP', 'MaveDB', 'MAVE', 'genetic variant'],
     description:
-      'Human genetic variants — gnomAD population frequencies/constraint, ClinVar records/search (direct NCBI), dbSNP, structural and mitochondrial variants.',
+      'Genetic variants — gnomAD frequencies and constraint, ClinVar, dbSNP, and MaveDB functional scores, mappings and experiments.',
     useWhen:
-      'Use when you need human genetic-variant data — gnomAD population allele frequencies, gene constraint (pLI/LOEUF), structural or mitochondrial variants, and build liftover; ClinVar clinical significance (gnomAD mirror or direct NCBI search/records by accession or rsID); or dbSNP RefSNP records and region lookups.',
-    sources: ['gnomAD', 'ClinVar', 'dbSNP'],
+      'Use when you need genetic-variant data — gnomAD population allele frequencies, gene constraint (pLI/LOEUF), structural or mitochondrial variants, and build liftover; ClinVar clinical significance (gnomAD mirror or direct NCBI search/records by accession or rsID); dbSNP RefSNP records and region lookups; or MaveDB multiplexed assays of variant effect (MAVE), score set search and metadata, CSV functional scores, existing GA4GH VRS variant mappings, and experiments. MaveDB public data needs no API key or contact email; functional scores are assay-specific, not clinical classifications.',
+    sources: ['gnomAD', 'ClinVar', 'dbSNP', 'MaveDB'],
     termsUrl: 'https://www.ncbi.nlm.nih.gov/clinvar/docs/maintenance_use/',
     requiresNcbi: true
   },
@@ -161,7 +236,7 @@ export const CONNECTOR_CATALOG: ConnectorMeta[] = [
     displayName: 'Drug Regulatory',
     description: 'Drugs@FDA applications, labels, and corpus statistics via openFDA.',
     useWhen:
-      'Use when you need FDA drug regulatory data — searching or fetching Drugs@FDA applications (NDA/ANDA/BLA) by brand, generic, ingredient, sponsor, marketing status, or pharmacologic class; aggregate/corpus statistics; generic equivalents of a brand; or product label (SPL) sections such as indications and boxed warnings. Sourced from openFDA (Drugs@FDA + drug labels).',
+      'Use when you need FDA drug regulatory and safety data — searching or fetching Drugs@FDA applications (NDA/ANDA/BLA) by brand, generic, ingredient, sponsor, marketing status, or pharmacologic class; aggregate/corpus statistics; generic equivalents of a brand; product label (SPL) sections such as indications and boxed warnings; FAERS adverse-event reports and reaction/drug aggregations; or drug product enforcement and recall reports. Sourced from openFDA (Drugs@FDA, drug labels, drug events and drug enforcement).',
     sources: ['openFDA'],
     termsUrl: 'https://open.fda.gov/terms/',
     requiresNcbi: false
@@ -180,11 +255,12 @@ export const CONNECTOR_CATALOG: ConnectorMeta[] = [
   {
     id: 'expression',
     displayName: 'Expression',
-    description: 'Human tissue expression and eQTLs via the GTEx Portal.',
+    aliases: ['Bgee', 'Bgee expression', 'cross-species expression', 'normal tissue expression'],
+    description: 'Human and cross-species normal tissue expression via GTEx and Bgee.',
     useWhen:
-      'Use for GTEx tissue expression and eQTL evidence — listing tissue sites or dataset releases, resolving gene symbols to versioned GENCODE ids, median or per-sample expression (TPM) by tissue, top-expressed genes per tissue, sample/donor metadata, and cis-eQTLs (eGenes, single-tissue, multi-tissue METASOFT, or on-the-fly calculation) for a gene or variant. Sourced from GTEx.',
-    sources: ['GTEx'],
-    termsUrl: 'https://gtexportal.org/home/license',
+      'Use for tissue expression and eQTL evidence — GTEx tissue sites, dataset releases, versioned GENCODE resolution, median or per-sample TPM, top-expressed genes, donor metadata, and cis-eQTLs; or Bgee healthy wild-type expression across animal species, present/absent calls and scores for a gene, bounded SPARQL lookup constrained by gene/species/tissue, and official expression-call or processed-value download links. Sourced from GTEx and Bgee.',
+    sources: ['GTEx', 'Bgee'],
+    termsUrl: 'https://www.bgee.org/about/terms-and-conditions',
     requiresNcbi: false
   },
   {
@@ -202,9 +278,10 @@ export const CONNECTOR_CATALOG: ConnectorMeta[] = [
     id: 'interproscan',
     displayName: 'InterProScan',
     aliases: ['InterProScan 5', 'iprscan5'],
-    description: 'InterProScan job status and TSV result retrieval via EMBL-EBI.',
+    description:
+      'InterProScan protein sequence submission, job status and TSV result retrieval via EMBL-EBI.',
     useWhen:
-      'Use when you already have an EMBL-EBI InterProScan job_id and need to check its status or retrieve its finished TSV matches. This connector does not create or cancel jobs. For precomputed annotations of known UniProt accessions, use Protein Annotation instead.',
+      'Use when you need to submit one or more bounded protein sequences to EMBL-EBI InterProScan, retain the returned job_id, check status without automatic polling, or retrieve the finished TSV matches. For precomputed annotations of known UniProt accessions, use Protein Annotation instead.',
     sources: ['InterProScan', 'EMBL-EBI'],
     termsUrl: 'https://www.ebi.ac.uk/about/terms-of-use',
     requiresNcbi: false
@@ -225,7 +302,7 @@ export const CONNECTOR_CATALOG: ConnectorMeta[] = [
     displayName: 'Cancer Models',
     description: 'Cancer genomics study records via the cBioPortal REST API.',
     useWhen:
-      "Use when you need cancer genomics data from cBioPortal — listing or looking up cancer studies (cancer type, sample counts, citation), the mutations of a gene in a study (recurrent protein changes, mutation types), a gene's mutation frequency across several studies, discrete copy-number alterations (deletions/amplifications) of a gene, or a study's clinical attributes and survival endpoints.",
+      "Use when you need cancer genomics data from cBioPortal — listing or looking up cancer studies, samples and patients; retrieving patient/sample clinical values; fetching mRNA expression values for genes; the mutations of a gene in a study (recurrent protein changes, mutation types), a gene's mutation frequency across several studies, discrete copy-number alterations (deletions/amplifications) of a gene, or a study's clinical attributes and survival endpoints.",
     sources: ['cBioPortal'],
     termsUrl: 'https://www.cbioportal.org/faq',
     requiresNcbi: false
@@ -255,12 +332,45 @@ export const CONNECTOR_CATALOG: ConnectorMeta[] = [
     id: 'omics-archives',
     displayName: 'Omics Archives',
     description:
-      'Omics data archives — expression (ArrayExpress, GEO), sequencing reads (ENA), metabolomics (MetaboLights), metagenomics (MGnify) and proteomics (PRIDE).',
+      'Omics data archives — expression (ArrayExpress, GEO), sequencing reads (ENA), metabolomics (MetaboLights, Metabolomics Workbench), metagenomics (MGnify) and proteomics (PRIDE).',
     useWhen:
-      'Use when finding or looking up omics datasets across the major archives — functional-genomics / expression experiments in ArrayExpress (BioStudies) or NCBI GEO series (by keyword, organism, assay, or accession, with per-sample metadata); metabolomics studies and data files in MetaboLights (MTBLS); metagenomics studies and analyses in MGnify (MGYS, by free text or biome lineage); or proteomics projects, proteins and paged project file inventories with download locations in PRIDE Archive (PXD/PRD, by keyword/organism/instrument/disease, or protein↔project). Discover ENA sequencing runs by taxonomy, library strategy and title/description keywords, or resolve ENA/INSDC study, experiment or sample accessions to runs. List archive-generated FASTQ URLs or original submitted file locations (including BAM/CRAM), sizes and MD5 checksums for a run; resolve GEO/ArrayExpress/MGnify IDs to linked INSDC accessions first. Sourced from ArrayExpress, GEO, ENA, MetaboLights, MGnify and PRIDE.',
-    sources: ['ArrayExpress', 'GEO', 'ENA', 'MetaboLights', 'MGnify', 'PRIDE'],
+      'Use when finding or looking up omics datasets across the major archives — functional-genomics / expression experiments in ArrayExpress (BioStudies) or NCBI GEO series (by keyword, organism, assay, or accession, with per-sample metadata); metabolomics studies and data files in MetaboLights (MTBLS), or Metabolomics Workbench (ST) study records, samples, experimental factors, analysis metadata and compound structures/cross-references; metagenomics studies, analyses and downloadable result files in MGnify (MGYS, by free text or biome lineage); or proteomics projects, proteins and paged project file inventories with download locations in PRIDE Archive (PXD/PRD, by keyword/organism/instrument/disease, or protein↔project). Discover GEO Series Matrix and NCBI-generated RNA-seq count files, then preflight decompressed matrix format, dimensions and sample correspondence with geo_preflight_matrix. Discover ENA sequencing runs by taxonomy, library strategy and title/description keywords, or resolve ENA/INSDC study, experiment or sample accessions to runs. List archive-generated FASTQ URLs or original submitted file locations (including BAM/CRAM), sizes and MD5 checksums for a run; resolve GEO/ArrayExpress/MGnify IDs to linked INSDC accessions first. Sourced from ArrayExpress, GEO, ENA, MetaboLights, Metabolomics Workbench, MGnify and PRIDE.',
+    sources: [
+      'ArrayExpress',
+      'GEO',
+      'ENA',
+      'MetaboLights',
+      'Metabolomics Workbench',
+      'MGnify',
+      'PRIDE'
+    ],
     termsUrl: 'https://www.ebi.ac.uk/about/terms-of-use',
     requiresNcbi: true
+  },
+  {
+    id: 'cellxgene-discover',
+    displayName: 'CELLxGENE Discover',
+    aliases: ['CELLxGENE Discover', 'CELLxGENE datasets'],
+    description:
+      'Public collections, datasets, versions and file download links from CELLxGENE Discover.',
+    useWhen:
+      'Use to discover public single-cell datasets and collections in CELLxGENE Discover, filter dataset metadata by organism, tissue, disease, assay or cell type, inspect published collection/dataset versions, and obtain file formats, sizes and download URLs. Canonical IDs follow the current publication; version IDs pin a published snapshot. Lists are filtered and paginated client-side. Use CellGuide for cell-type descriptions and marker genes. Census expression-matrix queries and binary downloads are not provided.',
+    sources: ['CELLxGENE Discover'],
+    termsUrl: 'https://cellxgene.cziscience.com/',
+    requiresNcbi: false
+  },
+  {
+    id: 'cellosaurus',
+    displayName: 'Cellosaurus',
+    aliases: ['Cellosaurus', 'cell line identity', 'CVCL'],
+    description:
+      'Cell line identity, origin, diseases, quality records and database mappings from Cellosaurus.',
+    useWhen:
+      'Use for laboratory cell line identity and curated quality information: search names and aliases, resolve CVCL or RRID:CVCL identifiers, inspect species/tissue origin and donor disease, known contamination or misidentification, ICLAC registrations, and external database mappings. Search returns candidates; select an accession before requesting details. No recorded problem does not certify a sample. This read-only API requires no authentication.',
+    sources: ['Cellosaurus'],
+    termsUrl: 'https://www.cellosaurus.org/description.html',
+    requiresNcbi: false,
+    group: 'directory'
   },
   {
     id: 'cellguide',

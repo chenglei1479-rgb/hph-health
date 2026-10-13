@@ -23,6 +23,26 @@ const PYTHON_FILE_CALL_EFFECTS: ReadonlyMap<string, NotebookFileCallEffect> = ne
       [name, { kind: 'read', position: 0, keywords: ['fname'], inputForm: 'lines' }] as const
   ),
   ['scipy.io.loadmat', { kind: 'read', position: 0, keywords: ['file_name'] }],
+  ['scipy.sparse.load_npz', { kind: 'read', position: 0, keywords: ['file'] }],
+  [
+    'scipy.sparse.save_npz',
+    { kind: 'write', position: 0, keywords: ['file'], appendedSuffix: '.npz' }
+  ],
+  // MNE Raw FIF files are a common neurophysiology handoff.  Keep the reader
+  // contract limited to its explicit filename; dynamic paths remain partial.
+  ['mne.io.read_raw_fif', { kind: 'read', position: 0, keywords: ['fname', 'filename'] }],
+  ['rdkit.Chem.MolFromMolFile', { kind: 'read', position: 0, keywords: ['filename'] }],
+  ['rdkit.Chem.MolToMolFile', { kind: 'write', position: 1, keywords: ['filename'] }],
+  // Astropy FITS is a single-file scientific container.  Keep the explicit
+  // path as a complete input/output identity so a later cell can consume the
+  // HDU list without requiring runtime package inspection.
+  ...['astropy.io.fits.open', 'astropy.io.fits.getdata', 'astropy.io.fits.getheader'].map(
+    (name) => [name, { kind: 'read', position: 0, keywords: ['name', 'file', 'filename'] }] as const
+  ),
+  [
+    'astropy.io.fits.writeto',
+    { kind: 'write', position: 0, keywords: ['name', 'filename', 'file'] }
+  ],
   ...['xarray.open_mfdataset', 'open_mfdataset'].map(
     (name) =>
       [name, { kind: 'read', position: 0, keywords: ['paths'], inputForm: 'paths' }] as const
@@ -124,6 +144,12 @@ const PYTHON_FILE_CALL_EFFECTS: ReadonlyMap<string, NotebookFileCallEffect> = ne
       ] as const
   ),
   ['dump', { kind: 'write', position: 1, keywords: ['file', 'filename', 'fp'] }],
+  // Atomic publication moves a temporary file into its final destination. The
+  // source path is intentionally not recorded as a read because mkstemp or a
+  // tempfile helper commonly makes it dynamic; the destination is the durable
+  // notebook output that downstream cells consume.
+  ['os.replace', { kind: 'write', position: 1, keywords: ['dst'] }],
+  ['shutil.move', { kind: 'write', position: 1, keywords: ['dst'] }],
   ['dcmwrite', { kind: 'write', position: 0, keywords: ['filename'] }],
   ['imwrite', { kind: 'write', position: 0, keywords: ['filename'] }],
   ['imsave', { kind: 'write', position: 0, keywords: ['fname'] }],
@@ -182,7 +208,6 @@ const PYTHON_UNSUPPORTED_EXTERNAL_STATE_NAMESPACES = [
   's3fs',
   'secrets',
   'socket',
-  'sqlite3',
   'sqlalchemy',
   'subprocess',
   'tempfile',
@@ -251,8 +276,38 @@ const R_FILE_CALL_EFFECTS: ReadonlyMap<string, NotebookFileCallEffect> = new Map
   ['ArchRProject', { kind: 'write', position: 1, keywords: ['outputDirectory'] }],
   ['tximport', { kind: 'read', position: 0, keywords: ['files'], inputForm: 'paths' }],
   ['readMSData', { kind: 'read', position: 0, keywords: ['files'], inputForm: 'paths' }],
+  [
+    'read10xVisium',
+    { kind: 'read', position: 0, keywords: ['samples', 'sample'], inputForm: 'paths' }
+  ],
+  ['writeVcf', { kind: 'write', position: 1, keywords: ['filename'] }],
   ['createArrowFiles', { kind: 'read', position: 0, keywords: ['inputFiles'], inputForm: 'paths' }],
   ['Spectra', { kind: 'read', position: 0, keywords: ['object'], inputForm: 'paths' }],
+  // DropletUtils reads the 10x Matrix directory (or a collection of sample
+  // directories) into a SingleCellExperiment. Keep each declared root as an
+  // input; the matrix/barcode/features sidecars are discovered by the package.
+  [
+    'read10xCounts',
+    {
+      kind: 'read',
+      position: 0,
+      keywords: ['samples', 'paths', 'path'],
+      inputForm: 'paths'
+    }
+  ],
+  // arrow::open_dataset accepts a file or directory (and a static vector of
+  // sources). Keep the source identity so directory-backed Dataset handles
+  // can participate in cross-cell lineage.
+  [
+    'open_dataset',
+    { kind: 'read', position: 0, keywords: ['sources', 'source'], inputForm: 'paths' }
+  ],
+  // phyloseq::import_biom loads a BIOM community table into a phyloseq
+  // container. Keep the input path explicit so microbiome notebooks expose
+  // file lineage before any taxonomic transforms.
+  ['import_biom', { kind: 'read', position: 0, keywords: ['BIOMfilename'] }],
+  ['HDF5Array', { kind: 'read', position: 0, keywords: ['filepath'] }],
+  ['writeHDF5Array', { kind: 'write', position: 1, keywords: ['filepath'] }],
   ...[
     'dget',
     'fread',
@@ -372,6 +427,7 @@ const R_FILE_CALL_EFFECTS: ReadonlyMap<string, NotebookFileCallEffect> = new Map
     (name) => [name, { kind: 'write', position: 0, keywords: ['filename'] }] as const
   ),
   ['capture.output', { kind: 'write', position: -1, keywords: ['file'], pathOptional: true }],
+  ['cat', { kind: 'write', position: -1, keywords: ['file'], pathOptional: true }],
   ['dput', { kind: 'write', position: 1, keywords: ['file'], pathOptional: true }],
   ['h5write', { kind: 'write', position: 1, keywords: ['file'] }],
   ['image_write', { kind: 'write', position: 1, keywords: ['path'] }],
@@ -380,6 +436,7 @@ const R_FILE_CALL_EFFECTS: ReadonlyMap<string, NotebookFileCallEffect> = new Map
   ['save.image', { kind: 'write', position: 0, keywords: ['file'] }],
   ['saveWidget', { kind: 'write', position: 1, keywords: ['file'] }],
   ['sink', { kind: 'write', position: 0, keywords: ['file'], pathOptional: true }],
+  ['write', { kind: 'write', position: 1, keywords: ['file'] }],
   ['write_file', { kind: 'write', position: 1, keywords: ['file'] }],
   ['write_json', { kind: 'write', position: 1, keywords: ['path'] }],
   ['write_lines', { kind: 'write', position: 1, keywords: ['file'] }],
@@ -411,6 +468,11 @@ const R_FILE_CALL_EFFECTS: ReadonlyMap<string, NotebookFileCallEffect> = new Map
   ['Read10X_h5', { kind: 'read', position: 0, keywords: ['filename'] }],
   ['Read10X', { kind: 'read', position: 0, keywords: ['data.dir'] }],
   ['Load10X_Spatial', { kind: 'read', position: 0, keywords: ['data.dir'] }],
+  // SeuratDisk serializes a Seurat object as one HDF5-backed file. Keep these
+  // contracts explicit so a multi-cell Seurat workflow exposes the handoff
+  // between LoadH5Seurat and SaveH5Seurat in file lineage.
+  ['LoadH5Seurat', { kind: 'read', position: 0, keywords: ['filename', 'file'] }],
+  ['SaveH5Seurat', { kind: 'write', position: 1, keywords: ['filename'] }],
   ...[
     'read_csv',
     'read_csv2',
@@ -436,6 +498,32 @@ const R_FILE_CALL_EFFECTS: ReadonlyMap<string, NotebookFileCallEffect> = new Map
 
 const R_POTENTIAL_FILE_WRITE_CALLS = new Set(['st_write', 'writeRaster'])
 
+// These effects are keyed by bare R function name for compatibility with
+// unqualified calls. Qualified calls must still prove the package that owns
+// the contract, otherwise a user-defined `custom::read10xCounts()` could be
+// mistaken for DropletUtils I/O.
+const R_FILE_CALL_PACKAGES: ReadonlyMap<string, string> = new Map([
+  ['cat', 'base'],
+  ['read10xCounts', 'DropletUtils'],
+  ['read10xVisium', 'SpatialExperiment'],
+  ['writeVcf', 'VariantAnnotation'],
+  ['open_dataset', 'arrow'],
+  ['import_biom', 'phyloseq'],
+  ['HDF5Array', 'HDF5Array'],
+  ['writeHDF5Array', 'HDF5Array'],
+  ['LoadH5Seurat', 'SeuratDisk'],
+  ['SaveH5Seurat', 'SeuratDisk']
+])
+
+const rFileCallEffect = (
+  name: string,
+  qualifiedPackage?: string
+): NotebookFileCallEffect | undefined => {
+  const expectedPackage = R_FILE_CALL_PACKAGES.get(name)
+  if (expectedPackage && qualifiedPackage && expectedPackage !== qualifiedPackage) return undefined
+  return R_FILE_CALL_EFFECTS.get(name)
+}
+
 const isPotentialRFileWriteCall = (name: string): boolean =>
   R_POTENTIAL_FILE_WRITE_CALLS.has(name) ||
   (name !== 'write' && /^(?:export|save|write)/u.test(name))
@@ -447,6 +535,7 @@ export {
   PYTHON_FILESYSTEM_OBSERVATIONS,
   PYTHON_UNSUPPORTED_EXTERNAL_STATE_NAMESPACES,
   R_FILE_CALL_EFFECTS,
+  rFileCallEffect,
   R_GRAPHICS_FILE_DEVICES,
   isPotentialRFileWriteCall
 }

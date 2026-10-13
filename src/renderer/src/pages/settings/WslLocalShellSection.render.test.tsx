@@ -161,7 +161,7 @@ beforeEach(() => {
     }
   })
   switchToPowerShell = vi.fn().mockResolvedValue({
-    runtimeBinding: { kind: 'powershell', version: '5.1' },
+    runtimeBinding: { kind: 'powershell', version: '7.6' },
     appliesTo: 'subsequent-executions',
     wslProfilePreserved: true
   })
@@ -480,7 +480,7 @@ describe('WslLocalShellSection', () => {
     await flush()
 
     expect(container.textContent).toContain('could not finish changing the Shell runtime')
-    expect(container.textContent).toContain('Restart MedResearch Agent')
+    expect(container.textContent).toContain('Restart DRA')
     expect(container.textContent).toContain('Try switching again')
     expect(container.textContent).not.toContain('Future Shell commands will use PowerShell')
     expect(probe).toHaveBeenCalledOnce()
@@ -615,7 +615,7 @@ describe('WslLocalShellSection', () => {
 
     expect(container.textContent).toContain('wsl_workspace_not_ntfs · a1b2c3d4')
     expect(container.textContent).toContain(
-      'Move the MedResearch Agent data folder to a local NTFS drive'
+      'Move the DRA data folder to a local NTFS drive'
     )
     expect(container.textContent).toContain('Not checked')
     expect(container.querySelector('[role="alert"]')).not.toBeNull()
@@ -812,11 +812,11 @@ describe('WslLocalShellSection', () => {
   it.each([
     [
       'wsl_dependency_install_failed',
-      'MedResearch Agent could not install the missing Linux dependencies.'
+      'DRA could not install the missing Linux dependencies.'
     ],
     [
       'wsl_dependency_install_unconfirmed',
-      'MedResearch Agent could not confirm that the missing Linux dependencies were installed.'
+      'DRA could not confirm that the missing Linux dependencies were installed.'
     ],
     [
       'wsl_dependency_install_not_allowed',
@@ -826,7 +826,7 @@ describe('WslLocalShellSection', () => {
       'wsl_dependency_install_not_supported',
       'Automatic installation is unavailable for this distribution.'
     ],
-    ['wsl_install_journal_unavailable', 'MedResearch Agent could not safely record the installation.']
+    ['wsl_install_journal_unavailable', 'DRA could not safely record the installation.']
   ])('explains dependency installation recovery for %s', async (errorCode, expectedCopy) => {
     const candidate: WslSetupSnapshot = {
       ...dependencySnapshot(errorCode),

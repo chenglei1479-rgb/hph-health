@@ -11,15 +11,16 @@ export const credentialRecoveryMessage = (
   const title = translate('Credential storage needs recovery')
   const description = error.reason.startsWith('linux-')
     ? translate(
-        'Linux OS credentials require an available Secret Service backend and /usr/bin/busctl. Unlock the original default keyring and restart. For an unsupported backend, use a compatible application version without changing the backend or profile.'
+        'Linux OS credentials require the original selected Secret Service or KWallet backend and /usr/bin/busctl. Unlock the original default keyring or wallet and restart. Do not change the password-store backend or profile to bypass this check.'
       )
     : error.reason.includes('unsupported')
       ? translate(
           'Silent credential identity checks are not supported by this system credential backend. Startup has stopped to preserve existing encrypted data.'
         )
       : translate(
-          'MedResearch Agent could not safely access existing encrypted data. Unlock the system credential store or restore the original key and profile, then restart. Existing credentials have not been replaced.'
+          'DRA could not safely access existing encrypted data. Unlock the system credential store or restore the original key and profile, then restart. Existing credentials have not been replaced.'
         )
-  const code = error.probe?.reason ? `${error.reason} / ${error.probe.reason}` : error.reason
+  const details = [error.probe?.reason, error.diagnosticCode].filter(Boolean)
+  const code = details.length ? `${error.reason} / ${details.join(' / ')}` : error.reason
   return `${title}\n\n${description}\n\nCREDENTIAL_IDENTITY: ${code}`
 }

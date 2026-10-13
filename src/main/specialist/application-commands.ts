@@ -12,7 +12,18 @@ import {
   type UploadTransferRequest,
   type UploadTransferStatus
 } from '../../shared/uploads'
-import type { UpdateSpecialistRequest, SetSpecialistEnabledRequest } from '../../shared/specialist'
+import type {
+  UpdateSpecialistRequest,
+  SetSpecialistEnabledRequest,
+  SetSessionSpecialistRequest,
+  SetSessionSpecialistResponse
+} from '../../shared/specialist'
+import type {
+  GetMarketplaceReleaseRequest,
+  ListMarketplaceRequest,
+  MarketplaceSnapshot,
+  MarketplaceSpecialistRelease
+} from '../../shared/specialist-marketplace'
 import {
   defineApplicationCommand,
   defineApplicationCommandGroup,
@@ -25,11 +36,15 @@ import {
 import type { UploadCommandOwner } from '../uploads/command-owner'
 import type { SpecialistService } from './service'
 import type { SpecialistPackageService } from './package/service'
+import type { MarketplaceService } from './marketplace/service'
+import type { SessionSpecialistReconfiguration } from './session-reconfiguration'
 
 type Dependencies = {
   service: Pick<SpecialistService, 'listForSettingsSnapshot' | 'update' | 'setEnabled'>
   packages: Pick<SpecialistPackageService, 'preview' | 'install' | 'cancel' | 'dispose' | 'report'>
   uploads: UploadCommandOwner
+  marketplace: Pick<MarketplaceService, 'list' | 'getRelease'>
+  sessionReconfiguration: Pick<SessionSpecialistReconfiguration, 'requestSwitch'>
   onProfilesChanged: () => void
 }
 
@@ -44,6 +59,20 @@ const beginRequest = z
 const transferRequest = z.object({ transferId: z.string().min(1) }).strict()
 const candidateRequest = z.object({ candidateToken: z.string().min(1) }).strict()
 const enabledRequest = z.object({ id: z.string().min(1), enabled: z.boolean() }).strict()
+// Parity with the Electron IPC parseListMarketplaceRequest: undefined passes through, otherwise
+// exactly { forceRefresh: boolean } — anything else is rejected as renderer data.
+const parseListMarketplaceRequest = (request: unknown): { forceRefresh?: boolean } | undefined => {
+  if (request === undefined) return undefined
+  if (
+    typeof request !== 'object' ||
+    request === null ||
+    Object.keys(request).length !== 1 ||
+    typeof (request as { forceRefresh?: unknown }).forceRefresh !== 'boolean'
+  ) {
+    throw new Error('Marketplace list does not accept renderer data.')
+  }
+  return { forceRefresh: (request as { forceRefresh: boolean }).forceRefresh }
+}
 
 // Web callers receive negative, process-local IDs, disjoint from Electron WebContents IDs.
 // Candidate identity stays in the existing package service, never in browser-supplied data.
@@ -56,6 +85,13 @@ export type SpecialistApplicationOwner = {
   setEnabled: (
     request: SetSpecialistEnabledRequest
   ) => ReturnType<Dependencies['service']['setEnabled']>
+  setSessionSpecialist: (
+    request: SetSessionSpecialistRequest
+  ) => Promise<SetSessionSpecialistResponse>
+  listMarketplace: (request?: ListMarketplaceRequest) => Promise<MarketplaceSnapshot>
+  getMarketplaceRelease: (
+    request: GetMarketplaceReleaseRequest
+  ) => Promise<MarketplaceSpecialistRelease>
   beginUpload: (
     invocation: ApplicationInvocation<readonly [BeginUploadTransferRequest]>
   ) => Promise<UploadTransferStatus>
@@ -76,6 +112,8 @@ export const createSpecialistApplicationOwner = ({
   service,
   packages,
   uploads,
+  marketplace,
+  sessionReconfiguration,
   onProfilesChanged
 }: Dependencies): SpecialistApplicationOwner => {
   type Caller = {
@@ -153,6 +191,21 @@ export const createSpecialistApplicationOwner = ({
       onProfilesChanged()
       return result
     },
+    // Parity with the Electron IPC parse in ipc.ts: sessionId must be a string, specialistId
+    // must be a string or undefined — anything else is rejected as renderer data.
+    setSessionSpecialist: async (request: SetSessionSpecialistRequest) => {
+      if (!request || typeof request.sessionId !== 'string') {
+        throw new Error('SET_SESSION_SPECIALIST: sessionId must be a string.')
+      }
+      if (request.specialistId !== undefined && typeof request.specialistId !== 'string') {
+        throw new Error('SET_SESSION_SPECIALIST: specialistId must be a string or undefined.')
+      }
+      return sessionReconfiguration.requestSwitch(request.sessionId, request.specialistId)
+    },
+    listMarketplace: async (request?: ListMarketplaceRequest) =>
+      marketplace.list(parseListMarketplaceRequest(request)),
+    getMarketplaceRelease: (request: GetMarketplaceReleaseRequest) =>
+      marketplace.getRelease(request),
     beginUpload: async (
       invocation: ApplicationInvocation<readonly [BeginUploadTransferRequest]>
     ) => {
@@ -282,6 +335,11 @@ const commands = [
     Awaited<ReturnType<SpecialistApplicationOwner['setEnabled']>>
   >('specialist:set-enabled'),
   command<
+    'specialist:set-session-specialist',
+    readonly [SetSessionSpecialistRequest],
+    Awaited<ReturnType<SpecialistApplicationOwner['setSessionSpecialist']>>
+  >('specialist:set-session-specialist'),
+  command<
     'specialist:package-upload-begin',
     readonly [BeginUploadTransferRequest],
     Awaited<ReturnType<SpecialistApplicationOwner['beginUpload']>>
@@ -301,7 +359,17 @@ const commands = [
   >('specialist:package-install'),
   command<'specialist:package-cancel', readonly [SpecialistPackageInstallRequest], void>(
     'specialist:package-cancel'
-  )
+  ),
+  command<
+    'specialist:marketplace-list',
+    readonly [request?: ListMarketplaceRequest],
+    MarketplaceSnapshot
+  >('specialist:marketplace-list'),
+  command<
+    'specialist:marketplace-release-get',
+    readonly [GetMarketplaceReleaseRequest],
+    MarketplaceSpecialistRelease
+  >('specialist:marketplace-release-get')
 ] as const
 
 export const specialistApplicationCommandGroup = defineApplicationCommandGroup(
@@ -318,11 +386,14 @@ export const registerSpecialistApplicationCommands = (
       'specialist:list': () => owner.list(),
       'specialist:update': ({ args }) => owner.update(args[0]),
       'specialist:set-enabled': ({ args }) => owner.setEnabled(args[0]),
+      'specialist:set-session-specialist': ({ args }) => owner.setSessionSpecialist(args[0]),
       'specialist:package-upload-begin': (invocation) => owner.beginUpload(invocation),
       'specialist:package-upload-preview': (invocation) => owner.previewUpload(invocation),
       'specialist:package-upload-abort': (invocation) => owner.abortUpload(invocation),
       'specialist:package-install': (invocation) => owner.install(invocation),
-      'specialist:package-cancel': (invocation) => owner.cancel(invocation)
+      'specialist:package-cancel': (invocation) => owner.cancel(invocation),
+      'specialist:marketplace-list': ({ args }) => owner.listMarketplace(args[0]),
+      'specialist:marketplace-release-get': ({ args }) => owner.getMarketplaceRelease(args[0])
     })
     return scope.complete(() => owner.dispose())
   } catch (error) {

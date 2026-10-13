@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest'
 import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
+import { readPdfFixture } from './read-fixture'
 
 const { captionKind, findCaptionCandidates, groupPageLines } = await import(
   pathToFileURL(resolve('resources/pdf-structure/literature-pdf-caption-group.mjs')).href
@@ -11,6 +12,195 @@ const { associateTableNotes } = await import(
 const { associateFigures, associateTableCaptions } = await import(
   pathToFileURL(resolve('resources/pdf-structure/literature-pdf-association.mjs')).href
 )
+
+const multilineFigureCaption = (title: string): ReturnType<typeof JSON.parse> => ({
+  pageNumber: 1,
+  width: 600,
+  height: 800,
+  invalidGraphicsBounds: 0,
+  lines: [title, 'demonstrate the response across the measured conditions.'].map((text, n) => ({
+    text,
+    x: 50,
+    y: 250 + n * 14,
+    width: 300,
+    height: 10,
+    fontSize: 10
+  })),
+  graphicsBounds: [{ kind: 'image', normalizedRect: [50 / 600, 50 / 800, 350 / 600, 235 / 800] }]
+})
+
+it.each(['Figure 1b. Results', 'Fig. 1b. Results'])(
+  'associates the complete native multiline caption after its first line is accepted: %s',
+  (title) => {
+    const page = multilineFigureCaption(title),
+      before = structuredClone(page),
+      captions = findCaptionCandidates([page])
+    expect(captions).toHaveLength(1)
+    expect(captions[0].lines).toEqual(page.lines.map((line: { text: string }) => line.text))
+    const figures = associateFigures(page, captions)
+    expect(figures).toHaveLength(1)
+    expect(figures[0].caption).toEqual(captions[0])
+    expect(figures[0].rect).toEqual([50, 50, 350, 235])
+    expect(page).toEqual(before)
+  }
+)
+
+it.each(['Figure 1b. Results demonstrate a measured effect.', 'Fig. 1b. Results show the effect.'])(
+  'retains first-line prose rejection during figure association: %s',
+  (title) => {
+    const page = multilineFigureCaption(title)
+    expect(findCaptionCandidates([page])).toEqual([])
+    expect(
+      associateFigures(page, [
+        { page: 1, lines: [title, page.lines[1].text], rect: [50, 250, 350, 274] }
+      ])
+    ).toEqual([])
+  }
+)
+
+it('retains the complete multiline facing-page exclusion after accepting the figure title', () => {
+  const page = multilineFigureCaption('Figure 1b. Results'),
+    caption = {
+      page: 1,
+      lines: [page.lines[0].text, `${page.lines[1].text} (facing page)`],
+      rect: [50, 250, 350, 274]
+    }
+  expect(associateFigures(page, [caption])).toEqual([])
+})
+
+const splitFigureHeading = (): ReturnType<typeof JSON.parse> =>
+  readPdfFixture('src/main/literature/pdf-structure/fixtures/branching-flowchart.jsonl')
+
+it('associates an independently grouped native figure label with its immediate title', () => {
+  const f = splitFigureHeading(),
+    before = structuredClone(f),
+    captions = findCaptionCandidates([f.page])
+  expect(captions).toEqual(f.captions)
+  expect(captions[0].lines).toEqual(['Figure 1.', 'CONSORT diagram.'])
+  const figures = associateFigures(f.page, captions, f.tables)
+  expect(figures).toHaveLength(1)
+  expect(figures[0].caption).toEqual(captions[0])
+  expect(figures[0].rect).toEqual([80.192125, 95.10697265625001, 441.0566875, 475.53486328125])
+  expect(figures[0].graphicsCount).toBe(17)
+  expect(f).toEqual(before)
+})
+
+it.each(['Figure 1.', 'Fig. 1.', 'Fig 1:', 'Figure S1.', 'Figure SM1.'])(
+  'classifies only the immediate title of a split numbered figure label: %s',
+  (label) => {
+    const f = splitFigureHeading()
+    f.captions[0].lines = [label, 'CONSORT diagram.', 'Results demonstrate the measured response.']
+    expect(captionKind(label)).toBeUndefined()
+    const figures = associateFigures(f.page, f.captions, f.tables)
+    expect(figures).toHaveLength(1)
+    expect(figures[0].caption).toEqual(f.captions[0])
+    expect(figures[0].rect).toBeDefined()
+  }
+)
+
+it.each([
+  ['Figure 1.'],
+  ['Figure 1.', ''],
+  ['Figure 1.', '   '],
+  ['Figure 1.', '', 'CONSORT diagram.'],
+  ['Figure 1.', 'As shown in the figure, the response is stable.'],
+  ['Figure 1.', 'In our study, the baseline is unchanged.'],
+  ['Fig. 1.', 'Thus, the result is larger.'],
+  ['Figure 1.', 'CONSORT diagram. (facing page)'],
+  ['Figure.', 'CONSORT diagram.'],
+  ['Figure Title.', 'CONSORT diagram.'],
+  ['Figure 1 shows a measured response.', 'CONSORT diagram.'],
+  ['Figure IV.', 'CONSORT diagram.'],
+  ['Fig. IV.', 'CONSORT diagram.']
+])('refuses unsupported or prose split-heading evidence: %s', (...lines) => {
+  const f = splitFigureHeading()
+  f.captions[0].lines = lines
+  expect(associateFigures(f.page, f.captions, f.tables)).toEqual([])
+})
+
+const repeatedTableNumber = (): ReturnType<typeof JSON.parse> =>
+  readPdfFixture(
+    'src/main/literature/pdf-structure/fixtures/source-grids/repeated-number-above-described-table.jsonl'
+  )
+
+const spacedDefinitionCaption = (): ReturnType<typeof JSON.parse> =>
+  readPdfFixture(
+    'src/main/literature/pdf-structure/fixtures/source-grids/double-spaced-caption-definition-tail.jsonl'
+  )
+
+it('retains the closed double-spaced definition tail of an accepted unfinished table caption', () => {
+  const f = spacedDefinitionCaption()
+  const caption = associateTableCaptions(f.page, f.tables, f.candidates)[0].caption
+  expect(caption.lines).toEqual(f.page.lines.map((l: { text: string }) => l.text))
+  expect(caption.rect[3]).toBeCloseTo(365.74)
+})
+
+it.each([
+  'completed-title',
+  'single-definition',
+  'closed-definition',
+  'capitalized-tail',
+  'open-tail',
+  'different-font',
+  'shifted-tail',
+  'uneven-leading',
+  'intervening-text'
+])('keeps the original caption without closed native definition evidence: %s', (change) => {
+  const f = spacedDefinitionCaption()
+  if (change === 'completed-title') {
+    f.candidates[0].lines[0] += '.'
+    f.page.lines[0].text += '.'
+  }
+  if (change === 'single-definition') f.page.lines[1].text = 'treatment. CC ='
+  if (change === 'closed-definition') f.page.lines[1].text += ' last outcome.'
+  if (change === 'capitalized-tail') f.page.lines[2].text = 'Another paragraph.'
+  if (change === 'open-tail') f.page.lines[2].text = 'third outcome'
+  if (change === 'different-font') f.page.lines[2].fontSize = 13
+  if (change === 'shifted-tail') f.page.lines[2].x += 10
+  if (change === 'uneven-leading') f.page.lines[2].y += 6
+  if (change === 'intervening-text')
+    f.page.lines.push({ ...f.page.lines[2], text: 'Unrelated text.', y: 345 })
+  expect(associateTableCaptions(f.page, f.tables, f.candidates)[0].caption).toEqual(f.candidates[0])
+})
+
+it.each([0.7, 1.8])('retains native definition leading at scale %s', (scale) => {
+  const f = spacedDefinitionCaption()
+  for (const l of f.page.lines)
+    for (const k of ['x', 'y', 'width', 'height', 'fontSize']) l[k] *= scale
+  f.page.width *= scale
+  f.page.height *= scale
+  for (const t of f.tables) t.rect = t.rect.map((v: number) => v * scale)
+  for (const c of f.candidates) c.rect = c.rect.map((v: number) => v * scale)
+  expect(associateTableCaptions(f.page, f.tables, f.candidates)[0].caption.lines).toHaveLength(3)
+})
+
+it('uses the complete description when a nearby number is repeated above the same table', () => {
+  const f = repeatedTableNumber()
+  expect(associateTableCaptions(f.page, f.tables, f.candidates)[0].caption).toEqual(f.candidates[1])
+})
+
+it.each(['different-number', 'short-description', 'third-caption', 'misaligned-label'])(
+  'keeps repeated-number caption ambiguity without %s evidence',
+  (change) => {
+    const f = repeatedTableNumber()
+    if (change === 'different-number')
+      f.candidates[1].lines[0] = 'Table 4. Overview of study records and follow-up results.'
+    if (change === 'short-description') f.candidates[1].lines[0] = 'Table 3. Records'
+    if (change === 'third-caption')
+      f.candidates.push({
+        ...f.candidates[1],
+        lines: ['Table 4. Other records and follow-up results.']
+      })
+    if (change === 'misaligned-label') f.candidates[0].rect = [90, 70.26, 130, 81.24]
+    expect(associateTableCaptions(f.page, f.tables, f.candidates)[0].caption).toBeUndefined()
+  }
+)
+
+it('does not move a repeated description to a table that only owns the short label', () => {
+  const f = repeatedTableNumber()
+  f.tables.push({ rect: [68.6667, 282, 755.3333, 290] })
+  expect(associateTableCaptions(f.page, f.tables, f.candidates)[0].caption).toBeUndefined()
+})
 
 it('keeps consecutive above-table captions with their own compact tables', () => {
   const page = { pageNumber: 6, height: 783, lines: [] }
@@ -729,6 +919,156 @@ it('prefers a nearby aligned caption over an equally close caption in the other 
   expect(matches[1].rect).toBeUndefined()
 })
 
+it('recovers a conservative crop when paired graphics leave caption direction ambiguous', () => {
+  const page = {
+    pageNumber: 1,
+    width: 600,
+    height: 800,
+    invalidGraphicsBounds: 0,
+    lines: [],
+    graphicsBounds: [
+      { kind: 'image', normalizedRect: [0.1, 0.1, 0.3, 0.3] },
+      { kind: 'image', normalizedRect: [0.7, 0.1, 0.9, 0.3] },
+      { kind: 'image', normalizedRect: [0.1, 0.7, 0.3, 0.9] },
+      { kind: 'image', normalizedRect: [0.7, 0.7, 0.9, 0.9] }
+    ]
+  }
+  const [figure] = associateFigures(page, [
+    {
+      page: 1,
+      lines: ['Figure 1. A paired multi-panel result with an intentionally ambiguous layout.'],
+      rect: [90, 370, 510, 390]
+    }
+  ])
+  expect(figure.rect).toBeDefined()
+  expect(figure.rect).toEqual([58, 78, 542, 242])
+})
+
+it('keeps a vertically adjacent figure crop inside the caption lane', () => {
+  const page = {
+    pageNumber: 1,
+    width: 600,
+    height: 800,
+    invalidGraphicsBounds: 0,
+    lines: [],
+    graphicsBounds: [
+      { kind: 'image', normalizedRect: [0.1, 0.1, 0.19, 0.3] },
+      { kind: 'image', normalizedRect: [0.21, 0.1, 0.3, 0.3] },
+      { kind: 'image', normalizedRect: [0.7, 0.1, 0.9, 0.3] },
+      { kind: 'image', normalizedRect: [0.1, 0.7, 0.19, 0.9] },
+      { kind: 'image', normalizedRect: [0.21, 0.7, 0.3, 0.9] },
+      { kind: 'image', normalizedRect: [0.7, 0.7, 0.9, 0.9] }
+    ]
+  }
+  const [figure] = associateFigures(page, [
+    {
+      page: 1,
+      lines: ['Figure 2. A caption belonging to the left column.'],
+      rect: [60, 370, 250, 390]
+    }
+  ])
+  expect(figure.rect).toEqual([58, 78, 182, 242])
+})
+
+it('does not merge a neighboring side-column graphic during conservative recovery', () => {
+  const sideColumns = {
+    pageNumber: 1,
+    width: 600,
+    height: 800,
+    invalidGraphicsBounds: 0,
+    lines: [],
+    graphicsBounds: [
+      { kind: 'path', normalizedRect: [0.05, 0.32, 0.2, 0.47] },
+      { kind: 'image', normalizedRect: [0.38, 0.32, 0.52, 0.47] },
+      { kind: 'image', normalizedRect: [0.48, 0.32, 0.58, 0.47] },
+      { kind: 'path', normalizedRect: [0.7, 0.05, 0.75, 0.2] },
+      { kind: 'path', normalizedRect: [0.76, 0.05, 0.81, 0.2] },
+      { kind: 'path', normalizedRect: [0.82, 0.05, 0.87, 0.2] }
+    ]
+  }
+  const [figure] = associateFigures(sideColumns, [
+    { page: 1, lines: ['Figure 3. Side-column result.'], rect: [400, 330, 550, 430] }
+  ])
+  expect(figure.rect).toEqual([226, 254, 350, 378])
+})
+
+it('rejects a graphics-count-only listing block as a figure', () => {
+  const lines = Array.from({ length: 60 }, (_, index) => ({
+    text: `Listing instruction line ${index} with enough words to resemble prose rather than a plot label.`,
+    x: 60,
+    y: 80 + index * 10,
+    width: 480,
+    height: 8,
+    fontSize: 8
+  }))
+  const graphicsBounds = [
+    ...Array.from({ length: 24 }, (_, index) => ({
+      kind: 'path',
+      normalizedRect: [0.1 + index * 0.03, 0.1, 0.105 + index * 0.03, 0.24]
+    })),
+    ...Array.from({ length: 24 }, (_, index) => ({
+      kind: 'path',
+      normalizedRect: [0.1, 0.1 + index * 0.025, 0.88, 0.105 + index * 0.025]
+    })),
+    ...Array.from({ length: 72 }, (_, index) => ({
+      kind: 'path',
+      normalizedRect: [
+        0.1 + (index % 24) * 0.03,
+        0.12 + Math.floor(index / 24) * 0.04,
+        0.12 + (index % 24) * 0.03,
+        0.14 + Math.floor(index / 24) * 0.04
+      ]
+    }))
+  ]
+  const [figure] = associateFigures(
+    {
+      pageNumber: 1,
+      width: 600,
+      height: 800,
+      invalidGraphicsBounds: 0,
+      lines,
+      graphicsBounds
+    },
+    [{ page: 1, lines: ['Figure 2. Listing block.'], rect: [60, 700, 540, 715] }]
+  )
+  expect(figure.rect).toBeUndefined()
+  expect(figure.issue).toBe('text-dominant-graphics')
+})
+
+it('keeps a dense vector plot when labels are not listing-shaped prose', () => {
+  const graphicsBounds = Array.from({ length: 2_000 }, (_, index) => ({
+    kind: 'path',
+    normalizedRect: [
+      0.1 + (index % 40) * 0.02,
+      0.1 + Math.floor(index / 40) * 0.01,
+      0.125 + (index % 40) * 0.02,
+      0.112 + Math.floor(index / 40) * 0.01
+    ]
+  }))
+  graphicsBounds.unshift({ kind: 'path', normalizedRect: [0.1, 0.1, 0.2, 0.25] })
+  const lines = Array.from({ length: 45 }, (_, index) => ({
+    text: `label ${index} value`,
+    x: 70 + (index % 9) * 55,
+    y: 100 + Math.floor(index / 9) * 35,
+    width: 35,
+    height: 8,
+    fontSize: 8
+  }))
+  const [figure] = associateFigures(
+    {
+      pageNumber: 1,
+      width: 600,
+      height: 800,
+      invalidGraphicsBounds: 0,
+      lines,
+      graphicsBounds
+    },
+    [{ page: 1, lines: ['Figure 3. Dense vector plot.'], rect: [60, 500, 540, 520] }]
+  )
+  expect(figure.rect).toBeDefined()
+  expect(figure.issue).toBeUndefined()
+})
+
 it('does not extend a figure into nearby column prose but retains its axis labels', () => {
   const sample = {
     ...page,
@@ -1413,11 +1753,72 @@ it('rejects running-text references while retaining numbered caption titles', ()
   for (const text of [
     'Table 1 shows the outcomes.',
     'Fig. 2 presents the study flow.',
-    'Figure 3 illustrates the changes.'
+    'Figure 3 illustrates the changes.',
+    'Fig. 4 visualizes the measured trends.',
+    'Figure 5 plots the response curves.',
+    'Figure 6 gives the ablation results.',
+    'Figure 7 follows the calibration path.'
   ])
     expect(captionKind(text)).toBeUndefined()
   expect(captionKind('Table 1. Shows and recordings')).toBe('table')
   expect(captionKind('Fig. 2 Study flow')).toBe('figure')
+})
+
+it('rejects finite-verb table references that were split onto their own lines', () => {
+  const page = readPdfFixture(
+    resolve('src/main/literature/pdf-structure/fixtures/prose-table-reference.jsonl')
+  )
+  expect(
+    findCaptionCandidates([page]).map((candidate: { lines: string[] }) => candidate.lines)
+  ).toEqual([['Table 1. Baseline characteristics of participants.']])
+  for (const text of [
+    'Table 3 reports results the logistic regression results.',
+    'Table 2. It should be mentioned that no patients had ascites.'
+  ])
+    expect(captionKind(text)).toBeUndefined()
+})
+
+it('rejects a bare table number emitted after a paragraph reference', () => {
+  const line = (text: string, y: number, width: number): object => ({
+    text,
+    x: 150,
+    y,
+    width,
+    height: 10,
+    fontSize: 10
+  })
+  const page = {
+    pageNumber: 6,
+    lines: [line('Test statistics are shown in', 540, 145), line('Table 3.', 554, 32)]
+  }
+  expect(findCaptionCandidates([page])).toEqual([])
+})
+
+it('rejects supplementary and table labels split after a reference preposition', () => {
+  const line = (text: string, y: number, x = 108): object => ({
+    text,
+    x,
+    y,
+    width: text.length * 5,
+    height: 10,
+    fontSize: 10
+  })
+  expect(
+    findCaptionCandidates([
+      {
+        pageNumber: 1,
+        lines: [line('the decoding framework is illustrated in', 680, 215), line('Figure S2.', 691)]
+      }
+    ])
+  ).toEqual([])
+  expect(
+    findCaptionCandidates([
+      {
+        pageNumber: 1,
+        lines: [line('the rates are summarized in', 680, 72), line('Table 4.', 691, 72)]
+      }
+    ])
+  ).toEqual([])
 })
 
 it('retains double-spaced manuscript legends only below a legends heading', () => {
@@ -1491,6 +1892,26 @@ it('requires punctuation and title text for an unnumbered table label', () => {
   ]) {
     expect(captionKind(text)).toBeUndefined()
   }
+})
+
+it.each([
+  ['TABLE', 'table'],
+  ['table', 'table'],
+  ['tAbLe', 'table'],
+  ['FIGURE', 'figure'],
+  ['figure', 'figure'],
+  ['fIgUrE', 'figure']
+])('recognizes an explicit unnumbered %s label without loosening title evidence', (label, kind) => {
+  const text = `${label}: Baseline characteristics`,
+    page = {
+      pageNumber: 1,
+      width: 600,
+      height: 800,
+      lines: [{ text, x: 50, y: 50, width: 180, height: 10, fontSize: 10 }]
+    }
+  expect(captionKind(text)).toBe(kind)
+  expect(findCaptionCandidates([page])[0]?.lines).toEqual([text])
+  expect(captionKind(`${label}. shows the patient characteristics.`)).toBeUndefined()
 })
 
 it('keeps stacked titles with their tables when a header rule precedes the predicted rows', () => {
@@ -1593,4 +2014,31 @@ it('stops a caption at a segmented native border overlapping the next glyph box 
   expect(findCaptionCandidates([page], new Map([[1, [rules[0]]]]))[0].lines.length).toBeGreaterThan(
     1
   )
+})
+
+it('keeps an unpunctuated table number with its indented title above a native rule', () => {
+  const page = {
+    pageNumber: 1,
+    width: 600,
+    height: 800,
+    lines: [
+      { text: 'Table 1', x: 54, y: 272.935, width: 33.032, height: 8, fontSize: 8 },
+      {
+        text: 'Clinicopathological factors.',
+        x: 51,
+        y: 284.935,
+        width: 104.832,
+        height: 8,
+        fontSize: 8
+      },
+      { text: 'Factors', x: 160, y: 299.647, width: 29, height: 8, fontSize: 8 },
+      { text: 'Control (n = 19)', x: 400, y: 299.647, width: 65, height: 8, fontSize: 8 }
+    ]
+  }
+  const rules = new Map([[1, [[51, 297.185, 558, 297.185]]]])
+  expect(findCaptionCandidates([page], rules)[0].lines).toEqual([
+    'Table 1',
+    'Clinicopathological factors.'
+  ])
+  expect(findCaptionCandidates([page])[0].lines).toEqual(['Table 1'])
 })

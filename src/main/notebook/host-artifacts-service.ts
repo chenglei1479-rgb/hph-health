@@ -21,6 +21,7 @@ type HostArtifactReadContext = { projectId: string; sessionId: string }
 
 type NormalizedOptions = {
   frameId?: string
+  versionId?: string
   filename?: string
   exact: boolean
   search?: string
@@ -49,6 +50,7 @@ type RankedArtifact = {
 const HOST_ARTIFACTS_CURSOR_SNAPSHOT_CHANGED = 'HOST_ARTIFACTS_CURSOR_SNAPSHOT_CHANGED'
 
 const OPTION_KEYS = new Set([
+  'version_id',
   'frame_id',
   'filename',
   'exact',
@@ -126,6 +128,7 @@ const normalizeOptions = (value: unknown): NormalizedOptions => {
   if (unknown.length > 0) throw new Error(`host.artifacts unknown option: ${unknown[0]}`)
 
   const frameId = optionalString(value, 'frame_id', 512)
+  const versionId = optionalString(value, 'version_id', 512)
   const filename = optionalString(value, 'filename')
   const search = optionalString(value, 'search')
   const contentType = normalizeContentType(value)
@@ -148,6 +151,7 @@ const normalizeOptions = (value: unknown): NormalizedOptions => {
 
   return {
     frameId,
+    versionId,
     filename,
     exact,
     search,
@@ -261,7 +265,10 @@ class HostArtifactsService {
 
   async list(options: unknown, context: HostArtifactReadContext): Promise<HostArtifactsResult> {
     const normalized = normalizeOptions(options)
-    const candidates = await this.catalog.readHostArtifactCatalog({ projectId: context.projectId })
+    const candidates = await this.catalog.readHostArtifactCatalog({
+      projectId: context.projectId,
+      ...(normalized.versionId ? { versionId: normalized.versionId } : {})
+    })
     const snapshotFingerprint = catalogSnapshotFingerprint(candidates)
     const ranked: RankedArtifact[] = candidates.flatMap((item) => {
       if (
@@ -289,6 +296,7 @@ class HostArtifactsService {
 
     const queryKey = JSON.stringify({
       projectId: context.projectId,
+      versionId: normalized.versionId,
       frameId: normalized.frameId,
       filename: normalized.filename,
       exact: normalized.exact,

@@ -10,6 +10,64 @@ const { repairPdfSymbolText, splitPdfNumericRuns, removeBackgroundNumericPadding
 
 it.each([
   'native',
+  'native-small',
+  'wrong-font',
+  'wrong-type',
+  'wrong-width',
+  'wrong-slot',
+  'mapped-name',
+  'wrong-encoding'
+])('recovers the embedded large radical with %s evidence', async (variant) => {
+  const font = {
+    name: 'ABCDEF+CMEX10',
+    type: 'Type1',
+    differences: [] as string[],
+    defaultEncoding: Object.assign([] as string[], { 112: 'p' })
+  }
+  const glyph = { originalCharCode: 112, unicode: 'p', width: 1000 }
+  if (variant === 'native-small') {
+    font.name = 'ABCDEF+CMEX9'
+    glyph.width = 1027.8
+  }
+  if (variant === 'wrong-font') font.name = 'ABCDEF+Times-Roman'
+  if (variant === 'wrong-type') font.type = 'TrueType'
+  if (variant === 'wrong-width') glyph.width = 999
+  if (variant === 'wrong-slot') glyph.originalCharCode = 113
+  if (variant === 'mapped-name') font.differences[112] = 'p'
+  if (variant === 'wrong-encoding') font.defaultEncoding[112] = 'question'
+  const content = { items: [{ str: 'p', fontName: 'native' }] }
+  const operators = { fnArray: [OPS.setFont, OPS.showText], argsArray: [['native', 10], [[glyph]]] }
+  const original = structuredClone({ font, content, operators })
+  const result = await repairPdfSymbolText({ commonObjs: { get: () => font } }, content, operators)
+  expect(result.items[0].str).toBe(['native', 'native-small'].includes(variant) ? '√' : 'p')
+  expect({ font, content, operators }).toEqual(original)
+})
+
+it('repairs legacy ligatures inside table labels', async () => {
+  const content = {
+    items: [{ str: 'Modi¢ed mastectomy; Sleep e⁄ciency; Hot £ashes', fontName: 'source' }]
+  }
+  const page = { commonObjs: { get: () => ({ name: 'ABCDEF+AdvT041' }) } }
+  const operators = {
+    fnArray: [OPS.setFont, OPS.showText],
+    argsArray: [
+      ['source', 12],
+      [
+        [
+          { originalCharCode: 162, unicode: '¢', width: 500 },
+          { originalCharCode: 135, unicode: '⁄', width: 770 },
+          { originalCharCode: 163, unicode: '£', width: 500 }
+        ]
+      ]
+    ]
+  }
+  expect((await repairPdfSymbolText(page, content, operators)).items[0].str).toBe(
+    'Modified mastectomy; Sleep efficiency; Hot flashes'
+  )
+})
+
+it.each([
+  'native',
   'shifted-slots',
   'wrong-font',
   'wrong-width',
@@ -32,7 +90,8 @@ it.each([
       f.font.differences[glyph.originalCharCode] = name
     }
   }
-  const content = { items: [{ str: '\u0015 40.3; \u0014 60', fontName: 'native' }] }
+  const sourceItem = { pageNumber: 3, index: 19, text: '\u0015 40.3; \u0014 60' }
+  const content = { items: [{ str: sourceItem.text, fontName: 'native', sourceItem }] }
   const operators = {
     fnArray: [OPS.setFont, OPS.showText],
     argsArray: [['native', 10], [f.glyphs]]
@@ -47,17 +106,54 @@ it.each([
     ['native', 'shifted-slots'].includes(variant) ? '≥ 40.3; ≤ 60' : content.items[0].str
   )
   expect({ f, content, operators }).toEqual(original)
+  expect(result.items[0].sourceItem).toEqual(sourceItem)
 })
 
 it.each([
+  ['MathematicalPi-One', 35, '#', '≤', 833],
+  ['MathematicalPi-One', 36, '$', '≥', 833],
+  ['MathematicalPi-One', 49, '1', '+', 833],
+  ['MathematicalPi-One', 50, '2', '−', 833],
+  ['MathematicalPi-One', 53, '5', '=', 833],
+  ['MathematicalPi-One', 54, '6', '±', 833],
+  ['AdvP80675', 49, '1', '+', 833],
+  ['AdvP80675', 50, '2', '−', 833],
+  ['AdvOT9d186844', 53, '5', '=', 833],
+  ['AdvPSMP13', 68, 'D', 'Δ', 666],
   ['AdvTir_symb', 66, 'B', '≤', 750],
   ['AdvTir_symb', 67, 'C', '≥', 750],
   ['AdvOT463cc31e', 53, '5', '=', 822],
+  ['AdvOT463cc31e', 49, '1', '+', 822],
+  ['AdvOT463cc31e', 50, '2', '−', 822],
+  ['AdvOT463cc31e', 51, '3', '×', 822],
+  ['AdvOT463cc31e', 54, '6', '±', 822],
+  ['AdvOT9d186844', 53, '5', '=', 822],
+  ['AdvOT8817665d', 36, '$', '≥', 822],
+  ['AdvPS7DED', 50, '2', '−', 833],
   ['AdvPS586B', 54, '6', '±', 833],
+  ['AdvPS586B', 49, '1', '+', 833],
+  ['AdvPS586B', 50, '2', '−', 833],
+  ['AdvPS586B', 44, ',', '<', 833],
+  ['AdvP80675', 54, '6', '±', 833],
+  ['AdvPS7DED', 53, '5', '=', 833],
   ['AdvPS586B', 53, '5', '=', 833],
+  ['AdvMPi-One', 53, '5', '=', 833],
+  ['AdvPSSPS-AS', 41, ')', '−', 635],
+  ['AdvPi1', 123, '{', '†', 500],
+  ['AdvT041', 135, '⁄', 'ffi', 770],
+  ['AdvT041', 161, '¡', 'ff', 562],
+  ['AdvT041', 162, '¢', 'fi', 500],
+  ['AdvT041', 163, '£', 'fl', 500],
+  ['AdvPSSym', 135, '⁄', '/', 166],
+  ['AdvPSSym', 133, '–', '±', 552],
+  ['AdvPSSym', 163, '£', '≤', 552],
+  ['AdvPSSym', 130, '‡', '≥', 552],
+  ['AdvP586B', 54, '6', '±', 833],
+  ['AdvT678', 162, '¢', 'fi', 500],
   ['AdvMT_SY', 188, '¼', '=', 770],
   ['MinionMathSymbols', 136, '�', '=', 583],
   ['TeX_CM_Bold_Maths_Symbols', 136, '¼', '=', 885],
+  ['TeX_CM_Bold_Maths_Symbols', 135, 'þ', '+', 885],
   ['AdvP7CA8', 85, 'U', '=', 833],
   ['AdvPS3FDD77', 91, '[', '=', 1000],
   ['AdvPSMP4', 91, '[', '>', 1000],
@@ -65,6 +161,8 @@ it.each([
   ['AdvPS44A44B', 67, 'C', '+', 1000],
   ['AdvTT454a7a89', 98, 'b', '<', 562],
   ['TeX_CM_Maths_Symbols', 0, '\u0000', '−', 250],
+  ['TeX_CM_Maths_Symbols', 133, 'ð', '(', 385],
+  ['TeX_CM_Maths_Symbols', 134, 'Þ', ')', 385],
   ['AdvPS3F4C13', 117, 'u', 'ω', 718],
   ['AdvP0DE0', 177, '±', '–', 552],
   ['AdvP0DE0', 174, 'Æ', 'fi', 614],
@@ -114,6 +212,28 @@ it.each([
           source.replace(String(unicode), String(replacement))
         )
       }
+    }
+  }
+)
+
+it.each(['native', 'wrong-font', 'wrong-width', 'conflicting-name'])(
+  'repairs source statistical glyph encodings with %s evidence',
+  async (variant) => {
+    const cases = readPdfFixture(
+      resolve(
+        'src/main/literature/pdf-structure/fixtures/native-statistical-symbol-encodings.jsonl'
+      )
+    )
+    for (const { font, glyph, expected } of cases) {
+      if (variant === 'wrong-font') font.name = 'Times-Roman'
+      if (variant === 'wrong-width') glyph.width++
+      if (variant === 'conflicting-name') font.differences[glyph.originalCharCode] = 'unknown'
+      const content = { items: [{ str: glyph.unicode, fontName: 'source' }] }
+      const result = await repairPdfSymbolText({ commonObjs: { get: () => font } }, content, {
+        fnArray: [OPS.setFont, OPS.showText],
+        argsArray: [['source', 10], [[glyph]]]
+      })
+      expect(result.items[0].str).toBe(variant === 'native' ? expected : glyph.unicode)
     }
   }
 )
@@ -419,6 +539,13 @@ it('discards off-crop form text while keeping visible text and outer captions', 
   const result = await repairPdfSymbolText({}, content, operators)
   expect(result.items.map((i: { str: string }) => i.str)).toEqual(['visible', 'caption'])
   expect(content.items).toHaveLength(3)
+  const symbols = ['𝛽', '𝛼', '𝜇']
+  const unicode = { items: content.items.map((item, i) => ({ ...item, str: symbols[i] })) }
+  const unicodeOps = structuredClone(operators)
+  for (const [i, at] of [2, 3, 5].entries()) unicodeOps.argsArray[at] = text(symbols[i])
+  expect(
+    (await repairPdfSymbolText({}, unicode, unicodeOps)).items.map((i: { str: string }) => i.str)
+  ).toEqual(['𝛼', '𝜇'])
 })
 
 it('recovers legacy math symbols using the font and original glyph code', async () => {
@@ -619,6 +746,57 @@ it('recovers case only from a consistent subset encoding and exact glyph stream 
   }
 })
 
+it('splits mixed counts and probabilities only at measured native gutters', () => {
+  const f = readPdfFixture(
+    resolve(
+      'src/main/literature/pdf-structure/fixtures/mixed-count-statistics-with-native-gutters.jsonl'
+    )
+  )
+  const original = structuredClone(f)
+  const result = splitPdfNumericRuns(f.content, f.operators).items
+  expect(result.map((i: { str: string }) => i.str)).toEqual([
+    '25 (27.2%)',
+    '47 (52.2%)',
+    '48 (56.4%)',
+    '<0.001',
+    '10 (22.2%)',
+    '29 (64.4%)',
+    '30 (73.2%)',
+    '<0.001',
+    '15 (31.9%)',
+    '18 (40%)'
+  ])
+  expect(result[3].transform[4]).toBeCloseTo(211.7467446, 6)
+  expect(result[4].transform[4]).toBeCloseTo(234.42345006, 6)
+  expect(result.at(-1).transform[4] + result.at(-1).width).toBeCloseTo(
+    f.content.items[0].transform[4] + f.content.items[0].width,
+    6
+  )
+  expect(f).toEqual(original)
+  const inconsistent = structuredClone(f.content)
+  inconsistent.items[0].width += 1
+  expect(splitPdfNumericRuns(inconsistent, f.operators)).toEqual(inconsistent)
+  // The same words with ordinary inline spaces do not establish columns.
+  const glyphs = [...'12 (20%) 24 (40%) 0.123'].map((unicode) => ({
+    unicode,
+    width: unicode === ' ' ? 250 : 500
+  }))
+  const item = {
+    str: '12 (20%) 24 (40%) 0.123',
+    fontName: 'inline',
+    transform: [10, 0, 0, 10, 0, 0],
+    dir: 'ltr',
+    height: 10,
+    width: glyphs.reduce((n, g) => n + g.width / 100, 0)
+  }
+  expect(
+    splitPdfNumericRuns(
+      { items: [item] },
+      { fnArray: [OPS.setFont, OPS.showText], argsArray: [['inline', 10], [glyphs]] }
+    ).items
+  ).toEqual([item])
+})
+
 it('splits fraction-valued runs using unequal TJ advances and text spacing', () => {
   const parts = ['1 (2/3)', '4 (5/6)', '7 (8/9)']
   const glyphs = (text: string): object[] =>
@@ -634,6 +812,7 @@ it('splits fraction-valued runs using unequal TJ advances and text spacing', () 
   }
   const item = {
     str: parts.join(' '),
+    sourceItem: { pageNumber: 1, index: 7, text: parts.join(' ') },
     fontName: 'f',
     dir: 'ltr',
     transform: [10, 0, 0, 10, 100, 500],
@@ -643,6 +822,17 @@ it('splits fraction-valued runs using unequal TJ advances and text spacing', () 
   }
   const result = splitPdfNumericRuns({ items: [item] }, ops).items
   expect(result.map((i: { str: string }) => i.str)).toEqual(parts)
+  expect(result.every((i: { sourceItem?: unknown }) => i.sourceItem === undefined)).toBe(true)
+  const prefix = { ...item, str: '𝛼', width: 5 }
+  const prefixedOps = {
+    fnArray: [ops.fnArray[0], OPS.showText, ...ops.fnArray.slice(1)],
+    argsArray: [ops.argsArray[0], [glyphs('𝛼')], ...ops.argsArray.slice(1)]
+  }
+  expect(
+    splitPdfNumericRuns({ items: [prefix, item] }, prefixedOps).items.map(
+      (i: { str: string }) => i.str
+    )
+  ).toEqual(['𝛼', ...parts])
   expect(result.map((i: { hasEOL: boolean }) => i.hasEOL)).toEqual([false, false, true])
   for (const [i, x] of [100, 145.9, 200.8].entries()) {
     expect(result[i].transform[4]).toBeCloseTo(x, 6)
@@ -721,9 +911,12 @@ it.each([
 )
 
 it.each([
+  ['MathematicalPi-Three', 115, 's', 333, '('],
+  ['MathematicalPi-Three', 100, 'd', 333, ')'],
   ['AdvMacMthSyN', 188, '¼', 781, '='],
   ['AdvMacMthSyN', 2, '\u0002', 781, '−'],
   ['AdvEls-ent4', 111, 'o', 979, '<'],
+  ['AdvEls-ent4', 114, 'r', 979, '≤'],
   ['AdvEls-ent5', 90, 'Z', 979, '≥'],
   ['AdvPSMP13', 97, 'a', 552, 'α'],
   ['AdvPSMP13', 98, 'b', 552, 'β'],
@@ -748,6 +941,29 @@ it.each([
       ['Times-Roman', unicode]
     ]) {
       const page = { commonObjs: { get: () => ({ name: font, differences: { 2: 'C0' } }) } }
+      expect((await repairPdfSymbolText(page, content, ops)).items[0].str).toBe(value)
+    }
+  }
+)
+
+it.each([
+  [107, 'k', 500, '‖'],
+  [106, 'j', 270, '|']
+] as const)(
+  'recovers verified footnote bar slot %s without changing Latin letters',
+  async (code, unicode, width, expected) => {
+    const content = { items: [{ str: unicode, fontName: 'math' }] }
+    for (const [name, advance, slot, value] of [
+      ['ICLIDA+AdvP4C4E74', width, unicode, expected],
+      ['AdvPSSAB-R', width, unicode, unicode],
+      ['AdvP4C4E74', width + 1, unicode, unicode],
+      ['AdvP4C4E74', width, 'unknown', unicode]
+    ] as const) {
+      const page = { commonObjs: { get: () => ({ name, differences: { [code]: slot } }) } }
+      const ops = {
+        fnArray: [OPS.setFont, OPS.showText],
+        argsArray: [['math', 8], [[{ originalCharCode: code, unicode, width: advance }]]]
+      }
       expect((await repairPdfSymbolText(page, content, ops)).items[0].str).toBe(value)
     }
   }
@@ -945,6 +1161,15 @@ it('removes background-coloured decimal padding but retains visible comparisons'
     expect(result.items.map((i: { str: string }) => i.str)).toEqual(
       colour === '#000000' ? ['<', '0.15', '0'] : ['0.15']
     )
+    const prefixedOps = {
+      fnArray: [ops.fnArray[0], OPS.showText, ...ops.fnArray.slice(1)],
+      argsArray: [ops.argsArray[0], [glyphs('𝛼')], ...ops.argsArray.slice(1)]
+    }
+    expect(
+      removeBackgroundNumericPadding({ items: [item('𝛼', 0, 5), ...items] }, prefixedOps).items.map(
+        (i: { str: string }) => i.str
+      )
+    ).toEqual(colour === '#000000' ? ['𝛼', '<', '0.15', '0'] : ['𝛼', '0.15'])
     const detached = {
       items: items.map((i) => ({
         ...i,
@@ -1031,14 +1256,15 @@ it.each([
 
 it.each([
   ['1515) ED arm (n', ['1515)', 'ED arm (n']],
-  ['Median age, years (range) 50 (23', ['Median age, years (range)', '50 (23']]
+  ['Median age, years (range) 50 (23', ['Median age, years (range)', '50 (23']],
+  ['𝛼 (range) 50 (23', ['𝛼 (range)', '50 (23']]
 ])('splits a joined table run by verified glyph advances: %s', (str, expected) => {
   const glyphs = [...str].map((unicode) => ({ unicode, width: 500, isSpace: unicode === ' ' }))
   const item = {
     str,
     fontName: 'f',
     dir: 'ltr',
-    width: str.length * 5,
+    width: [...str].length * 5,
     height: 10,
     transform: [10, 0, 0, 10, 100, 500],
     hasEOL: true
@@ -1062,7 +1288,7 @@ it.each([
   }
   const result = splitPdfNumericRuns({ items: [item, other] }, ops).items
   expect(result.slice(0, 2).map((i: { str: string }) => i.str)).toEqual(expected)
-  expect(result[1].transform[4]).toBe(100 + (expected[0].length + 1) * 5)
+  expect(result[1].transform[4]).toBe(100 + ([...expected[0]].length + 1) * 5)
   expect(result.at(-1)).toEqual(other)
   const invalid = { ...item, width: item.width + 2 }
   expect(splitPdfNumericRuns({ items: [invalid, other] }, ops).items).toEqual([invalid, other])
@@ -1286,6 +1512,7 @@ it.each(['native', 'wrong-font', 'wrong-width', 'wrong-slot', 'wrong-name', 'wro
 it.each([
   ['AdvPSMP10', 118, 'v', 'χ', 500],
   ['AdvPSMP11', 108, 'l', 'μ', 552],
+  ['AdvGreek_B', 108, 'l', 'μ', 552],
   ['AdvP7DED', 53, '5', '=', 833]
 ])(
   'repairs the native clinical-font slot %s/%s without guessing prose',
@@ -1588,5 +1815,38 @@ it.each([250, 500, 900])(
       expect(result[1].transform[4]).toBe(100 + a.length * 5 + gap / 100)
       expect(result[0].width + gap / 100 + result[1].width).toBe(item.width)
     }
+  }
+)
+
+it.each([100, 115])(
+  'requires the verified glyph width for MathematicalPi-Three slot %s',
+  async (code) => {
+    const unicode = String.fromCharCode(code)
+    const content = { items: [{ str: unicode, fontName: 'math' }] }
+    const page = { commonObjs: { get: () => ({ name: 'ABCDEF+MathematicalPi-Three' }) } }
+    const operators = {
+      fnArray: [OPS.setFont, OPS.showText],
+      argsArray: [['math', 10], [[{ originalCharCode: code, unicode, width: 334 }]]]
+    }
+    expect((await repairPdfSymbolText(page, content, operators)).items[0].str).toBe(unicode)
+  }
+)
+it.each([
+  ['AdvP4C4E74', 'C15', 500, '•'],
+  ['AdvP4C4E74', 'C15', 501, '\u000f'],
+  ['AdvP4C4E74', 'C21', 500, '\u000f'],
+  ['Arial', 'C15', 500, '\u000f']
+])(
+  'repairs a verified bullet subset only with matching font, slot and width: %s/%s/%s',
+  async (name, glyphName, width, expected) => {
+    const content = { items: [{ str: '\u000f', fontName: 'symbol' }] }
+    const page = {
+      commonObjs: { get: () => ({ name: 'ABCDEF+' + name, differences: ['', '', '' + glyphName] }) }
+    }
+    const operators = {
+      fnArray: [OPS.setFont, OPS.showText],
+      argsArray: [['symbol', 10], [[{ originalCharCode: 2, unicode: '\u000f', width }]]]
+    }
+    expect((await repairPdfSymbolText(page, content, operators)).items[0].str).toBe(expected)
   }
 )

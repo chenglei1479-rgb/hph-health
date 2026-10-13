@@ -8,6 +8,7 @@ import type { StoreApi } from 'zustand'
 
 import type { ElicitationProjection, ElicitationValue } from '../../../shared/acp'
 import type { ActivePlanProjection } from '../../../shared/session-plan/contract'
+import { activateConversationBranch } from '../../../shared/conversation-graph'
 import { applySessionConversationCommands } from '../../../shared/session-conversation-command'
 import { DEFAULT_PERMISSION_PROFILE } from '../../../shared/permission-profiles'
 import type { PermissionProfileId } from '../../../shared/permission-profiles'
@@ -29,7 +30,10 @@ import {
   type PersistedSessionManifest,
   type PersistedSessionStatus,
   type PersistedToolActivity,
-  type SessionSummary
+  type SessionSummary,
+  type SessionAttention,
+  deriveSessionAttention,
+  projectSessionAttention
 } from '../../../shared/session-persistence'
 import {
   inferSessionInteractionState,
@@ -66,6 +70,8 @@ export type ToolActivity = {
   status: ToolActivityStatus
   toolDisposition?: 'declined' | 'permission-closed'
   executionInvocationId?: string
+  // Set only by the main-process permission owner, never by provider metadata.
+  appOwned?: true
   eventIds: string[]
   sortIndex: number
   providerToolName?: string
@@ -101,6 +107,8 @@ export type ChatSession = Omit<
   activePlanProjection?: ActivePlanProjection
   planHistoryProjections?: ActivePlanProjection[]
   isPending?: boolean
+  // Renderer-only identity of the durable seed while the optimistic Session is being prepared.
+  pendingBindingSessionId?: string
   // Transient presentation hint returned from Main's durable WSL setup binding. It carries no
   // authority and is refreshed from startup summaries and create/resume responses rather than
   // persisted by renderer.
@@ -133,6 +141,7 @@ export type ChatSession = Omit<
   activeMessageCount?: number
   artifactCount?: number
   presentedActivityAt?: number
+  attention?: SessionAttention
 }
 
 export type StreamingMessageContent = {
@@ -170,6 +179,7 @@ export type ApplyDurableSessionProjectionInput = {
     | 'delegated-authority'
     | 'session-details-authority'
     | 'runtime-transcript-authority'
+    | 'prompt-rollback-authority'
     | 'archive-authority'
 }
 
@@ -329,6 +339,7 @@ export const toPersistedSession = (
     activities,
     activityGroups,
     isPending,
+    pendingBindingSessionId,
     wslSetup,
     delegationPolicyAuthorityPending,
     unsavedTitle,
@@ -351,6 +362,8 @@ export const toPersistedSession = (
     activeMessageCount,
     artifactCount,
     presentedActivityAt,
+    attention,
+    recordProblems,
     planHistoryProjections,
     runtimeContext,
     artifacts,
@@ -359,6 +372,7 @@ export const toPersistedSession = (
   } = session
 
   void isPending
+  void pendingBindingSessionId
   void wslSetup
   void delegationPolicyAuthorityPending
   void unsavedTitle
@@ -381,6 +395,8 @@ export const toPersistedSession = (
   void activeMessageCount
   void artifactCount
   void presentedActivityAt
+  void attention
+  void recordProblems
   void runtimeContext
 
   const persistedPlanHistory = sanitizePlanHistoryProjections(planHistoryProjections)
@@ -447,7 +463,11 @@ export const hydrateSession = (session: PersistedChatSession): ChatSession => {
         ? true
         : undefined
   }
-  return { ...hydrated, interactionState: inferSessionInteractionState(hydrated) }
+  return {
+    ...hydrated,
+    attention: deriveSessionAttention(hydrated),
+    interactionState: inferSessionInteractionState(hydrated)
+  }
 }
 
 const hydrateSessionSummary = (summary: SessionSummary): ChatSession => ({
@@ -475,7 +495,11 @@ const hydrateSessionSummary = (summary: SessionSummary): ChatSession => ({
     permission: summary.presentedStatus === 'waiting-permission',
     elicitation: summary.presentedStatus === 'waiting-for-user',
     plan: summary.presentedStatus === 'waiting-plan-approval'
-  }
+  },
+  recordProblems: summary.recordProblems,
+  ...(summary.presentedStatus === 'error'
+    ? { attention: { recordProblems: summary.recordProblems ?? [] } }
+    : {})
 })
 
 const matchesPersistedPlanProjection = (
@@ -550,6 +574,7 @@ const withTransientSessionState = (
       sortIndex: sourceMessages.get(message.id)?.sortIndex
     })),
     isPending: source.isPending,
+    pendingBindingSessionId: source.pendingBindingSessionId,
     wslSetup: source.wslSetup,
     interrupted: source.interrupted ?? hydrated.interrupted,
     fixLoopActive: source.fixLoopActive,
@@ -577,7 +602,17 @@ const withTransientSessionState = (
     branchSwitchBlocked: source.branchSwitchBlocked,
     conversationGraphSyncBlocked: source.conversationGraphSyncBlocked,
     pendingContextReplayMessageId: source.pendingContextReplayMessageId,
-    interactionState: source.interactionState
+    interactionState: source.interactionState,
+    // Recompute durable Attention from the fresh save receipt so a successful
+    // newer turn clears the previous turn's badge. Keep only the local graph-sync
+    // problem from the source projection; it is intentionally renderer-scoped.
+    attention: projectSessionAttention({
+      latestVisibleTurn: hydrated.attention?.turn,
+      recordProblems: [
+        ...(hydrated.attention?.recordProblems ?? []),
+        ...(source.conversationGraphSyncBlocked ? (['conversation-graph-sync'] as const) : [])
+      ]
+    })
   }
 }
 
@@ -876,6 +911,62 @@ export const createSessionPersistenceOwner = <State extends SessionStoreData>(
     set((state) => {
       const current = state.sessions.find((candidate) => candidate.id === session.id)
       if (!current) return state
+      if (mode === 'prompt-rollback-authority') {
+        if (sessionRevision(session) < sessionRevision(current)) return state
+        acknowledgeSessionConversationCommands(session)
+        let authority = session
+        const pending = pendingSessionConversationCommands(session.id)
+        if (pending.length) {
+          try {
+            authority = applySessionConversationCommands(authority, pending)
+          } catch (error) {
+            // Main already committed this rollback. Keeping the pre-rollback projection would leave
+            // a ghost prompt and run, so adopt Main's authority and drop only the commands that
+            // cannot replay on it from this projection; they stay queued for their own outcome.
+            console.warn(
+              'Pending conversation commands could not replay on the rollback authority',
+              error
+            )
+            for (const command of pending) {
+              try {
+                authority = applySessionConversationCommands(authority, [command])
+              } catch {
+                // This command conflicts with committed authority and is not projected.
+              }
+            }
+          }
+        }
+        // This response is Main's narrow conditional rollback, not a renderer baseline snapshot.
+        // Replay unrelated pending commands, but never union the removed optimistic identities back.
+        const localBranch = current.conversationGraph?.frames.find(
+          (frame) => frame.id === current.conversationGraph?.rootFrameId
+        )?.activeBranchId
+        if (
+          localBranch &&
+          authority.conversationGraph?.branches.some((branch) => branch.id === localBranch)
+        ) {
+          authority = {
+            ...authority,
+            conversationGraph: activateConversationBranch(authority.conversationGraph, localBranch)
+          }
+        }
+        const projected = withTransientSessionState(authority, current)
+        projected.interrupted = hydrateSession(authority).interrupted
+        projected.branchContextResetRequired = authority.branchContextResetRequired
+        projected.agentStatus = undefined
+        projected.awaitingFirstAgentOutput = undefined
+        markExternallyHydratedSession(projected, session)
+        return {
+          sessions: state.sessions.map((candidate) =>
+            candidate.id === session.id ? projected : candidate
+          ),
+          streamingMessages: pruneStreamingMessageContent(
+            state.streamingMessages,
+            session.id,
+            new Set(projected.messages.map(({ id }) => id))
+          )
+        } as Partial<State>
+      }
       if (mode === 'runtime-transcript-authority') {
         // Main lifecycle delivery can trail a direct command/save receipt. Once the live store has
         // observed a newer durable revision, an older transcript projection cannot replace it.
@@ -900,6 +991,14 @@ export const createSessionPersistenceOwner = <State extends SessionStoreData>(
           mergeNewerPersistedSessionByIdentity(current, authority),
           current
         )
+        // Recovery aliases follow Main's committed state, including a successful attach with no
+        // eligible user anchor. Retaining this renderer-only flag would leave Resume visible.
+        projected.interrupted = hydrateSession(authority).interrupted
+        if (!authority.activeRun) {
+          projected.agentStatus = undefined
+          projected.awaitingFirstAgentOutput = undefined
+          projected.agentPromptInFlight = undefined
+        }
         markExternallyHydratedSession(projected, session)
         return {
           sessions: state.sessions.map((candidate) =>

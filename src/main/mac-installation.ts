@@ -179,7 +179,7 @@ export const showMacInstallationGuidance = (reason: 'startup' | 'update'): Promi
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
-    title: 'MedResearch Agent',
+    title: 'DRA',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     backgroundColor: '#fbfcfb',

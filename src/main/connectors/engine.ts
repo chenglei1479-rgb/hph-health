@@ -14,7 +14,7 @@ const DEFAULT_BACKOFF_MS = 400
 
 // Some public APIs (e.g. AlphaFold EBI) reject requests without a User-Agent; send a stable one.
 const USER_AGENT =
-  'Mozilla/5.0 (compatible; MedResearch Agent/1.0; +https://github.com/chenglei1479-rgb/hph-health)'
+  'Mozilla/5.0 (compatible; DRA/1.0; +https://github.com/chenglei1479-rgb/hph-health)'
 
 // Strips credential query params (NCBI email/api_key) from a URL before it can land in an error
 // message or log. Falls back to the raw string if it doesn't parse as a URL.
@@ -343,6 +343,7 @@ export class ParserEngine {
           },
           options?.retry === false ? 0 : this.retries
         )
+        if (options?.allowNoContent && response.status === 204) return undefined
         return bodyText === undefined ? response.json() : JSON.parse(bodyText)
       }
     }

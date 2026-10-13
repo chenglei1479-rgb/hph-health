@@ -146,10 +146,10 @@ describe('opencodeFramework.prepareModelConfig', () => {
 
     const rules = JSON.parse(config.env?.OPENCODE_CONFIG_CONTENT ?? '{}').permission
     expect(rules['*']).toBe('ask')
-    for (const tool of ['read', 'lsp', 'skill']) {
+    for (const tool of ['read', 'lsp']) {
       expect(rules[tool]).toBe('allow')
     }
-    for (const tool of ['edit', 'webfetch', 'websearch']) {
+    for (const tool of ['edit', 'webfetch', 'websearch', 'skill']) {
       expect(rules[tool]).toBe('ask')
     }
     for (const tool of ['bash', 'glob', 'grep', 'list']) expect(rules[tool]).toBe('deny')
@@ -292,6 +292,28 @@ describe('opencodeFramework.prepareModelConfig', () => {
     // The key rides the env as a reference only — never a plaintext literal in the pinned layer.
     expect(content.provider.anthropic.options.apiKey).toBe('{env:OPENCODE_APP_API_KEY}')
     expect(config.env?.OPENCODE_CONFIG_CONTENT).not.toContain('"k"')
+  })
+
+  it('pins the Anthropic driver for an app-generated provider id in both config layers', () => {
+    const config = opencodeFramework.prepareModelConfig(
+      {
+        type: 'custom',
+        agentProviderId: 'open-science-messages-model',
+        apiEndpoints: ['anthropic'],
+        baseUrl: 'http://127.0.0.1:41002',
+        model: 'claude-sonnet-4-5',
+        key: 'local-token'
+      },
+      { storageRoot: '/data', executablePath: '/bin/opencode' }
+    )
+    const file = config.configFiles?.find((entry) => entry.path.endsWith('opencode.json'))
+    for (const source of [file?.content, config.env?.OPENCODE_CONFIG_CONTENT]) {
+      const content = JSON.parse(source ?? '{}')
+      expect(content.provider['open-science-messages-model']).toMatchObject({
+        npm: '@ai-sdk/anthropic',
+        options: { baseURL: 'http://127.0.0.1:41002/v1' }
+      })
+    }
   })
 
   it('gives the Anthropic AI SDK a /v1 base so it requests /v1/messages', () => {
@@ -480,6 +502,15 @@ describe('opencodeFramework.prepareModelConfig', () => {
   it.each([
     ['minimax', 'MiniMax-M3', 'none', { thinking: { type: 'disabled' } }],
     ['minimax', 'MiniMax-M3', 'high', { thinking: { type: 'adaptive' } }],
+    ...(['low', 'medium', 'high', 'xhigh', 'max'] as const).map(
+      (effort) =>
+        [
+          'minimax',
+          'MiniMax-M3.1-Flash-Preview',
+          effort,
+          { reasoningEffort: effort, thinking: { type: 'adaptive' } }
+        ] as const
+    ),
     ['xiaomimimo', 'mimo-v2.5-pro', 'none', { thinking: { type: 'disabled' } }],
     ['xiaomimimo', 'mimo-v2.5-pro', 'high', { thinking: { type: 'enabled' } }],
     ['apodex', 'apodex-1.1', 'none', {}],
@@ -737,7 +768,7 @@ describe('buildOpencodeConfig', () => {
     )
 
     // Our rules override the base for every side-effecting built-in.
-    for (const tool of ['edit', 'webfetch', 'websearch']) {
+    for (const tool of ['edit', 'webfetch', 'websearch', 'skill']) {
       expect(config.permission[tool]).toBe('ask')
     }
     expect(config.permission.bash).toBe('deny')
@@ -747,7 +778,7 @@ describe('buildOpencodeConfig', () => {
       explore: { disable: true },
       scout: { disable: true }
     })
-    expect(config.permission.skill).toBe('allow')
+    expect(config.permission.skill).toBe('ask')
   })
 
   it('delegates every side-effecting tool (incl. MCP) via a "*" catch-all, allowing safe reads', () => {
@@ -759,7 +790,7 @@ describe('buildOpencodeConfig', () => {
 
     expect(config.permission['*']).toBe('ask')
     // Safe read-only tools run without prompting (parity with Claude's Ask mode).
-    for (const tool of ['read', 'lsp', 'skill']) {
+    for (const tool of ['read', 'lsp']) {
       expect(config.permission[tool]).toBe('allow')
     }
     // Mutating/external tools are pinned to ask (and unlisted MCP tools fall through to "*" → ask),

@@ -1,6 +1,8 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
+import type { Stats } from 'node:fs'
 import { join } from 'node:path'
 
+import { FileMatcher } from 'app-builder-lib/out/fileMatcher'
 import { load } from 'js-yaml'
 import { describe, expect, it } from 'vitest'
 
@@ -14,7 +16,129 @@ import {
   WINDOWS_CACHE_TRUSTED_OWNER_SIDS
 } from '../src/main/notebook/micromamba-cache'
 
+describe('macOS native privacy purpose descriptions', () => {
+  it.each([
+    'NSDesktopFolderUsageDescription',
+    'NSDocumentsFolderUsageDescription',
+    'NSDownloadsFolderUsageDescription',
+    'NSNetworkVolumesUsageDescription',
+    'NSRemovableVolumesUsageDescription',
+    'NSLocalNetworkUsageDescription'
+  ])('provides a purpose for %s in the app Info.plist configuration', (key) => {
+    const config = load(readFileSync(join(process.cwd(), 'electron-builder.yml'), 'utf8')) as {
+      mac?: { extendInfo?: Record<string, unknown> }
+    }
+
+    expect(config.mac?.extendInfo?.[key]).toEqual(expect.stringMatching(/\S/))
+  })
+})
+
+describe('electron-builder local evidence exclusion', () => {
+  it('declares the native PDF worker imports as production dependencies', () => {
+    const manifest = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'))
+    for (const dependency of [
+      'fontkit',
+      '@embedpdf/pdfium',
+      'pdf-lib',
+      '@huggingface/transformers'
+    ])
+      expect(manifest.dependencies[dependency]).toEqual(expect.stringMatching(/\S/))
+  })
+
+  it('excludes local papers and traces while preserving application and translation resources', () => {
+    const config = load(readFileSync(join(process.cwd(), 'electron-builder.yml'), 'utf8')) as {
+      files: string[]
+      asarUnpack: string[]
+    }
+    // Match the builder's default inclusion for an exclusion-only files list.
+    const filter = new FileMatcher(process.cwd(), process.cwd(), (value) => value, [
+      '**/*',
+      ...config.files
+    ]).createFilter()
+    for (const directory of [
+      'docs/internal',
+      'docs/superpowers',
+      'test-results',
+      'playwright-report',
+      'blob-report',
+      'coverage',
+      'local',
+      '.dev-isolate',
+      '.hallmark',
+      '.scratch',
+      '.superpowers',
+      '.worktree/other-checkout'
+    ]) {
+      // Exclude the directory itself so the packager never traverses private evidence.
+      expect(filter(join(process.cwd(), directory), { isDirectory: () => true } as Stats)).toBe(
+        false
+      )
+      for (const file of ['paper.pdf', 'nested/model.onnx', 'trace.zip', 'screenshot.png'])
+        expect(
+          filter(join(process.cwd(), directory, file), { isDirectory: () => false } as Stats)
+        ).toBe(false)
+    }
+    for (const file of [
+      'out/main/index.js',
+      'out/renderer/index.html',
+      'resources/pdf-translation/worker.mjs',
+      'resources/pdf-translation-local/worker.mjs',
+      'node_modules/@huggingface/transformers/dist/transformers.node.mjs',
+      'node_modules/onnxruntime-web/dist/ort.wasm.bundle.min.mjs',
+      'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs',
+      'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
+      'resources/pdf-translation/NotoSansSC-Regular.otf',
+      'resources/pdf-translation/OFL.txt',
+      'resources/notebook/python_loop.py',
+      'node_modules/fontkit/dist/main.cjs',
+      'node_modules/@embedpdf/pdfium/dist/index.js',
+      'node_modules/pdf-lib/cjs/index.js',
+      'docs/design.md',
+      'package.json',
+      'LICENSE'
+    ])
+      expect(filter(join(process.cwd(), file), { isDirectory: () => false } as Stats)).toBe(true)
+    const unpack = new FileMatcher(
+      process.cwd(),
+      process.cwd(),
+      (value) => value,
+      config.asarUnpack
+    ).createFilter()
+    for (const file of [
+      'resources/pdf-translation/worker.mjs',
+      'resources/pdf-translation-local/worker.mjs',
+      'node_modules/@huggingface/transformers/dist/transformers.node.mjs',
+      'node_modules/onnxruntime-web/dist/ort.wasm.bundle.min.mjs',
+      'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs',
+      'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
+      'resources/pdf-translation/NotoSansSC-Regular.otf',
+      'resources/pdf-translation/OFL.txt',
+      'node_modules/@embedpdf/pdfium/dist/pdfium.wasm',
+      'node_modules/fontkit/dist/main.cjs',
+      'node_modules/pdf-lib/cjs/index.js'
+    ])
+      expect(unpack(join(process.cwd(), file), { isDirectory: () => false } as Stats)).toBe(true)
+  })
+})
+
 describe('electron-builder native image processing', () => {
+  it.each(['tmp/fixture-build/node.exe', 'tmp/fixture-trace.log', 'docs/internal/fixture-plan.md'])(
+    'keeps local-only %s out of the packaged application',
+    (relativePath) => {
+      const root = process.cwd()
+      const config = load(readFileSync(join(root, 'electron-builder.yml'), 'utf8')) as {
+        files?: string[]
+      }
+      const matcher = new FileMatcher(root, root, (pattern) => pattern, config.files)
+      if (matcher.containsOnlyIgnore()) matcher.prependPattern('**/*')
+      const filter = matcher.createFilter()
+      const file = statSync(join(root, 'package.json'))
+
+      expect(filter(join(root, relativePath), file)).toBe(false)
+      expect(filter(join(root, 'out/main/index.js'), file)).toBe(true)
+    }
+  )
+
   it('ships sharp and its platform binary outside the ASAR archive', () => {
     const config = load(readFileSync(join(process.cwd(), 'electron-builder.yml'), 'utf8')) as {
       asarUnpack?: string[]
@@ -195,13 +319,13 @@ describe('electron-builder Windows targets', () => {
     expect(include).toContain('taskkill /F /IM "notebook-appcontainer-host.exe"')
   })
 
-  it('does not claim a Windows publisher while packages remain unsigned', () => {
+  it('requires signature verification without inventing a Windows publisher', () => {
     const config = load(readFileSync(join(process.cwd(), 'electron-builder.yml'), 'utf8')) as {
       win?: { publisherName?: string; verifyUpdateCodeSignature?: boolean }
     }
 
     expect(config.win?.publisherName).toBeUndefined()
-    expect(config.win?.verifyUpdateCodeSignature).toBeUndefined()
+    expect(config.win?.verifyUpdateCodeSignature).toBe(true)
   })
 })
 
@@ -286,10 +410,10 @@ it('registers .science as a viewable document without changing the per-user inst
     })
   )
   expect(config.win.fileAssociations[0]).toMatchObject({
-    name: 'Open Science Session package',
-    description: 'Open-Science Session package'
+    name: 'DRA Session package',
+    description: 'DRA Session package'
   })
-  expect(config.mac.fileAssociations[0].name).toBe('Open-Science Session package')
-  expect(config.linux.fileAssociations[0].name).toBe('Open-Science Session package')
+  expect(config.mac.fileAssociations[0].name).toBe('DRA Session package')
+  expect(config.linux.fileAssociations[0].name).toBe('DRA Session package')
   expect(config.nsis).toMatchObject({ perMachine: false, allowElevation: false })
 })

@@ -1,13 +1,14 @@
 appId: com.aipoch.medresearch-agent
-productName: MedResearch Agent
+productName: DRA
 copyright: Copyright © 2026 AIPOCH
 directories:
   buildResources: build
 # Apply a valid deep ad-hoc signature on macOS (no Developer ID available). Without this,
 # electron-builder ships an incompletely-signed bundle that Gatekeeper flags as "damaged"
 # on downloaded/quarantined copies, so the app won't launch on other machines. See the hook.
-afterPack: build/adhoc-sign.cjs
+afterPack: build/deployment-pack.cjs
 afterSign: build/sign-windows.cjs
+afterAllArtifactBuild: build/verify-windows-release.cjs
 files:
   - '!**/.vscode/*'
   # Agent/AI tooling state lives in the project (.claude holds git worktrees — full nested repo
@@ -17,6 +18,12 @@ files:
   - '!.claude{,/**/*}'
   - '!.codex{,/**/*}'
   - '!**/{.worktree,.worktrees,.codegraph,.agents}{,/**/*}'
+  # Runtime source builds, diagnostic traces and internal plans are local-only artifacts.
+  - '!tmp{,/**/*}'
+  # electron-builder does not apply .gitignore: local papers, model spikes, screenshots and
+  # traces must never enter an installer built from a developer checkout.
+  - '!docs/{internal,superpowers}{,/**/*}'
+  - '!{test-results,playwright-report,blob-report,coverage,local,.dev-isolate,.hallmark,.scratch,.superpowers}{,/**/*}'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md,UPSTREAM_README.md,MEDICAL_RESEARCH_AGENT.md}'
@@ -50,6 +57,9 @@ files:
   - '!node_modules/pdfjs-dist/image_decoders{,/**/*}'
   - '!node_modules/pdfjs-dist/types{,/**/*}'
   - '!node_modules/pdfjs-dist/**/*.map'
+  # Local translation selects offline WASM CPU ONNX; retain WASM binaries, omit source maps.
+  - '!node_modules/@huggingface/transformers/**/*.map'
+  - '!node_modules/onnxruntime-{node,common,web}/**/*.map'
   # Micromamba is copied from this staging tree to the resources root by the platform-specific
   # extraResources entries below. Keep the staging copies out of app.asar and avoid shipping a
   # second, unused copy under app.asar.unpacked/resources/bin.
@@ -57,6 +67,24 @@ files:
 asarUnpack:
   - resources/**
   - '!resources/bin{,/**/*}'
+  # The translation worker runs outside asar and resolves its WASM/font dependencies there.
+  - node_modules/@embedpdf/pdfium/**
+  - node_modules/fontkit/**
+  - node_modules/@pdf-lib/upng/**
+  - node_modules/@pdf-lib/standard-fonts/**
+  - node_modules/pako/**
+  - node_modules/unicode-trie/**
+  - node_modules/unicode-properties/**
+  - node_modules/tiny-inflate/**
+  - node_modules/restructure/**
+  - node_modules/fast-deep-equal/**
+  - node_modules/dfa/**
+  - node_modules/clone/**
+  - node_modules/base64-js/**
+  - node_modules/brotli/**
+  - node_modules/tslib/**
+  - node_modules/@swc/helpers/**
+  - node_modules/pdf-lib/**
   - node_modules/@aipoch/credential-identity-probe-native/build/Release/credential_*
   - node_modules/@aipoch/process-tree-native/build/Release/*.node
   - node_modules/@aipoch/safe-file-publisher-native/build/Release/*.node
@@ -66,6 +94,11 @@ asarUnpack:
   - node_modules/detect-libc/**
   - node_modules/semver/**
   - node_modules/sharp/**
+  # Offline translation needs physical WASM assets; Transformers also imports native ONNX bindings.
+  - node_modules/@huggingface/**
+  - node_modules/onnxruntime-node/**
+  - node_modules/onnxruntime-common/**
+  - node_modules/onnxruntime-web/**
   - node_modules/@img/**
   # The ACP agent runs as a spawned child process, so its entry must live outside the asar.
   - node_modules/@agentclientprotocol/claude-agent-acp/**
@@ -81,6 +114,9 @@ extraResources:
   # Keep the project license readable outside app.asar on every platform.
   - from: LICENSE
     to: LICENSE.txt
+  # Keep the copied third-party provider icon paths' MIT notice readable in every packaged app.
+  - from: src/renderer/src/assets/provider-icons/LobeHub-icons-LICENSE
+    to: LobeHub-icons-LICENSE
   - from: node_modules/.prisma
     to: node_modules/.prisma
   - from: node_modules/@prisma/client
@@ -98,26 +134,32 @@ extraResources:
       - '*.d.ts'
       - 'LICENSE'
       - 'package.json'
-# Windows: stable releases use Azure Artifact Signing; nightly and other builds remain unsigned.
+# All Windows release builds require a valid signing identity.
 # The afterSign hook supplements missing bundled PE signatures for Store submissions after
 # electron-builder edits/signs the launcher. Existing helper/vendor signatures are preserved.
 win:
+  forceCodeSigning: true
+  verifyUpdateCodeSignature: true
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
     - ext: science
-      name: Medical Research Agent Session package
-      description: Medical Research Agent Session package
+      name: DRA Session package
+      description: DRA Session package
       mimeType: application/x-open-science-session
       role: Viewer
       rank: Default
   executableName: medresearch-agent
   icon: build/icon.ico
-  artifactName: aipoch-${name}-${version}-win-${arch}.${ext}
+  artifactName: deep-research-agent-${version}-win-${arch}.${ext}
   # AppContainer profiles and firewall rules require a product uninstaller, so Windows ships only
   # through NSIS. A portable ZIP could be deleted without releasing those durable resources.
   target:
     - nsis
   extraResources:
+    - from: resources/profile-launcher.ps1
+      to: profile-launcher.ps1
+    - from: resources/profile-launcher.cmd
+      to: profile-launcher.cmd
     # Staged per-arch micromamba binary, copied to the resources root (Task 2's resolveMicromamba
     # looks for it there via process.resourcesPath).
     - from: resources/bin/win/${arch}/micromamba.exe
@@ -135,7 +177,7 @@ win:
     - from: packages/notebook-network-sandbox/vendor/wsl2/manifest.json
       to: notebook-network-sandbox/wsl2/manifest.json
 nsis:
-  artifactName: aipoch-${name}-${version}-win-${arch}-setup.${ext}
+  artifactName: deep-research-agent-${version}-win-${arch}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -151,8 +193,8 @@ mac:
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
     - ext: science
-      name: Medical Research Agent Session package
-      description: Medical Research Agent Session package
+      name: DRA Session package
+      description: DRA Session package
       mimeType: application/x-open-science-session
       role: Viewer
       rank: Default
@@ -161,19 +203,23 @@ mac:
   # volume still uses the legacy, explicitly-designed ICNS artwork.
   icon: build/icon.icon
   darkModeSupport: true
-  artifactName: aipoch-${name}-${version}-mac-${arch}.${ext}
+  artifactName: deep-research-agent-${version}-mac-${arch}.${ext}
   # Minimum macOS to run the app (written to Info.plist LSMinimumSystemVersion). macOS 12 (Monterey)
   # and up; below this the OS refuses to launch. Independent of the CI build runner's macOS version.
   minimumSystemVersion: '12.0.0'
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     # Electron locates its Helper bundles using this internal name. Keep it aligned with productName.
-    CFBundleName: MedResearch Agent
-    CFBundleDisplayName: MedResearch Agent
+    CFBundleName: DRA
+    CFBundleDisplayName: DRA
     NSCameraUsageDescription: Application requests access to the device's camera.
     NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+    NSDesktopFolderUsageDescription: Open-Science needs access to Desktop files to browse, open, and save your research files.
+    NSDocumentsFolderUsageDescription: Open-Science needs access to Documents files to browse, open, and save your research files.
+    NSDownloadsFolderUsageDescription: Open-Science needs access to Downloads files to browse, open, and save your research files.
+    NSNetworkVolumesUsageDescription: Open-Science needs access to network volumes to browse, open, and save your research files.
+    NSRemovableVolumesUsageDescription: Open-Science needs access to removable volumes to browse, open, and save your research files.
+    NSLocalNetworkUsageDescription: Open-Science needs local network access to connect to compute hosts and services you configure.
   notarize: false
   extraResources:
     # Ship the ad-hoc-signed micromamba mach-O at Contents/Resources/micromamba, where
@@ -182,14 +228,14 @@ mac:
     - from: resources/bin/mac/${arch}/micromamba
       to: micromamba
 dmg:
-  title: MedResearch Agent
+  title: DRA
   background: build/dmg-background.png
   iconSize: 88
   iconTextSize: 12
   contents:
     - x: 130
       y: 286
-      name: MedResearch Agent.app
+      name: DRA.app
     - x: 530
       y: 286
       type: link
@@ -205,13 +251,13 @@ dmg:
   # Stable macOS releases require a primary signature on the outer DMG in addition to the signed app
   # and notarization ticket. Nightly and certificate-free builds override this to false in build.yml.
   sign: true
-  artifactName: aipoch-${name}-${version}-mac-${arch}.${ext}
+  artifactName: deep-research-agent-${version}-mac-${arch}.${ext}
 linux:
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
     - ext: science
-      name: Medical Research Agent Session package
-      description: Medical Research Agent Session package
+      name: DRA Session package
+      description: DRA Session package
       mimeType: application/x-open-science-session
       role: Viewer
       rank: Default
@@ -234,13 +280,13 @@ linux:
     - from: build/deb-cli-launcher
       to: medresearch-agent-cli
 appImage:
-  artifactName: aipoch-${name}-${version}-linux-${arch}.${ext}
+  artifactName: deep-research-agent-${version}-linux-${arch}.${ext}
 deb:
   fpm:
     - build/deb-copyright=/usr/share/doc/medresearch-agent/copyright
   afterInstall: build/deb-after-install.tpl
   afterRemove: build/deb-after-remove.tpl
-  artifactName: aipoch-${name}_${version}_${arch}.${ext}
+  artifactName: deep-research-agent-${version}-${arch}.${ext}
   depends:
     - libgtk-3-0
     - libnotify4
@@ -253,13 +299,7 @@ deb:
     - libsecret-1-0
     - bubblewrap
 npmRebuild: false
-# electron-updater feed. Win/Linux/macOS auto-update reads app-update.yml (generated from this block)
-# and fetches its feed from <url>. Each installed app uses the default latest channel. macOS
-# builds preserve uniquely named per-arch feed artifacts; release.yml merges them into latest-mac.yml
-# after optional notarization. --publish never means this configuration does not upload anything.
-publish:
-  provider: generic
-  url: https://statics.aipoch.com/medical-research-agent/app/stable
-  channel: latest
+# No third-party update feed. Re-enable only with an operator-controlled DRA release service.
+publish: null
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/

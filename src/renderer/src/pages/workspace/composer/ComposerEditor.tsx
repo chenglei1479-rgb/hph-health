@@ -46,7 +46,7 @@ import { useMentionTrigger } from './useMentionTrigger'
 // rendered as a model-driven overlay (see below) rather than a CSS :empty hint, so it shows whenever
 // the doc is empty — including when the editor is blurred or retains a stray browser-inserted node.
 const composerEditorClassName =
-  'min-h-[36px] max-h-[200px] w-full overflow-y-auto whitespace-pre-wrap break-words bg-transparent py-1.5 text-[15px] leading-relaxed text-text-000 outline-none'
+  'min-h-[36px] max-h-[200px] w-full overflow-y-auto whitespace-pre-wrap break-words bg-transparent py-1.5 text-[15px] leading-relaxed text-text-000 outline-none focus-visible:outline-none'
 
 // Placeholder overlay aligned to the editor's text start; pointer-events-none lets clicks reach the box.
 const composerPlaceholderClassName =
@@ -757,7 +757,13 @@ export const ComposerEditor = ({
       }
     }
     // Enter submits; Shift+Enter inserts a newline; IME composition never submits.
-    if (event.key === 'Enter' && !event.shiftKey && !composingRef.current) {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !composingRef.current &&
+      !event.nativeEvent.isComposing &&
+      event.nativeEvent.keyCode !== 229
+    ) {
       event.preventDefault()
       onSubmit()
     }
@@ -823,12 +829,12 @@ export const ComposerEditor = ({
       event.clipboardData?.getData(PASTED_TEXT_CLIPBOARD_TYPE) ?? ''
     )
     if (internalFragment && onLongTextPaste) {
-      event.preventDefault()
       const root = editorRef.current
       const pastedTextNodes = root
         ? insertComposerClipboardFragmentAtCaret(root, internalFragment)
         : []
       if (root && pastedTextNodes.length > 0) {
+        event.preventDefault()
         onLongTextPaste(domToDoc(root), pastedTextNodes, undoCaretRef.current)
         undoCaretRef.current = undefined
       }
@@ -837,7 +843,6 @@ export const ComposerEditor = ({
     // For text, insert it as plain text ourselves to keep the contenteditable free of rich HTML.
     const text = event.clipboardData?.getData('text/plain') ?? ''
     if (text) {
-      event.preventDefault()
       const root = editorRef.current
       if (onLongTextPaste && shouldAttachPastedText(text)) {
         const node: ComposerPastedTextNode = {
@@ -846,11 +851,15 @@ export const ComposerEditor = ({
           text
         }
         if (root && insertPastedTextAtCaret(root, node)) {
+          event.preventDefault()
           onLongTextPaste(domToDoc(root), node, undoCaretRef.current)
           undoCaretRef.current = undefined
         }
       } else {
-        if (root && insertPlainTextAtCaret(root, text)) emitDocFromDom()
+        if (root && insertPlainTextAtCaret(root, text)) {
+          event.preventDefault()
+          emitDocFromDom()
+        }
       }
     }
   }

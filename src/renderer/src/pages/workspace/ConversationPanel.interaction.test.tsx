@@ -7,16 +7,30 @@ import { createRoot, type Root } from 'react-dom/client'
 import type { PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { forkSessionMock } = vi.hoisted(() => ({ forkSessionMock: vi.fn(async () => undefined) }))
+const { forkSessionMock, scrollerProps } = vi.hoisted(() => ({
+  forkSessionMock: vi.fn(async () => undefined),
+  scrollerProps: { turnOutcomeActions: undefined as unknown }
+}))
 vi.mock('@/lib/session-fork', () => ({
   forkSession: forkSessionMock,
   sessionForkAvailable: () => true
 }))
 
 import { ConversationPanel } from './ConversationPanel'
+import { createSessionDiscussionAnnotation } from './session-discussion-annotation'
+import { SessionPromptPreparationOwner } from '../../../../main/session-persistence/prompt-preparation-owner'
+import { recordRestartTurnOutcome } from '../../../../main/session-persistence/turn-outcome-authority'
+import {
+  materializeSessionConversationGraph,
+  normalizeSessionAfterRestore
+} from '../../../../shared/session-persistence'
+import type { SessionConversationCommand } from '../../../../shared/session-conversation-command'
+import { HistoricalTurnOutcome, type TurnOutcomeActions } from './TurnOutcomeNotice'
+import { createWorkspaceConversationTimeline } from './workspace-conversation-timeline'
+import { useConversationSubmissions } from './use-conversation-submissions'
 import { FOCUS_COMPOSER_EVENT } from './composer-focus-events'
 import { subscribeAnnotationReveal } from './annotations/annotation-reveal'
-import { emptyDoc, type ComposerDoc } from './composer/composer-doc'
+import { docFromText, emptyDoc, type ComposerDoc } from './composer/composer-doc'
 
 import {
   createInitialGrantedFoldersState,
@@ -31,6 +45,7 @@ import {
   createInitialSessionState,
   createSessionStore,
   toPersistedSession,
+  hydrateSession,
   type ChatSession
 } from '@/stores/session-store'
 import type { ActivePlanProjection } from '../../../../shared/session-plan/contract'
@@ -67,6 +82,7 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
     <div>{children}</div>
   ),
   DropdownMenuSeparator: (): React.JSX.Element => <hr />,
+  DropdownMenuLabel: ({ children }: PropsWithChildren): React.JSX.Element => <div>{children}</div>,
   DropdownMenuItem: ({
     children,
     disabled,
@@ -207,26 +223,50 @@ vi.mock('./WorkspaceMessageScroller', () => ({
     credentialPending,
     isResumingSession,
     visiblePermissionPending,
-    pendingElicitations = []
+    pendingElicitations = [],
+    onStartResearch,
+    activeSession,
+    turnOutcomeActions
   }: {
+    activeSession?: ChatSession
+    turnOutcomeActions?: TurnOutcomeActions
     forkSourceContent?: React.ReactNode
     credentialPending?: boolean
     isResumingSession?: boolean
     visiblePermissionPending?: boolean
     pendingElicitations?: unknown[]
-  }): React.JSX.Element => (
-    <>
-      {forkSourceContent}
-      {isResumingSession ? (
-        <span data-testid="resume-progress-indicator">Resuming session</span>
-      ) : null}
-      <span data-testid="scroller-pending-elicitations">{pendingElicitations.length}</span>
-      <span data-testid="scroller-credential-pending">{String(credentialPending ?? false)}</span>
-      <span data-testid="scroller-visible-permission-pending">
-        {String(visiblePermissionPending ?? false)}
-      </span>
-    </>
-  )
+    onStartResearch?: (prompt: string) => void
+  }): React.JSX.Element => {
+    scrollerProps.turnOutcomeActions = turnOutcomeActions
+    return (
+      <>
+        {forkSourceContent}
+        {activeSession && turnOutcomeActions
+          ? createWorkspaceConversationTimeline(activeSession).map((item) =>
+              item.type === 'turn-outcome' ? (
+                <HistoricalTurnOutcome
+                  key={item.id}
+                  promptMessageId={item.promptMessageId}
+                  outcome={item.outcome}
+                  actions={turnOutcomeActions}
+                />
+              ) : null
+            )
+          : null}
+        {onStartResearch ? (
+          <button onClick={() => onStartResearch('Analyze my data')}>Start research</button>
+        ) : null}
+        {isResumingSession ? (
+          <span data-testid="resume-progress-indicator">Resuming session</span>
+        ) : null}
+        <span data-testid="scroller-pending-elicitations">{pendingElicitations.length}</span>
+        <span data-testid="scroller-credential-pending">{String(credentialPending ?? false)}</span>
+        <span data-testid="scroller-visible-permission-pending">
+          {String(visiblePermissionPending ?? false)}
+        </span>
+      </>
+    )
+  }
 }))
 
 // The ledger is covered by its own test file; here it is a props-reflecting sentinel so
@@ -630,12 +670,14 @@ const createPanelDefaults = (): PanelProps => ({
         bindings: [],
         pendingBindingId: undefined,
         isPending: false,
+        automaticAttachments: [],
         automaticAttachmentCount: 0
       }
     },
     actions: {
       discardWslSetupDraft: vi.fn(() => false),
       changeDoc: vi.fn(),
+      appendLiterature: vi.fn(() => true),
       addAnnotation: vi.fn(),
       updateAnnotationNote: vi.fn(),
       removeAnnotation: vi.fn(),
@@ -787,6 +829,12 @@ const createPanelDefaults = (): PanelProps => ({
   },
   subagents: {
     stop: vi.fn()
+  },
+  submissions: {
+    stopBySessionId: new Map(),
+    resumePendingSessionIds: new Set(),
+    submitStop: vi.fn(),
+    submitResume: vi.fn()
   }
 })
 
@@ -810,10 +858,15 @@ const mergePanelProps = (defaults: PanelProps, overrides: DeepPartial<PanelProps
   return merge(defaults, overrides) as PanelProps
 }
 
+const PanelHarness = (props: PanelProps): React.JSX.Element => {
+  const submissions = useConversationSubmissions()
+  return <ConversationPanel {...props} submissions={submissions} />
+}
+
 const renderPanel = (props: DeepPartial<PanelProps> = {}): void => {
   const panelProps = mergePanelProps(createPanelDefaults(), props)
   act(() => {
-    root.render(<ConversationPanel {...panelProps} />)
+    root.render(<PanelHarness {...panelProps} />)
   })
 }
 
@@ -888,17 +941,72 @@ const dispatchPaste = (files: File[]): boolean => {
   return event.defaultPrevented
 }
 
-const dispatchDrag = (type: string, dataTransferTypes: string[], files: File[] = []): void => {
+const dispatchDrag = (
+  type: string,
+  dataTransferTypes: string[],
+  files: File[] = [],
+  target = getComposerForm()
+): void => {
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperty(event, 'dataTransfer', {
     value: { types: dataTransferTypes, files, dropEffect: 'none' }
   })
   act(() => {
-    getComposerForm().dispatchEvent(event)
+    target.dispatchEvent(event)
   })
 }
 
 describe('ConversationPanel header spacing', () => {
+  it('keeps a storage-limit explanation local to the blocked conversation', () => {
+    renderPanel({ view: { persistenceBlocked: true } })
+    expect(container.textContent).toContain('Conversation storage limit reached')
+    expect(container.textContent).toContain('Start a new conversation to keep working.')
+    renderPanel({ view: { persistenceBlocked: false } })
+    expect(container.textContent).not.toContain('Conversation storage limit reached')
+  })
+
+  it('keeps storage, turn and operation errors independent above the composer', () => {
+    const activeSession: ChatSession = {
+      id: 'blocked-failed-turn',
+      projectId: 'project-a',
+      title: 'Blocked failed turn',
+      cwd: '/workspace',
+      status: 'error',
+      messages: [
+        {
+          ...planOriginMessages()[0],
+          turnOutcome: {
+            kind: 'failed',
+            settledAt: 2,
+            error: 'Admitted turn failed.',
+            errorReportable: true
+          }
+        }
+      ],
+      createdAt: 1,
+      updatedAt: 2
+    }
+    renderPanel({
+      view: {
+        activeSession,
+        persistenceBlocked: true,
+        actionError: 'Independent operation failed.'
+      }
+    })
+    expect(container.textContent).toContain('Conversation storage limit reached')
+    expect(container.querySelector('[data-slot="turn-outcome-notice"]')?.textContent).toContain(
+      'Admitted turn failed.'
+    )
+    expect(container.textContent).toContain('Independent operation failed.')
+
+    renderPanel({ view: { activeSession, persistenceBlocked: false, actionError: null } })
+    expect(container.textContent).not.toContain('Conversation storage limit reached')
+    expect(container.textContent).not.toContain('Independent operation failed.')
+    expect(container.querySelector('[data-slot="turn-outcome-notice"]')?.textContent).toContain(
+      'Admitted turn failed.'
+    )
+  })
+
   it('shows background export progress in New conversation and Session workspace', () => {
     act(() =>
       usePackageOperationStore.setState({
@@ -962,6 +1070,100 @@ describe('ConversationPanel header spacing', () => {
     expect(button.disabled).toBe(false)
     act(() => button.click())
     expect(exportDiagnostics).toHaveBeenCalledWith(expect.objectContaining({ id: session.id }))
+  })
+
+  it('opens an empty side chat from the persistent header menu without sending the main draft', async () => {
+    const createDraft = vi.fn(() => 'empty-side-chat')
+    const start = vi.fn()
+    const changeDoc = vi.fn()
+    renderPanel({
+      view: {
+        activeSession: {
+          id: 'header-session',
+          projectId: 'project-a',
+          title: 'Research',
+          cwd: '/workspace',
+          status: 'running',
+          messages: planOriginMessages(),
+          createdAt: 1,
+          updatedAt: 2
+        }
+      },
+      composer: {
+        view: { doc: docFromText('Keep this draft') },
+        actions: { changeDoc }
+      },
+      sideChat: { createDraft },
+      conversation: { actions: { sideChat: { start } } },
+      sessionTools: { exportDiagnostics: vi.fn() }
+    })
+    const header = getConversationHeader()
+    const trigger = header.querySelector<HTMLButtonElement>('[aria-label="Session actions"]')!
+    const diagnostics = header.querySelector('[aria-label="Export diagnostics…"]')!
+    expect(
+      diagnostics.compareDocumentPosition(trigger) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(trigger.className).not.toMatch(/opacity-0|invisible|hidden/)
+    await act(async () => trigger.click())
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-action-id="new-side-chat"]')!.click()
+    )
+    expect(createDraft).toHaveBeenCalledExactlyOnceWith()
+    expect(start).not.toHaveBeenCalled()
+    expect(changeDoc).not.toHaveBeenCalled()
+    expect(getComposerEditor().textContent).toContain('Keep this draft')
+  })
+
+  it('passes pending credential state to the header menu availability projection', async () => {
+    const activeSession: ChatSession = {
+      id: 'credential-header',
+      projectId: 'project-a',
+      title: 'Research',
+      cwd: '/workspace',
+      status: 'idle',
+      messages: [],
+      createdAt: 1,
+      updatedAt: 1
+    }
+    const execute = vi.fn()
+    const disabled = vi.fn(({ presentedStatus }: { presentedStatus: string }) =>
+      presentedStatus.startsWith('waiting-')
+    )
+    renderPanel({
+      view: { activeSession },
+      permissions: {
+        ...createPanelDefaults().permissions,
+        credentialRequests: [
+          {
+            id: 'credential-1',
+            credentialId: 'openalex',
+            connector: 'literature',
+            method: 'openalex_search_works',
+            sessionId: activeSession.id
+          }
+        ]
+      },
+      sessionTools: {
+        menuBindings: {
+          fork: {
+            execute,
+            disabled
+          }
+        }
+      }
+    })
+    await act(async () =>
+      getConversationHeader()
+        .querySelector<HTMLButtonElement>('[aria-label="Session actions"]')!
+        .click()
+    )
+    const fork = document.querySelector<HTMLButtonElement>('[data-action-id="fork"]')!
+    expect(disabled).toHaveBeenLastCalledWith(
+      expect.objectContaining({ presentedStatus: 'waiting-for-user' })
+    )
+    expect(fork.disabled).toBe(true)
+    await act(async () => fork.click())
+    expect(execute).not.toHaveBeenCalled()
   })
 
   it('opens Session information and routes editing through the owner', () => {
@@ -1070,63 +1272,119 @@ describe('ConversationPanel composer errors', () => {
     expect(alert?.className).not.toContain('bg-red-50')
   })
 
-  it('offers an immediate retry when Artifact publication fails', () => {
-    const request = vi.fn()
-    const pendingPath = '/data/artifacts/project-a/artifact-session-1/.pending/run-1/report.md'
+  it.each([false, true])(
+    'gates Artifact publication retry for imported history (%s)',
+    (imported) => {
+      const request = vi.fn()
+      const pendingPath = '/data/artifacts/project-a/artifact-session-1/.pending/run-1/report.md'
+      const activeSession: ChatSession = {
+        id: 'session-artifact-retry',
+        projectId: 'project-a',
+        title: 'Artifact retry',
+        cwd: '/workspace',
+        status: 'error',
+        error: 'Generated file finalization failed: disk temporarily unavailable',
+        errorReportable: true,
+        messages: [
+          {
+            ...planOriginMessages()[0],
+            turnOutcome: {
+              kind: 'failed',
+              settledAt: 2,
+              error: 'Generated file finalization failed: disk temporarily unavailable',
+              errorReportable: true,
+              recovery: 'retry-artifact-publication'
+            }
+          },
+          {
+            id: 'message-1',
+            role: 'agent',
+            responseToMessageId: 'plan-origin',
+            content: 'Created the report.',
+            status: 'complete',
+            eventIds: ['artifact-event-1'],
+            artifactIds: ['artifact-session-1:run-1:report.md'],
+            createdAt: 1,
+            updatedAt: 1
+          }
+        ],
+        artifacts: [
+          {
+            id: 'artifact-session-1:run-1:report.md',
+            kind: 'managed-file',
+            name: 'report.md',
+            path: pendingPath,
+            fileUrl: `file://${pendingPath}`,
+            size: 10,
+            mtimeMs: 1
+          }
+        ],
+        createdAt: 1,
+        updatedAt: 2
+      }
+
+      if (imported)
+        activeSession.packageOrigin = {
+          importId: 'import-1',
+          sourceProjectId: 'source-project',
+          sourceSessionId: 'source-session',
+          importedAt: 1,
+          manifestChecksum: 'a'.repeat(64)
+        }
+      renderPanel({
+        view: { activeSession },
+        workflows: { artifactFinalization: { request } }
+      })
+
+      const retry = container.querySelector<HTMLButtonElement>(
+        '[aria-label="Retry Artifact publication"]'
+      )
+      const report = container.querySelector<HTMLButtonElement>('[aria-label="Report this error"]')
+      const error = Array.from(container.querySelectorAll('span')).find(
+        (element) => element.textContent === activeSession.error
+      )
+      expect(retry).not.toBeNull()
+      expect(report).not.toBeNull()
+      expect(error?.parentElement?.classList.contains('flex-col')).toBe(true)
+      expect(retry?.parentElement?.classList.contains('flex-wrap')).toBe(true)
+      expect(container.querySelector('[data-slot="turn-outcome-notice"]')).not.toBeNull()
+      act(() => retry?.click())
+      expect(retry?.disabled).toBe(imported)
+      if (imported) expect(request).not.toHaveBeenCalled()
+      else expect(request).toHaveBeenCalledExactlyOnceWith('session-artifact-retry', 'plan-origin')
+    }
+  )
+
+  it('keeps Turn Outcome actions stable across draft edits but never calls stale handlers', () => {
+    const firstRequest = vi.fn()
+    const nextRequest = vi.fn()
     const activeSession: ChatSession = {
-      id: 'session-artifact-retry',
+      id: 'session-stable-actions',
       projectId: 'project-a',
-      title: 'Artifact retry',
+      title: 'Stable actions',
       cwd: '/workspace',
-      status: 'error',
-      error: 'Generated file finalization failed: disk temporarily unavailable',
-      errorReportable: true,
-      messages: [
-        {
-          id: 'message-1',
-          role: 'agent',
-          content: 'Created the report.',
-          status: 'complete',
-          eventIds: ['artifact-event-1'],
-          artifactIds: ['artifact-session-1:run-1:report.md'],
-          createdAt: 1,
-          updatedAt: 1
-        }
-      ],
-      artifacts: [
-        {
-          id: 'artifact-session-1:run-1:report.md',
-          kind: 'managed-file',
-          name: 'report.md',
-          path: pendingPath,
-          fileUrl: `file://${pendingPath}`,
-          size: 10,
-          mtimeMs: 1
-        }
-      ],
+      status: 'idle',
+      messages: planOriginMessages(),
       createdAt: 1,
       updatedAt: 2
     }
+    renderPanel({
+      view: { activeSession },
+      workflows: { artifactFinalization: { request: firstRequest } }
+    })
+    const initial = scrollerProps.turnOutcomeActions as TurnOutcomeActions
 
     renderPanel({
       view: { activeSession },
-      workflows: { artifactFinalization: { request } }
+      composer: { view: { doc: docFromText('typing a new draft') } },
+      workflows: { artifactFinalization: { request: nextRequest } }
     })
 
-    const retry = container.querySelector<HTMLButtonElement>(
-      '[aria-label="Retry Artifact publication"]'
-    )
-    const report = container.querySelector<HTMLButtonElement>('[aria-label="Report this error"]')
-    const error = Array.from(container.querySelectorAll('span')).find(
-      (element) => element.textContent === activeSession.error
-    )
-    expect(retry).not.toBeNull()
-    expect(report).not.toBeNull()
-    expect(error?.parentElement?.classList.contains('flex-col')).toBe(true)
-    expect(retry?.parentElement?.classList.contains('flex-wrap')).toBe(true)
-    expect(retry?.parentElement?.classList.contains('self-end')).toBe(true)
-    act(() => retry?.click())
-    expect(request).toHaveBeenCalledOnce()
+    const afterDraftEdit = scrollerProps.turnOutcomeActions as TurnOutcomeActions
+    expect(afterDraftEdit).toBe(initial)
+    afterDraftEdit.onRetryArtifact('plan-origin')
+    expect(firstRequest).not.toHaveBeenCalled()
+    expect(nextRequest).toHaveBeenCalledExactlyOnceWith('session-stable-actions', 'plan-origin')
   })
 
   it('does not offer retry when Artifact provenance proof is invalid', () => {
@@ -1149,6 +1407,201 @@ describe('ConversationPanel composer errors', () => {
     expect(
       container.querySelector<HTMLButtonElement>('[aria-label="Retry Artifact publication"]')
     ).toBeNull()
+  })
+})
+
+describe('ConversationPanel research starters', () => {
+  it('applies the new conversation height only to the editor, including while disabled', () => {
+    const doc: ComposerDoc = {
+      nodes: [
+        { type: 'artifact', id: 'file', source: 'upload', name: 'paper.pdf', path: '/paper.pdf' },
+        { type: 'skill', id: 'skill', name: 'Analyze' },
+        { type: 'session', sessionId: 'source', title: 'Previous research' },
+        { type: 'pasted-text', id: 'paste', text: 'Long research notes' }
+      ]
+    }
+    for (const canEditDraft of [true, false]) {
+      renderPanel({ view: { canEditDraft }, composer: { view: { doc } } })
+      const editor = getComposerEditor()
+      expect(editor.classList.contains('min-h-20')).toBe(true)
+      expect(editor.getAttribute('contenteditable')).toBe(String(canEditDraft))
+      expect(Array.from(container.querySelectorAll('.min-h-20'))).toEqual([editor])
+      expect(editor.querySelectorAll('[contenteditable="false"]')).toHaveLength(4)
+    }
+    renderPanel({
+      view: {
+        activeSession: {
+          id: 'sent',
+          projectId: 'project-a',
+          title: 'First message',
+          cwd: '/workspace',
+          status: 'idle',
+          messages: [],
+          createdAt: 1,
+          updatedAt: 2
+        }
+      },
+      composer: { view: { doc } }
+    })
+    expect(getComposerEditor().classList.contains('min-h-20')).toBe(false)
+  })
+
+  it('prepares and appends prompts while preserving structured draft content', () => {
+    const changeDoc = vi.fn()
+    const submit = vi.fn()
+    const starter = (): HTMLButtonElement =>
+      Array.from(container.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Analyze data'
+      )!
+    renderPanel({
+      composer: { actions: { changeDoc } },
+      conversation: { actions: { submit: { draft: submit } } }
+    })
+    const form = container.querySelector('[data-testid="ordinary-composer-form"]')
+    act(() => starter().click())
+    expect(changeDoc).toHaveBeenCalledWith(
+      docFromText('Analyze my data and explain the main findings.')
+    )
+    const doc = {
+      nodes: [
+        { type: 'text' as const, text: 'Existing draft' },
+        { type: 'skill' as const, id: 's1', name: 'Skill' }
+      ]
+    }
+    renderPanel({ composer: { view: { doc }, actions: { changeDoc } } })
+    expect(container.querySelector('[data-testid="ordinary-composer-form"]')).toBe(form)
+    act(() => starter().click())
+    expect(changeDoc).toHaveBeenLastCalledWith({
+      nodes: [
+        ...doc.nodes,
+        { type: 'text', text: '\n\nAnalyze my data and explain the main findings.' }
+      ]
+    })
+    expect(submit).not.toHaveBeenCalled()
+    renderPanel({ view: { canEditDraft: false } })
+    expect(starter().disabled).toBe(true)
+  })
+
+  it('keeps one editor form through first send and returns to the start only for a new conversation', () => {
+    renderPanel({})
+    const form = container.querySelector('[data-testid="ordinary-composer-form"]')
+    const placement = (): string | null | undefined =>
+      container
+        .querySelector('[data-testid="conversation-composer-dock"]')
+        ?.getAttribute('data-placement')
+    expect(placement()).toBe('start')
+    renderPanel({
+      view: { actionError: 'Cannot send' },
+      composer: { view: { doc: docFromText('Draft') } }
+    })
+    expect(placement()).toBe('start')
+    const activeSession: ChatSession = {
+      id: 'sent',
+      projectId: 'project-a',
+      title: 'First message',
+      cwd: '/workspace',
+      status: 'idle',
+      messages: [],
+      createdAt: 1,
+      updatedAt: 2
+    }
+    renderPanel({ view: { activeSession } })
+    expect(placement()).toBe('bottom')
+    expect(container.querySelector('[data-testid="ordinary-composer-form"]')).toBe(form)
+    expect(container.querySelector('[data-testid="new-conversation-start"]')).toBeNull()
+    renderPanel({
+      view: { activeSession: { ...activeSession, status: 'error', error: 'Provider unavailable' } }
+    })
+    expect(placement()).toBe('bottom')
+    renderPanel({})
+    expect(placement()).toBe('start')
+    expect(container.querySelector('[data-testid="ordinary-composer-form"]')).toBe(form)
+  })
+})
+
+describe('ConversationPanel whole-window find', () => {
+  it('owns the find handshake only while the new conversation start is mounted', () => {
+    const listeners = new Set<() => void>()
+    const stopReady = vi.fn()
+    const announceWindowFindReady = vi.fn(() => stopReady)
+    const announceWindowFindContentReady = vi.fn()
+    const removeListener = vi.fn()
+    const onShowWindowFind = vi.fn((listener: () => void) => {
+      listeners.add(listener)
+      return () => {
+        removeListener()
+        listeners.delete(listener)
+      }
+    })
+    window.api.window = {
+      announceWindowFindReady,
+      announceWindowFindContentReady,
+      onShowWindowFind
+    } as unknown as Window['api']['window']
+
+    renderPanel()
+    expect(onShowWindowFind).toHaveBeenCalledTimes(1)
+    expect(announceWindowFindReady).toHaveBeenCalledTimes(1)
+    expect(onShowWindowFind.mock.invocationCallOrder[0]).toBeLessThan(
+      announceWindowFindReady.mock.invocationCallOrder[0]
+    )
+    expect(announceWindowFindContentReady).not.toHaveBeenCalled()
+    for (let attempt = 0; attempt < 2; attempt++) {
+      listeners.forEach((listener) => listener())
+    }
+    expect(announceWindowFindContentReady).toHaveBeenCalledTimes(2)
+    renderPanel({ composer: { view: { doc: docFromText('Find my draft') } } })
+    expect(onShowWindowFind).toHaveBeenCalledTimes(1)
+
+    const activeSession: ChatSession = {
+      id: 'find-session',
+      projectId: 'project-a',
+      title: 'Find conversation',
+      cwd: '/workspace',
+      status: 'idle',
+      messages: [],
+      createdAt: 1,
+      updatedAt: 1
+    }
+    // Loaded transcripts own their handshake; lazy content must not be acknowledged early.
+    renderPanel({ view: { activeSession: { ...activeSession, contentLoaded: false } } })
+    expect(listeners.size).toBe(0)
+    expect(removeListener).toHaveBeenCalledTimes(1)
+    expect(stopReady).toHaveBeenCalledTimes(1)
+    expect(removeListener.mock.invocationCallOrder[0]).toBeLessThan(
+      stopReady.mock.invocationCallOrder[0]
+    )
+    renderPanel({ view: { activeSession } })
+    expect(announceWindowFindReady).toHaveBeenCalledTimes(1)
+    expect(announceWindowFindContentReady).toHaveBeenCalledTimes(2)
+
+    renderPanel()
+    expect(listeners.size).toBe(1)
+    expect(announceWindowFindReady).toHaveBeenCalledTimes(2)
+    renderPanel({
+      conversation: {
+        optimisticMessage: {
+          id: 'pending-first-message',
+          role: 'user',
+          content: 'First prompt',
+          status: 'complete',
+          eventIds: [],
+          createdAt: 1,
+          updatedAt: 1
+        }
+      }
+    })
+    expect(listeners.size).toBe(0)
+    expect(stopReady).toHaveBeenCalledTimes(2)
+    expect(announceWindowFindReady).toHaveBeenCalledTimes(2)
+
+    renderPanel()
+    expect(listeners.size).toBe(1)
+    expect(announceWindowFindReady).toHaveBeenCalledTimes(3)
+    act(() => root.render(null))
+    expect(listeners.size).toBe(0)
+    expect(removeListener).toHaveBeenCalledTimes(3)
+    expect(stopReady).toHaveBeenCalledTimes(3)
   })
 })
 
@@ -1201,6 +1654,10 @@ const hasDropOverlay = (): boolean =>
   container.textContent?.includes('Drop files to attach') ?? false
 
 beforeEach(() => {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+  )
   resizeCallbacks = []
   vi.stubGlobal(
     'ResizeObserver',
@@ -1338,7 +1795,10 @@ describe('ConversationPanel composer intake', () => {
               size: 42
             }
           ],
-          readingContext: { automaticAttachmentCount: 1 }
+          readingContext: {
+            automaticAttachmentCount: 1,
+            automaticAttachments: [{ id: 'upload-1', name: 'paper.pdf' }]
+          }
         },
         actions: { dismissAutomaticReading }
       }
@@ -1346,7 +1806,10 @@ describe('ConversationPanel composer intake', () => {
 
     const suggestion = container.querySelector('[data-testid="automatic-reading-suggestion"]')
     expect(suggestion?.textContent).toContain('Reading')
+    expect(suggestion?.querySelector('svg.lucide-book-open[aria-hidden="true"]')).not.toBeNull()
     expect(suggestion?.textContent).toContain('1 PDF will be linked when sent')
+    expect(suggestion?.textContent).toContain('paper.pdf')
+    expect(suggestion?.querySelector('[role="status"]')?.textContent).toBe('Link on send')
     expect(container.textContent).toContain('paper.pdf')
 
     act(() =>
@@ -1354,6 +1817,29 @@ describe('ConversationPanel composer intake', () => {
     )
     expect(dismissAutomaticReading).toHaveBeenCalledOnce()
     expect(container.textContent).toContain('paper.pdf')
+  })
+
+  it('keeps the automatic PDF name and a linking status after submitted attachments leave the draft', () => {
+    renderPanel({
+      composer: {
+        view: {
+          attachments: [],
+          readingContext: {
+            automaticAttachmentCount: 1,
+            automaticAttachments: [{ id: 'upload', name: 'paper.pdf' }],
+            isPending: true
+          }
+        }
+      }
+    })
+    const suggestion = container.querySelector('[data-testid="automatic-reading-suggestion"]')!
+    expect(suggestion.textContent).toContain('paper.pdf')
+    expect(suggestion.querySelector('[role="status"]')?.textContent).toBe('Linking PDFs…')
+    expect(suggestion.querySelector('[role="status"] .lucide-loader-circle')).not.toBeNull()
+    expect(
+      suggestion.querySelector<HTMLButtonElement>('[aria-label="Keep as attachments"]')?.disabled
+    ).toBe(true)
+    expect(suggestion.textContent).not.toContain('will be linked when sent')
   })
 
   it('shows automatic Reading follow-ups alongside linked PDF context', () => {
@@ -1389,6 +1875,7 @@ describe('ConversationPanel composer intake', () => {
                 linkedAt: 1
               }
             ],
+            automaticAttachments: [{ id: 'upload-2', name: 'second.pdf' }],
             automaticAttachmentCount: 1
           }
         },
@@ -1403,6 +1890,46 @@ describe('ConversationPanel composer intake', () => {
       suggestion?.querySelector<HTMLButtonElement>('[aria-label="Keep as attachments"]')?.click()
     )
     expect(dismissAutomaticReading).toHaveBeenCalledOnce()
+  })
+
+  it('places Discussion and Reading in one header outside the scrolling annotation list', () => {
+    const discussion = createSessionDiscussionAnnotation({
+      projectId: 'project',
+      sourceSessionId: 'source',
+      sourceTitle: 'Study',
+      fingerprint: 'fp',
+      branchId: 'main',
+      stepId: 'step',
+      stepOffsetMs: 0,
+      excerpt: '',
+      evidence: [{ kind: 'message', id: 'step', projectId: 'project', sessionId: 'source' }]
+    })!
+    renderPanel({
+      composer: {
+        view: {
+          annotations: [
+            discussion,
+            {
+              id: 'ordinary',
+              kind: 'text',
+              target: 'agent',
+              quote: 'An ordinary annotation',
+              source: { kind: 'agent-message', sessionId: 'source', messageId: 'step' }
+            }
+          ],
+          readingContext: {
+            bindings: [{ bindingId: 'paper', name: 'paper.pdf', draftSelection: true }]
+          }
+        }
+      }
+    })
+    const header = container.querySelector('[data-testid="composer-context-header"]')!
+    expect(header.querySelector('[data-testid="session-discussion-draft"]')).not.toBeNull()
+    expect(header.querySelector('[data-testid="pdf-context-bar"]')).not.toBeNull()
+    const list = container.querySelector('[data-testid="annotation-draft-list"]')!
+    expect(list.textContent).toContain('An ordinary annotation')
+    expect(header.contains(list)).toBe(false)
+    expect(header.textContent).not.toContain('An ordinary annotation')
   })
 
   it('shows linked PDF context as a single-line chip that opens its preview', () => {
@@ -1474,13 +2001,19 @@ describe('ConversationPanel composer intake', () => {
     })
 
     const bar = container.querySelector('[data-testid="pdf-context-bar"]')
-    expect(bar?.className.split(/\s+/)).toContain('rounded-t-2xl')
+    expect(
+      bar?.closest('[data-testid="composer-context-header"]')?.className.split(/\s+/)
+    ).toContain('rounded-t-2xl')
     expect(bar?.textContent).toContain('Reading')
+    expect(bar?.querySelector('svg.lucide-book-open[aria-hidden="true"]')).not.toBeNull()
     expect(bar?.textContent).toContain('paper.pdf')
     expect(bar?.textContent).toContain('second.pdf')
     expect(bar?.textContent).toContain('third.pdf')
     expect(bar?.querySelector('[aria-label="Choose PDFs for Reading"]')).not.toBeNull()
     expect(bar?.querySelectorAll('[aria-label^="Open PDF context "]')).toHaveLength(3)
+    expect(
+      bar?.querySelectorAll('[aria-label^="Open PDF context "] [aria-hidden="true"] svg')
+    ).toHaveLength(3)
     // The page-position line is gone: the disclosure moved to the chip's tooltip.
     expect(bar?.textContent).not.toContain('Page')
     expect(bar?.textContent).not.toContain('Open the PDF')
@@ -1575,6 +2108,83 @@ describe('ConversationPanel composer intake', () => {
       window.dispatchEvent(new CustomEvent(FOCUS_COMPOSER_EVENT))
     })
     expect(document.activeElement).toBe(getComposerEditor())
+  })
+
+  it('returns keyboard focus from a control to the composer on Escape', () => {
+    renderPanel()
+    const button = container.querySelector<HTMLButtonElement>('[aria-label="Open navigation"]')!
+    button.focus()
+    act(() => {
+      button.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+      )
+    })
+    expect(document.activeElement).toBe(getComposerEditor())
+  })
+
+  it('dismisses a focused tooltip and returns to the composer with one Escape', () => {
+    renderPanel()
+    const button = container.querySelector<HTMLButtonElement>('[aria-label="Open navigation"]')!
+    const tooltip = document.createElement('span')
+    tooltip.id = 'escape-tooltip'
+    tooltip.setAttribute('role', 'tooltip')
+    document.body.append(tooltip)
+    button.setAttribute('aria-describedby', tooltip.id)
+    button.focus()
+    const dismissTooltip = (event: KeyboardEvent): void => {
+      event.preventDefault()
+      tooltip.remove()
+    }
+    document.addEventListener('keydown', dismissTooltip, { capture: true, once: true })
+    act(() =>
+      button.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+      )
+    )
+    expect(document.activeElement).toBe(getComposerEditor())
+    expect(tooltip.isConnected).toBe(false)
+  })
+
+  it.each([
+    'handled',
+    'composing',
+    'modified',
+    'pointer',
+    'blocked',
+    'disabled',
+    'dialog',
+    'menu',
+    'editable'
+  ])('keeps Escape with its current owner (%s)', (owner) => {
+    renderPanel({
+      ...(owner === 'blocked'
+        ? { permissions: { requests: [{ requestId: 'escape-blocked' } as never] } }
+        : {}),
+      ...(owner === 'disabled' ? { view: { canEditDraft: false } } : {})
+    })
+    const region = document.createElement('div')
+    const target = document.createElement(owner === 'editable' ? 'input' : 'button')
+    if (owner === 'dialog' || owner === 'menu') region.setAttribute('role', owner)
+    region.append(target)
+    document.body.append(region)
+    target.focus()
+    const matches =
+      owner === 'pointer' ? vi.spyOn(target, 'matches').mockReturnValue(false) : undefined
+    const event = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+      isComposing: owner === 'composing',
+      ctrlKey: owner === 'modified'
+    })
+    if (owner === 'handled') event.preventDefault()
+    try {
+      act(() => target.dispatchEvent(event))
+      expect(document.activeElement).toBe(target)
+    } finally {
+      matches?.mockRestore()
+      region.remove()
+    }
   })
 
   it('does not focus the hidden composer while a blocking interaction owns its lane', () => {
@@ -2896,6 +3506,20 @@ describe('ConversationPanel composer intake', () => {
     expect(hasDropOverlay()).toBe(false)
   })
 
+  it.each(['workspace-file-drop-zone', 'conversation-header'])(
+    'stages files dropped on %s outside the composer',
+    (testId) => {
+      renderPanel()
+      const target = container.querySelector(`[data-testid="${testId}"]`) as HTMLElement
+      const file = new File(['data'], 'paper.pdf', { type: 'application/pdf' })
+      dispatchDrag('dragenter', ['Files'], [], target)
+      expect(hasDropOverlay()).toBe(true)
+      dispatchDrag('drop', ['Files'], [file], target)
+      expect(onStageAttachmentFiles).toHaveBeenCalledExactlyOnceWith([file])
+      expect(hasDropOverlay()).toBe(false)
+    }
+  )
+
   it('ignores plain-text drags with no overlay and no upload', () => {
     renderPanel()
 
@@ -2915,6 +3539,29 @@ describe('ConversationPanel composer intake', () => {
 
     dispatchDrag('dragenter', ['Files'])
     expect(hasDropOverlay()).toBe(false)
+    dispatchDrag('drop', ['Files'], [new File(['data'], 'data.csv')])
+    expect(onStageAttachmentFiles).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Files cannot be attached right now.')
+  })
+
+  it('does not stage workspace files while an attachment upload is in progress', () => {
+    renderPanel({ composer: { view: { isUploading: true } } })
+    const target = container.querySelector(
+      '[data-testid="workspace-file-drop-zone"]'
+    ) as HTMLElement
+    dispatchDrag('dragenter', ['Files'], [], target)
+    expect(hasDropOverlay()).toBe(false)
+    dispatchDrag('drop', ['Files'], [new File(['data'], 'data.csv')], target)
+    expect(onStageAttachmentFiles).not.toHaveBeenCalled()
+  })
+
+  it('does not stage workspace files into a composer covered by permission approval', () => {
+    renderPanel({ permissions: { requests: [{} as never] } })
+    const target = container.querySelector(
+      '[data-testid="workspace-file-drop-zone"]'
+    ) as HTMLElement
+    dispatchDrag('drop', ['Files'], [new File(['data'], 'data.csv')], target)
+    expect(onStageAttachmentFiles).not.toHaveBeenCalled()
   })
 
   it('submits on Enter through the editor with the picked skill ids', () => {
@@ -3171,6 +3818,30 @@ describe('ConversationPanel composer intake', () => {
     expect(controls?.getAttribute('data-delegation-read-only')).toBe('false')
     expect(controls?.getAttribute('data-delegation-live')).toBe('true')
     expect(controls?.getAttribute('data-specialist-read-only')).toBe('false')
+  })
+
+  it('keeps Compute Host controls read-only before a failed Session binds', () => {
+    renderPanel({
+      view: {
+        activeSession: {
+          id: 'pending-session-1',
+          projectId: 'project-a',
+          title: 'Failed connection',
+          cwd: '/workspace',
+          status: 'error',
+          isPending: true,
+          messages: [],
+          createdAt: 1,
+          updatedAt: 1
+        }
+      },
+      agentControls: { canChange: true }
+    })
+
+    expect(
+      container.querySelector('[data-testid="mock-agent-controls"]')?.getAttribute('data-read-only')
+    ).toBe('true')
+    expect(container.querySelector('[data-testid="mock-model-picker"]')).not.toBeNull()
   })
 
   it.each([undefined, { kind: 'all' }, { kind: 'before-message', messageId: 'user-1' }] as const)(
@@ -4443,6 +5114,632 @@ describe('ConversationPanel composer intake', () => {
 })
 
 describe('ConversationPanel interrupted Session recovery', () => {
+  it('keeps anchorless recovery through real Main prepare/append/start, rollback and admission', () => {
+    const original = materializeSessionConversationGraph({
+      id: 'anchorless-main-preparation',
+      projectId: 'project-a',
+      title: 'Recovery',
+      cwd: '/workspace',
+      status: 'error',
+      error: 'Session was interrupted before the app closed.',
+      resumeRecovery: { kind: 'resume-required', cause: 'app-restart' },
+      messages: [],
+      runtimeTranscriptOwner: 'main',
+      createdAt: 1,
+      updatedAt: 2
+    })
+    const owner = new SessionPromptPreparationOwner()
+    const prepared = owner.apply(original, [
+      { id: 'prepare', kind: 'prepare-prompt', mode: 'new', promptMessageId: 'new', timestamp: 3 },
+      {
+        id: 'append',
+        kind: 'append-user',
+        preparationId: 'prepare',
+        branchId: original.conversationGraph!.frames[0].activeBranchId,
+        message: { ...planOriginMessages()[0], id: 'new', createdAt: 4 },
+        timestamp: 4
+      },
+      {
+        id: 'start',
+        kind: 'start-run',
+        preparationId: 'prepare',
+        run: { promptMessageId: 'new', startedAt: 5 },
+        timestamp: 5
+      }
+    ])
+    const projected = hydrateSession(prepared)
+    expect(projected.interrupted).toBeUndefined()
+    expect(projected.error).toBeUndefined()
+    expect(projected.resumeRecovery).toBeUndefined()
+    renderPanel({ view: { activeSession: projected } })
+    expect(container.textContent).toContain('Session was interrupted before the app closed.')
+    expect(
+      container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.disabled
+    ).toBe(true)
+    expect(container.querySelector('[data-slot="turn-outcome-notice"]')).toBeNull()
+
+    const restored = owner.apply(prepared, [
+      { id: 'rollback', kind: 'rollback-prompt', preparationId: 'prepare', timestamp: 6 }
+    ])
+    renderPanel({
+      view: {
+        activeSession: hydrateSession(restored),
+        actionError: 'New prompt preparation failed.'
+      }
+    })
+    expect(
+      container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.disabled
+    ).toBe(false)
+    expect(container.textContent).toContain('New prompt preparation failed.')
+    renderPanel({ view: { activeSession: { ...projected, promptPreparation: undefined } } })
+    expect(container.querySelector('[aria-label="Resume session"]')).toBeNull()
+    expect(container.textContent).not.toContain('Session was interrupted before the app closed.')
+    expect(container.querySelector('[data-slot="historical-turn-outcome"]')).toBeNull()
+  })
+  it('exposes Resume on the admitted prompt after a restart interrupted a turn with an in-turn reply', () => {
+    const crashed = materializeSessionConversationGraph({
+      id: 'steered-restart',
+      projectId: 'project-a',
+      title: 'Steered restart',
+      cwd: '/workspace',
+      status: 'running',
+      activeRun: { promptMessageId: 'prompt', startedAt: 2 },
+      runtimeTranscriptOwner: 'main',
+      createdAt: 1,
+      updatedAt: 5,
+      messages: [
+        { ...planOriginMessages()[0], id: 'prompt' },
+        {
+          ...planOriginMessages()[0],
+          id: 'steering',
+          content: 'Use a log scale',
+          responseToMessageId: 'prompt',
+          createdAt: 3
+        }
+      ],
+      runtimeContext: {
+        version: 1,
+        revision: 4,
+        permission: {
+          state: 'continuing',
+          request: {
+            requestId: 'permission-1',
+            sessionId: 'steered-restart',
+            toolCallId: 'tool-1',
+            title: 'Run npm test',
+            isMcp: true,
+            options: [{ optionId: 'allow', name: 'Allow', kind: 'allow_once' }]
+          },
+          originatingPromptMessageId: 'prompt',
+          fingerprint: 'a'.repeat(64),
+          createdAt: 2
+        }
+      }
+    })
+    const restored = recordRestartTurnOutcome(normalizeSessionAfterRestore(crashed), crashed)
+    expect(restored.resumeRecovery?.promptMessageId).toBe('prompt')
+
+    renderPanel({ view: { activeSession: hydrateSession(restored) } })
+
+    expect(
+      container
+        .querySelector('[data-slot="turn-outcome-notice"]')
+        ?.getAttribute('data-prompt-message-id')
+    ).toBe('prompt')
+    expect(container.querySelector('[aria-label="Resume session"]')).not.toBeNull()
+  })
+
+  it.each(['cancelled', 'interrupted', 'legacy-failed'] as const)(
+    'preserves the original %s UI through real Main new/edit preparation',
+    (kind) => {
+      const early = { ...planOriginMessages()[0], id: 'early' }
+      const latest = {
+        ...planOriginMessages()[0],
+        id: 'latest',
+        createdAt: 2,
+        turnOutcome:
+          kind === 'legacy-failed'
+            ? undefined
+            : kind === 'cancelled'
+              ? { kind, settledAt: 3, recovery: 'resume' as const }
+              : {
+                  kind,
+                  settledAt: 3,
+                  cause: 'connection-lost' as const,
+                  recovery: 'resume' as const
+                }
+      }
+      const original = materializeSessionConversationGraph({
+        id: 'early-edit-recovery',
+        projectId: 'project-a',
+        title: 'Recovery',
+        cwd: '/workspace',
+        status: 'error',
+        error: 'Original latest error',
+        runtimeTranscriptOwner: 'main',
+        messages: [early, latest],
+        createdAt: 1,
+        updatedAt: 3,
+        resumeRecovery:
+          kind === 'legacy-failed'
+            ? undefined
+            : {
+                kind: 'resume-required',
+                cause: kind === 'cancelled' ? 'cancelled' : 'connection-lost',
+                promptMessageId: latest.id
+              }
+      })
+      for (const editing of [false, true]) {
+        const originalBranch = original.conversationGraph!.frames[0].activeBranchId
+        const commands: SessionConversationCommand[] = [
+          {
+            id: 'prepare',
+            kind: 'prepare-prompt',
+            mode: 'new',
+            promptMessageId: 'edited',
+            timestamp: 4
+          },
+          ...(editing
+            ? [
+                {
+                  id: 'fork',
+                  kind: 'fork-message' as const,
+                  preparationId: 'prepare',
+                  branchId: 'edit',
+                  parentBranchId: originalBranch,
+                  messageId: early.id,
+                  timestamp: 5
+                }
+              ]
+            : []),
+          {
+            id: 'append',
+            kind: 'append-user',
+            preparationId: 'prepare',
+            branchId: editing ? 'edit' : originalBranch,
+            parentMessageId: editing ? undefined : latest.id,
+            message: { ...early, id: 'edited', content: 'Edit the early prompt', createdAt: 6 },
+            timestamp: 6
+          },
+          {
+            id: 'start',
+            kind: 'start-run',
+            preparationId: 'prepare',
+            run: { promptMessageId: 'edited', startedAt: 7 },
+            timestamp: 7
+          }
+        ]
+        const prepared = new SessionPromptPreparationOwner().apply(original, commands)
+        if (editing) {
+          expect(
+            prepared.promptPreparation?.previousState.resumeRecovery?.promptMessageId
+          ).toBeUndefined()
+          expect(prepared.promptPreparation?.previousState.error).toBeUndefined()
+        }
+        const rendererSession = hydrateSession(prepared)
+        renderPanel({ view: { activeSession: rendererSession } })
+        expect(
+          container
+            .querySelector('[data-slot="turn-outcome-notice"]')
+            ?.getAttribute('data-prompt-message-id')
+        ).toBe(latest.id)
+        if (kind === 'legacy-failed') {
+          expect(container.textContent).toContain('Original latest error')
+        } else {
+          expect(
+            container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.disabled
+          ).toBe(true)
+        }
+        renderPanel({
+          view: { activeSession: { ...rendererSession, promptPreparation: undefined } }
+        })
+        expect(container.querySelector('[data-slot="turn-outcome-notice"]')).toBeNull()
+        expect(container.querySelector('[aria-label="Resume session"]')).toBeNull()
+      }
+    }
+  )
+  it('preserves the attachment recovery entry for an anchorless legacy Session', async () => {
+    const resume = vi.fn().mockResolvedValue(undefined)
+    renderPanel({
+      view: {
+        activeSession: {
+          id: 'legacy-anchorless',
+          projectId: 'project-a',
+          title: 'Legacy recovery',
+          cwd: '/workspace',
+          status: 'error',
+          interrupted: true,
+          messages: [],
+          createdAt: 1,
+          updatedAt: 1
+        }
+      },
+      conversation: { actions: { resume } }
+    })
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.click()
+    )
+    expect(resume).toHaveBeenCalledOnce()
+  })
+
+  it('does not let an unadmitted preparation displace anchorless legacy recovery', () => {
+    renderPanel({
+      view: {
+        activeSession: {
+          id: 'legacy-anchorless-preparation',
+          projectId: 'project-a',
+          title: 'Legacy recovery preparation',
+          cwd: '/workspace',
+          status: 'error',
+          interrupted: true,
+          error: 'Session was interrupted before the app closed.',
+          resumeRecovery: { kind: 'resume-required', cause: 'app-restart' },
+          messages: [
+            {
+              ...planOriginMessages()[0],
+              id: 'prepared-prompt',
+              turnOutcome: undefined
+            }
+          ],
+          promptPreparation: {
+            id: 'legacy-preparation',
+            projectId: 'project-a',
+            sessionId: 'legacy-anchorless-preparation',
+            promptMessageId: 'prepared-prompt',
+            mode: 'resume',
+            preparedAt: 2,
+            previousState: {
+              status: 'error',
+              error: 'Session was interrupted before the app closed.',
+              resumeRecovery: { kind: 'resume-required', cause: 'app-restart' }
+            },
+            expectedState: { status: 'running' }
+          },
+          createdAt: 1,
+          updatedAt: 2
+        }
+      }
+    })
+
+    expect(container.querySelector('[aria-label="Resume session"]')).not.toBeNull()
+    expect(container.textContent).toContain('Session was interrupted before the app closed.')
+  })
+
+  it('keeps a failed Resume Operation Error beside the original interrupted turn', () => {
+    renderPanel({
+      view: {
+        actionError: 'Resume preparation could not be saved.',
+        activeSession: {
+          id: 'resume-operation-failure',
+          projectId: 'project-a',
+          title: 'Recovery',
+          cwd: '/workspace',
+          status: 'error',
+          interrupted: true,
+          error: 'Connection lost — Resume to reconnect and continue.',
+          resumeRecovery: {
+            kind: 'resume-required',
+            promptMessageId: 'plan-origin',
+            cause: 'connection-lost'
+          },
+          messages: [
+            {
+              ...planOriginMessages()[0],
+              turnOutcome: {
+                kind: 'interrupted',
+                settledAt: 2,
+                cause: 'connection-lost',
+                recovery: 'resume'
+              }
+            }
+          ],
+          createdAt: 1,
+          updatedAt: 2
+        }
+      }
+    })
+    expect(container.querySelector('[data-slot="turn-outcome-notice"]')?.textContent).toContain(
+      'Connection lost'
+    )
+    const composerError = Array.from(container.querySelectorAll('span')).find(
+      (node) => node.textContent === 'Resume preparation could not be saved.'
+    )
+    expect(composerError).toBeDefined()
+    expect(composerError?.closest('[data-slot="turn-outcome-notice"]')).toBeNull()
+    expect(
+      container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.disabled
+    ).toBe(false)
+  })
+
+  it.each(['cancelled', 'interrupted'] as const)(
+    'keeps exact %s Resume visible through new-prompt preparation, rollback and admission',
+    (kind) => {
+      const previous = {
+        ...planOriginMessages()[0],
+        turnOutcome:
+          kind === 'cancelled'
+            ? { kind, settledAt: 2, recovery: 'resume' as const }
+            : { kind, settledAt: 2, cause: 'connection-lost' as const, recovery: 'resume' as const }
+      }
+      const resumeRecovery = {
+        kind: 'resume-required' as const,
+        promptMessageId: previous.id,
+        cause: 'connection-lost' as const
+      }
+      const base: ChatSession = {
+        id: 'new-prompt-recovery',
+        projectId: 'project-a',
+        title: 'Recovery',
+        cwd: '/workspace',
+        status: 'error',
+        messages: [previous],
+        resumeRecovery,
+        createdAt: 1,
+        updatedAt: 2
+      }
+      const prepared = { ...planOriginMessages()[0], id: 'new-prompt', createdAt: 3 }
+      const preparing: ChatSession = {
+        ...base,
+        status: 'running',
+        resumeRecovery: undefined,
+        messages: [previous, prepared],
+        activeRun: { promptMessageId: prepared.id, startedAt: 4 },
+        promptPreparation: {
+          id: 'preparation',
+          projectId: base.projectId,
+          sessionId: base.id,
+          promptMessageId: prepared.id,
+          mode: 'new',
+          preparedAt: 3,
+          runStartedAt: 4,
+          previousState: { status: 'error', resumeRecovery },
+          expectedState: { status: 'running' }
+        }
+      }
+      renderPanel({ view: { activeSession: preparing } })
+      expect(
+        container
+          .querySelector('[data-slot="turn-outcome-notice"]')
+          ?.getAttribute('data-prompt-message-id')
+      ).toBe(previous.id)
+      expect(
+        container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.disabled
+      ).toBe(true)
+
+      renderPanel({ view: { activeSession: base, actionError: 'New prompt preparation failed.' } })
+      expect(
+        container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.disabled
+      ).toBe(false)
+      expect(container.textContent).toContain('New prompt preparation failed.')
+
+      renderPanel({ view: { activeSession: { ...preparing, promptPreparation: undefined } } })
+      expect(container.querySelector('[data-slot="turn-outcome-notice"]')).toBeNull()
+      expect(container.querySelector('[aria-label="Resume session"]')).toBeNull()
+      expect(container.querySelector('[data-slot="historical-turn-outcome"]')).toBeNull()
+    }
+  )
+
+  it('keeps the previous composer notice until Main admits a prepared new turn', () => {
+    const previous = {
+      ...planOriginMessages()[0],
+      turnOutcome: {
+        kind: 'failed' as const,
+        settledAt: 2,
+        error: 'Previous admitted failure.',
+        errorReportable: true
+      }
+    }
+    const prepared = {
+      ...planOriginMessages()[0],
+      id: 'prepared-prompt',
+      content: 'Prepared but not admitted',
+      createdAt: 3,
+      sortIndex: 2
+    }
+    renderPanel({
+      view: {
+        actionError: 'Preparation failed.',
+        activeSession: {
+          id: 'prepared-new-turn',
+          projectId: 'project-a',
+          title: 'Prepared new turn',
+          cwd: '/workspace',
+          status: 'running',
+          error: undefined,
+          messages: [previous, prepared],
+          activeRun: { promptMessageId: 'prepared-prompt', startedAt: 4 },
+          promptPreparation: {
+            id: 'preparation-1',
+            projectId: 'project-a',
+            sessionId: 'prepared-new-turn',
+            promptMessageId: 'prepared-prompt',
+            mode: 'new',
+            preparedAt: 3,
+            runStartedAt: 4,
+            previousState: { status: 'error', error: 'Previous admitted failure.' },
+            expectedState: { status: 'running' }
+          },
+          createdAt: 1,
+          updatedAt: 4
+        }
+      }
+    })
+
+    const notices = container.querySelectorAll('[data-slot="turn-outcome-notice"]')
+    expect(notices).toHaveLength(1)
+    expect(notices[0].getAttribute('data-prompt-message-id')).toBe('plan-origin')
+    expect(notices[0].textContent).toContain('Previous admitted failure.')
+    expect(container.textContent).toContain('Preparation failed.')
+
+    renderPanel({
+      view: {
+        actionError: null,
+        activeSession: {
+          id: 'prepared-new-turn',
+          projectId: 'project-a',
+          title: 'Prepared new turn',
+          cwd: '/workspace',
+          status: 'running',
+          messages: [previous, prepared],
+          activeRun: { promptMessageId: 'prepared-prompt', startedAt: 4 },
+          runtimeTranscriptOwner: 'main',
+          runtimeSessionAdmissions: [
+            {
+              executionId: 'execution-2',
+              promptMessageId: 'prepared-prompt',
+              promptRuntimeSegmentId: 'prompt-segment-2',
+              rootFrameId: 'root',
+              agentFrameId: 'agent',
+              messageBranchId: 'branch',
+              runtimeSegmentId: 'runtime-2'
+            }
+          ],
+          createdAt: 1,
+          updatedAt: 5
+        }
+      }
+    })
+
+    const historical = container.querySelector('[data-slot="historical-turn-outcome"]')
+    expect(historical?.getAttribute('data-prompt-message-id')).toBe('plan-origin')
+    expect(
+      container
+        .querySelector('[data-slot="turn-outcome-notice"]')
+        ?.closest('[data-slot="historical-turn-outcome"]')
+    ).toBe(historical)
+  })
+
+  it('keeps live terminal-write exhaustion off both the turn and composer recovery surfaces', () => {
+    renderPanel({
+      view: {
+        activeSession: {
+          id: 'live-storage-release',
+          projectId: 'project-a',
+          title: 'Live release',
+          cwd: '/workspace',
+          status: 'error',
+          interrupted: true,
+          error: 'ACP connection closed',
+          resumeRecovery: {
+            kind: 'resume-required',
+            promptMessageId: 'plan-origin',
+            cause: 'connection-lost'
+          },
+          messages: [
+            {
+              ...planOriginMessages()[0],
+              turnOutcome: {
+                kind: 'interrupted',
+                settledAt: 2,
+                cause: 'terminal-commit-failed',
+                recovery: 'resume'
+              }
+            }
+          ],
+          createdAt: 1,
+          updatedAt: 2
+        }
+      }
+    })
+    expect(container.querySelector('[data-slot="turn-outcome-notice"]')).toBeNull()
+    expect(container.querySelector('[aria-label="Resume session"]')).toBeNull()
+    expect(container.textContent).not.toContain('ACP connection closed')
+  })
+
+  it('localizes the known Main connection-close diagnostic without changing its stored text', async () => {
+    const { i18next } = await import('../../i18n')
+    const activeSession: ChatSession = {
+      id: 'connection-close',
+      projectId: 'project-a',
+      title: 'Connection loss',
+      cwd: '/workspace',
+      status: 'error',
+      interrupted: true,
+      resumeRecovery: {
+        kind: 'resume-required',
+        promptMessageId: 'plan-origin',
+        cause: 'connection-lost'
+      },
+      messages: [
+        {
+          ...planOriginMessages()[0],
+          turnOutcome: {
+            kind: 'interrupted',
+            settledAt: 2,
+            cause: 'connection-lost',
+            recovery: 'resume',
+            error: 'ACP connection closed'
+          }
+        }
+      ],
+      createdAt: 1,
+      updatedAt: 2
+    }
+    try {
+      await act(async () => i18next.changeLanguage('zh-Hans'))
+      renderPanel({ view: { activeSession } })
+      expect(container.querySelector('[data-slot="turn-outcome-notice"]')?.textContent).toContain(
+        '连接已断开'
+      )
+      expect(activeSession.messages[0].turnOutcome).toMatchObject({
+        error: 'ACP connection closed'
+      })
+    } finally {
+      await act(async () => i18next.changeLanguage('en'))
+    }
+  })
+
+  it.each(['cancelled', 'connection-lost', 'app-restart'] as const)(
+    'retains the original Resume action after routed user messages and %s',
+    async (cause) => {
+      const onResumeSession = vi.fn().mockResolvedValue(undefined)
+      const prompt = planOriginMessages()[0]
+      const activeSession: ChatSession = {
+        id: 'session-steered-interrupted',
+        projectId: 'project-a',
+        title: 'Interrupted session with steering',
+        cwd: '/workspace',
+        status: cause === 'cancelled' ? 'idle' : 'error',
+        resumeRecovery: { kind: 'resume-required', promptMessageId: prompt.id, cause },
+        messages: [
+          {
+            ...prompt,
+            turnOutcome:
+              cause === 'cancelled'
+                ? { kind: 'cancelled', settledAt: 4, recovery: 'resume' }
+                : { kind: 'interrupted', cause, settledAt: 4, recovery: 'resume' }
+          },
+          ...['steering-1', 'steering-2'].map((id, index) => ({
+            ...prompt,
+            id,
+            content: 'Additional instruction',
+            responseToMessageId: prompt.id,
+            createdAt: 2 + index,
+            updatedAt: 2 + index
+          }))
+        ],
+        createdAt: 1,
+        updatedAt: 4
+      }
+      renderPanel({
+        view: { activeSession },
+        conversation: { actions: { resume: onResumeSession } }
+      })
+      expect(
+        container
+          .querySelector('[data-slot="turn-outcome-notice"]')
+          ?.getAttribute('data-prompt-message-id')
+      ).toBe(prompt.id)
+      const resumeButton = container.querySelector<HTMLButtonElement>(
+        'button[aria-label="Resume session"]'
+      )
+      expect(resumeButton).not.toBeNull()
+      expect(resumeButton?.disabled).toBe(false)
+      await act(async () => resumeButton?.click())
+      expect(onResumeSession).toHaveBeenCalledTimes(1)
+    }
+  )
+
   it('shows message-area progress while the Session resume is in flight', async () => {
     let resolveResume: (() => void) | undefined
     const onResumeSession = vi.fn(
@@ -4458,6 +5755,11 @@ describe('ConversationPanel interrupted Session recovery', () => {
       cwd: '/workspace',
       status: 'idle',
       interrupted: true,
+      resumeRecovery: {
+        kind: 'resume-required',
+        promptMessageId: 'plan-origin',
+        cause: 'app-restart'
+      },
       messages: planOriginMessages(),
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -4468,6 +5770,7 @@ describe('ConversationPanel interrupted Session recovery', () => {
         activeSession: interruptedSession
       },
       conversation: {
+        availability: { submit: true },
         actions: {
           resume: onResumeSession
         }
@@ -4481,10 +5784,19 @@ describe('ConversationPanel interrupted Session recovery', () => {
 
     expect(onResumeSession).toHaveBeenCalledTimes(1)
     expect(container.querySelector('[data-testid="resume-progress-indicator"]')).not.toBeNull()
+    expect(
+      container.querySelector<HTMLButtonElement>('[aria-label="Send message"]')?.disabled
+    ).toBe(true)
+    expect(resumeButton?.disabled).toBe(true)
+    await act(async () => resumeButton?.click())
+    expect(onResumeSession).toHaveBeenCalledTimes(1)
 
     await act(async () => resolveResume?.())
 
     expect(container.querySelector('[data-testid="resume-progress-indicator"]')).toBeNull()
+    expect(
+      container.querySelector<HTMLButtonElement>('[aria-label="Send message"]')?.disabled
+    ).toBe(false)
   })
 
   it('does not show one Session resume progress on another active Session', async () => {
@@ -4502,6 +5814,11 @@ describe('ConversationPanel interrupted Session recovery', () => {
       cwd: '/workspace',
       status: 'idle',
       interrupted: true,
+      resumeRecovery: {
+        kind: 'resume-required',
+        promptMessageId: 'plan-origin',
+        cause: 'app-restart'
+      },
       messages: planOriginMessages(),
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -4537,6 +5854,65 @@ describe('ConversationPanel interrupted Session recovery', () => {
     await act(async () => resolveResume?.())
   })
 
+  it('retains each Session recovery guard when two resumes overlap across navigation', async () => {
+    const interrupted = (id: string): ChatSession => ({
+      id,
+      projectId: 'project-a',
+      title: id,
+      cwd: '/workspace',
+      status: 'error',
+      interrupted: true,
+      resumeRecovery: {
+        kind: 'resume-required',
+        promptMessageId: 'plan-origin',
+        cause: 'app-restart'
+      },
+      messages: planOriginMessages(),
+      createdAt: 1,
+      updatedAt: 1
+    })
+    let finishA!: () => void
+    let finishB!: () => void
+    const resumeA = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishA = resolve
+        })
+    )
+    const resumeB = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishB = resolve
+        })
+    )
+    const show = (id: string, resume: () => Promise<void>): void =>
+      renderPanel({
+        view: { activeSession: interrupted(id) },
+        conversation: { availability: { submit: true }, actions: { resume } }
+      })
+    const resumeButton = (): HTMLButtonElement | null =>
+      container.querySelector('[aria-label="Resume session"]')
+    const sendButton = (): HTMLButtonElement | null =>
+      container.querySelector('[aria-label="Send message"]')
+
+    show('session-a', resumeA)
+    await act(async () => resumeButton()?.click())
+    show('session-b', resumeB)
+    expect(sendButton()?.disabled).toBe(false)
+    await act(async () => resumeButton()?.click())
+    show('session-a', resumeA)
+    expect(resumeButton()?.disabled).toBe(true)
+    expect(sendButton()?.disabled).toBe(true)
+    await act(async () => finishB())
+    expect(resumeButton()?.disabled).toBe(true)
+    expect(sendButton()?.disabled).toBe(true)
+    await act(async () => resumeButton()?.click())
+    expect(resumeA).toHaveBeenCalledOnce()
+    await act(async () => finishA())
+    expect(resumeButton()?.disabled).toBe(false)
+    expect(sendButton()?.disabled).toBe(false)
+  })
+
   it('does not show Session resume progress for a new conversation with no active Session', () => {
     // Regression: `activeSession?.id === resumingSessionId` is true when both are undefined, which
     // marked every brand-new conversation as "resuming" and suppressed the empty-state banner.
@@ -4554,6 +5930,11 @@ describe('ConversationPanel interrupted Session recovery', () => {
       cwd: '/workspace',
       status: 'idle',
       interrupted: true,
+      resumeRecovery: {
+        kind: 'resume-required',
+        promptMessageId: 'plan-origin',
+        cause: 'app-restart'
+      },
       messages: planOriginMessages(),
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -4578,7 +5959,7 @@ describe('ConversationPanel interrupted Session recovery', () => {
     )
     expect(resumeButton?.disabled).toBe(true)
     expect(resumeButton?.dataset.slot).toBe('button')
-    expect(resumeButton?.className).toContain('focus-visible:ring-3')
+    expect(resumeButton?.className).toContain('focus-visible:keyboard-focus')
     expect(resumeButton?.className).toContain('disabled:pointer-events-none')
 
     act(() => resumeButton?.click())
@@ -6752,6 +8133,51 @@ describe('ConversationPanel error box + report affordance', () => {
 
   const errorBoxText = (): string => container.querySelector('.border-red-200')?.textContent ?? ''
 
+  it('reports the clicked historical failure while the current turn is non-reportable and preserves the snapshot across navigation', () => {
+    const historicalError = 'Historical opaque failure.'
+    renderPanel({
+      view: {
+        activeSession: {
+          ...errorSession,
+          error: 'Current provider failure.',
+          errorReportable: false,
+          messages: [
+            {
+              ...planOriginMessages()[0],
+              turnOutcome: {
+                kind: 'failed',
+                settledAt: 2,
+                error: historicalError,
+                errorReportable: true
+              }
+            },
+            {
+              ...planOriginMessages()[0],
+              id: 'later-prompt',
+              createdAt: 3,
+              sortIndex: 2,
+              turnOutcome: {
+                kind: 'failed',
+                settledAt: 4,
+                error: 'Current provider failure.',
+                errorReportable: false
+              }
+            }
+          ]
+        }
+      }
+    })
+    expect(container.querySelectorAll('[aria-label="Report this error"]')).toHaveLength(1)
+    act(() => reportButton()?.click())
+    const details = (): HTMLTextAreaElement | null =>
+      document.body.querySelector('textarea[aria-label="Error details"]')
+    expect(details()?.value).toBe(historicalError)
+    renderPanel({
+      view: { activeSession: { ...errorSession, id: 'another-session', error: 'Another failure.' } }
+    })
+    expect(details()?.value).toBe(historicalError)
+  })
+
   it('shows the error and a Report button for a failed run (status === error)', () => {
     renderPanel({
       view: {
@@ -6922,6 +8348,36 @@ describe('ConversationPanel error box + report affordance', () => {
     expect(openSettingsToPanel).toHaveBeenCalledWith('model')
   })
 
+  it.each(['', 'Agent session resume failed: ', 'Error invoking remote method: Error: '])(
+    'opens Agent settings for an unsupported native Codex CLI (%s)',
+    (wrapper) => {
+      const openSettingsToPanel = vi.fn()
+      useSettingsStore.setState({ openSettingsToPanel })
+      renderPanel({
+        view: {
+          activeSession: {
+            ...errorSession,
+            interrupted: Boolean(wrapper),
+            error:
+              wrapper +
+              'The installed Codex CLI is incompatible or its version could not be verified. Update Codex CLI to 0.157.1 or later, then re-detect it in Settings.',
+            errorReportable: true
+          }
+        }
+      })
+      expect(reportButton()).toBeNull()
+      expect(Boolean(container.querySelector('[aria-label="Resume session"]'))).toBe(
+        Boolean(wrapper)
+      )
+      const button = Array.from(container.querySelectorAll('button')).find(
+        (candidate) => candidate.textContent === 'Agent settings'
+      )
+      expect(button).toBeDefined()
+      act(() => button?.click())
+      expect(openSettingsToPanel).toHaveBeenCalledWith('agent')
+    }
+  )
+
   it('opens Agent settings instead of reporting an unsupported Codex ACP version', () => {
     const openSettingsToPanel = vi.fn()
     useSettingsStore.setState({ openSettingsToPanel })
@@ -6954,14 +8410,21 @@ describe('ConversationPanel error box + report affordance', () => {
         activeSession: {
           ...errorSession,
           interrupted: true,
-          error:
-            'Agent session resume failed: Codex ACP adapter 1.1.4 is no longer supported. Update to 1.6.2 or later in settings.'
-        }
+          error: 'Connection lost — Resume to reconnect and continue.',
+          messages: planOriginMessages(),
+          resumeRecovery: {
+            kind: 'resume-required',
+            promptMessageId: 'plan-origin',
+            cause: 'connection-lost'
+          }
+        },
+        actionError:
+          'Agent session resume failed: Codex ACP adapter 1.1.4 is no longer supported. Update to 1.6.2 or later in settings.'
       }
     })
 
     expect(errorBoxText()).toContain('Agent session resume failed: Codex ACP adapter 1.1.4')
-    expect(container.querySelector('[aria-label="Resume session"]')).toBeNull()
+    expect(container.querySelector('[aria-label="Resume session"]')).not.toBeNull()
     const button = Array.from(container.querySelectorAll('button')).find(
       (candidate) => candidate.textContent === 'Agent settings'
     )
@@ -6970,13 +8433,50 @@ describe('ConversationPanel error box + report affordance', () => {
     expect(openSettingsToPanel).toHaveBeenCalledWith('agent')
   })
 
+  it('keeps recovery reachable after dismissing a repaired compatibility error', async () => {
+    const resume = vi.fn().mockResolvedValue(undefined)
+    renderPanel({
+      view: {
+        activeSession: {
+          ...errorSession,
+          interrupted: true,
+          error: 'Connection lost — Resume to reconnect and continue.',
+          messages: planOriginMessages(),
+          resumeRecovery: {
+            kind: 'resume-required',
+            promptMessageId: 'plan-origin',
+            cause: 'connection-lost'
+          }
+        },
+        actionError:
+          'Codex ACP adapter 1.1.4 is no longer supported. Update to 1.6.2 or later in settings.'
+      },
+      conversation: { actions: { resume } }
+    })
+
+    act(() => container.querySelector<HTMLButtonElement>('[aria-label="Dismiss error"]')?.click())
+    expect(errorBoxText()).toBe('')
+    const resumeButton = container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')
+    expect(resumeButton?.disabled).toBe(false)
+    await act(async () => resumeButton?.click())
+    expect(resume).toHaveBeenCalledOnce()
+    // A retry that leaves the same Session failure must reopen its diagnostic.
+    expect(errorBoxText()).toContain('Codex ACP adapter 1.1.4')
+  })
+
   it('keeps an unrelated session resume failure in the Resume banner', () => {
     renderPanel({
       view: {
         activeSession: {
           ...errorSession,
           interrupted: true,
-          error: 'Agent session resume failed: connection reset'
+          error: 'Agent session resume failed: connection reset',
+          messages: planOriginMessages(),
+          resumeRecovery: {
+            kind: 'resume-required',
+            promptMessageId: 'plan-origin',
+            cause: 'connection-lost'
+          }
         }
       }
     })
@@ -7178,6 +8678,30 @@ it('offers Fork to continue while leaving the imported conversation read-only', 
     button!.click()
   })
   expect(forkSessionMock).toHaveBeenCalledWith(activeSession)
+  expect(usePreviewWorkbenchStore.getState().items).toEqual([])
+  const replay = [...container.querySelectorAll('button')].find((button) =>
+    button.textContent?.includes('View replay')
+  )!
+  expect(replay).toBeDefined()
+  await act(async () => {
+    replay.click()
+  })
+  expect(usePreviewWorkbenchStore.getState().panelState).toBe('open')
+  expect(usePreviewWorkbenchStore.getState().items).toContainEqual(
+    expect.objectContaining({
+      toolKind: 'replay',
+      replaySourceProjectId: 'project-a',
+      replaySourceSessionId: activeSession.id
+    })
+  )
+  await act(async () => {
+    replay.click()
+  })
+  expect(
+    usePreviewWorkbenchStore
+      .getState()
+      .items.filter((item) => item.type === 'tool' && item.toolKind === 'replay')
+  ).toHaveLength(1)
 })
 
 it('shows the branch source chat number and opens that source session', () => {
@@ -7212,3 +8736,69 @@ it('shows the branch source chat number and opens that source session', () => {
   act(() => sourceLink!.click())
   expect(openSession).toHaveBeenCalledWith('branch-source')
 })
+
+it.each(['question', 'delegated question', 'plan', 'permission', 'delegated permission'] as const)(
+  'does not reactivate an imported historical %s',
+  (kind) => {
+    const activeSession: ChatSession = {
+      ...delegatedQuestionSession(),
+      packageOrigin: {
+        importId: 'import-operation',
+        sourceProjectId: 'source-project',
+        sourceSessionId: 'source-session',
+        importedAt: 1,
+        manifestChecksum: 'a'.repeat(64)
+      }
+    }
+    if (kind === 'question') {
+      activeSession.activities = [
+        {
+          id: 'historical-question',
+          kind: 'tool',
+          title: 'Choose an approach',
+          status: 'failed',
+          eventIds: [],
+          sortIndex: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          elicitation: {
+            message: 'Choose an approach',
+            fields: [],
+            state: 'pending',
+            durable: { kind: 'agent-user-choice', requestId: 'historical-choice' }
+          }
+        }
+      ]
+    }
+    if (kind === 'plan') {
+      activeSession.status = 'waiting-plan-approval'
+      activeSession.messages = planOriginMessages()
+      activeSession.activePlanProjection = {
+        ...completedPlanProjection,
+        approval: 'pending',
+        lifecycle: 'awaiting_approval'
+      }
+    }
+    if (kind.endsWith('permission')) activeSession.status = 'waiting-permission'
+    renderPanel({
+      view: { activeSession },
+      permissions: {
+        requests: kind.endsWith('permission')
+          ? [
+              {
+                sessionId: activeSession.id,
+                ...(kind === 'delegated permission'
+                  ? { delegated: { frameId: 'child', attemptId: 'attempt' } }
+                  : {})
+              } as never
+            ]
+          : []
+      }
+    })
+    expect(container.querySelector('[data-testid="permission-approval-controls"]')).toBeNull()
+    expect(container.querySelector('[aria-label="Imported research history"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="blocking-composer-overlay"]')).toBeNull()
+    expect(container.textContent).not.toContain('Asked by Researcher')
+    expect(container.querySelector('[data-testid="ordinary-composer-form"]')).toBeNull()
+  }
+)

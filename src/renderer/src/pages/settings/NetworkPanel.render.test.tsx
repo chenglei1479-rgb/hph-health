@@ -56,7 +56,7 @@ describe('NetworkPanel offline retry', () => {
       root.render(<NetworkPanel view={{ kind: 'list' }} onNavigate={() => {}} />)
     )
     expect(container.querySelector('[aria-label="Proxy"]')?.textContent).toContain(
-      'How MedResearch Agent, ACP agents, notebook runtimes, and installers reach the internet.'
+      'How DRA, ACP agents, notebook runtimes, and installers reach the internet.'
     )
     expect(buttonWithText('Check again')).not.toBeUndefined()
     await act(async () => buttonWithText('Check again').click())
@@ -192,7 +192,7 @@ describe('NetworkPanel offline retry', () => {
       )
     })
 
-    expect(container.querySelector('[aria-label="Allowed domains"]')).toBeNull()
+    expect(container.querySelector('[aria-label="Custom public domains"]')).toBeNull()
     expect(container.querySelector('[aria-label="Network status"]')).not.toBeNull()
     expect(onNavigate).not.toHaveBeenCalled()
   })

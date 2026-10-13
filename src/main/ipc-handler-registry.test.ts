@@ -7,6 +7,34 @@ import { callerLeaseForEvent } from './caller-lifecycle'
 import { createIpcHandlerRegistry } from './ipc-handler-registry'
 
 describe('createIpcHandlerRegistry', () => {
+  it('checks account authorization in the main process before calling protected handlers', () => {
+    const handlers = new Map<string, (...args: unknown[]) => unknown>()
+    let authenticated = false
+    const registry = createIpcHandlerRegistry(
+      {
+        handle: (channel: string, handler: (...args: unknown[]) => unknown) =>
+          handlers.set(channel, handler)
+      } as never,
+      {
+        authorize: (channel) => {
+          if (channel !== 'account:state' && !authenticated)
+            throw new Error('DRA account login required.')
+        },
+        log: { warn: vi.fn() }
+      }
+    )
+    const read = vi.fn(() => 'private-research')
+    registry.ipcMainHandle('projects:list', read)
+    registry.ipcMainHandle('account:state', () => authenticated)
+    expect(handlers.get('account:state')?.(undefined)).toBe(false)
+    expect(() => handlers.get('projects:list')?.(undefined)).toThrow('login required')
+    expect(read).not.toHaveBeenCalled()
+    authenticated = true
+    expect(handlers.get('projects:list')?.(undefined)).toBe('private-research')
+    authenticated = false
+    expect(() => handlers.get('projects:list')?.(undefined)).toThrow('login required')
+    registry.dispose()
+  })
   it('keeps injected handler registrars callable without an Electron event', () => {
     const nativeHandlers = new Map<string, (...args: unknown[]) => unknown>()
     const registry = createIpcHandlerRegistry({

@@ -50,9 +50,28 @@ import {
 } from '../../../shared/session-package'
 import { useNavigationStore } from '@/stores/navigation-store'
 import { useProjectStore } from '@/stores/project-store'
+import { useSessionStore } from '@/stores/session-store'
+import { usePreviewWorkbenchStore } from '@/stores/preview-workbench-store'
+import { createSessionReplayItem } from '@/pages/workspace/workspace-session-actions'
 import { drainWorkspaceRuntimeEventsForPersistence } from '@/lib/acp/useWorkspaceAgentRuntime'
 import { forkSession } from '@/lib/session-fork'
 import { flushSessionPersistence } from '@/lib/session-persistence/session-persistence'
+
+const openPackageSession = (operation: PackageOperationSnapshot): boolean => {
+  const identity = operation.result?.imported
+  if (!identity) return false
+  const { projectId, sessionId } = identity
+  if (operation.kind !== 'import')
+    return useNavigationStore.getState().openSession(projectId, sessionId, 'user')
+  return useNavigationStore.getState().openSession(projectId, sessionId, 'user', () => {
+    const session = useSessionStore.getState().sessions.find((item) => item.id === sessionId)
+    usePreviewWorkbenchStore
+      .getState()
+      .upsertAndActivateItem(
+        createSessionReplayItem(projectId, sessionId, session?.title ?? sessionId)
+      )
+  })
+}
 
 const operationStatus = (
   operation: PackageOperationSnapshot,
@@ -331,11 +350,15 @@ export const PackageOperationIndicator = (): React.JSX.Element | null => {
 export const SessionPackageOperation = (): React.JSX.Element | null => {
   const { t } = useTranslation()
   const speedId = useId()
+  const riskId = useId()
   const { operation, open, receive, setOpen, dismiss } = usePackageOperationStore()
   const [operationError, setError] = useState<{ id: string; message: string }>()
   const [retrying, setRetrying] = useState(false)
+  const retryPending = useRef(false)
+  const [riskAcceptedFor, setRiskAcceptedFor] = useState<string>()
+  if (riskAcceptedFor && (!open || riskAcceptedFor !== operation?.id)) setRiskAcceptedFor(undefined)
   const titleRef = useRef<HTMLHeadingElement>(null)
-  const navigationIntent = useRef<string | undefined>(undefined)
+  const navigationIntent = useRef<{ operationId: string; revision: number } | undefined>(undefined)
   const isWeb = document.documentElement.getAttribute(WEB_EVENT_SURFACE_ATTRIBUTE) === 'true'
   useEffect(() => {
     if (isWeb || !window.api?.sessions?.onPackageOperation) return
@@ -360,19 +383,21 @@ export const SessionPackageOperation = (): React.JSX.Element | null => {
   useEffect(() => {
     if (
       isWeb ||
-      navigationIntent.current !== operation?.id ||
+      navigationIntent.current?.operationId !== operation?.id ||
       operation?.state !== 'succeeded' ||
       !operation.result?.imported ||
       openedImport.current === operation.id
     )
       return
     openedImport.current = operation.id
-    const identity = operation.result.imported
+    const revision = navigationIntent.current?.revision
+    if (revision !== useNavigationStore.getState().explicitNavigationRevision) return
     void useProjectStore
       .getState()
       .loadProjects()
       .then(() => {
-        useNavigationStore.getState().openSession(identity.projectId, identity.sessionId, 'user')
+        if (revision !== useNavigationStore.getState().explicitNavigationRevision) return
+        openPackageSession(operation)
       })
       .catch(() => undefined)
   }, [operation, isWeb])
@@ -386,23 +411,41 @@ export const SessionPackageOperation = (): React.JSX.Element | null => {
         ? t('Export Session package')
         : t('Import Session package')
   const { phase, status, waiting, busy, description } = operationStatus(operation, t)
+  const canOverride =
+    operation.kind === 'export' &&
+    operation.state === 'failed' &&
+    Boolean(operation.session && operation.sensitiveContent?.length) &&
+    !operation.cleanupPending &&
+    !operation.result?.recovery
   const selecting = operation.state === 'awaiting-selection'
   const OperationIcon =
     operation.state === 'succeeded' ? Check : waiting ? Clock3 : busy ? LoaderCircle : PackageOpen
   const respond = async (request: PackageOperationRequest): Promise<void> => {
     setError(undefined)
-    if (request.action === 'confirm-import') navigationIntent.current = operation.id
+    if (request.action === 'confirm-import')
+      navigationIntent.current = {
+        operationId: operation.id,
+        revision: useNavigationStore.getState().explicitNavigationRevision
+      }
     try {
       await window.api.sessions.packageOperation(request)
     } catch (caught) {
-      if (navigationIntent.current === operation.id) navigationIntent.current = undefined
+      if (navigationIntent.current?.operationId === operation.id)
+        navigationIntent.current = undefined
       setError({
         id: operation.id,
         message: caught instanceof Error ? caught.message : String(caught)
       })
     }
   }
-  const retry = async (chooseAnotherPackage = false): Promise<void> => {
+  const retry = async (
+    chooseAnotherPackage = false,
+    allowSensitiveContent = false
+  ): Promise<void> => {
+    if (retryPending.current) return
+    if (allowSensitiveContent && (!canOverride || riskAcceptedFor !== operation.id)) return
+    retryPending.current = true
+    setRiskAcceptedFor(undefined)
     setRetrying(true)
     setError(undefined)
     try {
@@ -414,7 +457,12 @@ export const SessionPackageOperation = (): React.JSX.Element | null => {
       } else if (operation.kind === 'export' && operation.session) {
         await drainWorkspaceRuntimeEventsForPersistence(operation.session.sessionId)
         await flushSessionPersistence()
-        await window.api.sessions.exportPackage(operation.session)
+        if (allowSensitiveContent)
+          await window.api.sessions.packageOperation({
+            action: 'export-with-sensitive-content',
+            operationId: operation.id
+          })
+        else await window.api.sessions.exportPackage(operation.session)
       } else if (operation.importRequestId && !chooseAnotherPackage)
         await respond({ action: 'retry-import', operationId: operation.id })
       else await window.api.sessions.importPackage(operation.importTarget)
@@ -424,6 +472,7 @@ export const SessionPackageOperation = (): React.JSX.Element | null => {
         message: caught instanceof Error ? caught.message : String(caught)
       })
     } finally {
+      retryPending.current = false
       setRetrying(false)
     }
   }
@@ -514,12 +563,7 @@ export const SessionPackageOperation = (): React.JSX.Element | null => {
   const openImported = async (): Promise<void> => {
     try {
       await useProjectStore.getState().loadProjects()
-      const identity = operation.result?.imported
-      if (
-        identity &&
-        useNavigationStore.getState().openSession(identity.projectId, identity.sessionId, 'user')
-      )
-        dismiss()
+      if (openPackageSession(operation)) dismiss()
     } catch (caught) {
       setError({
         id: operation.id,
@@ -695,6 +739,31 @@ export const SessionPackageOperation = (): React.JSX.Element | null => {
                     </pre>
                   </details>
                 ) : null}
+                {canOverride ? (
+                  <div className="space-y-3 rounded-lg border border-border bg-status-warning-surface p-3 dark:bg-status-warning-dark-surface">
+                    <p id={`${riskId}-description`} className="text-sm leading-5 text-foreground">
+                      {t(
+                        'This package may contain credentials or private information. Exporting anyway includes flagged content without redaction. Review the package before sharing.'
+                      )}
+                    </p>
+                    <div className="flex items-start gap-2">
+                      <input
+                        id={riskId}
+                        type="checkbox"
+                        className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+                        aria-describedby={`${riskId}-description`}
+                        checked={riskAcceptedFor === operation.id}
+                        disabled={retrying}
+                        onChange={(event) =>
+                          setRiskAcceptedFor(event.target.checked ? operation.id : undefined)
+                        }
+                      />
+                      <Label htmlFor={riskId} className="min-w-0 text-sm leading-5">
+                        {t('I understand the risk and want to export anyway')}
+                      </Label>
+                    </div>
+                  </div>
+                ) : null}
                 {operation.cleanupPending && !active ? (
                   <ErrorNotice
                     inline
@@ -736,8 +805,13 @@ export const SessionPackageOperation = (): React.JSX.Element | null => {
                   ) : null
                 }
                 onCancel={() => void respond({ action: 'cancel', operationId: operation.id })}
-                onSelect={(excludedStorageKeys) =>
-                  void respond({ action: 'select', operationId: operation.id, excludedStorageKeys })
+                onSelect={(excludedStorageKeys, includePdfNotes) =>
+                  void respond({
+                    action: 'select',
+                    operationId: operation.id,
+                    excludedStorageKeys,
+                    includePdfNotes
+                  })
                 }
               >
                 {transferSettings}
@@ -806,8 +880,27 @@ export const SessionPackageOperation = (): React.JSX.Element | null => {
                 {operation.state === 'failed' &&
                 !operation.cleanupPending &&
                 !operation.result?.recovery ? (
-                  <Button disabled={retrying} onClick={() => void retry()}>
+                  <Button
+                    variant={canOverride ? 'outline' : 'default'}
+                    disabled={retrying}
+                    onClick={() => void retry()}
+                  >
                     {t('Try again')}
+                  </Button>
+                ) : null}
+                {canOverride ? (
+                  <Button
+                    disabled={retrying || riskAcceptedFor !== operation.id}
+                    aria-busy={retrying}
+                    onClick={() => void retry(false, true)}
+                  >
+                    {retrying ? (
+                      <LoaderCircle
+                        className="size-4 animate-spin motion-reduce:animate-none"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    {t('Export anyway')}
                   </Button>
                 ) : null}
               </div>

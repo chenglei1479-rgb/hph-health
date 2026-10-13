@@ -170,6 +170,7 @@ const composeAcpRuntimePromptOwners = (
       [],
     authorizeReferencedUploads: options.skillImport?.authorizeReferencedUploads,
     memory: options.memory,
+    prepareSessionReading: options.prepareSessionReading,
     isMemoryEnabledForSession: (sessionId) =>
       session.sessionRegistry.lookup(sessionId)?.aggregate.snapshot().memoryEnabled ?? false,
     ...(options.notebook
@@ -238,39 +239,36 @@ const composeAcpRuntimePromptOwners = (
       })
     },
     serialization: base.providerPromptSerialization,
-    ...(options.auxiliaryUsage
-      ? {
+    usage: {
+      begin: (input) => base.providerPromptExecutor.beginObservation(input),
+      cwd: (sessionId) =>
+        session.sessionRegistry.lookup(sessionId)?.aggregate.snapshot().cwd ??
+        base.snapshotOwner.cwd,
+      model: () =>
+        base.backendGeneration.current.context.model ??
+        base.backendGeneration.current.session.model,
+      record: async ({ sessionId, eventId, frameworkId, model, completedAtMs, facts }) => {
+        if (!options.auxiliaryUsage) return
+        const projectId = await options.auxiliaryUsage.projectIdForSession(sessionId)
+        if (!projectId) return
+        await options.auxiliaryUsage!.record({
+          projectId,
+          sessionId,
+          eventId,
+          source: 'context-compaction',
+          frameworkId,
+          ...(base.backendGeneration.current.providerId
+            ? { providerId: base.backendGeneration.current.providerId }
+            : {}),
+          model,
+          completedAtMs,
           usage: {
-            begin: (input) => base.providerPromptExecutor.beginObservation(input),
-            cwd: (sessionId) =>
-              session.sessionRegistry.lookup(sessionId)?.aggregate.snapshot().cwd ??
-              base.snapshotOwner.cwd,
-            model: () =>
-              base.backendGeneration.current.context.model ??
-              base.backendGeneration.current.session.model,
-            record: async ({ sessionId, eventId, frameworkId, model, completedAtMs, facts }) => {
-              const projectId = await options.auxiliaryUsage!.projectIdForSession(sessionId)
-              if (!projectId) return
-              await options.auxiliaryUsage!.record({
-                projectId,
-                sessionId,
-                eventId,
-                source: 'context-compaction',
-                frameworkId,
-                ...(base.backendGeneration.current.providerId
-                  ? { providerId: base.backendGeneration.current.providerId }
-                  : {}),
-                model,
-                completedAtMs,
-                usage: {
-                  ...facts.turnUsage!,
-                  ...(facts.modelTurnCount === undefined ? {} : { turnCount: facts.modelTurnCount })
-                }
-              })
-            }
+            ...facts.turnUsage!,
+            ...(facts.modelTurnCount === undefined ? {} : { turnCount: facts.modelTurnCount })
           }
-        }
-      : {}),
+        })
+      }
+    },
     cancelCompaction: async (sessionId) => {
       const connection = base.connectionResources.connection
       const active = activeSession(sessionId)
@@ -373,13 +371,12 @@ const composeAcpRuntimePromptOwners = (
                 timestamp: event.timestamp ?? Date.now(),
                 level: event.level ?? 'info'
               } as AcpRuntimeEvent
-              options.runtimeSessions!.accept(durableEvent)
-              await options.runtimeSessions!.flush(
-                durableEvent.sessionId ?? '',
-                durableEvent.promptMessageId ?? ''
+              await options.runtimeSessions!.commitTerminal(durableEvent, (published) =>
+                session.publication.pushEvent(published)
               )
-              session.publication.pushEvent({ ...durableEvent, publicationOwner: 'main' })
-            }
+            },
+            retryTerminalCommits: (sessionId: string) =>
+              options.runtimeSessions!.retryTerminalCommits(sessionId)
           }
         : {}),
       onPromptEnded: (sessionId, turnToken) => {
@@ -411,7 +408,8 @@ const composeAcpRuntimePromptOwners = (
             reviewOwner,
             planDeliveryCommandId,
             delegatedMessageId,
-            applicationPrompt
+            applicationPrompt,
+            approvedHandoffContinuation
           ) => {
             const provenance = request.provenanceContext
             if (
@@ -448,10 +446,13 @@ const composeAcpRuntimePromptOwners = (
                 reviewOwner,
                 ...(planDeliveryCommandId ? { planDeliveryCommandId } : {}),
                 ...(delegatedMessageId ? { delegatedMessageId } : {}),
-                ...(applicationPrompt ? { applicationPrompt } : {})
+                ...(applicationPrompt ? { applicationPrompt } : {}),
+                ...(approvedHandoffContinuation ? { approvedHandoffContinuation } : {})
               }
             )
-          }
+          },
+          assertRuntimeSessionAdmissionAvailable: (sessionId: string) =>
+            options.runtimeSessions!.assertAdmissionAvailable(sessionId)
         }
       : {}),
     onPromptStarted: (sessionId, turnToken, promptAttemptId) =>

@@ -32,6 +32,7 @@ export const customProviderRequiresKey = (baseUrl: string | undefined): boolean 
   !isLoopbackProviderBaseUrl((baseUrl ?? '').trim())
 
 export type CustomProviderBaseUrlError =
+  | "Replace YOUR-RESOURCE or YOUR-PROJECT with your institutional configuration."
   | typeof PROVIDER_TRANSPORT_ERROR
   | 'Base URL must be a valid HTTP or HTTPS URL.'
   | 'Base URL must not include query parameters or fragments.'
@@ -55,6 +56,8 @@ export const getCustomProviderBaseUrlError = (
     return 'Remove credentials from the Base URL and use the API key field.'
   }
   if (url.search || url.hash) return 'Base URL must not include query parameters or fragments.'
+
+  if (/YOUR-(?:RESOURCE|PROJECT)/i.test(value)) return "Replace YOUR-RESOURCE or YOUR-PROJECT with your institutional configuration."
 
   return undefined
 }

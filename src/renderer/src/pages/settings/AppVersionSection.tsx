@@ -1,7 +1,8 @@
+import { AppBrand } from '@/components/AppBrand'
 import { InlineNotice } from '@/components/ui/inline-notice'
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 /* Hallmark · component: Settings About · macrostructure: identity + resource list
- * genre: modern-minimal · theme: MedResearch Agent Settings
+ * genre: modern-minimal · theme: DRA Settings
  * states: default · hover · focus · active · disabled · loading · error · success
  * contrast: pass (semantic Settings tokens) · slop: pass
  */
@@ -50,7 +51,7 @@ const AppVersionSection = ({
   const version = appInfo?.version ?? status.current
   const isChecking = status.state === 'checking'
   const isDownloading = status.state === 'downloading'
-  const canCheck = !isChecking && !isDownloading
+  const canCheck = status.state !== 'disabled' && !isChecking && !isDownloading
   const hasUpdate = status.state === 'available' || isDownloading || status.state === 'ready'
   const helpPreviewClassName =
     previewState === 'hover'
@@ -64,6 +65,8 @@ const AppVersionSection = ({
   const statusLine = ((): string => {
     if (status.error) return status.error
     switch (status.state) {
+      case 'disabled':
+        return t('Automatic updates are disabled until a DRA update service is configured.')
       case 'checking':
         return t('Checking for updates…')
       case 'available':
@@ -92,7 +95,7 @@ const AppVersionSection = ({
             <AppLogo className="size-12 shrink-0 rounded-lg" />
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-baseline gap-x-2">
-                <span className="text-sm font-semibold text-foreground">{APP.name}</span>
+                <AppBrand showLogo={false} />
                 <span className="text-xs text-muted-foreground tabular-nums">v{version}</span>
               </p>
               <p className="mt-0.5 text-xs font-normal text-muted-foreground">{APP.copyright}</p>

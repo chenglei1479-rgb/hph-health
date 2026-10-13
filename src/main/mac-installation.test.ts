@@ -28,7 +28,7 @@ const native = vi.hoisted(() => ({
   checkAccess: vi.fn(),
   app: {
     isPackaged: true,
-    getPath: vi.fn(() => '/Volumes/Installer/MedResearch Agent.app/Contents/MacOS/MedResearch Agent')
+    getPath: vi.fn(() => '/Volumes/Installer/DRA.app/Contents/MacOS/DRA')
   }
 }))
 
@@ -230,9 +230,9 @@ describe('mac installation location', () => {
     async () => {
       const root = await mkdtemp(join(tmpdir(), 'open-science-install-test-'))
       try {
-        const source = join(root, 'source', 'MedResearch Agent.app')
+        const source = join(root, 'source', 'DRA.app')
         const applications = join(root, 'Applications')
-        const destination = join(applications, 'MedResearch Agent.app')
+        const destination = join(applications, 'DRA.app')
         await mkdir(join(source, 'Contents'), { recursive: true })
         await mkdir(destination, { recursive: true })
         await writeFile(join(source, 'Contents', 'version'), 'new')
@@ -274,7 +274,7 @@ describe.skipIf(process.platform !== 'darwin')('mac installation coexistence', (
   }> => {
     const root = await mkdtemp(join(tmpdir(), 'open-science-brand-install-'))
     roots.push(root)
-    const source = join(root, 'source', 'MedResearch Agent.app')
+    const source = join(root, 'source', 'DRA.app')
     const applications = join(root, 'Applications')
     const legacy = join(applications, legacyName)
     await mkdir(join(source, 'Contents'), { recursive: true })
@@ -285,20 +285,20 @@ describe.skipIf(process.platform !== 'darwin')('mac installation coexistence', (
       join(legacy, 'Contents', 'Info.plist'),
       '<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.aipoch.open-science</string></dict></plist>'
     )
-    return { source, applications, legacy, destination: join(applications, 'MedResearch Agent.app') }
+    return { source, applications, legacy, destination: join(applications, 'DRA.app') }
   }
 
   afterEach(async () => {
     for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true })
   })
 
-  it.each(['MedResearch Agent.app', 'OpenScience.app'])(
+  it.each(['DRA.app', 'OpenScience.app'])(
     'installs the new name without changing the existing %s',
     async (legacyName) => {
       const f = await fixture(legacyName)
       await expect(installMacApplication(f.source, f.applications)).resolves.toBe(f.destination)
       expect((await readdir(f.applications)).sort()).toEqual(
-        [legacyName, 'MedResearch Agent.app'].sort()
+        [legacyName, 'DRA.app'].sort()
       )
       expect(await readFile(join(f.legacy, 'Contents/version'), 'utf8')).toBe('old')
       expect(await readFile(join(f.destination, 'Contents/version'), 'utf8')).toBe('new')
@@ -308,7 +308,7 @@ describe.skipIf(process.platform !== 'darwin')('mac installation coexistence', (
   it.each(['duplicate', 'foreign'])(
     'preserves a %s sibling while installing the same-name target',
     async (kind) => {
-      const f = await fixture('MedResearch Agent.app')
+      const f = await fixture('DRA.app')
       if (kind === 'duplicate') await mkdir(f.destination)
       else {
         await writeFile(
@@ -319,8 +319,8 @@ describe.skipIf(process.platform !== 'darwin')('mac installation coexistence', (
       const previousInfo = await readFile(join(f.legacy, 'Contents/Info.plist'), 'utf8')
       await expect(installMacApplication(f.source, f.applications)).resolves.toBe(f.destination)
       expect((await readdir(f.applications)).sort()).toEqual([
-        'MedResearch Agent.app',
-        'MedResearch Agent.app'
+        'DRA.app',
+        'DRA.app'
       ])
       expect(await readFile(join(f.destination, 'Contents/version'), 'utf8')).toBe('new')
       expect(await readFile(join(f.legacy, 'Contents/Info.plist'), 'utf8')).toBe(previousInfo)
@@ -334,14 +334,14 @@ describe.skipIf(process.platform !== 'darwin')('mac installation coexistence', (
     await writeFile(join(f.destination, 'Contents/version'), 'previous new-name version')
     const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
     vi.mocked(rename).mockImplementation(async (from, to) => {
-      if (to === f.destination && String(from).endsWith('/MedResearch Agent.app'))
+      if (to === f.destination && String(from).endsWith('/DRA.app'))
         throw new Error('fixture final rename failure')
       return actual.rename(from, to)
     })
     await expect(installMacApplication(f.source, f.applications)).rejects.toThrow(
       'fixture final rename failure'
     )
-    expect((await readdir(f.applications)).sort()).toEqual(['MedResearch Agent.app', 'OpenScience.app'])
+    expect((await readdir(f.applications)).sort()).toEqual(['DRA.app', 'OpenScience.app'])
     expect(await readFile(join(f.destination, 'Contents/version'), 'utf8')).toBe(
       'previous new-name version'
     )

@@ -53,23 +53,24 @@ export type AppIconControllerDeps = {
   electron: AppIconElectron
   // Absolute filesystem path of each variant's bundled platform asset (resolved by the ?asset import).
   variantPaths: Record<AppIconVariant, string>
-  // The persisted variant to apply on startup.
+  // The system theme's variant, used until the renderer reports the resolved app theme.
   initialVariant: AppIconVariant
+  // Keeps the tray on the same theme variant as windows and the Dock.
+  onVariantChanged?: (variant: AppIconVariant) => void
   // Overridable for tests; defaults to the host platform.
   platform?: NodeJS.Platform
 }
 
-// Owns runtime icon appearance. Off macOS the independent variant is applied to every window and
+// Owns runtime icon appearance. Off macOS the resolved theme variant is applied to every window and
 // re-applied after recreation. On macOS the renderer's resolved Theme drives the Dock, while the
 // installed .app/Finder/Launchpad icon remains the build/icon.icon asset catalog. NOTE: on Windows
 // setIcon changes the window's own icon but NOT the taskbar button, which Windows keys off the
 // AppUserModelID / baked-in exe icon; the installed bundle/exe icon is unaffected at runtime.
 export type AppIconController = {
-  // Applies the independent app-icon setting off macOS. On macOS, Theme is authoritative so this
-  // legacy setting cannot race the adaptive app icon / Dock appearance.
+  // Legacy setting hook; user-visible theme updates override it off macOS.
   setVariant: (variant: AppIconVariant) => void
-  // Applies the resolved General > Theme appearance to the macOS Dock. `followsSystem` keeps the
-  // main process listening after the last renderer window closes.
+  // Applies the resolved General > Theme appearance. `followsSystem` keeps tracking the OS after
+  // the last renderer window closes.
   setAppearance: (appearance: WindowFindAppearance) => void
   // The variant currently applied.
   getVariant: () => AppIconVariant
@@ -124,9 +125,10 @@ export const createAppIconController = (deps: AppIconControllerDeps): AppIconCon
   const applyEverywhere = (): void => {
     if (isDarwin) {
       applyToDock()
-      return
+    } else {
+      for (const window of deps.electron.getAllWindows()) applyToWindow(window)
     }
-    for (const window of deps.electron.getAllWindows()) applyToWindow(window)
+    deps.onVariantChanged?.(current)
   }
 
   // Every window created from here on picks up the current variant before it is shown, so a variant
@@ -135,29 +137,23 @@ export const createAppIconController = (deps: AppIconControllerDeps): AppIconCon
     applyToWindow(window)
   })
 
-  // Resolve a system-following preference from Electron's native source rather than trusting a
-  // renderer snapshot that may have been sent immediately before the OS appearance changed.
-  const applyAppearanceToDock = (): void => {
-    if (!isDarwin || !currentAppearance) return
+  // Use Electron's native appearance for System mode; explicit app themes remain pinned.
+  const applyAppearance = (): void => {
+    if (!currentAppearance) return
     current = currentAppearance.followsSystem
       ? deps.electron.nativeTheme.shouldUseDarkColors
         ? 'dark'
         : 'light'
       : currentAppearance.theme
-    applyToDock()
-  }
-
-  if (isDarwin) {
-    // Keep following macOS even while every BrowserWindow is closed. Before the renderer announces
-    // its preference we deliberately leave the Dock alone, so the bundled .icon remains authoritative
-    // during startup instead of being immediately overwritten by a stale persisted icon choice.
-    deps.electron.nativeTheme.on('updated', () => {
-      if (currentAppearance?.followsSystem) applyAppearanceToDock()
-    })
-  } else {
-    // Off macOS the independent persisted icon variant remains the existing source of truth.
     applyEverywhere()
   }
+
+  // Follow OS day/night changes on every platform, including while all app windows are closed.
+  deps.electron.nativeTheme.on('updated', () => {
+    if (currentAppearance?.followsSystem) applyAppearance()
+  })
+
+  if (!isDarwin) applyEverywhere()
 
   return {
     setVariant: (variant: AppIconVariant): void => {
@@ -166,9 +162,8 @@ export const createAppIconController = (deps: AppIconControllerDeps): AppIconCon
       applyEverywhere()
     },
     setAppearance: (appearance: WindowFindAppearance): void => {
-      if (!isDarwin) return
       currentAppearance = appearance
-      applyAppearanceToDock()
+      applyAppearance()
     },
     getVariant: (): AppIconVariant => current
   }

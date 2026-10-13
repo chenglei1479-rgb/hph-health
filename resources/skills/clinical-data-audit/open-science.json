@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "helpers": [
+    {
+      "id": "clinical-data-audit",
+      "language": "python",
+      "interfaceRevision": 1,
+      "implementation": "kernel.py",
+      "exports": ["inspect_dataset", "audit_synthetic_cohort"],
+      "dependencies": []
+    }
+  ]
+}

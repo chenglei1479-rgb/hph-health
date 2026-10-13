@@ -54,6 +54,7 @@ const settingsPaths = {
   providerRuntimeProjection: resolve(settingsRoot, 'provider-runtime-projection.ts'),
   backendResolver: resolve(settingsRoot, 'backend-resolver.ts'),
   backendSelection: resolve(settingsRoot, 'backend-selection-owner.ts'),
+  backendTarget: resolve(settingsRoot, 'backend-target.ts'),
   backendRoutePlanner: resolve(settingsRoot, 'backend-route-planner.ts'),
   providerTransportOwner: resolve(settingsRoot, 'provider-transport-owner.ts'),
   responsesBridge: resolve(settingsRoot, 'responses-bridge.ts'),
@@ -453,6 +454,7 @@ describe('Settings backend ownership architecture', () => {
       'resolveActiveReasoningEffort',
       'resolveActiveSpawnConfig',
       'resolveAdmittedTarget',
+      'resolveExplicitDirectProvider',
       'resolveExplicitTarget',
       'resolveSelection'
     ])
@@ -487,15 +489,15 @@ describe('Settings backend ownership architecture', () => {
         getComputeBookmarks getConnectorDetail getConnectors getConversationSkillImportEnabled getGitHubTokenStatus getGrantedLocalRoots getLocalShellRuntimePreference getManualInterpreters getNotebookNetwork getNotebookNetworkStatus getNotificationsEnabled getPackageMirror
         getPreflight getRuntimeEnablement getSettingsView getShowNotificationContent getSkillDetail getSkillMarketplaceBatch getSkillMarketplaceDetail getWsl2BashPreviewStatus getWslSetupStatus hasActiveInstall holdInstallAdmission
         getStoredSettings importAgentHomeSkills importSkill importSkillArchiveBatch importSkillZip
-        importSkillZipBatch installClaude installCodeBuddy installCodex installMissingWslDependencies installNotebookNetwork installOpencode installRecommendedWslDistro installSkillMarketplace installWslPlatform isEncryptionAvailable
+        cancelNotebookNetworkSetup importSkillZipBatch installClaude installCodeBuddy installCodex installMissingWslDependencies installNotebookNetwork installOpencode installRecommendedWslDistro installSkillMarketplace installWslPlatform isEncryptionAvailable
         isNpmAvailable listAgentHomeSkills listConnectors listDeviceCredentials listHostSkills listSkillMarketplace listSkills listSpecialistSkillCatalog listUserSkills
         dispose loginClaudeShared loginIsolatedClaude loginIsolatedClaudeBrowser loginIsolatedCodex
         logoutClaudeShared logoutIsolatedClaude logoutIsolatedCodex logoutXaiOAuth markOnboardingComplete
         markPathsNormalized migrateAgentHomeSkillIdentities openWslTerminal prepareDelegatedSkills previewAgentHomeSkill previewCustomServerTemplateExport
         previewCustomServerTemplateImport previewGitHubSkill previewSkillArchive previewSkillZip
         createWslSupportHandoff probeWslSetup provisionedConnectorSkillNames publishHostSkill refreshProviderModels registeredHelperCatalog rememberCodexAutoHttpsFallback removeCustomServer removeDeviceCredential removeGitHubToken removeNotebookNetwork
-        removeManualInterpreter resolveActiveModelChangeTarget resolveActiveReasoningEffort restoreLocalShellRuntimePreference
-        resolveAdmittedSubagentBackend resolveAgentBackend resolveDeviceOAuthCredential resolveExplicitAgentBackend resolveSkillDocument resolveSubagentExecutionModel saveCustomServerOAuthState saveGitHubToken saveValidatedProvider
+        removeManualInterpreter resolveActiveModelChangeTarget resolveActiveReasoningEffort restoreLocalShellRuntimePreference reviewNotebookPrivateDestination
+        resolveAdmittedSubagentBackend resolveAgentBackend resolveDeviceOAuthCredential resolveExplicitAgentBackend resolveExplicitDirectProvider resolveSkillDocument resolveSubagentExecutionModel saveCustomServerOAuthState saveGitHubToken saveValidatedProvider
         scanRepoSkills selectWslProfile setActiveProvider setAgentEnvironmentCreationEnabled setAgentFramework setAgentRouting setAppIconVariant setClosePreference switchLocalShellToPowerShell
         setComputeBookmarks setConnectorAutoAllow setConnectorEnabled
         setConversationSkillImportEnabled setCustomServerAuthenticator setCustomServerEnabled
@@ -513,7 +515,12 @@ describe('Settings backend ownership architecture', () => {
 
   it('locks the current production importer graph at the public seams', () => {
     expect(importersOf(settingsPaths.repository)).toEqual([
-      'src/main/ipc.ts',
+      'src/main/composition/compute.ts',
+      'src/main/composition/connectors.ts',
+      'src/main/composition/session-packages.ts',
+      'src/main/composition/settings-bootstrap.ts',
+      'src/main/composition/settings-effects.ts',
+      'src/main/composition/specialists.ts',
       'src/main/locale/owner.ts',
       'src/main/settings/agent-runtime-manager.ts',
       'src/main/settings/classification-settings.ts',
@@ -547,7 +554,8 @@ describe('Settings backend ownership architecture', () => {
       'src/main/settings/repository.ts'
     ])
     expect(importersOf(settingsPaths.documentStore)).toEqual([
-      'src/main/ipc.ts',
+      'src/main/composition/settings-bootstrap.ts',
+      'src/main/ipc-application-composition.ts',
       'src/main/settings/repository.ts',
       'src/main/storage/initialize-location.ts'
     ])
@@ -569,7 +577,6 @@ describe('Settings backend ownership architecture', () => {
     expect(importersOf(settingsPaths.backendResolver)).toEqual([
       'src/main/acp/artifact-code-reconstruction-runner.ts',
       'src/main/acp/image-input-compatibility-owner.ts',
-      'src/main/acp/restricted-inference-runner.ts',
       'src/main/artifacts/code-reconstruction.ts',
       'src/main/notebook/host-model-service.ts',
       'src/main/reviewer/model-runtime-owner.ts',
@@ -598,7 +605,27 @@ describe('Settings backend ownership architecture', () => {
       'src/main/settings/validate.ts'
     ])
     expect(importersOf(settingsPaths.service)).toEqual([
-      'src/main/ipc.ts',
+      'src/main/composition/agent-completion.ts',
+      'src/main/composition/agent-controls.ts',
+      'src/main/composition/agent-runtime.ts',
+      'src/main/composition/connectors.ts',
+      'src/main/composition/delegation.ts',
+      'src/main/composition/document-reading.ts',
+      'src/main/composition/handoff.ts',
+      'src/main/composition/managed-files.ts',
+      'src/main/composition/notebook-bridge.ts',
+      'src/main/composition/notebook-environment.ts',
+      'src/main/composition/notebook-runtime.ts',
+      'src/main/composition/research-catalog.ts',
+      'src/main/composition/session-foundation.ts',
+      'src/main/composition/session-packages.ts',
+      'src/main/composition/session-projection.ts',
+      'src/main/composition/session-surfaces.ts',
+      'src/main/composition/settings-bootstrap.ts',
+      'src/main/composition/settings-effects.ts',
+      'src/main/composition/side-chat.ts',
+      'src/main/composition/specialists.ts',
+      'src/main/composition/storage-startup.ts',
       'src/main/settings/application-commands.ts',
       'src/main/settings/bootstrap-application-commands.ts',
       'src/main/settings/ipc.ts',
@@ -751,14 +778,18 @@ describe('Settings backend ownership architecture', () => {
       'type',
       'vendorId'
     ])
-    expect(typePropertyNames(settingsPaths.backendSelection, 'ExplicitAgentBackendTarget')).toEqual(
-      ['frameworkId', 'model', 'providerId', 'reasoningEffort', 'resolvedReasoningEffort']
-    )
+    expect(typePropertyNames(settingsPaths.backendTarget, 'ExplicitAgentBackendTarget')).toEqual([
+      'frameworkId',
+      'model',
+      'providerId',
+      'reasoningEffort',
+      'resolvedReasoningEffort'
+    ])
   })
 
   it('locks one production Settings document owner and the narrow Compute legacy port', () => {
     expect(constructorSitesFor(settingsPaths.repository, 'SettingsRepository')).toEqual([
-      'src/main/ipc.ts',
+      'src/main/composition/settings-bootstrap.ts',
       'src/main/settings/compute-grant-port.ts',
       'src/main/settings/service.ts',
       'src/main/specialist/package/transaction.ts',
@@ -770,23 +801,28 @@ describe('Settings backend ownership architecture', () => {
     expect(computeIpc).toContain('legacyComputeGrants && !permissionGrantRegistry')
     expect(computeIpc).toContain('legacyComputeGrants.hasComputeGrant(grant)')
     expect(computeIpc).toContain('legacyComputeGrants.addComputeGrant(grant)')
-    const mainIpc = readSource(resolve(projectRoot, 'src/main/ipc.ts'))
+    const settingsBootstrap = readSource(
+      resolve(projectRoot, 'src/main/composition/settings-bootstrap.ts')
+    )
+    const specialists = readSource(resolve(projectRoot, 'src/main/composition/specialists.ts'))
+    const handoff = readSource(resolve(projectRoot, 'src/main/composition/handoff.ts'))
+    const compute = readSource(resolve(projectRoot, 'src/main/composition/compute.ts'))
     const mainIndex = readSource(resolve(projectRoot, 'src/main/index.ts'))
     expect(mainIndex).toContain('const settingsStore = bootstrapLocations.settingsStore')
     expect(mainIndex).toContain('const startupSettingsRepository = bootstrapLocations.repository')
     expect(mainIndex).toMatch(
       /registerIpcHandlers\(\{\s+mainEntryPath,\s+settingsStore,\s+translate,/u
     )
-    expect(mainIpc).toContain('settingsStore ?? resolveConfigRoot()')
+    expect(settingsBootstrap).toContain('settingsStore ?? resolveConfigRoot()')
     // Package transactions use the shared production repository; their fallback supports standalone use.
-    expect(mainIpc).toContain('skillSettings: settingsRepository')
-    expect(mainIpc).toContain('await settingsService.migrateAgentHomeSkillIdentities()')
-    expect(mainIpc.indexOf('specialistPackageRecovery.current =')).toBeLessThan(
-      mainIpc.indexOf('await settingsService.migrateAgentHomeSkillIdentities()')
+    expect(specialists).toContain('skillSettings: settingsRepository')
+    expect(specialists).toContain('await settingsService.migrateAgentHomeSkillIdentities()')
+    expect(specialists.indexOf('specialistPackageRecovery.current =')).toBeLessThan(
+      specialists.indexOf('await settingsService.migrateAgentHomeSkillIdentities()')
     )
-    const settingsModule = mainIpc.slice(
-      mainIpc.indexOf('const settingsService = await modules.add('),
-      mainIpc.indexOf('settingsServiceRef.current = settingsService')
+    const settingsModule = settingsBootstrap.slice(
+      settingsBootstrap.indexOf('const settingsService = await modules.add('),
+      settingsBootstrap.indexOf('settingsServiceRef.current = settingsService')
     )
     expect(settingsModule).toContain(
       'const capability = new SettingsService({\n      repository: settingsRepository,\n      onProviderHealthChanged: async () => {\n        await settingsSnapshotCommits.projectAfter(Promise.resolve())\n      },\n      installCoordinator: settingsInstallCoordinator,\n      skillRuntimeMcpEntryPath: mainEntryPath,\n      openAlexFetch: netFetchStandard,\n      applyNetworkProxy:'
@@ -795,30 +831,30 @@ describe('Settings backend ownership architecture', () => {
     expect(settingsModule).toContain('rollback: () => capability.dispose()')
     expect(settingsModule).toContain('dispose: () => capability.dispose()')
     expect(settingsModule).toContain('disposeTimeoutMs: QUIT_SHUTDOWN_BUDGET_MS')
-    const updateBlockerDetector = mainIpc.slice(
-      mainIpc.indexOf('const detectResearchBlockers'),
-      mainIpc.indexOf('const durableDataRootHandoffGate')
+    const updateBlockerDetector = handoff.slice(
+      handoff.indexOf('const detectResearchBlockers'),
+      handoff.indexOf('const durableDataRootHandoffGate')
     )
     expect(updateBlockerDetector).toContain(
       "if (settingsService.hasActiveInstall()) blockers.push('settings-install')"
     )
-    const updateInstallHandoff = mainIpc.slice(
-      mainIpc.indexOf('let releaseSettingsInstallAdmission'),
-      mainIpc.indexOf('const updateCommandOwner')
+    const updateInstallHandoff = handoff.slice(
+      handoff.indexOf('let releaseSettingsInstallAdmission'),
+      handoff.indexOf('const updateCommandOwner')
     )
     expect(updateInstallHandoff).toContain(
       'releaseSettingsInstallAdmission = settingsService.holdInstallAdmission()'
     )
     expect(updateInstallHandoff).toContain('releaseAdmission?.()')
-    const dataRootInstallHandoff = mainIpc.slice(
-      mainIpc.indexOf('let releaseDataRootInstallAdmission'),
-      mainIpc.indexOf("declareElectronAdapter('storage'")
+    const dataRootInstallHandoff = handoff.slice(
+      handoff.indexOf('let releaseDataRootInstallAdmission'),
+      handoff.indexOf("declareElectronAdapter('storage'")
     )
     expect(dataRootInstallHandoff).toContain(
       'releaseDataRootInstallAdmission ??= settingsService.holdInstallAdmission()'
     )
     expect(dataRootInstallHandoff).toContain('abortDataRootInstallAdmission()')
-    expect(mainIpc).toContain('permissionGrantRegistry,\n    settingsRepository')
+    expect(compute).toContain('permissionGrantRegistry,\n    settingsRepository')
   })
 
   it('locks dependency-aware impact owners and cross-surface evidence', () => {
@@ -881,7 +917,9 @@ describe('Settings backend ownership architecture', () => {
       'src/main/settings/validate.test.ts',
       'src/main/settings/validate.ts',
       'src/main/settings/xai-oauth.test.ts',
-      'src/main/settings/xai-provider-account-owner.test.ts'
+      'src/main/settings/xai-provider-account-owner.test.ts',
+      'src/main/settings/provider-text-generation.ts',
+      'src/main/settings/provider-text-generation.test.ts'
     ])
     expect(manifest.modules.settings_provider_accounts.interfacePaths).toEqual([
       'src/main/settings/provider-accounts.ts',
@@ -895,7 +933,8 @@ describe('Settings backend ownership architecture', () => {
       'src/main/settings/provider-env.ts',
       'src/main/settings/provider-resource-limits.ts',
       'src/main/settings/provider-runtime-projection.ts',
-      'src/main/settings/validate.ts'
+      'src/main/settings/validate.ts',
+      'src/main/settings/provider-text-generation.ts'
     ])
     expect(manifest.modules.settings_backend_resolution.ownerPaths).toEqual([
       'src/main/settings/backend-resolver.ts',
@@ -947,7 +986,8 @@ describe('Settings backend ownership architecture', () => {
       'src/main/settings/responses-response-adapter.test.ts',
       'src/main/settings/system-proxy.test.ts',
       'src/main/settings/xai-oauth-provider-bridge.test.ts',
-      'src/main/settings/xai-protocol.test.ts'
+      'src/main/settings/xai-protocol.test.ts',
+      'src/main/settings/backend-target.ts'
     ])
     expect(manifest.modules.settings_backend_resolution.interfacePaths).toEqual([
       'src/main/settings/backend-resolver.ts',
@@ -966,7 +1006,8 @@ describe('Settings backend ownership architecture', () => {
       'src/main/settings/responses-response-adapter.ts',
       'src/main/settings/system-proxy.ts',
       'src/main/settings/xai-oauth-provider-bridge.ts',
-      'src/main/settings/xai-protocol.ts'
+      'src/main/settings/xai-protocol.ts',
+      'src/main/settings/backend-target.ts'
     ])
     expect(manifest.modules.settings_service_facade.ownerPaths).toEqual([
       'src/main/settings/service.ts',
@@ -1036,6 +1077,7 @@ describe('Settings backend ownership architecture', () => {
       'src/preload/index.test.ts'
     ])
     expect(manifest.modules.settings_service_facade.testFiles.consumer).toEqual([
+      'src/main/composition/notebook-environment.test.ts',
       'packages/open-science/cli.test.ts',
       'src/main/acp/backend-generation-owner.test.ts',
       'src/main/acp/runtime-provider-session-composition.test.ts',
@@ -1070,9 +1112,14 @@ describe('Settings backend ownership architecture', () => {
       'src/main/web-service/artifact-download.integration.test.ts',
       'src/main/web-service/controller.test.ts',
       'src/main/web-service/task-api.test.ts',
-      'src/main/literature/smart-collections.test.ts'
+      'src/main/literature/smart-collections.test.ts',
+      'src/main/session-persistence/ipc.test.ts'
     ])
     expect(manifest.modules.settings_backend_resolution.testFiles.consumer).toEqual([
+      'src/main/storage/wsl-npm-migration.integration.test.ts',
+      'src/main/composition/notebook-environment.test.ts',
+      'src/main/literature/command-owner.test.ts',
+      'src/main/composition/reviewer.test.ts',
       'src/main/session-persistence/runtime-session-owner.test.ts',
       'src/main/session-plan/adversarial-session-plan.test.ts',
       'packages/open-science/cli.test.ts',
@@ -1457,9 +1504,9 @@ describe('Settings backend ownership architecture', () => {
       'src/main/window-find-ipc.test.ts',
       'src/renderer/src/hooks/useLifecycleSync.test.tsx',
       'src/renderer/src/lib/acp/useWorkspaceAgentRuntime.test.ts',
-      'src/renderer/src/pages/literature/LiteratureFullTextLookup.render.test.tsx',
+      'src/renderer/src/pages/literature/detail/LiteratureFullTextLookup.render.test.tsx',
       'src/renderer/src/pages/literature/LiteratureLibraryPage.render.test.tsx',
-      'src/renderer/src/pages/literature/LiteratureMetadataEditor.test.tsx',
+      'src/renderer/src/pages/literature/detail/LiteratureMetadataEditor.test.tsx',
       'src/renderer/src/pages/onboarding/OnboardingWizard.regressions.test.tsx',
       'src/renderer/src/pages/settings/ConnectorAddForm.render.test.tsx',
       'src/renderer/src/pages/settings/SpecialistEditor.persistence.render.test.tsx',
@@ -1503,7 +1550,28 @@ describe('Settings backend ownership architecture', () => {
       'src/main/notebook/runtime-service.rpc-retirement.test.ts',
       'src/main/literature/smart-collections.test.ts',
       'src/main/notebook/runtime-service.macos-isolation.integration.test.ts',
-      'src/main/acp/library-auto-policy.test.ts'
+      'src/main/acp/library-auto-policy.test.ts',
+      'src/main/literature/journal-attributes.test.ts',
+      'src/main/session-diagnostics/export-evidence.integration.test.ts',
+      'src/main/permission-grants/connector-broker.test.ts',
+      'src/main/session-persistence/missing-runtime-session-repro.test.ts',
+      'src/main/session-persistence/prompt-preparation-restart.test.ts',
+      'src/main/session-persistence/terminal-commit-scheduler.test.ts',
+      'src/main/session-persistence/reconciliation-renderer-parity.test.ts',
+      'src/main/session-persistence/turn-outcome-reconciliation.test.ts',
+      'src/main/session-persistence/attention-projection.test.ts',
+      'src/main/acp/approved-handoff-outcome.integration.test.ts',
+      'src/main/acp/approved-handoff-outcome.test.ts',
+      'src/main/agent-framework/claude-shared-settings.integration.test.ts',
+      'src/main/literature/pdf-translation/checkpoints.test.ts',
+      'src/main/literature/pdf-translation/index.test.ts',
+      'src/main/literature/pdf-translation/diagnostics.test.ts',
+      'src/main/literature/pdf-translation/ipc.test.ts',
+      'src/main/literature/pdf-translation/reader-ownership.test.ts',
+      'src/main/literature/pdf-translation/usage.test.ts',
+      'src/main/literature/pdf-translation/pdf-cache.test.ts',
+      'src/main/literature/pdf-translation/api-target.test.ts',
+      'src/main/literature/pdf-translation/agent-target.test.ts'
     ])
     expect(
       [

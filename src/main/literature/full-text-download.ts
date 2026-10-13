@@ -72,6 +72,16 @@ export const downloadFullText = async (
     if (until <= Date.now()) retryAfterByOrigin.delete(host)
   for (let redirects = 0; redirects <= 5; redirects += 1) {
     signal.throwIfAborted()
+    // Europe PMC's article route can return a browser challenge. Use its current PDF
+    // API directly while retaining the reviewed candidate URL and attachment provenance.
+    const europeArticle = /^\/articles\/(PMC\d+)\/?$/u.exec(url.pathname)
+    if (
+      ['europepmc.org', 'www.europepmc.org'].includes(url.hostname) &&
+      europeArticle &&
+      url.searchParams.get('pdf') === 'render'
+    ) {
+      url = new URL(`https://europepmc.org/api/getPdf?pmcid=${europeArticle[1]}`)
+    }
     const retryAt = retryAfterByOrigin.get(url.origin) ?? retryAfterByOrigin.get(origin)
     if (retryAt && retryAt > Date.now()) throw new FullTextRateLimitError(retryAt)
     const proxy = await resolveProxy?.(url.href)
@@ -112,7 +122,7 @@ export const downloadFullText = async (
         {
           signal,
           ...(agent ? { agent } : {}),
-          headers: { Accept: 'application/pdf', 'User-Agent': 'MedResearch Agent/1.0' },
+          headers: { Accept: 'application/pdf', 'User-Agent': 'DRA/1.0' },
           lookup: (hostname, options, callback) => {
             void lookup(hostname, { all: true }).then(
               (addresses) => {

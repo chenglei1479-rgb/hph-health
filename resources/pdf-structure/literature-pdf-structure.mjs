@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
 // Read-only feasibility probe, not a production layout parser.
-// Usage: node scripts/spikes/literature-pdf-structure.mjs input.pdf output-directory [render-pages]
+// Usage: node resources/pdf-structure/literature-pdf-structure.mjs input.pdf output-directory [render-pages]
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
@@ -17,9 +17,11 @@ import {
   startsDetachedTextColumn
 } from './literature-pdf-caption-group.mjs'
 import { collectGraphicsBounds } from './literature-pdf-graphics.mjs'
+import { recordPaintedOperationBounds } from './literature-pdf-render-bounds.mjs'
 import { getDocument, OPS, version } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { repairPdfSymbolText } from './literature-pdf-symbol-text.mjs'
 import { readingRotation } from './literature-pdf-orientation.mjs'
+import { normalizePageLineOrder } from './literature-pdf-reading-order.mjs'
 
 const [inputPath, outputDirectory, renderPageList, adjacent, mode] = process.argv.slice(2)
 assert(inputPath && outputDirectory, 'Supply a local PDF and an output directory.')
@@ -52,7 +54,9 @@ try {
   if (renderPages) assert(renderPages.every((page) => page <= document.numPages))
   const geometryPages =
     renderPages && adjacent === 'adjacent'
-      ? [...new Set(renderPages.flatMap((page) => [page - 1, page, page + 1]))]
+      ? // A continuation can have one intervening captionless table page. Keep
+        // native look-back bounded; auxiliary failures still cannot fail the job.
+        [...new Set(renderPages.flatMap((page) => [page - 2, page - 1, page, page + 1]))]
           .filter((page) => page > 0 && page <= document.numPages)
           .sort((a, b) => a - b)
       : renderPages
@@ -141,9 +145,13 @@ try {
         if (item.hasEOL) flush()
       }
       flush()
+      // PDF text streams may paint the right column before the left column.
+      // Normalize only pages with clear two-column evidence; ambiguous pages
+      // retain their source order for downstream spatial ownership checks.
+      const orderedLines = normalizePageLineOrder({ width: viewport.width, lines })
       // Deliberately expose false positives instead of claiming caption association.
-      const captionStarts = lines.filter(({ text }) => captionKind(text))
-      const headingCandidates = lines.filter(
+      const captionStarts = orderedLines.filter(({ text }) => captionKind(text))
+      const headingCandidates = orderedLines.filter(
         ({ text, fontSize }) =>
           text.length < 110 &&
           fontSize >= 10 &&
@@ -166,7 +174,7 @@ try {
         graphicsOperators: counts,
         captionStarts,
         headingCandidates,
-        lines
+        lines: orderedLines
       })
       if (
         geometryPages ? geometryPages.includes(pageNumber) : captionStarts.length && rendered < 2
@@ -182,6 +190,7 @@ try {
           viewport: scaled,
           recordOperations: true
         })
+        recordPaintedOperationBounds(rendering)
         await rendering.promise
         Object.assign(pages.at(-1), collectGraphicsBounds(rendering, page.recordedBBoxes))
         if (mode !== 'production') {

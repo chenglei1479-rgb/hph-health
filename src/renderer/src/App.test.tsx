@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
-import { act, type ReactNode } from 'react'
+import { act, useImperativeHandle, type ReactNode, type Ref } from 'react'
+import type { SettingsPageHandle } from './pages/settings/SettingsPage'
 import { createRoot, type Root } from 'react-dom/client'
+import { WindowsTitleBar } from '@/components/WindowsTitleBar'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createLinearConversationGraph } from '../../shared/conversation-graph'
@@ -85,6 +87,7 @@ const mocks = vi.hoisted(() => {
     })),
     initUpdates: vi.fn(),
     openSessionById: vi.fn(),
+    requestSettingsLeave: vi.fn((leave: () => void) => leave()),
     notificationNudgeBox,
     notifications: {
       onOpenSession: vi.fn((listener: () => void) => {
@@ -138,11 +141,16 @@ const mocks = vi.hoisted(() => {
     getStatus: vi.fn(),
     getInfo: vi.fn(),
     onboarding: {
+      pending: undefined as Promise<void> | undefined,
       props: undefined as { loadStorageInfo: () => Promise<unknown> } | undefined
     },
     syncWindowFindAppearance: vi.fn(),
     syncUnreadTaskView: vi.fn(),
-    globalSearch: { props: undefined as { open: boolean } | undefined },
+    globalSearch: {
+      props: undefined as
+        | { open: boolean; isSessionPersistenceReady: boolean; onOpenRecovery?: () => void }
+        | undefined
+    },
     literaturePage: { renderCount: 0 },
     homePage: { props: undefined as { onOpenGlobalSearch: () => void } | undefined },
     closeActiveModal: {
@@ -150,6 +158,8 @@ const mocks = vi.hoisted(() => {
     },
     sideChatParentSessionIds: new Set<string>(),
     presentationProps: {
+      settings: undefined as
+        { sessionLoadError?: string; onRetryCatalogRecovery?: () => void } | undefined,
       closeConfirmation: undefined as { active?: boolean } | undefined,
       update: undefined as { active?: boolean } | undefined,
       computeApproval: undefined as { active?: boolean } | undefined,
@@ -191,7 +201,11 @@ vi.mock('@/hooks/useUnreadTaskViewSync', () => ({
   useUnreadTaskViewSync: mocks.syncUnreadTaskView
 }))
 vi.mock('@/components/global-search/GlobalSearchDialog', () => ({
-  GlobalSearchDialog: (props: { open: boolean }) => {
+  GlobalSearchDialog: (props: {
+    open: boolean
+    isSessionPersistenceReady: boolean
+    onOpenRecovery?: () => void
+  }) => {
     mocks.globalSearch.props = props
     return <div data-testid="global-search" />
   }
@@ -346,6 +360,7 @@ vi.mock('@/pages/literature/LiteratureLibraryPage', () => ({
 }))
 vi.mock('@/pages/onboarding/OnboardingWizard', () => ({
   OnboardingWizard: (props: { loadStorageInfo: () => Promise<unknown> }): React.JSX.Element => {
+    if (mocks.onboarding.pending) throw mocks.onboarding.pending
     mocks.onboarding.props = props
     return <div data-testid="onboarding-page" />
   }
@@ -376,23 +391,36 @@ vi.mock('@/pages/settings/ComputeApprovalDialog', () => ({
 }))
 vi.mock('@/pages/settings/SettingsPage', () => ({
   SettingsPage: ({
+    ref,
     open,
-    onOpenSession
+    onOpenSession,
+    sessionLoadError,
+    onRetryCatalogRecovery
   }: {
+    ref?: Ref<SettingsPageHandle>
     open: boolean
     onOpenSession?: (sessionId: string) => void
-  }): React.JSX.Element => (
-    <div>
-      <span data-testid="settings-page">{open ? 'open' : 'closed'}</span>
-      <button
-        type="button"
-        data-testid="open-settings-session"
-        onClick={() => onOpenSession?.('settings-session')}
-      >
-        Open settings session
-      </button>
-    </div>
-  )
+    sessionLoadError?: string
+    onRetryCatalogRecovery?: () => void
+  }): React.JSX.Element => {
+    mocks.presentationProps.settings = { sessionLoadError, onRetryCatalogRecovery }
+    useImperativeHandle(ref, () => ({
+      requestLeave: mocks.requestSettingsLeave,
+      closeActivePane: () => false
+    }))
+    return (
+      <div>
+        <span data-testid="settings-page">{open ? 'open' : 'closed'}</span>
+        <button
+          type="button"
+          data-testid="open-settings-session"
+          onClick={() => onOpenSession?.('settings-session')}
+        >
+          Open settings session
+        </button>
+      </div>
+    )
+  }
 }))
 vi.mock('@/pages/workspace/EnvStatusBanner', () => ({
   EnvStatusBanner: ({
@@ -444,6 +472,10 @@ vi.mock('@/pages/workspace/use-side-chat-controller', () => ({
 }))
 
 import { useStorageInfoStore } from '@/stores/storage-info-store'
+import {
+  useApplicationEventBindings,
+  type ApplicationEventProjection
+} from '@/hooks/useApplicationEventBindings'
 import App from './App'
 
 describe('App startup routing', () => {
@@ -473,7 +505,9 @@ describe('App startup routing', () => {
     mocks.settings.load.mockReset().mockResolvedValue(true)
     mocks.settings.checkEnvironment.mockReset().mockResolvedValue(undefined)
     mocks.settings.openSettings.mockClear()
+    mocks.settings.openSettingsToPanel.mockClear()
     mocks.settings.closeSettings.mockClear()
+    mocks.requestSettingsLeave.mockReset().mockImplementation((leave: () => void) => leave())
     mocks.settings.enqueueApproval.mockClear()
     mocks.settings.dismissApproval.mockClear()
     mocks.settings.enqueueCredentialRequest.mockClear()
@@ -539,6 +573,7 @@ describe('App startup routing', () => {
       usage: { categories: [], totalBytes: 0 },
       availableBytes: 1_000_000_000
     })
+    mocks.onboarding.pending = undefined
     mocks.onboarding.props = undefined
     window.api = {
       storage: { getStatus: mocks.getStatus, getInfo: mocks.getInfo },
@@ -610,6 +645,62 @@ describe('App startup routing', () => {
     root = createRoot(container)
     await act(async () => root.render(<App />))
   }
+
+  it('routes Windows menu commands through startup and dialog presentation guards', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (
+      this: HTMLCanvasElement
+    ) {
+      if (this.width !== 1 || this.height !== 1) return null
+      return {
+        fillStyle: '',
+        fillRect: vi.fn(),
+        getImageData: () => ({ data: new Uint8ClampedArray([255, 255, 255, 255]) })
+      } as unknown as CanvasRenderingContext2D
+    })
+    window.api.platform = 'win32'
+    const showMenu = vi.fn().mockResolvedValue('settings')
+    window.api.window = {
+      ...window.api.window,
+      showTitleBarMenu: showMenu,
+      updateTitleBar: vi.fn().mockResolvedValue(undefined)
+    }
+    root = createRoot(container)
+    const renderFrame = (): Promise<void> =>
+      act(async () =>
+        root.render(
+          <WindowsTitleBar>
+            <App />
+          </WindowsTitleBar>
+        )
+      )
+    const selectSettings = async (): Promise<void> => {
+      await act(async () => {
+        container.querySelector<HTMLButtonElement>('[role="menuitem"]')!.click()
+      })
+    }
+    await renderFrame()
+    await selectSettings()
+    expect(showMenu).toHaveBeenLastCalledWith(
+      expect.objectContaining({ settingsEnabled: false, searchEnabled: false })
+    )
+    expect(mocks.settings.openSettings).not.toHaveBeenCalled()
+
+    mocks.settings.isLoaded = true
+    await renderFrame()
+    await selectSettings()
+    expect(showMenu).toHaveBeenLastCalledWith(
+      expect.objectContaining({ settingsEnabled: true, searchEnabled: true })
+    )
+    expect(mocks.settings.openSettings).toHaveBeenCalledOnce()
+
+    mocks.update.isDialogOpen = true
+    await renderFrame()
+    await selectSettings()
+    expect(showMenu).toHaveBeenLastCalledWith(
+      expect.objectContaining({ settingsEnabled: false, searchEnabled: false })
+    )
+    expect(mocks.settings.openSettings).toHaveBeenCalledOnce()
+  })
 
   it('hydrates the persisted non-terminal Compute Job projection at app startup', async () => {
     mocks.settings.isLoaded = true
@@ -756,6 +847,55 @@ describe('App startup routing', () => {
       )
     })
     expect(document.querySelector('[data-testid="global-search"]')).toBeNull()
+  })
+
+  it('routes blocked search to existing recovery settings after closing search', async () => {
+    mocks.settings.isLoaded = true
+    mocks.sessionPersistence.isReady = false
+    mocks.sessionPersistence.catalogRecovery = { kind: 'repairable', reason: 'session-scan' }
+    await render()
+    await act(async () => mocks.homePage.props?.onOpenGlobalSearch())
+    expect(mocks.globalSearch.props?.isSessionPersistenceReady).toBe(false)
+    expect(mocks.globalSearch.props?.onOpenRecovery).toBeTypeOf('function')
+    await act(async () => mocks.globalSearch.props?.onOpenRecovery?.())
+    expect(mocks.settings.openSettingsToPanel).toHaveBeenCalledWith('archived')
+    expect(document.querySelector('[data-testid="global-search"]')).toBeNull()
+  })
+
+  it('projects search recovery as an owner command that transfers presentation to Settings', async () => {
+    let events!: ApplicationEventProjection
+    const BindingsHarness = (): null => {
+      events = useApplicationEventBindings({
+        startupView: 'app',
+        sessionPersistence: mocks.sessionPersistence,
+        hasDataRootRecovery: false,
+        hasLegacyDataMove: false,
+        closeActiveSettingsPane: vi.fn(),
+        requestSettingsLeave: mocks.requestSettingsLeave
+      })
+      return null
+    }
+    mocks.settings.openSettingsToPanel.mockImplementationOnce(() => {
+      mocks.settings.isSettingsOpen = true
+    })
+    root = createRoot(container)
+    await act(async () => root.render(<BindingsHarness />))
+    await act(async () => events.globalSearch.open())
+    expect(events.presentation.active).toBe('globalSearch')
+    await act(async () => events.globalSearch.openRecovery())
+    expect(mocks.settings.openSettingsToPanel).toHaveBeenCalledExactlyOnceWith('archived')
+    expect(events.presentation.active).toBe('settings')
+    expect(mocks.requestSettingsLeave).not.toHaveBeenCalled()
+  })
+
+  it('does not offer catalog recovery for temporary search unavailability', async () => {
+    mocks.settings.isLoaded = true
+    mocks.sessionPersistence.isReady = false
+    await render()
+    await act(async () => mocks.homePage.props?.onOpenGlobalSearch())
+    expect(mocks.globalSearch.props?.isSessionPersistenceReady).toBe(false)
+    expect(mocks.globalSearch.props?.onOpenRecovery).toBeUndefined()
+    expect(mocks.settings.openSettingsToPanel).not.toHaveBeenCalled()
   })
 
   it.each(['metaKey', 'ctrlKey'] as const)(
@@ -1186,6 +1326,40 @@ describe('App startup routing', () => {
     expect(container.querySelector('[data-testid="onboarding-page"]')).toBeNull()
   })
 
+  it('keeps the startup logo centered while onboarding suspends, then shows the wizard', async () => {
+    mocks.settings.isLoaded = true
+    mocks.startupView = 'onboarding'
+    let finishLoading!: () => void
+    mocks.onboarding.pending = new Promise<void>((resolve) => {
+      finishLoading = resolve
+    })
+
+    await render()
+
+    const logo = container.querySelector('[data-testid="open-science-logo-loader"]')
+    expect(logo).not.toBeNull()
+    const shell = logo?.closest('main')
+    expect(shell).not.toBeNull()
+    for (const className of [
+      'flex',
+      'min-h-svh',
+      'items-center',
+      'justify-center',
+      'bg-background'
+    ]) {
+      expect(shell?.classList.contains(className)).toBe(true)
+    }
+    expect(container.querySelector('[data-testid="onboarding-page"]')).toBeNull()
+
+    await act(async () => {
+      mocks.onboarding.pending = undefined
+      finishLoading()
+    })
+
+    expect(container.querySelector('[data-testid="open-science-logo-loader"]')).toBeNull()
+    expect(container.querySelector('[data-testid="onboarding-page"]')).not.toBeNull()
+  })
+
   it('shows a settings load error in the standard error notice and retries initialization', async () => {
     mocks.settings.loadError = 'settings IPC unavailable'
     mocks.settings.load.mockReset().mockResolvedValueOnce(false).mockResolvedValueOnce(true)
@@ -1204,7 +1378,7 @@ describe('App startup routing', () => {
     const retry = container.querySelector<HTMLButtonElement>('button')
     expect(retry).not.toBeNull()
     expect(retry?.dataset.slot).toBe('button')
-    expect(retry?.className).toContain('focus-visible:ring-3')
+    expect(retry?.className).toContain('focus-visible:keyboard-focus')
     expect(retry?.className).toContain('disabled:pointer-events-none')
     await act(async () => retry?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
 
@@ -1322,6 +1496,27 @@ describe('App startup routing', () => {
     expect(mocks.syncUnreadTaskView).toHaveBeenLastCalledWith({
       isSessionContentVisible: false
     })
+  })
+
+  it('waits for the Settings leave guard before host session navigation', async () => {
+    mocks.settings.isLoaded = true
+    mocks.settings.isSettingsOpen = true
+    mocks.sessions = [{ id: 'settings-session' }]
+    mocks.openSessionById.mockReturnValue(true)
+    let acceptLeave: (() => void) | undefined
+    mocks.requestSettingsLeave.mockImplementation((leave) => {
+      acceptLeave = leave
+    })
+    await render()
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('[data-testid="open-settings-session"]')?.click()
+    )
+    expect(mocks.requestSettingsLeave).toHaveBeenCalledOnce()
+    expect(mocks.openSessionById).not.toHaveBeenCalled()
+    expect(mocks.settings.closeSettings).not.toHaveBeenCalled()
+    await act(async () => acceptLeave?.())
+    expect(mocks.openSessionById).toHaveBeenCalledOnce()
+    expect(mocks.settings.closeSettings).toHaveBeenCalledOnce()
   })
 
   it('closes Settings only after remembered-session navigation completes', async () => {
@@ -1590,22 +1785,45 @@ describe('App startup routing', () => {
       '[data-testid="session-persistence-retry"]'
     )
     expect(retry?.dataset.slot).toBe('button')
-    expect(retry?.className).toContain('focus-visible:ring-3')
+    expect(retry?.className).toContain('focus-visible:keyboard-focus')
     retry?.click()
     expect(mocks.sessionPersistence.retryLoad).toHaveBeenCalledOnce()
+  })
+
+  it('dismisses a post-hydration load error without opening storage gates or removing Settings recovery', async () => {
+    mocks.settings.isLoaded = true
+    mocks.sessionPersistence.isHydrated = true
+    mocks.sessionPersistence.isReady = false
+    mocks.sessionPersistence.loadError = 'Storage unavailable'
+    mocks.sessionPersistence.canDeleteSessionsAndProjects = false
+    await render()
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="session-persistence-dismiss"]')!
+        .click()
+    )
+    expect(container.querySelector('[data-testid="session-persistence-alert"]')).toBeNull()
+    expect(container.querySelector('[data-testid="home-page"]')).not.toBeNull()
+    expect(mocks.sessionPersistence.isReady).toBe(false)
+    expect(mocks.sessionPersistence.loadError).toBe('Storage unavailable')
+    expect(mocks.sessionPersistence.retryLoad).not.toHaveBeenCalled()
+    expect(mocks.presentationProps.settings?.sessionLoadError).toBe('Storage unavailable')
+    expect(mocks.presentationProps.settings?.onRetryCatalogRecovery).toBe(
+      mocks.sessionPersistence.retryLoad
+    )
   })
 
   it('warns that in-memory conversation changes are not durable and retries them', async () => {
     mocks.settings.isLoaded = true
     mocks.sessionPersistence.writeError =
-      'MedResearch Agent could not save the latest conversation changes. Retry before closing the app.'
+      'DRA could not save the latest conversation changes. Retry before closing the app.'
 
     await render()
 
     const alert = container.querySelector('[data-testid="session-persistence-alert"]')
     expect(alert?.textContent).toContain('Conversation storage needs attention')
     expect(alert?.textContent).toContain(
-      'MedResearch Agent could not save the latest conversation changes. Retry before closing the app.'
+      'DRA could not save the latest conversation changes. Retry before closing the app.'
     )
     expect(alert?.textContent).not.toContain('could not confirm')
     expect(alert?.querySelector('[data-testid="session-persistence-dismiss"]')).not.toBeNull()
@@ -1629,7 +1847,7 @@ describe('App startup routing', () => {
     const alert = container.querySelector('[data-testid="session-persistence-alert"]')
     expect(alert?.textContent).toContain('Conversation storage limit reached')
     expect(container.querySelector('[data-testid="session-persistence-retry"]')).toBeNull()
-    expect(alert?.querySelector('[data-testid="session-persistence-dismiss"]')).toBeNull()
+    expect(alert?.querySelector('[data-testid="session-persistence-dismiss"]')).not.toBeNull()
 
     container
       .querySelector<HTMLButtonElement>('[data-testid="session-persistence-action"]')
@@ -1638,6 +1856,16 @@ describe('App startup routing', () => {
     expect(mocks.presentationProps.workspace?.persistenceBlockedSessionIds).toEqual(['session-1'])
     mocks.presentationProps.workspace?.onSessionSizeLimit?.('session-plan')
     expect(mocks.sessionPersistence.reportSessionSizeLimit).toHaveBeenCalledWith('session-plan')
+    await act(async () =>
+      alert
+        ?.querySelector<HTMLButtonElement>('[data-testid="session-persistence-dismiss"]')
+        ?.click()
+    )
+    expect(container.querySelector('[data-testid="session-persistence-alert"]')).toBeNull()
+    expect(mocks.presentationProps.workspace?.persistenceBlockedSessionIds).toEqual(['session-1'])
+    expect(mocks.sessionPersistence.dismissWriteWarning).not.toHaveBeenCalled()
+    await act(async () => root.render(<App />))
+    expect(container.querySelector('[data-testid="session-persistence-alert"]')).toBeNull()
   })
 
   it('stops a persistence-blocked active run while the Home page is visible', async () => {
@@ -1666,7 +1894,7 @@ describe('App startup routing', () => {
     mocks.sessionPersistence.hasCompleteSessionCatalog = false
     mocks.sessionPersistence.catalogRecovery = { kind: 'repairable', reason: 'session-scan' }
     mocks.sessionPersistence.writeError =
-      'MedResearch Agent could not save the latest conversation changes. Retry before closing the app.'
+      'DRA could not save the latest conversation changes. Retry before closing the app.'
 
     await render()
 

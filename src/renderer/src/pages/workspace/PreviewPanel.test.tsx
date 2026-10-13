@@ -19,8 +19,11 @@ import type { Annotation } from '../../../../shared/annotations'
 import type { LiteratureItemView } from '../../../../shared/literature'
 import { SOURCE_PREVIEW_PARTITION } from '../../../../shared/source-preview'
 import { FOCUS_COMPOSER_EVENT } from './composer-focus-events'
-import { literatureReadingDocument } from '../literature/literature-reading'
+import { literatureReadingDocument } from '../literature/workflows/literature-reading'
 import { createPreviewFileItemFromPdfContext } from './preview-file-item'
+
+// jsdom does not implement layout scrolling; real visibility is covered in keyboard-focus.spec.ts.
+Element.prototype.scrollIntoView ??= () => undefined
 
 vi.mock('@/components/ui/resizable', () => ({
   ResizablePanel: ({ children }: { children: React.ReactNode }): React.JSX.Element => (
@@ -444,7 +447,7 @@ describe('PreviewPanel', () => {
     tabBounds: [number, number]
     scrollLeft?: number
   }): { tabBar: HTMLElement; scrollTo: ReturnType<typeof vi.fn> } => {
-    const tabBar = container.querySelector<HTMLElement>('[aria-label="Open previews"]')
+    const tabBar = container.querySelector<HTMLElement>('[data-testid="preview-tab-strip"]')
     const tabContainer = container.querySelectorAll<HTMLElement>('[role="presentation"]')[tabIndex]
     if (!tabBar || !tabContainer) throw new Error('Expected preview tab geometry targets')
 
@@ -467,7 +470,7 @@ describe('PreviewPanel', () => {
     await renderPanel()
 
     expect(container.textContent).toContain('No preview content')
-    expect(container.querySelector('[aria-label="Open previews"]')).toBeNull()
+    expect(container.querySelector('[data-testid="preview-tab-strip"]')).toBeNull()
     expect(container.querySelector('[data-testid="preview-panel-top-bar"]')).toBeNull()
   })
 
@@ -475,7 +478,7 @@ describe('PreviewPanel', () => {
     await renderTwoFileTabs()
 
     const chromeRow = container.querySelector('[data-testid="preview-panel-top-bar"]')
-    const tabBar = container.querySelector('[aria-label="Open previews"]')
+    const tabBar = container.querySelector('[data-testid="preview-tab-strip"]')
 
     expect(chromeRow).not.toBeNull()
     expect(chromeRow?.contains(tabBar)).toBe(true)
@@ -519,8 +522,9 @@ describe('PreviewPanel', () => {
 
   it.each([
     ['compute', 'Compute', 'cpu'],
-    ['library', 'Library', 'book-open']
-  ] as const)('shows the sidebar icon on the %s preview tab', async (toolKind, title, icon) => {
+    ['library', 'Library', 'book-open'],
+    ['replay', 'Research replay', 'play']
+  ] as const)('shows the matching icon on the %s preview tab', async (toolKind, title, icon) => {
     usePreviewWorkbenchStore.getState().upsertAndActivateItem(createToolItem({ toolKind, title }))
 
     await renderPanel()
@@ -908,7 +912,7 @@ describe('PreviewPanel', () => {
     const card = container.querySelector('[data-testid="preview-card"]')
     const header = card?.querySelector('[data-testid="preview-card-header"]')
     const headerFileName = header?.querySelector('[data-testid="file-name-root"]')
-    const tabBar = container.querySelector('[aria-label="Open previews"]')
+    const tabBar = container.querySelector('[data-testid="preview-tab-strip"]')
     const fileTab = tabBar?.querySelector(`[role="tab"][title="${name}"]`)
     const fileTabContainer = fileTab?.parentElement
 
@@ -934,7 +938,7 @@ describe('PreviewPanel', () => {
       header?.querySelector(`[aria-label="Open full screen preview of ${name}"]`)
     ).not.toBeNull()
     expect(header?.querySelector(`[aria-label="Close preview of ${name}"]`)).not.toBeNull()
-    expect(tabBar?.getAttribute('role')).toBe('tablist')
+    expect(tabBar?.querySelector('[role="tablist"]')).not.toBeNull()
     expect(tabBar?.className).toContain('min-w-0')
     expect(tabBar?.className).toContain('flex-1')
     expect(fileTabContainer?.className).toContain('max-w-[160px]')
@@ -1178,7 +1182,7 @@ describe('PreviewPanel', () => {
     expect(usePreviewWorkbenchStore.getState().activeItemId).toBe('item-1')
   })
 
-  it('keeps pointer close affordances non-focusable and supports Delete on the tab', async () => {
+  it('exposes the active tab close button and preserves Delete navigation', async () => {
     usePreviewWorkbenchStore.getState().upsertAndActivateItem(createFileItem({}))
     usePreviewWorkbenchStore.getState().upsertItem(
       createFileItem({
@@ -1192,12 +1196,23 @@ describe('PreviewPanel', () => {
     await renderPanel()
 
     const closeAffordances = container.querySelectorAll<HTMLElement>(
-      '[aria-label="Open previews"] [data-preview-close]'
+      '[data-testid="preview-tab-strip"] [data-preview-close]'
     )
-    expect(Array.from(closeAffordances).every((element) => element.tabIndex === -1)).toBe(true)
+    const tabList = container.querySelector('[role="tablist"][aria-label="Open previews"]')!
+    const ownedTabs = tabList
+      .getAttribute('aria-owns')!
+      .split(' ')
+      .map((id) => document.getElementById(id))
+    expect(ownedTabs).toEqual(Array.from(container.querySelectorAll('[role="tab"]')))
+    expect(ownedTabs).toHaveLength(2)
+    expect(tabList.querySelector('button')).toBeNull()
+    expect(Array.from(closeAffordances).map((element) => element.tabIndex)).toEqual([0, -1])
     expect(
       Array.from(closeAffordances).every(
-        (element) => element.tagName === 'SPAN' && element.getAttribute('aria-hidden') === 'true'
+        (element) =>
+          element.tagName === 'BUTTON' &&
+          element.hasAttribute('aria-label') &&
+          !element.closest('[role="tab"]')
       )
     ).toBe(true)
 
@@ -1400,7 +1415,7 @@ describe('PreviewPanel', () => {
     await renderPanel()
 
     const closeInactiveTab = container.querySelector<HTMLElement>(
-      '[aria-label="Open previews"] [data-preview-close="file-2.pdf"]'
+      '[data-testid="preview-tab-strip"] [data-preview-close="file-2.pdf"]'
     )
     await act(async () => {
       closeInactiveTab?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -1712,12 +1727,44 @@ describe('PreviewPanel', () => {
       'Side chat'
     )
     expect(container.querySelector('[role="tab"]')?.textContent).not.toContain('Main analysis')
+    expect(container.querySelector('[role="tab"] svg')?.getAttribute('aria-hidden')).toBe('true')
+    expect(
+      container
+        .querySelector('[data-testid="preview-tab-strip"]')
+        ?.classList.contains('scrollbar-auto-hide')
+    ).toBe(true)
+    const information = panel!.querySelector<HTMLButtonElement>(
+      '[aria-label="Session information: Side chat"]'
+    )!
+    await act(async () => information.click())
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain('Main analysis')
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain(
+      'Compare the two cohorts'
+    )
+    await act(async () => information.click())
+    await act(async () => chat.setDraft('Keep this unfinished question'))
+    const textarea = panel!.querySelector('textarea')!
+    const enterFullScreen = (): void =>
+      panel!.querySelector<HTMLButtonElement>('[aria-label="Enter full screen"]')!.click()
+    await act(async () => enterFullScreen())
+    expect(panel!.closest('[role="dialog"]')).not.toBeNull()
+    expect(panel!.querySelector('textarea')).toBe(textarea)
+    expect(textarea.value).toBe('Keep this unfinished question')
+    expect(panel!.textContent).toContain('Question in the right panel')
+    await act(async () =>
+      panel!.querySelector<HTMLButtonElement>('[aria-label="Exit full screen"]')!.click()
+    )
+    expect(panel!.closest('[role="dialog"]')).toBeNull()
+    expect(panel!.querySelector('textarea')).toBe(textarea)
+    await act(async () => enterFullScreen())
     const viewMain = panel!.querySelector<HTMLButtonElement>('[aria-label="View main session"]')!
+    expect(viewMain.querySelector('svg.lucide-locate-fixed[aria-hidden="true"]')).not.toBeNull()
     await act(async () => viewMain.click())
     expect(openSession).toHaveBeenCalledWith('default', 'right-parent', 'user')
-    await act(async () => viewMain.focus())
-    expect(document.body.textContent).toContain('Main analysis')
-    expect(document.body.textContent).toContain('Compare the two cohorts')
+    expect(usePreviewWorkbenchStore.getState().expandedToolItemId).toBeNull()
+    expect(panel!.querySelector('textarea')).toBe(textarea)
+    expect(window.api.sideChat.cancel).not.toHaveBeenCalled()
+    expect(window.api.sideChat.close).not.toHaveBeenCalled()
     openSession.mockRestore()
   })
 

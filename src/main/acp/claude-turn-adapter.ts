@@ -7,7 +7,7 @@ import type {
 } from './provider-turn-adapter'
 
 // Unknown future origins stay eligible so a new user-driven lane does not silently under-report
-// model turns before MedResearch Agent knows its name.
+// model turns before DRA knows its name.
 const CLAUDE_AUTONOMOUS_RESULT_ORIGINS = new Set([
   'task-notification',
   'peer',
@@ -258,7 +258,11 @@ export const createClaudeCodeTurnAdapter = (
             turnUsage
           }))
         const exactLastModelStepUsage = exactModelCalls?.at(-1) ?? finalLastModelStepUsage
+        const contextUsedTokens = exactLastModelStepUsage
+          ? exactLastModelStepUsage.inputTokens + exactLastModelStepUsage.cacheTokens
+          : undefined
         const result: AcpProviderTurnResult = {
+          ...(Number.isSafeInteger(contextUsedTokens) ? { contextUsedTokens } : {}),
           ...(turnUsage ? { turnUsage } : {}),
           ...(finalModelTurnCount > 0 ? { modelTurnCount: finalModelTurnCount } : {}),
           ...(exactLastModelStepUsage ? { lastModelStepUsage: exactLastModelStepUsage } : {}),

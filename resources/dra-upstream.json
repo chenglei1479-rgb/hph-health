@@ -1,0 +1,20 @@
+{
+  "upstreamTag": "v0.36.0",
+  "upstreamCommit": "724d95e208209cc5fd12ffc54e715fa590454ba5",
+  "draVersion": "0.1.33-unified.1",
+  "components": [
+    {
+      "path": "packages/notebook-network-sandbox/vendor/windows/x64/notebook-appcontainer-host.exe",
+      "sha256": "dbdb1a6b75c5bdc71b3202a0b14c22112d4221552dba90415476a8d2610964d5"
+    },
+    {
+      "path": "resources/bin/win/x64/micromamba.exe",
+      "sha256": "616a625aa5ff4f05a23baf90d0e9604af0694ee53f4dd6b03ea953d9f4a41c2d"
+    },
+    {
+      "path": "resources/bin/win/x64/micromamba-compat.exe",
+      "sha256": "fcc3e439d62825f0e657eca51e6e302c71c53394a64ee3661b30f613b14db9a7"
+    }
+  ],
+  "windowsHostSource": "Preserved v0.35.1 native components; unchanged in v0.36.0; hashes checked during unified integration. Production sandbox execution pending."
+}

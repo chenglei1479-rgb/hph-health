@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "helpers": [{
+    "id": "dra-research-project",
+    "language": "python",
+    "interfaceRevision": 2,
+    "implementation": "kernel.py",
+    "exports": ["create_research_project", "build_evidence_table", "organize_manuscript", "record_expert_review", "record_research_issue", "build_research_package_manifest", "prepare_expert_collaboration", "consolidate_expert_collaboration", "build_research_review_bundle", "summarize_research_usage"],
+    "dependencies": []
+  }]
+}

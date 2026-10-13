@@ -258,6 +258,14 @@ describe('continueInterruptedTurn', () => {
       })
     )
     expect(startContinuation.mock.calls[0][0]).not.toHaveProperty('historyPreamble')
+    // Recovery must carry the anti-replay rule together with the immutable attachment above:
+    // an interrupted tool may already have produced an output or performed a side effect.
+    expect(startContinuation.mock.calls[0][0].text).toContain(
+      'query its existing Run before resubmitting it'
+    )
+    expect(startContinuation.mock.calls[0][0].text).toContain(
+      'Preserve the original input versions and researcher approvals'
+    )
     expect(trackPrompt).toHaveBeenCalledWith({
       sessionId: 'session-1',
       text: 'Analyze the attached evidence'

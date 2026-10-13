@@ -1,5 +1,10 @@
+import { pascalcaseTableNamesMigration } from './migrations/0049-pascalcase-table-names'
+import { pdfAnnotationSharingMigration } from './migrations/0048-pdf-annotation-sharing'
+import { journalAttributesMigration } from './migrations/0046-journal-attributes'
+import { sessionReplayMigration } from './migrations/0047-session-replay'
 import { literatureSmartCollectionsMigration } from './migrations/0044-literature-smart-collections'
 import { literatureSmartPauseRunMigration } from './migrations/0045-literature-smart-pause-run'
+import { literatureTranslationMigration } from './migrations/0050-literature-translation'
 import { classificationUsageMigration } from './migrations/0042-classification-usage'
 import { literatureCollectionRevisionMigration } from './migrations/0040-literature-collection-revision'
 import { bookmarksMigration } from './migrations/0041-bookmarks'
@@ -874,6 +879,63 @@ const MIGRATION_MANIFEST = [
     checksum: LITERATURE_SMART_PAUSE_RUN_CHECKSUM,
     backupOnApply: 'required',
     backupRetention: 'retain'
+  },
+  {
+    ...journalAttributesMigration,
+    checksum: checksumMigrationPayload(
+      journalAttributesMigration.id,
+      journalAttributesMigration.statements,
+      journalAttributesMigration.verifiers,
+      journalAttributesMigration.operations
+    ),
+    backupOnApply: 'required',
+    backupRetention: 'retain'
+  },
+  {
+    ...sessionReplayMigration,
+    checksum: checksumMigrationPayload(
+      sessionReplayMigration.id,
+      sessionReplayMigration.statements,
+      sessionReplayMigration.verifiers,
+      sessionReplayMigration.operations
+    ),
+    backupOnApply: 'required',
+    backupRetention: 'retain'
+  },
+  {
+    ...pdfAnnotationSharingMigration,
+    checksum: checksumMigrationPayload(
+      pdfAnnotationSharingMigration.id,
+      pdfAnnotationSharingMigration.statements,
+      pdfAnnotationSharingMigration.verifiers,
+      pdfAnnotationSharingMigration.operations
+    ),
+    foreignKeysDuringApply: 'disabled',
+    backupOnApply: 'required',
+    backupRetention: 'retain'
+  },
+  {
+    ...pascalcaseTableNamesMigration,
+    checksum: checksumMigrationPayload(
+      pascalcaseTableNamesMigration.id,
+      pascalcaseTableNamesMigration.statements,
+      pascalcaseTableNamesMigration.verifiers,
+      pascalcaseTableNamesMigration.operations
+    ),
+    foreignKeysDuringApply: 'disabled',
+    backupOnApply: 'required',
+    backupRetention: 'retain'
+  },
+  {
+    ...literatureTranslationMigration,
+    checksum: checksumMigrationPayload(
+      literatureTranslationMigration.id,
+      literatureTranslationMigration.statements,
+      literatureTranslationMigration.verifiers,
+      literatureTranslationMigration.operations
+    ),
+    backupOnApply: 'required',
+    backupRetention: 'retain'
   }
 ] as const satisfies readonly MigrationManifestEntry[]
 // schema-locality: begin frozen-0001-repairs
@@ -1276,6 +1338,7 @@ const currentApplicationSchemaExtensions = {
 
 const verifyCurrentApplicationSchema = async (client: PrismaClient): Promise<void> => {
   await verifyCurrentRuntimeSchema(client, currentApplicationSchemaExtensions)
+  await runMigrationVerifiers(client, literatureTranslationMigration.verifiers)
   // The generated schema enforces the latest checks; frozen auxiliary verifiers also accept
   // the exact stronger expressions from the immutable suffix.
   await runMigrationVerifiers(
@@ -1619,7 +1682,7 @@ const validateLedger = (
     const newerMigration = ledger[manifest.length]!
     throw new DatabaseMigrationError(
       'database_newer_than_app',
-      'The database was updated by a newer version of MedResearch Agent.',
+      'The database was updated by a newer version of DRA.',
       false,
       newerMigration.id
     )
@@ -1698,7 +1761,7 @@ const classifyDatabaseFailure = (
   if (phase !== 'migration') {
     return new DatabaseMigrationError(
       'database_open_failed',
-      'MedResearch Agent could not open its database.',
+      'DRA could not open its database.',
       transient,
       undefined,
       { cause: error }
@@ -1706,7 +1769,7 @@ const classifyDatabaseFailure = (
   }
   return new DatabaseMigrationError(
     'database_migration_failed',
-    'MedResearch Agent could not update its database. Existing data was not reset.',
+    'DRA could not update its database. Existing data was not reset.',
     transient,
     migrationId,
     { cause: error }
@@ -1878,6 +1941,20 @@ const applyManifestMigration = async (
           migration.verifiers,
           allowedCheckUpgrades,
           new Set(['LiteratureSourceRecord'])
+        )
+        return
+      }
+    }
+    if (migration.id === pdfAnnotationsMigration.id) {
+      const columns = await migrationSqlExecutor.query<{ name: string }[]>(
+        targetClient,
+        'PRAGMA table_info("pdf_annotations")'
+      )
+      if (columns.some((column) => column.name === 'documentId')) {
+        await verifyCurrentRuntimeSchemaTables(
+          targetClient,
+          ['pdf_annotations', 'pdf_annotation_imports'],
+          pdfAnnotationSharingMigration.statements
         )
         return
       }
@@ -2233,6 +2310,23 @@ const migrateApplicationDatabaseWithManifest = async (
 
   let nextIndex = appliedCount
   if (nextIndex === 0) {
+    // These names first shipped with a ledgered migration. Treat a missing ledger as
+    // corruption/development data, not a pre-ledger release that can safely replay history.
+    const renamedTables = new Set<string>(
+      pascalcaseTableNamesMigration.verifiers.flatMap((verifier) =>
+        verifier.kind === 'table-exists' ? [verifier.table] : []
+      )
+    )
+    const tables = await client.$queryRaw<Array<{ name: string }>>`
+      SELECT name FROM sqlite_schema WHERE type = 'table'
+    `
+    if (tables.some(({ name }) => renamedTables.has(name))) {
+      throw classifyDatabaseFailure(
+        new Error('A database with canonical table names requires its migration ledger.'),
+        'validation',
+        BASELINE_ID
+      )
+    }
     const baseline = manifest[0]!
     options.onProgress?.({ phase: 'migrating', migrationId: baseline.id })
     await ensureBackupBeforeMigration(baseline)

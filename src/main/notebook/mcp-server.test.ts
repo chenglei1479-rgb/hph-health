@@ -128,7 +128,7 @@ const callRememberMemoryThroughMcp = async (
 describe('notebook MCP server config', () => {
   it('builds an ACP stdio MCP server config scoped to the notebook runtime RPC endpoint', () => {
     const config = createNotebookMcpServerConfig({
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/DRA.app/Contents/MacOS/DRA',
       entryPath: '/app/out/main/index.js',
       endpoint: 'http://127.0.0.1:4567',
       token: 'secret-token',
@@ -140,7 +140,7 @@ describe('notebook MCP server config', () => {
 
     expect(config).toEqual({
       name: 'open-science-notebook',
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/DRA.app/Contents/MacOS/DRA',
       args: ['/app/out/main/index.js', '--open-science-notebook-mcp'],
       env: [
         { name: 'ELECTRON_RUN_AS_NODE', value: '1' },
@@ -178,7 +178,7 @@ describe('notebook MCP server config', () => {
 
   it('passes the Windows named-pipe path to the notebook MCP process', () => {
     const config = createNotebookMcpServerConfig({
-      command: 'C:\\MedResearch Agent.exe',
+      command: 'C:\\DRA.exe',
       entryPath: 'C:\\app\\main.js',
       endpoint: 'http://localhost',
       socketPath: '\\\\.\\pipe\\open-science-notebook',
@@ -207,7 +207,7 @@ describe('notebook MCP server config', () => {
       user: 'researcher'
     }
     const config = createNotebookMcpServerConfig({
-      command: 'MedResearch Agent.exe',
+      command: 'DRA.exe',
       entryPath: 'main.js',
       endpoint: 'http://localhost',
       token: 'secret-token',
@@ -330,8 +330,10 @@ describe('notebook MCP server config', () => {
     ].join('\n')
 
     expect(agentGuidance).not.toMatch(/\b4,?000\b/)
-    expect(REPL_EXECUTE_DOC).toContain('hand off large data from the REPL to Python/R')
-    expect(REPL_EXECUTE_DOC).toContain('Python/R reads the same OPEN_SCIENCE_HANDOFF_DIR path')
+    expect(REPL_EXECUTE_DOC).toContain(
+      'Transfer large data via process.env.OPEN_SCIENCE_HANDOFF_DIR'
+    )
+    expect(REPL_EXECUTE_DOC).toContain('shared with Python/R')
     expect(REPL_EXECUTE_DOC).not.toContain('Do not echo large data')
   })
 
@@ -903,7 +905,17 @@ describe('notebook_execute tool', () => {
     expect(() =>
       schema.parse({ code: 'x', artifactVersionInputs: [{ versionId: 'panel-a-v1' }] })
     ).toThrow()
-    expect(tool?.description).toContain("this Run's provenance inputs")
+    expect(tool?.description).toContain('Artifact Versions produced by the active workflow')
+    expect(
+      schema.parse({ code: 'inspect_cohort(...)', inputVersionIds: ['cohort-upload-v1'] })
+    ).toEqual({
+      code: 'inspect_cohort(...)',
+      inputVersionIds: ['cohort-upload-v1']
+    })
+    expect(() =>
+      schema.parse({ code: 'x', inputVersionIds: Array(65).fill('cohort-v1') })
+    ).toThrow()
+    expect(() => schema.parse({ code: 'x', inputVersionIds: [''] })).toThrow()
   })
 
   it('has no per-call environment param — the env is the session-bound runtime (v4)', () => {
@@ -1798,32 +1810,38 @@ describe('bash_execute tool', () => {
     })
   })
 
-  it('describes the stateless per-call shell distinctly from the persistent kernels', () => {
+  it('describes shell continuity and the boundaries that reset its state', () => {
     expect(tool?.description).toBe(BASH_EXECUTE_DOC)
-    expect(tool?.description.toLowerCase()).toContain('stateless')
-    expect(tool?.description).toContain('fresh process')
-    expect(tool?.description.toLowerCase()).toContain('persist')
+    expect(tool?.description).toContain('retain variables, exports, functions, and cwd')
+    expect(tool?.description).toContain('earlier commands are never replayed')
+    expect(tool?.description).toContain('resets its state')
   })
 
-  it('documents the actual Windows PowerShell dialect and keeps generated notebook files out of shell copies', () => {
-    const windowsDoc = buildShellExecuteDoc('win32')
+  it.each(['5.1', '7.6'] as const)(
+    'documents PowerShell %s and keeps generated notebook files out of shell copies',
+    (version) => {
+      const windowsDoc = buildShellExecuteDoc({ kind: 'powershell', version })
 
-    expect(windowsDoc).toContain('Windows PowerShell')
-    expect(windowsDoc).not.toContain('`sh -c`')
-    expect(windowsDoc).toContain('$env:OPEN_SCIENCE_HANDOFF_DIR')
-    expect(windowsDoc).not.toContain('./handoff/')
-    expect(windowsDoc).toContain('Windows PowerShell 5.1')
-    expect(windowsDoc).toContain('`&&` is unavailable')
-    expect(windowsDoc).toContain('cmdlet failure')
-    expect(windowsDoc).toContain('unhandled cmdlet failure')
-    expect(windowsDoc).toContain('native programs must emit UTF-8')
-    expect(windowsDoc).toContain('write_artifact_file')
-    expect(windowsDoc).toContain('Do NOT copy a generated notebook output into the workspace')
-    // Aligned with the relative-path artifact flow: point at the saved relative filename, not the
-    // old "generated file's absolute local path" wording.
-    expect(windowsDoc).toContain('same relative filename you saved with')
-    expect(windowsDoc).not.toContain("generated file's absolute local path")
-  })
+      expect(windowsDoc).toContain(`PowerShell ${version}`)
+      expect(buildShellExecuteDoc('win32')).toContain('Windows PowerShell 5.1')
+      expect(windowsDoc).not.toContain('`sh -c`')
+      expect(windowsDoc).toContain('$env:OPEN_SCIENCE_HANDOFF_DIR')
+      expect(windowsDoc).not.toContain('./handoff/')
+      expect(windowsDoc.includes('`&&` is unavailable')).toBe(version === '5.1')
+      expect(buildShellExecuteDoc({ kind: 'powershell', version: '5.1' })).toContain(
+        '`&&` is unavailable'
+      )
+      expect(windowsDoc).toContain('cmdlet failure')
+      expect(windowsDoc).toContain('unhandled cmdlet failure')
+      expect(windowsDoc).toContain('native programs must emit UTF-8')
+      expect(windowsDoc).toContain('write_artifact_file')
+      expect(windowsDoc).toContain('Do NOT copy a generated notebook output into the workspace')
+      // Aligned with the relative-path artifact flow: point at the saved relative filename, not the
+      // old "generated file's absolute local path" wording.
+      expect(windowsDoc).toContain('same relative filename you saved with')
+      expect(windowsDoc).not.toContain("generated file's absolute local path")
+    }
+  )
 
   it('derives the WSL2 Bash tool contract from the same captured binding', () => {
     const binding = {
@@ -2131,6 +2149,50 @@ describe('inspect_packages tool', () => {
     expect(JSON.stringify(compact)).not.toContain('full output in notebook preview')
     expect(JSON.stringify(compact)).toContain('omitted from this tool response')
     expect(JSON.stringify(compact).length).toBeLessThanOrEqual(NOTEBOOK_MCP_CONTROL_RESULT_LIMIT)
+  })
+
+  it('delivers clinical missing-package recovery and does not imply quota was checked', () => {
+    expect(
+      compactInspectPackagesResult({
+        language: 'r',
+        packages: [{ name: 'survival', requested: 'survival', status: 'missing' }],
+        packagePreflight: {
+          scope: 'package-metadata',
+          status: 'blocked',
+          missingPackages: ['survival'],
+          unknownPackages: [],
+          importability: 'not-checked',
+          executionPermissions: 'not-checked',
+          modelQuota: 'unknown',
+          recovery: { tool: 'manage_packages', language: 'r', packages: ['survival'] }
+        }
+      })
+    ).toMatchObject({
+      packagePreflight: {
+        status: 'blocked',
+        modelQuota: 'unknown',
+        recovery: { tool: 'manage_packages', language: 'r', packages: ['survival'] }
+      }
+    })
+  })
+
+  it('omits oversized recovery arguments instead of suggesting a partial or renamed install', () => {
+    for (const packages of [
+      Array.from({ length: 51 }, (_, n) => `package${n}`),
+      ['x'.repeat(300)]
+    ]) {
+      const compact = compactInspectPackagesResult({
+        packages: [],
+        packagePreflight: {
+          status: 'blocked',
+          missingPackages: packages,
+          unknownPackages: [],
+          recovery: { tool: 'manage_packages', language: 'python', packages }
+        }
+      }) as { packagePreflight: Record<string, unknown> }
+      expect(compact.packagePreflight).toHaveProperty('recoveryOmitted', true)
+      expect(compact.packagePreflight).not.toHaveProperty('recovery')
+    }
   })
 })
 

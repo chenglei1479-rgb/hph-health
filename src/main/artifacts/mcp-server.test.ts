@@ -431,7 +431,7 @@ describe('artifact MCP server', () => {
 
   it('builds an ACP stdio MCP server config for the artifact tool process', () => {
     const config = createArtifactMcpServerConfig({
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/DRA.app/Contents/MacOS/DRA',
       entryPath: '/app/out/main/index.js',
       storageRoot: '/Users/example/.open-science',
       projectId: 'default-project',
@@ -443,7 +443,7 @@ describe('artifact MCP server', () => {
 
     expect(config).toEqual({
       name: 'open-science-artifacts',
-      command: '/Applications/MedResearch Agent.app/Contents/MacOS/MedResearch Agent',
+      command: '/Applications/DRA.app/Contents/MacOS/DRA',
       args: ['/app/out/main/index.js', '--open-science-artifact-mcp'],
       env: [
         { name: 'ELECTRON_RUN_AS_NODE', value: '1' },
@@ -468,7 +468,7 @@ describe('artifact MCP server', () => {
 
   it('passes the Windows named-pipe path to the artifact MCP process', () => {
     const config = createArtifactMcpServerConfig({
-      command: 'C:\\MedResearch Agent.exe',
+      command: 'C:\\DRA.exe',
       entryPath: 'C:\\app\\main.js',
       storageRoot: 'C:\\OpenScience',
       projectId: 'default-project',

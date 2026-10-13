@@ -154,6 +154,23 @@ export class SessionPackageDesktop {
   respond(
     request: PackageOperationRequest
   ): PackageOperationSnapshot | null | Promise<PackageOperationSnapshot | null> {
+    if (request.action === 'export-with-sensitive-content') {
+      const failed = this.operations.snapshot
+      if (
+        !failed ||
+        failed.id !== request.operationId ||
+        failed.kind !== 'export' ||
+        failed.state !== 'failed' ||
+        !failed.session ||
+        !failed.sensitiveContent?.length ||
+        failed.cleanupPending ||
+        this.operations.active
+      )
+        throw new Error('No failed sensitive-content export is available.')
+      return this.exportWithPolicy(failed.session, undefined, true).then(
+        () => this.operations.snapshot
+      )
+    }
     if (
       request.action === 'dismiss-queue-warning' ||
       request.action === 'discard-import' ||
@@ -361,7 +378,7 @@ export class SessionPackageDesktop {
       if (detail === PACKAGE_REQUIRES_UPDATE)
         throw new Error(
           translate(
-            'This Session package requires a newer version of MedResearch Agent. Update MedResearch Agent, then try importing it again.'
+            'This Session package requires a newer version of DRA. Update DRA, then try importing it again.'
           ),
           { cause: error }
         )
@@ -521,6 +538,14 @@ export class SessionPackageDesktop {
     request: SessionPackageRequest,
     parent?: BrowserWindow
   ): Promise<SessionPackageExportResult> {
+    return this.exportWithPolicy(request, parent)
+  }
+
+  private exportWithPolicy(
+    request: SessionPackageRequest,
+    parent?: BrowserWindow,
+    allowSensitiveContent = false
+  ): Promise<SessionPackageExportResult> {
     let operationSignal: AbortSignal | undefined
     return this.operations
       .run('export', request, async (signal) => {
@@ -535,6 +560,7 @@ export class SessionPackageDesktop {
             await this.options.withDataRootWrite(() =>
               this.acceptCleanup(() =>
                 this.options.service.exportTo(request, archive, {
+                  ...(allowSensitiveContent ? { allowSensitiveContent: true } : {}),
                   signal,
                   onProgress: this.operations.report,
                   selectFiles: async (files, budgetSignal, summary, title) => {
@@ -550,7 +576,7 @@ export class SessionPackageDesktop {
                     const options = {
                       title: this.options.translate('Export Session package'),
                       defaultPath: `${sanitizeExportFilename(title || 'Session', 220)}-${date}.science`,
-                      filters: [{ name: 'MedResearch Agent Session', extensions: ['science'] }]
+                      filters: [{ name: 'DRA Session', extensions: ['science'] }]
                     }
                     const selected = await this.nativeDialog(
                       parent
@@ -640,7 +666,7 @@ export class SessionPackageDesktop {
               const options = {
                 title: this.options.translate('Import Session package'),
                 properties: ['openFile'] as ['openFile'],
-                filters: [{ name: 'MedResearch Agent Session', extensions: ['science'] }]
+                filters: [{ name: 'DRA Session', extensions: ['science'] }]
               }
               const selected = sourcePath
                 ? { canceled: false, filePaths: [sourcePath] }

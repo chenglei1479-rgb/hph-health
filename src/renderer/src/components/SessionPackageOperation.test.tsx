@@ -1,4 +1,7 @@
+import { drainWorkspaceRuntimeEventsForPersistence } from '@/lib/acp/useWorkspaceAgentRuntime'
+import { flushSessionPersistence } from '@/lib/session-persistence/session-persistence'
 import { useNavigationStore } from '@/stores/navigation-store'
+import { usePreviewWorkbenchStore } from '@/stores/preview-workbench-store'
 import { WEB_EVENT_SURFACE_ATTRIBUTE } from '../../../shared/web-event-connection'
 // @vitest-environment jsdom
 import { act } from 'react'
@@ -11,6 +14,13 @@ import {
 } from './SessionPackageOperation'
 import { sessionExportLocked, usePackageOperationStore } from '@/stores/package-operation-store'
 import type { PackageOperationSnapshot } from '../../../shared/session-package'
+
+vi.mock('@/lib/acp/useWorkspaceAgentRuntime', () => ({
+  drainWorkspaceRuntimeEventsForPersistence: vi.fn(async () => undefined)
+}))
+vi.mock('@/lib/session-persistence/session-persistence', () => ({
+  flushSessionPersistence: vi.fn(async () => undefined)
+}))
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 let root: Root
@@ -155,6 +165,7 @@ it('offers full and compact export without exposing customization and preserves 
   await act(async () => button('Export').click())
   expect(packageOperation).toHaveBeenCalledWith({
     action: 'select',
+    includePdfNotes: false,
     operationId: operation.id,
     excludedStorageKeys: ['artifacts/p/s/large']
   })
@@ -394,6 +405,7 @@ it('starts with a simple export summary and reveals optional controls on request
   await act(async () => button('Export').click())
   expect(request).toHaveBeenLastCalledWith({
     action: 'select',
+    includePdfNotes: false,
     operationId: snapshot.id,
     excludedStorageKeys: snapshot.files!.map((file) => file.storageKey)
   })
@@ -433,6 +445,7 @@ it('allows selecting a 32 GiB file while disabling files over the limit', async 
   await act(async () => button('Export').click())
   expect(request).toHaveBeenLastCalledWith({
     action: 'select',
+    includePdfNotes: false,
     operationId: snapshot.id,
     excludedStorageKeys: ['artifacts/p/s/oversized']
   })
@@ -549,6 +562,7 @@ it('selects file contents with a size filter and keeps selection separate from m
   await act(async () => button('Export').click())
   expect(request).toHaveBeenLastCalledWith({
     action: 'select',
+    includePdfNotes: false,
     operationId: 'operation-1',
     excludedStorageKeys: ['artifacts/p/s/oversized', 'artifacts/p/s/large']
   })
@@ -1064,8 +1078,67 @@ it('navigates once after this desktop window confirms an import', async () => {
   }
   await act(async () => usePackageOperationStore.getState().receive(completed))
   await act(async () => usePackageOperationStore.getState().receive(completed))
-  expect(navigate).toHaveBeenCalledExactlyOnceWith('target', 'imported', 'user')
+  expect(navigate).toHaveBeenCalledExactlyOnceWith(
+    'target',
+    'imported',
+    'user',
+    expect.any(Function)
+  )
 })
+
+it.each(['before-completion', 'during-project-refresh'])(
+  'does not reclaim navigation %s after import confirmation',
+  async (when) => {
+    const operation: PackageOperationSnapshot = {
+      id: 'background-confirmed-import',
+      kind: 'import',
+      state: 'awaiting-selection',
+      progress: { phase: 'confirming' },
+      importTarget: { projectId: 'target' },
+      importPreview: {
+        title: 'Source',
+        projectName: 'Source',
+        branchCount: 1,
+        messageCount: 1,
+        fileCount: 0,
+        totalBytes: 1,
+        omissions: []
+      }
+    }
+    const navigate = vi.spyOn(useNavigationStore.getState(), 'openSession').mockReturnValue(true)
+    navigate.mockClear()
+    let resolveProjects!: (rows: never[]) => void
+    const listing = new Promise<never[]>((resolve) => {
+      resolveProjects = resolve
+    })
+    vi.stubGlobal('api', {
+      sessions: {
+        packageOperation: async () => operation,
+        onPackageOperation: () => () => undefined
+      },
+      projects: { list: () => listing }
+    })
+    usePackageOperationStore.setState({ operation, open: true })
+    await act(async () => root.render(<SessionPackageOperation />))
+    await act(async () => button('Import').click())
+    const leave = (): void =>
+      useNavigationStore.setState((state) => ({
+        explicitNavigationRevision: state.explicitNavigationRevision + 1
+      }))
+    if (when === 'before-completion') leave()
+    await act(async () =>
+      usePackageOperationStore.getState().receive({
+        ...operation,
+        state: 'succeeded',
+        importPreview: undefined,
+        result: { imported: { projectId: 'target', sessionId: 'imported' } }
+      })
+    )
+    if (when === 'during-project-refresh') leave()
+    await act(async () => resolveProjects([]))
+    expect(navigate).not.toHaveBeenCalled()
+  }
+)
 
 it('restores a hidden transfer only for an explicit presentation request', () => {
   const operation: PackageOperationSnapshot = {
@@ -1283,5 +1356,164 @@ it('never labels required Literature PDF evidence as Essential export', async ()
   expect(usePackageOperationStore.getState().excludedStorageKeys).toEqual([])
   expect(document.body.textContent).toContain(
     'Essential export is unavailable because a Literature PDF is required evidence.'
+  )
+})
+
+const sensitiveFailure: PackageOperationSnapshot = {
+  ...snapshot,
+  state: 'failed',
+  progress: { phase: 'validating' },
+  error: 'Sensitive content detected',
+  sensitiveContent: [
+    {
+      location: 'session.json',
+      offset: 0,
+      rule: 'url',
+      matchLength: 31,
+      leftBoundary: 'start',
+      rightBoundary: 'end',
+      context: 'https://[redacted]@host/...',
+      valueHash: 'a'.repeat(64)
+    }
+  ]
+}
+
+it('requires fresh acknowledgement, sends the bound action once, and resets after failure', async () => {
+  let reject!: (error: Error) => void
+  const packageOperation = vi.fn((request: { action: string }) =>
+    request.action === 'snapshot'
+      ? Promise.resolve(sensitiveFailure)
+      : new Promise((_, rejectPromise) => {
+          reject = rejectPromise
+        })
+  )
+  vi.stubGlobal('api', {
+    sessions: { packageOperation, onPackageOperation: () => () => undefined }
+  })
+  usePackageOperationStore.setState({ operation: sensitiveFailure, open: true })
+  await act(async () => root.render(<SessionPackageOperation />))
+  const checkbox = document.querySelector<HTMLInputElement>('input[type="checkbox"]')!
+  expect(checkbox).not.toBeNull()
+  expect(checkbox.checked).toBe(false)
+  expect(button('Export anyway').disabled).toBe(true)
+  expect(document.body.textContent).toContain('without redaction')
+  await act(async () => checkbox.click())
+  expect(button('Export anyway').disabled).toBe(false)
+  await act(async () => {
+    button('Export anyway').click()
+    button('Export anyway').click()
+  })
+  expect(
+    packageOperation.mock.calls.filter(
+      ([request]) => request.action === 'export-with-sensitive-content'
+    )
+  ).toEqual([[{ action: 'export-with-sensitive-content', operationId: sensitiveFailure.id }]])
+  expect(drainWorkspaceRuntimeEventsForPersistence).toHaveBeenCalledWith('s')
+  expect(flushSessionPersistence).toHaveBeenCalled()
+  expect(button('Export anyway').disabled).toBe(true)
+  expect(checkbox.disabled).toBe(true)
+  await act(async () => reject(new Error('Export failed again')))
+  expect(checkbox.checked).toBe(false)
+  expect(button('Export anyway').disabled).toBe(true)
+  await act(async () => checkbox.click())
+  await act(async () => usePackageOperationStore.getState().setOpen(false))
+  await act(async () => usePackageOperationStore.getState().setOpen(true))
+  expect(document.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(false)
+  await act(async () => document.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click())
+  await act(async () =>
+    usePackageOperationStore.getState().receive({ ...sensitiveFailure, id: 'replacement' })
+  )
+  expect(button('Export anyway').disabled).toBe(true)
+})
+
+it.each([
+  { ...sensitiveFailure, kind: 'fork' as const },
+  { ...sensitiveFailure, kind: 'import' as const },
+  { ...sensitiveFailure, sensitiveContent: undefined },
+  { ...sensitiveFailure, cleanupPending: true }
+])('hides sensitive export acknowledgement for ineligible operation %#', async (operation) => {
+  vi.stubGlobal('api', {
+    sessions: { packageOperation: async () => operation, onPackageOperation: () => () => undefined }
+  })
+  usePackageOperationStore.setState({ operation, open: true })
+  await act(async () => root.render(<SessionPackageOperation />))
+  expect(document.querySelector('input[type="checkbox"]')).toBeNull()
+  expect(
+    [...document.querySelectorAll('button')].some((item) => item.textContent === 'Export anyway')
+  ).toBe(false)
+})
+
+it.each(['import', 'fork'] as const)(
+  'opens replay only after navigation to an imported package, not a fork (%s)',
+  async (kind) => {
+    const operation: PackageOperationSnapshot = {
+      id: 'completed-package',
+      kind,
+      state: 'succeeded',
+      progress: { phase: 'importing' },
+      result: { imported: { projectId: 'target', sessionId: 'imported' } }
+    }
+    const navigate = vi.spyOn(useNavigationStore.getState(), 'openSession').mockReturnValue(true)
+    const reveal = vi
+      .spyOn(usePreviewWorkbenchStore.getState(), 'upsertAndActivateItem')
+      .mockImplementation(() => undefined)
+    navigate.mockClear()
+    reveal.mockClear()
+    vi.stubGlobal('api', {
+      sessions: {
+        packageOperation: async () => operation,
+        onPackageOperation: () => () => undefined
+      },
+      projects: {
+        list: async () => [{ id: 'target', name: 'Imported study', createdAt: 1, updatedAt: 1 }]
+      }
+    })
+    usePackageOperationStore.setState({ operation, open: true })
+    await act(async () => root.render(<SessionPackageOperation />))
+    expect(reveal).not.toHaveBeenCalled()
+    await act(async () =>
+      button(kind === 'import' ? 'Open imported Session' : 'Open forked Session').click()
+    )
+    expect(navigate).toHaveBeenCalledOnce()
+    expect(reveal).not.toHaveBeenCalled()
+    const continuation = navigate.mock.calls[0][3]
+    if (kind === 'import') {
+      expect(continuation).toEqual(expect.any(Function))
+      act(() => continuation!())
+      expect(reveal).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          toolKind: 'replay',
+          projectId: 'target',
+          sessionId: 'imported',
+          replaySourceProjectId: 'target',
+          replaySourceSessionId: 'imported'
+        })
+      )
+    } else {
+      expect(continuation).toBeUndefined()
+    }
+  }
+)
+
+it('requires explicit opt-in before exporting notes shared across projects', async () => {
+  const request = vi.fn(async () => undefined)
+  vi.stubGlobal('api', { sessions: { packageOperation: request } })
+  usePackageOperationStore.setState({
+    operation: {
+      ...snapshot,
+      summary: { retainedFiles: [], metadataBytes: 0, pdfNotesAvailable: true }
+    },
+    open: true
+  })
+  await act(async () => root.render(<SessionPackageOperation />))
+  const label = [...document.querySelectorAll('label')].find((node) =>
+    node.textContent?.includes('Include shared PDF notes and annotations from all projects')
+  )!
+  const checkbox = label.querySelector<HTMLInputElement>('input')!
+  expect(checkbox.checked).toBe(false)
+  await act(async () => checkbox.click())
+  await act(async () => button('Export').click())
+  expect(request).toHaveBeenLastCalledWith(
+    expect.objectContaining({ action: 'select', includePdfNotes: true })
   )
 })

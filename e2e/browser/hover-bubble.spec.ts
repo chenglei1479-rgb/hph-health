@@ -117,7 +117,7 @@ test('switches warm tooltips without entry motion or retaining the outgoing hint
 test('releases a blurred tooltip before Escape dismisses Settings', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 })
   await page.goto('/')
-  await page.getByRole('button', { name: 'Model settings', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('button', { name: 'Open settings navigation', exact: true }).focus()
   await expect(page.locator('[data-slot="tooltip-content"]')).toContainText('Navigation')
   // Freeze any regression to exit retention instead of depending on the machine's frame timing.
@@ -254,7 +254,7 @@ test('shows shared hints for every Home header icon action', async ({ page }) =>
     ['Search', 'Search (Cmd/Ctrl+K)'],
     ['Library', 'Library'],
     ['Messages, no unread messages', 'Message center'],
-    ['Model settings', 'Settings'],
+    ['Settings', 'Settings'],
     ['New project', 'New project']
   ]) {
     const trigger = page.getByRole('button', { name: label, exact: true })
@@ -278,7 +278,7 @@ test('shares Home hover intent without replaying entry motion across header comp
     page.getByRole('link', { name: /Star Open-Science on GitHub/ }),
     page.getByRole('button', { name: 'Library', exact: true }),
     page.getByRole('button', { name: 'Messages, no unread messages', exact: true }),
-    page.getByRole('button', { name: 'Model settings', exact: true }),
+    page.getByRole('button', { name: 'Settings', exact: true }),
     page.locator('.update-reminder[data-variant="home"]'),
     page.getByRole('button', { name: 'New project', exact: true })
   ]
@@ -286,8 +286,13 @@ test('shares Home hover intent without replaying entry motion across header comp
   await page.clock.install()
   await page.clock.pauseAt(new Date())
   for (const [index, action] of actions.entries()) {
-    const box = (await action.boundingBox())!
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 5 })
+    // Leave Radix's hoverable-content grace corridor before testing the next
+    // trigger. The paused clock keeps this transfer inside the warm window.
+    if (index > 0) {
+      await page.mouse.move(0, 0, { steps: 5 })
+      await expect(page.locator('[data-slot="tooltip-content"]')).toHaveCount(0)
+    }
+    await action.hover()
     await page.clock.runFor(index === 0 ? 200 : 1)
     await expect(page.locator('[data-slot="tooltip-content"]')).toHaveAttribute(
       'data-state',

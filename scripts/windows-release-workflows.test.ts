@@ -1,6 +1,9 @@
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, posix } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { load } from 'js-yaml'
 import { describe, expect, it } from 'vitest'
@@ -38,7 +41,7 @@ type Workflow = {
   jobs: Record<string, WorkflowJob>
   permissions?: Record<string, string>
   on?: {
-    push?: { branches?: string[]; tags?: string[] }
+    push?: { branches?: string[]; tags?: string[]; paths?: string[] }
     schedule?: Array<{ cron: string }>
     workflow_run?: { workflows?: string[]; types?: string[] }
     workflow_call?: {
@@ -60,6 +63,199 @@ const findStep = (job: WorkflowJob, name: string): WorkflowStep => {
 }
 
 describe('post-merge Windows validation', () => {
+  it('warms a shared main-branch runtime cache when its recipe changes', () => {
+    const workflow = readWorkflow('windows-notebook-runtime.yml')
+    expect(workflow.on).toHaveProperty('workflow_call')
+    expect(workflow.on).toHaveProperty('workflow_dispatch')
+    expect(workflow.on?.push?.branches).toEqual(['main'])
+    const paths = workflow.on?.push?.paths ?? []
+    const action = load(
+      readFileSync('.github/actions/windows-notebook-runtime/action.yml', 'utf8')
+    ) as { runs: { steps: WorkflowStep[] } }
+    const cache = action.runs.steps.find(({ id }) => id === 'runtime')!
+    const inputs = [...String(cache.with?.key).matchAll(/'([^']+)'/g)].map((match) => match[1])
+    expect(inputs).toHaveLength(3)
+    for (const input of inputs) expect(paths).toContain(input)
+    expect(paths).toContain('.github/workflows/windows-notebook-runtime.yml')
+    expect(paths).toContain('.github/actions/windows-notebook-runtime/action.yml')
+    for (const unrelated of [
+      'src/renderer/src/pages/workspace/replay/ReplayPanel.tsx',
+      'e2e/replay-stage.spec.ts',
+      'packages/notebook-network-sandbox/src/index.ts',
+      'packages/notebook-network-sandbox/vendor/windows-runtime/README.md'
+    ]) {
+      expect(
+        paths.some((pattern) => posix.matchesGlob(unrelated, pattern)),
+        unrelated
+      ).toBe(false)
+    }
+    expect(workflow.permissions).toEqual({ contents: 'read' })
+    expect(Object.keys(workflow.jobs)).toEqual(['runtime'])
+  })
+
+  it.skipIf(process.platform !== 'win32')(
+    'extracts compressed runtime sources and never promotes failed or timed-out extraction',
+    () => {
+      const directory = mkdtempSync(join(tmpdir(), 'runtime-extraction-'))
+      const quote = (value: string): string => `'${value.replaceAll("'", "''")}'`
+      const buildScript = join(
+        process.cwd(),
+        'packages/notebook-network-sandbox/vendor/windows-runtime/build.ps1'
+      )
+      try {
+        const result = spawnSync(
+          'pwsh.exe',
+          [
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
+            `
+          $ErrorActionPreference = 'Stop'
+          $BuildRoot = ${quote(directory)}
+          $ast = [Management.Automation.Language.Parser]::ParseFile(${quote(buildScript)}, [ref]$null, [ref]$null)
+          $function = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Expand-Source' }, $true)
+          if (!$function) { throw 'Missing bounded source extraction' }
+          . ([scriptblock]::Create($function.Extent.Text))
+          foreach ($format in @('xz', 'gz')) {
+            $archive = Join-Path $BuildRoot "fixture.$format"
+            & python -c 'import io, sys, tarfile; t = tarfile.open(sys.argv[1], "w:" + sys.argv[2]); m = tarfile.TarInfo("fixture/space and \\u4e2d\\u6587.txt"); m.size = 7; t.addfile(m, io.BytesIO(b"fixture")); t.close()' $archive $format
+            if ($LASTEXITCODE -ne 0) { throw 'Fixture creation failed' }
+            $source = Join-Path $BuildRoot 'fixture'
+            Expand-Source $archive $source
+            if ((Get-Content -Raw (Join-Path $source 'space and 中文.txt')) -ne 'fixture') { throw 'Extraction changed content' }
+            Move-Item -LiteralPath $source -Destination (Join-Path $BuildRoot "complete-$format")
+          }
+          $invalid = Join-Path $BuildRoot 'invalid.tar'
+          Set-Content -LiteralPath $invalid -Value 'invalid archive'
+          $source = Join-Path $BuildRoot 'invalid'
+          try { Expand-Source $invalid $source; throw 'Accepted invalid archive' }
+          catch { if ($_.Exception.Message -notlike 'Source extraction failed:*') { throw } }
+          if (Test-Path $source) { throw 'Promoted failed extraction' }
+          try { Expand-Source $invalid $source; throw 'Reused partial extraction' }
+          catch { if ($_.Exception.Message -notlike 'Incomplete source extraction:*') { throw } }
+          $source = Join-Path $BuildRoot 'timeout'
+          try { Expand-Source $archive $source -TimeoutSeconds 0; throw 'Accepted expired deadline' }
+          catch { if ($_.Exception.Message -notlike 'Source extraction timed out:*') { throw } }
+          if (Test-Path $source) { throw 'Promoted timed-out extraction' }
+          exit 0
+        `
+          ],
+          { encoding: 'utf8', windowsHide: true, timeout: 20_000 }
+        )
+        expect(result.error, result.stderr).toBeUndefined()
+        expect(result.status, result.stderr).toBe(0)
+        expect(result.stdout).toContain('Extracted')
+      } finally {
+        rmSync(directory, { recursive: true, force: true })
+      }
+    },
+    25_000
+  )
+
+  it.skipIf(process.platform !== 'win32')(
+    'promotes only verified runtime source downloads and rejects failed transfers',
+    () => {
+      const directory = mkdtempSync(join(tmpdir(), 'runtime-source-'))
+      const fixture = join(directory, 'fixture.txt')
+      const content = 'offline runtime source fixture'
+      writeFileSync(fixture, content)
+      const quote = (value: string): string => `'${value.replaceAll("'", "''")}'`
+      const buildScript = join(
+        process.cwd(),
+        'packages/notebook-network-sandbox/vendor/windows-runtime/build.ps1'
+      )
+      try {
+        const result = spawnSync(
+          'pwsh.exe',
+          [
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
+            `$ErrorActionPreference = 'Stop'
+             $BuildRoot = ${quote(directory)}
+             $ast = [Management.Automation.Language.Parser]::ParseFile(${quote(buildScript)}, [ref]$null, [ref]$null)
+             $function = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-Source' }, $true)
+             . ([scriptblock]::Create($function.Extent.Text))
+             $source = @{ url = ${quote(pathToFileURL(fixture).href)}; sha256 = '${createHash('sha256').update(content).digest('hex')}' }
+             $archive = Get-Source $source 'valid.txt'
+             if ((Get-Content -Raw $archive) -ne ${quote(content)}) { throw 'Verified content differs' }
+             if (Test-Path "$archive.download") { throw 'Verified download was not promoted' }
+             $source.sha256 = 'invalid'
+             try { Get-Source $source 'corrupt.txt'; throw 'Accepted corrupt source' }
+             catch { if ($_.Exception.Message -notlike 'Source checksum mismatch:*') { throw } }
+             if (Test-Path (Join-Path $BuildRoot 'corrupt.txt')) { throw 'Corrupt source was promoted' }
+             $source.url = ${quote(pathToFileURL(join(directory, 'missing.txt')).href)}
+             try { Get-Source $source 'failed.txt'; throw 'Accepted failed transfer' }
+             catch { if ($_.Exception.Message -notlike 'Source download failed:*') { throw } }
+             if (Test-Path (Join-Path $BuildRoot 'failed.txt')) { throw 'Failed transfer was promoted' }
+             exit 0`
+          ],
+          { encoding: 'utf8', windowsHide: true, timeout: 15_000 }
+        )
+        expect(result.error, result.stderr).toBeUndefined()
+        expect(result.status, result.stderr).toBe(0)
+      } finally {
+        rmSync(directory, { recursive: true, force: true })
+      }
+    },
+    20_000
+  )
+
+  it('prepares the bundled runtime before Windows consumers and snapshot publication', () => {
+    const consumers = [
+      ['pr-gate.yml', 'windows_core', 'Test Windows notebook shell behavior'],
+      ['pr-gate.yml', 'windows_e2e_setup', 'Pack E2E setup'],
+      ['windows-e2e-regression.yml', 'windows_e2e_setup', 'Pack E2E setup'],
+      ['windows-full-test.yml', 'windows_dependencies', 'Pack dependencies'],
+      ['runtime-resource-soak.yml', 'runtime_resource_soak', 'Record runtime resource profile']
+    ]
+    for (const [file, jobId, consumer] of consumers) {
+      const job = readWorkflow(file).jobs[jobId]
+      const setup = findStep(job, 'Download Windows Notebook runtime')
+      expect(setup.uses).toMatch(/^actions\/download-artifact@[0-9a-f]{40}$/)
+      expect(setup.with?.['artifact-ids']).toBe(
+        '${{ needs.windows_notebook_runtime.outputs.artifact_id }}'
+      )
+      expect(job.needs).toContain('windows_notebook_runtime')
+      expect(readWorkflow(file).jobs.windows_notebook_runtime.uses).toBe(
+        './.github/workflows/windows-notebook-runtime.yml'
+      )
+      expect(setup['continue-on-error']).toBeUndefined()
+      expect(job.steps!.indexOf(setup)).toBeLessThan(job.steps!.indexOf(findStep(job, consumer)))
+    }
+    const compiler = readWorkflow('windows-notebook-runtime.yml').jobs.runtime
+    expect(compiler['runs-on']).toBe('windows-2022')
+    expect(compiler['timeout-minutes']).toBe(90)
+    expect(findStep(compiler, 'Prepare Windows Notebook runtime').uses).toBe(
+      './.github/actions/windows-notebook-runtime'
+    )
+    expect(findStep(compiler, 'Upload Windows Notebook runtime').with?.['if-no-files-found']).toBe(
+      'error'
+    )
+    const action = load(
+      readFileSync('.github/actions/windows-notebook-runtime/action.yml', 'utf8')
+    ) as { runs: { steps: WorkflowStep[] } }
+    const cache = action.runs.steps.find(({ id }) => id === 'runtime')!
+    expect(cache.uses).toMatch(/^actions\/cache@[0-9a-f]{40}$/)
+    for (const input of ['sources.json', '*.patch', 'build.ps1']) {
+      expect(cache.with?.key).toContain(input)
+    }
+    const build = action.runs.steps.find(({ name }) => name === 'Build Windows Notebook runtime')!
+    expect(build.if).toContain("cache-hit != 'true'")
+    expect(build.run).toContain('vendor/windows-runtime/build.ps1')
+    const verify = action.runs.steps.find(({ name }) => name === 'Verify Windows Notebook runtime')!
+    const npm = action.runs.steps.find(
+      ({ name }) => name === 'Prepare bundled npm for shared Notebook tools'
+    )!
+    expect(npm.if).toBeUndefined()
+    expect(npm.run).toContain('vendor/windows-runtime/npm/prepare.mjs')
+    expect(action.runs.steps.indexOf(npm)).toBeGreaterThan(action.runs.steps.indexOf(build))
+    expect(action.runs.steps.indexOf(npm)).toBeLessThan(action.runs.steps.indexOf(verify))
+    expect(verify.if).toBeUndefined()
+    for (const executable of ['node.exe', 'pwsh.exe', 'npm-cli.js'])
+      expect(verify.run).toContain(executable)
+  })
+
   it('blocks packaging on native data-location upgrade checks for every target OS', () => {
     const job = readWorkflow('build.yml').jobs.build
     const steps = job.steps ?? []
@@ -142,7 +338,7 @@ describe('post-merge Windows validation', () => {
       'timeout-minutes': 60
     })
     expect(dependencies).toMatchObject({
-      needs: 'plan',
+      needs: ['plan', 'windows_notebook_runtime'],
       'runs-on': 'windows-latest',
       outputs: {
         artifact_id: '${{ steps.upload.outputs.artifact-id }}',
@@ -180,6 +376,8 @@ describe('post-merge Windows validation', () => {
       'src/main/managed-file-versions/version-file-operator.test.ts'
     )
     expect(scheduledFixes.run).toContain('src/main/settings/service.test.ts')
+    expect(scheduledFixes.run).toContain('src/main/notebook/runtime-service.rpc-retirement.test.ts')
+    expect(scheduledFixes.run).toContain('src/main/notebook/shell-npm-environment.test.ts')
     expect(scheduledFixes.run).not.toContain('--shard')
     expect(sandbox).toMatchObject({
       needs: 'plan',
@@ -191,7 +389,7 @@ describe('post-merge Windows validation', () => {
     const rustTest = findStep(sandbox, 'Test Windows sandbox native source')
     const buildHost = findStep(sandbox, 'Build Windows sandbox native host')
     const smoke = findStep(sandbox, 'Test AppContainer ownership and removal lifecycle')
-    expect(findStep(sandbox, 'Setup Node').with).toMatchObject({ 'node-version': 22 })
+    expect(findStep(sandbox, 'Setup Node').with).toMatchObject({ 'node-version': 24 })
     expect(rustTest.run).toBe(
       'cargo test --locked --manifest-path packages/notebook-network-sandbox/vendor/windows-src/Cargo.toml'
     )
@@ -206,12 +404,52 @@ describe('post-merge Windows validation', () => {
   it('hard-gates every packaged Windows build on a fresh install/start/uninstall smoke', () => {
     const job = readWorkflow('package-smoke.yml').jobs.smoke
     const smoke = findStep(job, 'Smoke test Windows installer')
+    const install = findStep(job, 'Install Windows package for AppContainer certification')
 
     expect(job['continue-on-error']).toBeUndefined()
     expect(smoke.if).toBe("${{ !inputs.install_only && matrix.platform == 'win' }}")
     expect(smoke.run).toBe('node scripts/windows-installer-smoke.mjs --installer-dir dist')
     expect(smoke['timeout-minutes']).toBe(20)
+    expect(install.run).toContain(
+      '$installerProcess = Start-Process -FilePath $installer -ArgumentList @'
+    )
+    expect(install.run).toContain('-Wait -PassThru')
+    expect(install.run).toContain('$installerProcess.ExitCode')
+    expect(install.run).not.toContain('$LASTEXITCODE')
   })
+
+  it.skipIf(process.platform !== 'win32')(
+    'captures the GUI installer exit code after waiting for completion',
+    () => {
+      const directory = mkdtempSync(join(tmpdir(), 'installer-exit-code-'))
+      const fixture = join(directory, 'fixture.vbs')
+      const quote = (value: string): string => `'${value.replaceAll("'", "''")}'`
+      writeFileSync(fixture, 'WScript.Quit 0')
+      const invoke = (command: string): ReturnType<typeof spawnSync> =>
+        spawnSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-Command', command], {
+          encoding: 'utf8',
+          windowsHide: true,
+          timeout: 15_000
+        })
+
+      try {
+        const legacy = invoke(
+          `$LASTEXITCODE = $null; & "$env:WINDIR\\System32\\wscript.exe" //nologo ${quote(fixture)}; if ($LASTEXITCODE -ne 0) { exit 1 }`
+        )
+        expect(legacy.error, legacy.stderr).toBeUndefined()
+        expect(legacy.status, legacy.stdout + legacy.stderr).toBe(1)
+
+        const fixed = invoke(
+          `$process = Start-Process -FilePath "$env:WINDIR\\System32\\wscript.exe" -ArgumentList @('//nologo', ${quote(fixture)}) -Wait -PassThru; if ($process.ExitCode -ne 0) { exit 1 }`
+        )
+        expect(fixed.error, fixed.stderr).toBeUndefined()
+        expect(fixed.status, fixed.stdout + fixed.stderr).toBe(0)
+      } finally {
+        rmSync(directory, { recursive: true, force: true })
+      }
+    },
+    20_000
+  )
 
   it('installs Electron from GitHub mirrors and exposes an install-only dry-run', () => {
     const smokeWorkflow = readWorkflow('package-smoke.yml')
@@ -238,7 +476,7 @@ describe('post-merge Windows validation', () => {
     expect(dispatch?.inputs?.platform_name).toMatchObject({
       type: 'choice',
       default: 'macos-x64',
-      options: ['macos-x64', 'macos-arm64', 'linux-x64', 'windows-x64', 'all']
+      options: ['macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64', 'windows-x64', 'all']
     })
     expect(smokeWorkflow.permissions).toEqual({ contents: 'read' })
     expect(smokeWorkflow.concurrency).toEqual({
@@ -274,6 +512,11 @@ describe('post-merge Windows validation', () => {
     const names = job.steps?.map(({ name }) => name) ?? []
     const prepareMacSigning = findStep(job, 'Prepare macOS signing keychain')
     const azureLogin = findStep(job, 'Sign in to Azure for Windows code signing')
+    const preinstallTrustedSigning = findStep(job, 'Pre-install Azure Trusted Signing module')
+    const verifyTrustedSigning = findStep(
+      job,
+      'Verify Azure Trusted Signing module in packaging environment'
+    )
     const packageStep = findStep(job, 'Build & package')
     const verifyWindows = findStep(job, 'Verify signed Windows package')
     const cleanupMacSigning = findStep(job, 'Clean up macOS signing keychain')
@@ -291,6 +534,22 @@ describe('post-merge Windows validation', () => {
         'subscription-id': '${{ vars.AZURE_SUBSCRIPTION_ID }}'
       }
     })
+    expect(preinstallTrustedSigning).toMatchObject({
+      if: "${{ matrix.platform == 'win' && inputs.sign_windows }}",
+      shell: 'pwsh'
+    })
+    expect(preinstallTrustedSigning.run).toContain(
+      '"PSModulePath=$env:PSModulePath" >> $env:GITHUB_ENV'
+    )
+    expect(preinstallTrustedSigning.run).toContain("$pathEntries = @($env:PSModulePath -split ';'")
+    expect(preinstallTrustedSigning.run).not.toContain('[Environment]::SetEnvironmentVariable')
+    expect(verifyTrustedSigning).toMatchObject({
+      if: "${{ matrix.platform == 'win' && inputs.sign_windows }}",
+      shell: 'bash'
+    })
+    expect(verifyTrustedSigning.run).toContain(
+      "pwsh -NoProfile -NonInteractive -Command 'Get-Command Invoke-TrustedSigning"
+    )
     expect(prepareMacSigning).toMatchObject({
       id: 'mac_signing',
       if: "${{ matrix.platform == 'mac' && !inputs.nightly }}"
@@ -389,7 +648,7 @@ describe('post-merge Windows validation', () => {
       with: expect.objectContaining({ archive: false, 'if-no-files-found': 'error' })
     })
     expect(submit).toMatchObject({
-      uses: 'signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627',
+      uses: expect.stringMatching(/^signpath\/github-action-submit-signing-request@[0-9a-f]{40}$/),
       with: expect.objectContaining({
         'api-token': '${{ secrets.SIGNPATH_API_TOKEN }}',
         'organization-id': '${{ vars.SIGNPATH_ORGANIZATION_ID }}',
@@ -503,7 +762,7 @@ describe('post-merge Windows validation', () => {
       findStep(p0Regression, 'Run packaged P0 regression').env?.OPEN_SCIENCE_E2E_EXECUTABLE
     ).toBe('${{ steps.packaged_app.outputs.executable }}')
     expect(findStep(p0Regression, 'Upload P0 diagnostics').if).toBe('always()')
-    expect(visualRegression).toMatchObject({ needs: 'source', 'runs-on': 'macos-14' })
+    expect(visualRegression).toMatchObject({ needs: 'source', 'runs-on': 'macos-15' })
     expect(visualRegression.if).toBe(
       "${{ !cancelled() && inputs.suite != 'p0' && (inputs.suite == 'visual' || needs.source.outputs.available == 'true') }}"
     )
@@ -658,7 +917,7 @@ describe('post-merge Windows validation', () => {
     expect(upgrade['timeout-minutes']).toBe(40)
     expect(findStep(upgrade, 'Setup Node')).toMatchObject({
       uses: 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
-      with: { 'node-version': 22 }
+      with: { 'node-version': 24 }
     })
     expect(findStep(upgrade, 'Install dependencies').run).toBe(
       'npm ci --ignore-scripts --no-audit --no-fund'
@@ -807,6 +1066,10 @@ if ($artifactSaveBase -eq $artifactSaveCommit) {
       permissions: { contents: 'read' },
       'runs-on': 'ubuntu-latest'
     })
+    expect(preflight.outputs).toEqual({
+      windows_runtime_source_changed: '${{ steps.runtime_change.outputs.source_changed }}',
+      windows_runtime_catalog_changed: '${{ steps.runtime_change.outputs.catalog_changed }}'
+    })
     expect(checkout).toMatchObject({
       uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
       with: { 'fetch-depth': 0 }
@@ -818,7 +1081,26 @@ if ($artifactSaveBase -eq $artifactSaveCommit) {
       if: stableTagCondition,
       run: 'git merge-base --is-ancestor "$GITHUB_SHA" origin/main'
     })
+    const runtimeChange = findStep(preflight, 'Detect Windows runtime changes')
+    expect(runtimeChange).toMatchObject({ id: 'runtime_change', shell: 'bash' })
+    expect(runtimeChange.run).toContain("git describe --tags --match 'v*'")
+    expect(runtimeChange.run).toContain('src/main/notebook/windows-runtime-catalog.json')
+    expect(runtimeChange.run).toContain('Runtime source changed without a catalog update')
+    expect(runtimeChange.run).toContain("'.github/workflows/windows-notebook-runtime.yml'")
+    const verifyRuntime = findStep(preflight, 'Verify reviewed Windows runtime CDN objects')
+    expect(verifyRuntime).toMatchObject({
+      if: "github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')",
+      run: 'node scripts/windows-runtime-cdn.mjs check --verify-bytes',
+      env: {
+        CDN_BASE_URL: '${{ vars.CDN_BASE_URL }}',
+        S3_PREFIX: '${{ vars.S3_PREFIX }}'
+      }
+    })
+    expect(release.jobs['windows-notebook-runtime']).toBeUndefined()
+    expect(release.jobs['windows-runtime-sign']).toBeUndefined()
+    expect(release.jobs['windows-runtime-cdn']).toBeUndefined()
     expect(release.jobs.build.needs).toBe('release-preflight')
+    expect(release.jobs.build.if).toBeUndefined()
     expect(release.jobs.build.with?.sign_windows).toBe(
       "${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}"
     )
@@ -847,6 +1129,13 @@ if ($artifactSaveBase -eq $artifactSaveCommit) {
             type: 'choice',
             options: ['backfill', 'promote'],
             default: 'backfill'
+          },
+          bootstrap_linux_arm64: {
+            description:
+              'First ARM64 promotion only: allow a confirmed missing ARM64 feed (requires promote)',
+            required: false,
+            type: 'boolean',
+            default: false
           },
           dry_run: {
             description: 'Run local release transforms without AWS credentials or uploads',

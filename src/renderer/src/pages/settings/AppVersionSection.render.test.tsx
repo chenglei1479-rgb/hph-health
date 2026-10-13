@@ -21,7 +21,7 @@ beforeEach(() => {
 
   useUpdateStore.setState({
     appInfo: {
-      name: 'MedResearch Agent',
+      name: 'DRA',
       version: '0.2.0',
       copyright: '© 2026 AIPOCH. All rights reserved.'
     },
@@ -36,6 +36,18 @@ afterEach(() => {
 })
 
 describe('AppVersionSection', () => {
+  it('explains the disabled update service and disables checking', () => {
+    useUpdateStore.setState({ status: { state: 'disabled', current: '0.1.29' } })
+    act(() => root.render(<AppVersionSection />))
+    expect(container.textContent).toContain(
+      'Automatic updates are disabled until a DRA update service is configured.'
+    )
+    const checkButton = Array.from(container.querySelectorAll('button')).find((element) =>
+      /check now/i.test(element.textContent ?? '')
+    )
+    expect(checkButton?.disabled).toBe(true)
+    expect(container.textContent).not.toContain('You are on the latest version')
+  })
   it('opens the project license from a resource row without an inline disclosure', () => {
     act(() => root.render(<AppVersionSection />))
     const link = container.querySelector('a[aria-label="Open-source license"]')
@@ -51,7 +63,7 @@ describe('AppVersionSection', () => {
       root.render(<AppVersionSection />)
     })
 
-    expect(container.textContent).toContain('MedResearch Agent')
+    expect(container.textContent).toContain('DRA')
     expect(container.textContent).toContain('v0.2.0')
     expect(container.textContent).toContain('© 2026 AIPOCH')
   })

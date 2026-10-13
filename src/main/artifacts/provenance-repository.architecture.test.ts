@@ -613,6 +613,10 @@ describe('Artifact Provenance repository architecture', () => {
       'src/shared/renderer-surface-matrix.test.ts'
     ])
     expect(module.testFiles.consumer).toEqual([
+      'src/main/storage/wsl-npm-migration.integration.test.ts',
+      'src/main/composition/notebook-environment.test.ts',
+      'src/main/literature/command-owner.test.ts',
+      'src/main/composition/reviewer.test.ts',
       'src/main/session-persistence/runtime-session-owner.test.ts',
       'src/main/session-plan/adversarial-session-plan.test.ts',
       'src/main/acp/file-reference-resolver.test.ts',
@@ -904,9 +908,9 @@ describe('Artifact Provenance repository architecture', () => {
       'src/renderer/src/lib/acp/useWorkspaceAgentRuntime.test.ts',
       'src/renderer/src/lib/session-persistence/session-persistence.test.ts',
       'src/renderer/src/main.render.test.tsx',
-      'src/renderer/src/pages/literature/LiteratureFullTextLookup.render.test.tsx',
+      'src/renderer/src/pages/literature/detail/LiteratureFullTextLookup.render.test.tsx',
       'src/renderer/src/pages/literature/LiteratureLibraryPage.render.test.tsx',
-      'src/renderer/src/pages/literature/LiteratureMetadataEditor.test.tsx',
+      'src/renderer/src/pages/literature/detail/LiteratureMetadataEditor.test.tsx',
       'src/renderer/src/pages/onboarding/NotebookStep.render.test.tsx',
       'src/renderer/src/pages/onboarding/OnboardingWizard.regressions.test.tsx',
       'src/renderer/src/pages/onboarding/OnboardingWizard.render.test.tsx',
@@ -958,7 +962,23 @@ describe('Artifact Provenance repository architecture', () => {
       'src/main/literature/smart-collections.test.ts',
       'src/main/notebook/runtime-service.macos-isolation.integration.test.ts',
       'src/renderer/src/lib/acp/workspace-runtime-save-admission.test.ts',
-      'src/main/acp/library-auto-policy.test.ts'
+      'src/main/acp/library-auto-policy.test.ts',
+      'src/main/reviewer/correction-resume.test.ts',
+      'src/main/literature/journal-attributes.test.ts',
+      'src/main/session-persistence/missing-runtime-session-repro.test.ts',
+      'src/main/session-persistence/prompt-preparation-restart.test.ts',
+      'src/main/session-persistence/terminal-commit-scheduler.test.ts',
+      'src/main/session-persistence/reconciliation-renderer-parity.test.ts',
+      'src/main/session-persistence/turn-outcome-reconciliation.test.ts',
+      'src/main/session-persistence/prompt-preparation-owner.test.ts',
+      'src/main/session-persistence/session-state-authority.test.ts',
+      'src/main/session-persistence/terminal-live-projection.test.ts',
+      'src/main/session-persistence/attention-projection.test.ts',
+      'src/renderer/src/lib/acp/workspace-runtime-session-memory.test.ts',
+      'src/renderer/src/lib/compute/useJobAnalysisEffect.render.test.tsx',
+      'src/main/acp/approved-handoff-outcome.integration.test.ts',
+      'src/main/acp/approved-handoff-outcome.test.ts',
+      'src/main/literature/pdf-translation/checkpoints.test.ts'
     ])
     expect(module.capabilityOverlays).toEqual([
       'windows_sensitive',

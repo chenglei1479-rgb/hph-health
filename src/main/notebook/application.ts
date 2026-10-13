@@ -10,6 +10,7 @@ type NotebookApplicationDeps = Pick<
   NotebookRuntimeServiceOptions,
   | 'configRoot'
   | 'admitSessionWork'
+  | 'authorizeExecution'
   | 'dataRoot'
   | 'repository'
   | 'getPackageMirror'

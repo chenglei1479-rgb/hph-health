@@ -627,7 +627,8 @@ const ProvenanceMessagesTimeline = ({
                   if (
                     conversationItem.type === 'handoff' ||
                     conversationItem.type === 'subagent-message' ||
-                    conversationItem.type === 'session-config-change'
+                    conversationItem.type === 'session-config-change' ||
+                    conversationItem.type === 'turn-outcome'
                   )
                     return null
 
@@ -1517,7 +1518,7 @@ const ArtifactProvenancePanel = ({
   const editSummary = isUserEdit ? (
     <div className="space-y-1.5 text-xs text-text-300">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span>{t('Edited in MedResearch Agent')}</span>
+        <span>{t('Edited in DRA')}</span>
         {basedOnVersionId && basedOnVersionNumber !== undefined ? (
           <button
             type="button"
@@ -1624,7 +1625,7 @@ const ArtifactProvenancePanel = ({
               value={tab.id}
               title={t(tab.label)}
               onClick={() => setActiveTab(tab.id)}
-              className={`min-w-0 truncate whitespace-nowrap rounded px-2 py-1 text-xs ${isUserEdit || activeTab === tab.id ? 'bg-bg-300 text-text-000' : 'text-text-200 hover:text-text-100'}`}
+              className={`min-w-0 truncate whitespace-nowrap rounded px-2 py-1 text-xs focus-visible:keyboard-focus focus-visible:-outline-offset-2 ${isUserEdit || activeTab === tab.id ? 'bg-bg-300 text-text-000' : 'text-text-200 hover:text-text-100'}`}
             >
               {t(tab.label)}
             </Tabs.Trigger>
@@ -2055,7 +2056,7 @@ const ArtifactProvenancePanel = ({
               <p>
                 {provenance.messages.reason === 'message-snapshot-unsupported'
                   ? t(
-                      'This message snapshot was created by a newer version of MedResearch Agent. Update the app to view it.'
+                      'This message snapshot was created by a newer version of DRA. Update the app to view it.'
                     )
                   : t(
                       'The immutable message snapshot is not available for this version ({{reason}}).',
@@ -2242,7 +2243,7 @@ const ArtifactProvenancePanel = ({
                             </p>
                             <p>
                               {t(
-                                'Downloads include MedResearch Agent metadata and tool-native lock files.'
+                                'Downloads include DRA metadata and tool-native lock files.'
                               )}
                             </p>
                           </div>

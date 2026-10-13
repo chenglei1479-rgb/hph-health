@@ -22,7 +22,7 @@ import { toRuntimeUploadedAttachment } from '../../shared/uploads'
 import type { TaskNotificationService } from '../notifications/task-notifications'
 
 const INTERRUPTED_TURN_CONTINUATION_PROMPT =
-  'Continue the interrupted turn from where it stopped. Do not repeat completed work or completed tool calls unless needed to finish the original request.'
+  'Continue the interrupted turn from where it stopped. Do not repeat completed work or completed tool calls unless needed to finish the original request. First inspect the recorded tool results, Notebook Run receipts, and saved outputs to identify the last verified successful step. If a tool call has no terminal result, query its existing Run before resubmitting it; an interruption does not prove that it did not execute. Preserve the original input versions and researcher approvals. Resume only the remaining steps after the blocker is resolved; never infer completed analysis or approval from a draft or a completion notice.'
 const SAVE_AS_SKILL_PROMPT = `[System] Distill this session into a reusable Skill.
 
 Review the active conversation branch: what was the goal, which agents and tools were used, what were the key steps, and what steering or corrections did the user provide along the way? Capture the reusable pattern, not a verbatim transcript.

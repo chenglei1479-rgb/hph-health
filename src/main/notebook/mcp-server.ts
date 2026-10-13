@@ -53,6 +53,7 @@ const NOTEBOOK_SYSTEM_PROMPT_APPEND = [
   HOST_SDK_DISCOVERY_GUIDANCE,
   'Connector documents: use loaded text or the framework Skill loader, never Shell/REPL. `host.skills` manages authored Skills. If neither is available, stop and report.',
   '`manage_environments` creates separate runtimes and returns `created.runtimeId`; bind/switch them and move data with files.',
+  'For read-only CSV/TSV/XLSX cohort audits, use the `clinical-data-audit` skill helpers when available. Do not install `openpyxl` or pandas just to inspect an attached workbook; if the helper is unavailable, ask for CSV or report the exact blocker without claiming an audit ran.',
   'Use plain relative paths in the writable session workspace. Resolve connector handoff from `OPEN_SCIENCE_HANDOFF_DIR`; never overwrite a saved path or original user files.',
   'Use `inspect_packages` for versions and `manage_packages` for installs. Never install in cells/shells or outside `$OPEN_SCIENCE_RUNTIME_DIR`.',
   'MCP replies are bounded; full output stays in preview. Check errors and workingFiles. The notebook runtime does not classify files for you.',
@@ -108,7 +109,18 @@ const executeToolSchema = {
     .describe(
       'Skill IDs for called functions; repeat per dependent cell; call directly, never import.'
     ),
-  artifactVersionInputs: z.array(z.string().min(1).max(256)).max(64).optional()
+  artifactVersionInputs: z
+    .array(z.string().min(1).max(256))
+    .max(64)
+    .optional()
+    .describe('Artifact Versions produced by the active workflow. Do not use this for Uploads.'),
+  inputVersionIds: z
+    .array(z.string().min(1).max(256))
+    .max(64)
+    .optional()
+    .describe(
+      'Exact Upload or Artifact Version IDs listed by host.artifacts in the current Project. Attached uploads for this turn are registered automatically; use this only to select additional Project files.'
+    )
   // No `environment`: the env is the session's bound runtime (notebook_bind_runtime), not a per-call
   // argument. To run in a different env, bind/switch to it first.
 }
@@ -210,8 +222,8 @@ const wslSetupOpenTerminalSchema = {
 // The process boundary enforces the same approved-domain policy for every installer worker.
 const INSPECT_PACKAGES_DOC = [
   "Read installed/missing/version metadata from the session's bound app-managed Python/R runtime without importing or changing packages.",
-  'Use for requested version checks, not as a mandatory preflight after a clear missing-package error. Use notebook_execute to test actual importability.',
-  'There is no per-call environment. A missing default is prepared by notebook_execute; an external runtime must also be inspected through notebook_execute so execution receives approval.'
+  'Use for requested version checks and analysis dependency preflight; after a clear missing-package error, use manage_packages directly. packagePreflight reports metadata availability and exact missing-package recovery arguments, without installing anything. It does not certify version constraints, importability, execution permissions or model quota. Use notebook_execute to test actual importability.',
+  'There is no per-call environment. A missing default is prepared by notebook_execute; inspect an external runtime through notebook_execute for code-risk review. Bind first when multiple runtimes are enabled.'
 ].join('\n')
 
 const MANAGE_PACKAGES_DOC = [
@@ -256,7 +268,7 @@ const REPL_EXECUTE_DOC = [
   'Load Remote Compute (SSH) (`remote-compute-ssh`) for jobs. Compute Environment Setup (`compute-env-setup`) prepares named environment setup/repair instructions for users or administrators to execute.',
   HOST_SDK_DISCOVERY_GUIDANCE,
   'Use foreground when reasoning needs the result now; use background:true only for longer independent work. Background-safe calls include host.mcp, host.compute, host.llm, host.delegate, and read-only Host SDK operations. host.viewImage, host.agents.switch, and live user input are unsafe in background execution because their results require the live foreground response. Save the returned runId; do not poll frequently. A Turn end or MCP disconnect does not cancel an accepted background Run; cancel it explicitly with background_run. If a Host SDK operation reports BACKGROUND_HOST_METHOD_UNSAFE, continue in foreground.',
-  'Globals persist; trailing expressions return results for Agent inspection. Defaults allow the Host SDK maximum 30-minute bounded wait; timeoutMs overrides. To hand off large data from the REPL to Python/R, write under process.env.OPEN_SCIENCE_HANDOFF_DIR; Python/R reads the same OPEN_SCIENCE_HANDOFF_DIR path. Use notebook_execute for analysis.'
+  'Declarations and globals persist until restart/process loss; top-level return/await and later redeclaration work. No replay. Expressions return results. timeoutMs overrides the 30-minute Host SDK wait. Transfer large data via process.env.OPEN_SCIENCE_HANDOFF_DIR (shared with Python/R); use notebook_execute for analysis.'
 ].join('\n')
 
 // Stateless shell contract, embedded as the bash_execute description so the agent always sees it.
@@ -270,7 +282,9 @@ const buildShellExecuteDoc = (
     binding.kind === 'powershell' ? '$env:OPEN_SCIENCE_HANDOFF_DIR' : '$OPEN_SCIENCE_HANDOFF_DIR'
   const platformContract =
     binding.kind === 'powershell'
-      ? 'Target Windows PowerShell 5.1; aliases are not POSIX utilities and `&&` is unavailable. Use `if ($?) { ... }` for dependent commands.'
+      ? binding.version === '5.1'
+        ? 'Target Windows PowerShell 5.1; aliases are not POSIX utilities and `&&` is unavailable. Use `if ($?) { ... }` for dependent commands.'
+        : 'Target PowerShell 7.6; aliases are not POSIX utilities. Use PowerShell syntax and inspect native program exit codes.'
       : undefined
   const exitCodeContract =
     binding.kind === 'powershell'
@@ -280,7 +294,7 @@ const buildShellExecuteDoc = (
   return [
     agentContract.executionDescription,
     ...(platformContract ? [platformContract] : []),
-    `Stateless: each call is a fresh process, so cwd, variables, jobs, and functions do not persist. It starts in the data-kernel workspace and shares the handoff directory exposed as ${handoffVariable}; do not resolve handoff relative to cwd.`,
+    `Calls serialize per lane/runtime and retain variables, exports, functions, and cwd. Cancel/timeout, exit, restart, or launch-context change resets its state; earlier commands are never replayed. Starts in data-kernel workspace. Handoff: ${handoffVariable}; never relative to cwd.`,
     exitCodeContract,
     'If a result includes recovery, follow its retry prerequisite and guidance. Recovery describes that attempt, not current runtime health; exitCode:null is not permission to repeat a command.',
     'Use foreground when reasoning needs the result now; use background:true for a longer independent command. Turn end or MCP disconnect does not stop an accepted background Run; explicitly cancel with background_run.',
@@ -498,6 +512,9 @@ const resolveNotebookRpcFetch = (method: string): typeof fetchLocalRpc =>
 const NOTEBOOK_MCP_EXECUTION_RESULT_LIMIT = 24_000
 const NOTEBOOK_MCP_STATE_RESULT_LIMIT = 6_000
 const NOTEBOOK_MCP_CONTROL_RESULT_LIMIT = 8_000
+// Setup diagnostics include the bundled guide as well as structured checks. The generic control
+// budget would turn even the normal handoff into a truncated preview with no usable schema fields.
+const WSL_DIAGNOSTICS_RESULT_LIMIT = 24_000
 const NOTEBOOK_MCP_STREAM_PREVIEW_LIMIT = 8_000
 const NOTEBOOK_MCP_STATE_OUTPUT_PREVIEW_LIMIT = 600
 const MIME_INLINE_LIMIT = 8_000
@@ -1332,6 +1349,20 @@ const compactInspectPackagesResult = (raw: unknown): unknown => {
       : []
   })
   const inventory = asRecord(record.inventory)
+  const preflight = asRecord(record.packagePreflight)
+  const recovery = asRecord(preflight?.recovery)
+  const completeRecovery =
+    recovery &&
+    Array.isArray(recovery.packages) &&
+    recovery.packages.length <= MAX_PACKAGE_RESULTS &&
+    recovery.packages.every((name) => typeof name === 'string' && name.length <= 256)
+  const compactPackageNames = (value: unknown): string[] =>
+    Array.isArray(value)
+      ? value
+          .filter((name): name is string => typeof name === 'string')
+          .slice(0, MAX_PACKAGE_RESULTS)
+          .map((name) => clipToolDiagnostic(name, 256))
+      : []
   const warnings = Array.isArray(record.warnings)
     ? record.warnings
         .filter((warning): warning is string => typeof warning === 'string')
@@ -1344,6 +1375,43 @@ const compactInspectPackagesResult = (raw: unknown): unknown => {
       ? { inventory: pickDefined(inventory, ['capturedAt', 'source', 'validation']) }
       : {}),
     packages,
+    ...(preflight
+      ? {
+          packagePreflight: {
+            ...pickDefined(preflight, [
+              'scope',
+              'status',
+              'importability',
+              'executionPermissions',
+              'modelQuota'
+            ]),
+            missingPackages: compactPackageNames(preflight.missingPackages),
+            unknownPackages: compactPackageNames(preflight.unknownPackages),
+            ...(Array.isArray(preflight.missingPackages) &&
+            preflight.missingPackages.length > MAX_PACKAGE_RESULTS
+              ? {
+                  omittedMissingPackageCount: preflight.missingPackages.length - MAX_PACKAGE_RESULTS
+                }
+              : {}),
+            ...(Array.isArray(preflight.unknownPackages) &&
+            preflight.unknownPackages.length > MAX_PACKAGE_RESULTS
+              ? {
+                  omittedUnknownPackageCount: preflight.unknownPackages.length - MAX_PACKAGE_RESULTS
+                }
+              : {}),
+            ...(completeRecovery
+              ? {
+                  recovery: {
+                    ...pickDefined(recovery, ['tool', 'language']),
+                    packages: recovery.packages
+                  }
+                }
+              : recovery
+                ? { recoveryOmitted: true }
+                : {})
+          }
+        }
+      : {}),
     ...(source.length > packages.length
       ? { omittedPackageCount: source.length - packages.length }
       : {}),
@@ -1544,7 +1612,7 @@ const NOTEBOOK_RPC_TOOLS: NotebookRpcToolDefinition[] = [
     name: 'notebook_execute',
     title: 'Execute notebook code',
     description: [
-      "artifactVersionInputs: this Run's provenance inputs (Version IDs). Use runId as producerRunId.",
+      'inputVersionIds: exact Upload or Artifact Version IDs from host.artifacts in the current Project; attached uploads for this turn are already registered automatically. artifactVersionInputs is only for Artifact Versions produced by the active workflow. Use runId as producerRunId.',
       'Use foreground when reasoning needs the result now; use background:true for longer independent work.',
       'Save the returned runId; follow its dependency-point query guidance.',
       'Turn end or MCP disconnect does not stop an accepted background Run; explicitly cancel with background_run.'
@@ -1586,7 +1654,7 @@ const NOTEBOOK_RPC_TOOLS: NotebookRpcToolDefinition[] = [
   },
   {
     name: 'bash_execute',
-    title: 'Execute a stateless shell command',
+    title: 'Execute a command in the session shell',
     description: BASH_EXECUTE_DOC,
     method: 'executeShell',
     inputSchema: bashExecuteToolSchema,
@@ -1746,7 +1814,7 @@ const WSL_SETUP_RPC_TOOLS: readonly NotebookRpcToolDefinition[] = [
       'Call this first in a WSL setup Session. It refreshes app-owned diagnostics and returns the bundled, version-matched setup guide markdown that governs the available setup tools.',
     method: 'wslSetupDiagnostics',
     inputSchema: {},
-    resultLimitChars: NOTEBOOK_MCP_CONTROL_RESULT_LIMIT
+    resultLimitChars: WSL_DIAGNOSTICS_RESULT_LIMIT
   },
   {
     name: 'wsl_setup_install_platform',

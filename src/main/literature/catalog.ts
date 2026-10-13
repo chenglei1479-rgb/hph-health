@@ -1,3 +1,4 @@
+import { journalBindingIdentity } from '../../shared/journal-attributes'
 import { saveSmartRuleVersion } from './smart-rule-history'
 import {
   serializedSmartRuleSchema,
@@ -9,7 +10,10 @@ import {
   smartEvidenceModeSchema
 } from '../../shared/literature-smart-collections'
 import type { LiteratureSmartCollections } from './smart-collections'
+import type { JournalAttributes } from './journal-attributes'
 import { deletePdfAnnotations, readAnnotations } from '../pdf-annotations/repository'
+import { ensureBinding } from '../pdf-annotations/document-store'
+import { createLiteratureAttachmentVersionReference } from '../../shared/literature'
 import { ApplicationCommandError } from '../../shared/application-command-contract'
 import {
   LITERATURE_OVERSIZED_REFERENCE,
@@ -73,9 +77,11 @@ type LiteratureCatalogClient = Pick<
   | 'literatureCollection'
   | 'literatureInboxCandidate'
   | 'literatureItem'
+  | 'project'
   | 'projectLiterature'
   | 'projectDeletionIntent'
   | 'tagAssignment'
+  | 'pdfAnnotationSourceBinding'
   | 'pdfAnnotation'
 >
 
@@ -102,7 +108,11 @@ type AttachLiteratureContentInput = Readonly<{
   pageCount?: number
 }>
 
-type AttachedLiteratureContent = Readonly<{ attachmentId: string; versionId: string }>
+type AttachedLiteratureContent = Readonly<{
+  attachmentId: string
+  versionId: string
+  itemId?: string
+}>
 
 type ApplyLiteratureMetadataInput = Readonly<{
   operationId?: string
@@ -110,6 +120,7 @@ type ApplyLiteratureMetadataInput = Readonly<{
   expectedMetadataRevision: number
   item: LiteratureItemInput
   source: LiteratureSourceInput
+  sources?: readonly LiteratureSourceInput[]
 }>
 
 const identitySchemes = new Set<string>(LITERATURE_IDENTITY_SCHEMES)
@@ -537,11 +548,13 @@ const resolveImportItems = (
 
 const createItem = async (
   transaction: Prisma.TransactionClient,
-  item: LiteratureItemInput
+  item: LiteratureItemInput,
+  id?: string
 ): Promise<string> => {
   const identifiers = normalizedIdentifiers(item.identifiers)
   const created = await transaction.literatureItem.create({
     data: {
+      id,
       itemType: item.itemType,
       title: normalizeSpace(item.title),
       normalizedTitle: normalizeSearchText(item.title),
@@ -625,7 +638,14 @@ const replaceItemMetadata = async (
   const identifiers = normalizedIdentifiers(item.identifiers)
   const existing = await transaction.literatureItem.findFirst({
     where: { id: itemId, deletedAt: null },
-    select: { metadataRevision: true, creators: { select: { creatorId: true } } }
+    select: {
+      metadataRevision: true,
+      creators: { select: { creatorId: true } },
+      itemType: true,
+      containerTitle: true,
+      typeFieldsJson: true,
+      identifiers: { select: { scheme: true, rawValue: true } }
+    }
   })
   if (!existing) throw new Error('Literature Item is unavailable.')
   if (existing.metadataRevision !== expectedMetadataRevision) {
@@ -660,6 +680,15 @@ const replaceItemMetadata = async (
     }
   })
   if (updated.count !== 1) throw new Error('Literature Item revision conflict.')
+  if (
+    journalBindingIdentity({
+      ...existing,
+      typeFields: JSON.parse(existing.typeFieldsJson),
+      identifiers: existing.identifiers.map(({ scheme, rawValue }) => ({ scheme, value: rawValue }))
+    }) !== journalBindingIdentity({ ...item, identifiers })
+  ) {
+    await transaction.$executeRaw`DELETE FROM "JournalItemBinding" WHERE "itemId" = ${itemId}`
+  }
   await transaction.literatureItemCreator.deleteMany({ where: { itemId } })
   await transaction.literatureIdentifier.deleteMany({ where: { itemId } })
   if (identifiers.length > 0) {
@@ -747,6 +776,24 @@ const transferSourceRecords = async (
   }
 }
 
+const registerAttachmentNotes = async (
+  transaction: Prisma.TransactionClient,
+  versionId: string
+): Promise<void> => {
+  const version = await transaction.literatureAttachmentVersion.findUniqueOrThrow({
+    where: { id: versionId }
+  })
+  if (version.contentType.split(';', 1)[0].trim().toLowerCase() !== 'application/pdf') return
+  await ensureBinding(transaction, {
+    kind: 'literature-attachment-version',
+    sourceFileId: version.attachmentId,
+    versionId,
+    checksum: version.checksum,
+    name: version.filename,
+    path: createLiteratureAttachmentVersionReference(versionId)
+  })
+}
+
 const acceptInboxCandidate = async (
   transaction: Prisma.TransactionClient,
   candidateId: string
@@ -784,8 +831,9 @@ const acceptInboxCandidate = async (
     const existing = await transaction.literatureAttachmentVersion.findFirst({
       where: { checksum: pdf.checksum, attachment: { itemId } }
     })
-    if (!existing)
-      await transaction.literatureAttachment.create({
+    if (existing) await registerAttachmentNotes(transaction, existing.id)
+    else {
+      const attachment = await transaction.literatureAttachment.create({
         data: {
           itemId,
           kind: 'fullText',
@@ -803,8 +851,11 @@ const acceptInboxCandidate = async (
               versionNumber: 1
             }
           }
-        }
+        },
+        include: { versions: true }
       })
+      await registerAttachmentNotes(transaction, attachment.versions[0].id)
+    }
   }
   await transaction.literatureInboxPdf.deleteMany({ where: { candidateId } })
   return { kind: 'item', id: itemId, state: 'linked' }
@@ -823,7 +874,8 @@ class LiteratureCatalog {
         if (attachmentIds.length) throw new Error('Literature attachment removal is unavailable.')
       }),
     private readonly onChanged?: (event: LiteratureChangedEvent) => void,
-    private readonly smart?: LiteratureSmartCollections
+    private readonly smart?: LiteratureSmartCollections,
+    private readonly journalAttributes?: JournalAttributes
   ) {}
 
   private revision = 0
@@ -1046,9 +1098,19 @@ class LiteratureCatalog {
         nextOffset: rows.length > limit ? offset + limit : undefined
       }
     }
-    return client.$transaction((transaction) => this.searchLibrary(request, transaction), {
-      timeout: 30_000
-    })
+    const journalFilterIds = request.filter?.journalAttributes?.length
+      ? await this.journalAttributes?.filterItemIds(
+          client as PrismaClient,
+          request.filter.journalAttributes,
+          request.lifecycle
+        )
+      : undefined
+    return client.$transaction(
+      (transaction) => this.searchLibrary(request, transaction, true, journalFilterIds),
+      {
+        timeout: 30_000
+      }
+    )
   }
 
   // The main-process agent adapter applies the existing MCP projection and output budget.
@@ -1057,15 +1119,24 @@ class LiteratureCatalog {
     request: LiteratureCatalogSearchRequest & { scope: 'library' }
   ): Promise<LiteratureCatalogSearchPage> {
     const client = await this.getClient()
-    return client.$transaction((transaction) => this.searchLibrary(request, transaction, false), {
-      timeout: 30_000
-    })
+    const journalFilterIds = request.filter?.journalAttributes?.length
+      ? await this.journalAttributes?.filterItemIds(
+          client as PrismaClient,
+          request.filter.journalAttributes,
+          request.lifecycle
+        )
+      : undefined
+    return client.$transaction(
+      (transaction) => this.searchLibrary(request, transaction, false, journalFilterIds),
+      { timeout: 30_000 }
+    )
   }
 
   private async searchLibrary(
     request: LiteratureCatalogSearchRequest,
     client: Prisma.TransactionClient,
-    boundResponse = true
+    boundResponse = true,
+    journalFilterIds?: string[]
   ): Promise<LiteratureCatalogSearchPage> {
     const offset = Math.max(0, request.offset ?? 0)
     const limit = Math.min(100, Math.max(1, request.limit ?? 50))
@@ -1083,6 +1154,12 @@ class LiteratureCatalog {
           : Prisma.sql`0 = 1`
       )
     }
+    if (filter?.journalAttributes?.length)
+      predicates.push(
+        journalFilterIds?.length
+          ? Prisma.sql`i.id IN (SELECT value FROM json_each(${JSON.stringify(journalFilterIds)}))`
+          : Prisma.sql`0 = 1`
+      )
     const contains = (column: Prisma.Sql, text: string): Prisma.Sql =>
       Prisma.sql`instr(${column}, ${normalizeSearchText(text)}) > 0`
     const creatorMatches = (text: string): Prisma.Sql => Prisma.sql`EXISTS (
@@ -1218,12 +1295,12 @@ class LiteratureCatalog {
       const needle = query.toLowerCase()
       const notePredicates = [
         Prisma.sql`(a.note <> '' OR ${quote} <> '')`,
-        Prisma.sql`(
-        (a."sourceKind" = 'literature-attachment-version' AND EXISTS (
+        Prisma.sql`EXISTS (SELECT 1 FROM "PdfAnnotationSourceBinding" annotationSource WHERE annotationSource."documentId" = a."documentId" AND (
+        (annotationSource."sourceKind" = 'literature-attachment-version' AND EXISTS (
           SELECT 1 FROM "LiteratureAttachmentVersion" v
           JOIN "LiteratureAttachment" attachment ON attachment.id = v."attachmentId"
           JOIN "LiteratureItem" item ON item.id = attachment."itemId"
-          WHERE v.id = a."versionId" AND attachment.id = a."sourceFileId"
+          WHERE v.id = annotationSource."versionId" AND attachment.id = annotationSource."sourceFileId"
             AND item."deletedAt" IS NULL AND item."mergedIntoItemId" IS NULL
             ${
               projectId
@@ -1233,13 +1310,13 @@ class LiteratureCatalog {
                 AND project."deletedAt" IS NULL AND NOT EXISTS (SELECT 1 FROM "ProjectDeletionIntent" d WHERE d."projectId" = project.id))`
                 : Prisma.empty
             }
-        )) OR (a."sourceKind" <> 'literature-attachment-version' AND EXISTS (
+        )) OR (annotationSource."sourceKind" <> 'literature-attachment-version' AND EXISTS (
           SELECT 1 FROM "Project" project
-          WHERE project.id = a."projectId"
+          WHERE project.id = annotationSource."projectId"
             AND project."deletedAt" IS NULL
             AND NOT EXISTS (SELECT 1 FROM "ProjectDeletionIntent" d WHERE d."projectId" = project.id)
             ${projectId ? Prisma.sql`AND project.id = ${projectId}` : Prisma.empty}
-        )))`
+        ))))`
       ]
       if (needle)
         notePredicates.push(
@@ -1257,12 +1334,12 @@ class LiteratureCatalog {
       const [noteCount, notes] = includeNotes
         ? await Promise.all([
             client.$queryRaw<{ total: bigint }[]>(
-              Prisma.sql`SELECT COUNT(*) AS total FROM "pdf_annotations" a WHERE ${noteWhere}`
+              Prisma.sql`SELECT COUNT(*) AS total FROM "PdfAnnotation" a WHERE ${noteWhere}`
             ),
             request.countOnly
               ? []
               : client.$queryRaw<{ id: string; updatedAt: Date; score: number }[]>(Prisma.sql`
-          SELECT a.id, a."updatedAt", ${score} AS score FROM "pdf_annotations" a WHERE ${noteWhere}
+          SELECT a.id, a."updatedAt", ${score} AS score FROM "PdfAnnotation" a WHERE ${noteWhere}
           ORDER BY score DESC, a."updatedAt" DESC, a.id ASC LIMIT ${offset + limit}`)
           ])
         : [[], []]
@@ -1349,7 +1426,8 @@ class LiteratureCatalog {
         (noteIds.length
           ? await readAnnotations(
               client,
-              await client.pdfAnnotation.findMany({ where: { id: { in: noteIds } } })
+              await client.pdfAnnotation.findMany({ where: { id: { in: noteIds } } }),
+              projectId
             )
           : []
         ).map((annotation) => [annotation.id, { id: annotation.id, annotation }])
@@ -1597,7 +1675,7 @@ class LiteratureCatalog {
         expectedMetadataRevision: input.expectedMetadataRevision,
         item: input.item
       },
-      input.source,
+      input.sources ?? [input.source],
       input.operationId
     )
     const updated = await this.get(input.itemId)
@@ -1605,7 +1683,31 @@ class LiteratureCatalog {
     return updated
   }
 
-  async attachContent(input: AttachLiteratureContentInput): Promise<AttachedLiteratureContent> {
+  async findItemByPdf(
+    checksum: string,
+    sizeBytes: number
+  ): Promise<LiteratureItemView | undefined> {
+    const client = await this.getClient()
+    const version = await client.literatureAttachmentVersion.findFirst({
+      where: {
+        checksum,
+        sizeBytes: BigInt(sizeBytes),
+        attachment: { item: { deletedAt: null, mergedIntoItemId: null } }
+      },
+      select: { attachment: { select: { itemId: true } } },
+      orderBy: { id: 'asc' }
+    })
+    return version ? ((await this.get(version.attachment.itemId)) ?? undefined) : undefined
+  }
+
+  async attachContent(
+    input: AttachLiteratureContentInput,
+    onAttached?: (
+      transaction: Prisma.TransactionClient,
+      result: AttachedLiteratureContent
+    ) => Promise<void>,
+    newItem?: LiteratureItemInput
+  ): Promise<AttachedLiteratureContent> {
     const provenanceJson = input.provenance
       ? canonicalJson(literaturePdfProvenanceSchema.parse(input.provenance))
       : null
@@ -1633,20 +1735,16 @@ class LiteratureCatalog {
     return this.commit(
       client,
       async (transaction) => {
-        const [item, blob] = await Promise.all([
-          transaction.literatureItem.findFirst({
-            where: { id: itemId, deletedAt: null },
-            select: { id: true, metadataRevision: true }
-          }),
-          transaction.contentBlob.findUnique({ where: { id: input.contentBlobId } })
-        ])
-        if (!item) throw new Error('Literature Item is unavailable.')
-        if (
-          input.expectedMetadataRevision !== undefined &&
-          item.metadataRevision !== input.expectedMetadataRevision
-        ) {
-          throw new Error('Literature Item changed before the PDF could be attached.')
+        const finish = async (
+          result: AttachedLiteratureContent
+        ): Promise<AttachedLiteratureContent> => {
+          await registerAttachmentNotes(transaction, result.versionId)
+          await onAttached?.(transaction, result)
+          return result
         }
+        const blob = await transaction.contentBlob.findUnique({
+          where: { id: input.contentBlobId }
+        })
         if (
           !blob ||
           blob.state !== 'available' ||
@@ -1656,6 +1754,38 @@ class LiteratureCatalog {
         ) {
           throw new Error('Literature attachment bytes do not match the content authority.')
         }
+        if (newItem) {
+          // Recheck inside the writing transaction: independent windows may both have observed
+          // an empty catalog before asking to add the same PDF.
+          const duplicate = await transaction.literatureAttachmentVersion.findFirst({
+            where: {
+              checksum: input.checksum,
+              sizeBytes: BigInt(input.sizeBytes),
+              attachment: { item: { deletedAt: null, mergedIntoItemId: null } }
+            },
+            include: { attachment: { select: { itemId: true } } },
+            orderBy: { id: 'asc' }
+          })
+          if (duplicate)
+            return finish({
+              attachmentId: duplicate.attachmentId,
+              versionId: duplicate.id,
+              itemId: duplicate.attachment.itemId
+            })
+          if (!(await transaction.literatureItem.findUnique({ where: { id: itemId } })))
+            await createItem(transaction, literatureItemInputSchema.parse(newItem), itemId)
+        }
+        const item = await transaction.literatureItem.findFirst({
+          where: { id: itemId, deletedAt: null },
+          select: { id: true, metadataRevision: true }
+        })
+        if (!item) throw new Error('Literature Item is unavailable.')
+        if (
+          input.expectedMetadataRevision !== undefined &&
+          item.metadataRevision !== input.expectedMetadataRevision
+        ) {
+          throw new Error('Literature Item changed before the PDF could be attached.')
+        }
 
         if (!input.attachmentId) {
           const existingItemVersion = await transaction.literatureAttachmentVersion.findFirst({
@@ -1663,10 +1793,10 @@ class LiteratureCatalog {
             select: { id: true, attachmentId: true }
           })
           if (existingItemVersion) {
-            return {
+            return finish({
               attachmentId: existingItemVersion.attachmentId,
               versionId: existingItemVersion.id
-            }
+            })
           }
         }
 
@@ -1692,7 +1822,9 @@ class LiteratureCatalog {
           },
           select: { id: true }
         })
-        if (existing) return { attachmentId: attachment.id, versionId: existing.id }
+        if (existing) {
+          return finish({ attachmentId: attachment.id, versionId: existing.id })
+        }
         const latest = await transaction.literatureAttachmentVersion.findFirst({
           where: { attachmentId: attachment.id },
           orderBy: { versionNumber: 'desc' },
@@ -1712,9 +1844,9 @@ class LiteratureCatalog {
           },
           select: { id: true }
         })
-        return { attachmentId: attachment.id, versionId: version.id }
+        return finish({ attachmentId: attachment.id, versionId: version.id })
       },
-      { itemIds: [itemId] }
+      (result) => ({ itemIds: [result.itemId ?? itemId] })
     )
   }
 
@@ -2032,7 +2164,7 @@ class LiteratureCatalog {
 
   private async updateItem(
     command: Extract<LiteratureCatalogCommand, { kind: 'update-item' }>,
-    source?: LiteratureSourceInput,
+    sources: readonly LiteratureSourceInput[] = [],
     operationId?: string
   ): Promise<LiteratureCatalogReceipt> {
     const itemId = normalizeSpace(command.itemId)
@@ -2056,7 +2188,7 @@ class LiteratureCatalog {
           }
         }
         await replaceItemMetadata(transaction, itemId, command.expectedMetadataRevision, item)
-        if (source) await this.attachSource(transaction, { source, itemId })
+        for (const source of sources) await this.attachSource(transaction, { source, itemId })
         if (operationId) {
           const committed = await transaction.literatureItem.findUniqueOrThrow({
             where: { id: itemId },
@@ -2918,6 +3050,9 @@ class LiteratureCatalog {
     await transaction.literatureSmartAssessment.deleteMany({
       where: { itemId: { in: [command.survivorId, ...duplicateIds] } }
     })
+    await transaction.$executeRaw(
+      Prisma.sql`DELETE FROM "JournalItemBinding" WHERE "itemId" IN (${Prisma.join(duplicateIds)})`
+    )
     await transaction.literatureIdentifier.deleteMany({
       where: { itemId: { in: duplicateIds } }
     })

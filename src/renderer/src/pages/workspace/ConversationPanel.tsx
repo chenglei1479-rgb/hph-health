@@ -1,3 +1,8 @@
+import { replayAnnotationTarget } from '../../../../shared/replay-reference'
+import { SessionDiscussionSource } from './SessionDiscussionSource'
+import { composerContextRowClassName } from './SessionDiscussionBar'
+import { SessionDiscussionButton } from './SessionDiscussionButton'
+import { createSessionReplayItem } from './workspace-session-actions'
 import { forkSession, sessionForkAvailable } from '@/lib/session-fork'
 import { sideChatBlock, sideChatBlockMessage } from './side-chat-availability'
 import {
@@ -5,9 +10,13 @@ import {
   PackageOperationIndicator
 } from '@/components/SessionPackageOperation'
 import { SessionInfoPopover } from './SessionInfoPopover'
+import { SessionHeaderMenu } from './SessionHeaderMenu'
 import { sessionExportLocked, usePackageOperationStore } from '@/stores/package-operation-store'
+import { useNavigationStore } from '@/stores/navigation-store'
 import { AnnotationTransferSource } from './annotations/AnnotationTransferSource'
 import { useAnnotationDrop } from './annotations/use-annotation-drop'
+import { mentionProjectFile } from './project-file-mention'
+import { useProjectFileMentionDrop } from './use-project-file-mention-drop'
 import { UnavailablePlanNotice } from './session-plan/UnavailablePlanNotice'
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
 import type { TFunction } from 'i18next'
@@ -35,7 +44,11 @@ import type {
   SessionPermissionProfileState
 } from '../../../../shared/permission-profiles'
 import { MAX_UPLOAD_FILE_BYTES, formatUploadSizeLimit } from '../../../../shared/uploads'
-import { MAX_SESSION_PDF_CONTEXTS } from '../../../../shared/session-persistence'
+import {
+  MAX_SESSION_PDF_CONTEXTS,
+  latestOutcomePrompt,
+  resolvePreparationNoticeBaseline
+} from '../../../../shared/session-persistence'
 import {
   isReportableRunFailure,
   VISION_MODEL_NOT_CONFIGURED_MESSAGE,
@@ -55,29 +68,31 @@ import {
   GitBranch,
   Loader2,
   LockKeyhole,
-  Link2,
   ListChecks,
   Menu,
   MessageCircleMore,
   PanelRight,
   Plus,
+  Play,
   RotateCcw,
   ScanEye,
   Square,
   Stethoscope,
   X
 } from 'lucide-react'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { resolveEffectiveSpecialistSkills } from '../../../../shared/specialist'
-import { isUnsupportedCodexAcpVersionError } from '../../../../shared/codex-runtime'
+import {
+  isUnsupportedCodexAcpVersionError,
+  isCodexCliCompatibilityError
+} from '../../../../shared/codex-runtime'
 import {
   validateAnnotations,
   type AnnotationValidationError,
   type TextAnnotation
 } from '../../../../shared/annotations'
 
-import { FileDropOverlay } from '@/components/FileDropOverlay'
-import { sessionPackageImportAvailable } from '@/components/session-package-import-menu-model'
+import { ProjectPackageDropZone } from '@/components/ProjectPackageDropZone'
 import { DiagnosticDetails } from '@/components/diagnostic-details'
 import { ErrorNotice } from '@/components/error-notice'
 import { Button } from '@/components/ui/button'
@@ -86,14 +101,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useFileDropZone } from '@/hooks/useFileDropZone'
 import { cn } from '@/lib/utils'
 import {
-  isRetryableArtifactFinalizationError,
   projectSessionActionability,
   useSessionStore,
   type ChatSession
@@ -109,6 +123,7 @@ import {
   appendArtifactMention,
   docToSkillIds,
   docToText,
+  docFromText,
   pastedTextAttachmentDomId,
   pastedTextPreviewName,
   type ComposerPastedTextNode
@@ -127,13 +142,17 @@ import { ComposerSpecialistPicker } from './ComposerSpecialistPicker'
 import { ComposerYourFilesMenu } from './ComposerYourFilesMenu'
 import { PermissionApprovalControls } from './PermissionApprovalControls'
 import { ReadingContextPicker } from './ReadingContextPicker'
-import { normalizeRunFailureError } from './error-report'
+import { normalizeRunFailureError, type SessionReportSubject } from './error-report'
 import { isClaudeCliCompatibilityError } from '../../../../shared/claude-runtime'
 import { ReportErrorDialog } from './ReportErrorDialog'
 import { SessionInterruptedBanner } from './SessionInterruptedBanner'
+import { TurnOutcomeNotice, type TurnOutcomeActions } from './TurnOutcomeNotice'
+import { resolveCurrentTurnOutcomeItem } from './workspace-conversation-timeline'
 import { ExtensionPreservingFileName } from './ExtensionPreservingFileName'
 import { WorkspaceElicitationCard } from './WorkspaceElicitationCard'
 import { WorkspaceDelegatedQuestionCard } from './WorkspaceDelegatedQuestionCard'
+import { NewConversationStart, SessionPackageEntryRow } from './EmptyConversationBanner'
+import { sessionPackageImportAvailable } from '@/components/session-package-import-menu-model'
 import { WorkspaceMessageScroller } from './WorkspaceMessageScroller'
 import { AnnotationDraftCards } from './annotations/AnnotationCards'
 import { requestAnnotationReveal } from './annotations/annotation-reveal'
@@ -161,6 +180,7 @@ import { getAvatarColor } from '../settings/specialist-icons'
 import { localizeImageAnnotationSourceError } from './annotations/image-annotation-source-validation'
 import { BookmarksPopover } from './bookmarks/BookmarksPopover'
 import { useBookmarks } from './bookmarks/bookmark-context'
+import type { ConversationSubmissions } from './use-conversation-submissions'
 
 const localizeVisionRunFailure = (
   error: string | null | undefined,
@@ -189,29 +209,29 @@ const localizeVisionRunFailure = (
 const composerInteractiveTransitionClassName = 'transition-colors duration-200 ease-out'
 
 const composerIconButtonClassName = cn(
-  'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-300 hover:bg-bg-200 hover:text-text-100 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50',
+  'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-300 hover:bg-bg-200 hover:text-text-100 focus-visible:keyboard-focus disabled:cursor-not-allowed disabled:opacity-50',
   composerInteractiveTransitionClassName
 )
 
 const composerSplitSendPrimaryButtonClassName = cn(
-  "relative h-8 w-8 rounded-l-md rounded-r-none border-0 bg-transparent bg-clip-border text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-100 disabled:hover:bg-transparent [@media(pointer:coarse)]:before:absolute [@media(pointer:coarse)]:before:-inset-y-1.5 [@media(pointer:coarse)]:before:-left-3 [@media(pointer:coarse)]:before:right-0 [@media(pointer:coarse)]:before:content-['']",
+  "relative h-8 w-8 rounded-l-md rounded-r-none border-0 bg-transparent bg-clip-border text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground focus-visible:keyboard-focus disabled:cursor-not-allowed disabled:opacity-100 disabled:hover:bg-transparent [@media(pointer:coarse)]:before:absolute [@media(pointer:coarse)]:before:-inset-y-1.5 [@media(pointer:coarse)]:before:-left-3 [@media(pointer:coarse)]:before:right-0 [@media(pointer:coarse)]:before:content-['']",
   composerInteractiveTransitionClassName
 )
 
 const composerSplitSendMenuButtonClassName = cn(
-  "relative h-8 w-8 rounded-l-none rounded-r-md border-0 bg-transparent bg-clip-border text-primary-foreground after:pointer-events-none after:absolute after:inset-y-1 after:left-0 after:w-px after:bg-primary-foreground/20 after:content-[''] hover:bg-primary-foreground/10 hover:text-primary-foreground active:translate-y-px aria-expanded:bg-primary-foreground/10 aria-expanded:text-primary-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-100 disabled:hover:bg-transparent [@media(pointer:coarse)]:before:absolute [@media(pointer:coarse)]:before:-inset-y-1.5 [@media(pointer:coarse)]:before:left-0 [@media(pointer:coarse)]:before:-right-3 [@media(pointer:coarse)]:before:content-['']",
+  "relative h-8 w-8 rounded-l-none rounded-r-md border-0 bg-transparent bg-clip-border text-primary-foreground after:pointer-events-none after:absolute after:inset-y-1 after:left-0 after:w-px after:bg-primary-foreground/20 after:content-[''] hover:bg-primary-foreground/10 hover:text-primary-foreground active:translate-y-px aria-expanded:bg-primary-foreground/10 aria-expanded:text-primary-foreground focus-visible:keyboard-focus motion-reduce:active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-100 disabled:hover:bg-transparent [@media(pointer:coarse)]:before:absolute [@media(pointer:coarse)]:before:-inset-y-1.5 [@media(pointer:coarse)]:before:left-0 [@media(pointer:coarse)]:before:-right-3 [@media(pointer:coarse)]:before:content-['']",
   composerInteractiveTransitionClassName
 )
 
 const composerCancelButtonClassName = cn(
-  'flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-bg-200 text-text-000 hover:bg-bg-300 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+  'flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-bg-200 text-text-000 hover:bg-bg-300 focus-visible:keyboard-focus',
   composerInteractiveTransitionClassName
 )
 const composerContentClassName = 'mx-auto w-full max-w-4xl'
 const attachmentChipClassName =
   'flex h-9 min-w-0 max-w-[220px] items-center gap-2 rounded-lg border border-border-200 bg-bg-200 px-2 text-text-000'
 const attachmentRemoveButtonClassName = cn(
-  "relative flex size-6 shrink-0 items-center justify-center rounded-md text-text-300 hover:bg-bg-300 hover:text-text-000 active:translate-y-px focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 [@media(pointer:coarse)]:before:absolute [@media(pointer:coarse)]:before:-inset-2 [@media(pointer:coarse)]:before:content-['']",
+  "relative flex size-6 shrink-0 items-center justify-center rounded-md text-text-300 hover:bg-bg-300 hover:text-text-000 active:translate-y-px focus-visible:keyboard-focus motion-reduce:active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 [@media(pointer:coarse)]:before:absolute [@media(pointer:coarse)]:before:-inset-2 [@media(pointer:coarse)]:before:content-['']",
   composerInteractiveTransitionClassName
 )
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4
@@ -220,7 +240,7 @@ const attachmentRemoveButtonClassName = cn(
  * slop: pass (1–58) · contrast: inherited semantic tokens · mobile: pass (34, 49–57)
  */
 const pastedTextRestoreButtonClassName = cn(
-  'flex h-full min-w-0 flex-1 flex-col justify-center rounded-md text-left hover:text-text-100 active:translate-y-px focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50',
+  'flex h-full min-w-0 flex-1 flex-col justify-center rounded-md text-left hover:text-text-100 active:translate-y-px focus-visible:keyboard-focus motion-reduce:active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50',
   composerInteractiveTransitionClassName
 )
 // Read from two places (pointer-fine tooltip and coarse-pointer hint), so it takes t rather than
@@ -316,8 +336,10 @@ type ConversationPanelView = {
   activeSession: ChatSession | undefined
   composerFocusKey?: string
   canEditDraft: boolean
+  persistenceBlocked?: boolean
   actionError: string | null
   sideChatDisabledReason?: string
+  sessionImport?: { projectId: string; projectName?: string; canImport: boolean }
 }
 
 type ConversationPanelSpecialist = {
@@ -334,6 +356,7 @@ type ConversationPanelLayout = {
   isPreviewPanelCollapsed: boolean
   togglePreviewPanel: () => void
   openSidebar: () => void
+  onOpenLibraryMention?: (scope: { collectionId?: string; collectionName?: string }) => void
 }
 
 type ConversationPanelPermissions = {
@@ -406,7 +429,8 @@ type ConversationPanelWslSetup = {
 type ConversationPanelWorkflows = {
   artifactFinalization: {
     running: boolean
-    request: () => void
+    retryingPromptMessageId?: string
+    request: (sessionId: string, promptMessageId: string) => void
   }
   review: ConversationPanelReview
   saveAsSkill: ConversationPanelSaveAsSkill
@@ -414,6 +438,7 @@ type ConversationPanelWorkflows = {
 }
 
 type ConversationPanelSessionTools = {
+  menuBindings?: React.ComponentProps<typeof SessionHeaderMenu>['bindings']
   exportDiagnostics?: (session: ChatSession) => void
   togglePin?: (session: ChatSession) => void
   editSession?: (session: ChatSession) => void
@@ -429,11 +454,6 @@ type ConversationPanelSubagents = {
   stop: () => void | Promise<void>
 }
 
-type StopSubmissionState = Readonly<{
-  pending: boolean
-  error?: string
-}>
-
 type ConversationPanelProps = {
   view: ConversationPanelView
   composer: Pick<WorkspaceComposerController, 'view' | 'actions'>
@@ -448,6 +468,7 @@ type ConversationPanelProps = {
   workflows: ConversationPanelWorkflows
   sessionTools: ConversationPanelSessionTools
   subagents: ConversationPanelSubagents
+  submissions: ConversationSubmissions
 }
 
 const DismissibleConversationError = ({
@@ -465,7 +486,7 @@ const DismissibleConversationError = ({
         type="button"
         onClick={() => setDismissed(true)}
         aria-label={t('Dismiss error')}
-        className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-red-900/40"
+        className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded hover:bg-red-100 focus-visible:keyboard-focus dark:hover:bg-red-900/40"
       >
         <X className="size-3.5" strokeWidth={2.2} aria-hidden="true" />
       </button>
@@ -488,12 +509,20 @@ const ConversationPanel = ({
   contextWindow,
   workflows,
   sessionTools,
-  subagents
+  subagents,
+  submissions
 }: ConversationPanelProps): React.JSX.Element => {
   const { t } = useTranslation()
   const { total: bookmarkCount, loadError: bookmarkLoadError } = useBookmarks()
-  const { activeSession, composerFocusKey, canEditDraft, actionError, sideChatDisabledReason } =
-    view
+  const {
+    activeSession,
+    composerFocusKey,
+    canEditDraft,
+    persistenceBlocked,
+    actionError,
+    sideChatDisabledReason,
+    sessionImport
+  } = view
   const sourceSession = useSessionStore((state) =>
     state.sessions.find((session) => session.id === activeSession?.branchSource?.sessionId)
   )
@@ -545,6 +574,26 @@ const ConversationPanel = ({
     parentSessionId: activeSession?.id ?? '',
     disabled: !canEditDraft || !activeSession,
     receive: ({ annotation }) => !onAddAnnotation(annotation)
+  })
+  // Dropping a file card from the project Files view mentions it in this composer: the drop only
+  // resolves the head Version and hands the reference to the same store request the `@` popup and
+  // Global Search use, so the chip and its guards stay identical across entry points.
+  const fileMentionDrop = useProjectFileMentionDrop({
+    disabled:
+      !canEditDraft ||
+      !activeSession ||
+      typeof window.api?.managedFileVersions?.inspect !== 'function',
+    receive: async ({ projectId, file }) => {
+      const navigation = useNavigationStore.getState()
+      const availability = navigation.artifactMentionAvailability
+      if (
+        navigation.activeProjectId !== projectId ||
+        availability?.projectId !== projectId ||
+        !availability.canMention
+      )
+        return false
+      return (await mentionProjectFile(file)) === 'mentioned'
+    }
   })
   const handleAddTranscriptAnnotation = useCallback(
     (annotation: TextAnnotation): AnnotationValidationError | undefined => {
@@ -694,23 +743,74 @@ const ConversationPanel = ({
   const openSettings = useSettingsStore((state) => state.openSettings)
   const openSettingsToComputeHost = useSettingsStore((state) => state.openSettingsToComputeHost)
   const openSettingsToPanel = useSettingsStore((state) => state.openSettingsToPanel)
-  const stopSubmissionPendingSessionIdsRef = useRef(new Set<string>())
-  const [stopSubmissionsBySessionId, setStopSubmissionsBySessionId] = useState(
-    () => new Map<string, StopSubmissionState>()
-  )
   const [messageQueueExpanded, setMessageQueueExpanded] = useState(false)
   const setElicitationEditDraft = useSessionStore((state) => state.setElicitationEditDraft)
   const setElicitationDraftAnswers = useSessionStore((state) => state.setElicitationDraftAnswers)
+  const isNewConversation = !activeSession && !optimisticMessage
+  useEffect(() => {
+    if (!isNewConversation) return
+    // The start surface has no transcript scroller to own the native find handshake.
+    const stopShow = window.api?.window?.onShowWindowFind?.(() => {
+      window.api?.window?.announceWindowFindContentReady?.()
+    })
+    const stopReady = window.api?.window?.announceWindowFindReady?.()
+    return () => {
+      stopShow?.()
+      stopReady?.()
+    }
+  }, [isNewConversation])
+  const composerFormRef = useRef<HTMLFormElement>(null)
+  const startComposerTopRef = useRef<number | null>(null)
+  useLayoutEffect(() => {
+    const form = composerFormRef.current
+    if (!form) return
+    if (isNewConversation) {
+      const measure = (): void => {
+        startComposerTopRef.current = form.getBoundingClientRect().top
+      }
+      measure()
+      const observer = new ResizeObserver(measure)
+      observer.observe(form)
+      window.addEventListener('resize', measure)
+      return () => {
+        observer.disconnect()
+        window.removeEventListener('resize', measure)
+      }
+    }
+    const previousTop = startComposerTopRef.current
+    startComposerTopRef.current = null
+    if (previousTop === null || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      return
+    const animation = form.animate?.(
+      [
+        { transform: `translateY(${previousTop - form.getBoundingClientRect().top}px)` },
+        { transform: 'translateY(0)' }
+      ],
+      { duration: 200, easing: 'ease-out' }
+    )
+    return () => animation?.cancel()
+  }, [isNewConversation])
+  const insertResearchPrompt = (prompt: string): void => {
+    const hasContent = draftDoc.nodes.some((node) => node.type !== 'text' || node.text.trim())
+    onValidatedDraftDocChange(
+      hasContent
+        ? { ...draftDoc, nodes: [...draftDoc.nodes, { type: 'text', text: `\n\n${prompt}` }] }
+        : docFromText(prompt)
+    )
+    window.dispatchEvent(new CustomEvent(FOCUS_COMPOSER_EVENT))
+  }
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const globalSearchShortcut = window.api?.platform === 'darwin' ? '⌘K' : 'Ctrl+K'
-  // Local so the interrupted banner can show a spinner and block a double-resume until the request settles.
-  const [resumingSessionId, setResumingSessionId] = useState<string>()
-  const isResuming =
-    activeSession !== undefined &&
-    resumingSessionId !== undefined &&
-    activeSession.id === resumingSessionId
+  // The workspace retains pending Resume state while this panel remounts for another session.
+  const isResuming = Boolean(
+    activeSession && submissions.resumePendingSessionIds.has(activeSession.id)
+  )
   // Opens the reviewable, consent-gated error report dialog for a failed run.
   const [isReportOpen, setIsReportOpen] = useState(false)
+  const [reportSnapshot, setReportSnapshot] = useState<{
+    error: string
+    subject: SessionReportSubject
+  }>()
   const [isContextWindowOpen, setIsContextWindowOpen] = useState(false)
   const [reportDialogEpoch, setReportDialogEpoch] = useState(0)
   const [composerRestoreFocusRequest, setComposerRestoreFocusRequest] = useState<number>()
@@ -726,56 +826,28 @@ const ConversationPanel = ({
     return () => window.removeEventListener(FOCUS_COMPOSER_EVENT, focusComposer)
   }, [])
 
-  const openReportDialog = (): void => {
+  const openReportDialog = (errorOverride?: string): void => {
+    setReportSnapshot({
+      error: errorOverride ?? resolvedRunError,
+      subject: {
+        agentFrameworkId: activeSession?.agentFrameworkId,
+        agentBackendId: activeSession?.agentBackendId,
+        model: activeSession?.agentModel
+      }
+    })
     setReportDialogEpoch((epoch) => epoch + 1)
     setIsReportOpen(true)
   }
 
   const activeStopSubmission = activeSession
-    ? stopSubmissionsBySessionId.get(activeSession.id)
+    ? submissions.stopBySessionId.get(activeSession.id)
     : undefined
   const isStopping = activeStopSubmission?.pending === true
   const stopError = activeStopSubmission?.error
 
-  const settleStopSubmission = (sessionId: string, error?: string): void => {
-    stopSubmissionPendingSessionIdsRef.current.delete(sessionId)
-    setStopSubmissionsBySessionId((current) => {
-      const next = new Map(current)
-      if (error !== undefined) next.set(sessionId, { pending: false, error })
-      else next.delete(sessionId)
-      return next
-    })
-  }
+  const handleStop = (): void => submissions.submitStop(activeSession?.id, onCancelRun)
 
-  const submitStop = (sessionId: string | undefined, action: () => void | Promise<void>): void => {
-    if (!sessionId || stopSubmissionPendingSessionIdsRef.current.has(sessionId)) return
-    stopSubmissionPendingSessionIdsRef.current.add(sessionId)
-    setStopSubmissionsBySessionId((current) => {
-      const next = new Map(current)
-      next.set(sessionId, { pending: true })
-      return next
-    })
-    let outcome: void | Promise<void>
-    try {
-      outcome = action()
-    } catch (error) {
-      settleStopSubmission(sessionId, error instanceof Error ? error.message : String(error))
-      return
-    }
-    if (!outcome || typeof (outcome as Promise<void>).then !== 'function') {
-      settleStopSubmission(sessionId)
-      return
-    }
-    void outcome.then(
-      () => settleStopSubmission(sessionId),
-      (error: unknown) =>
-        settleStopSubmission(sessionId, error instanceof Error ? error.message : String(error))
-    )
-  }
-
-  const handleStop = (): void => submitStop(activeSession?.id, onCancelRun)
-
-  const handleStopSubagents = (): void => submitStop(activeSession?.id, onStopSubagents)
+  const handleStopSubagents = (): void => submissions.submitStop(activeSession?.id, onStopSubagents)
 
   // Unconditional hook: one shared data source for the background-task strip chip and
   // the expandable ledger. Compute Jobs stay observable before the Notebook exists.
@@ -788,6 +860,7 @@ const ConversationPanel = ({
     activeSession !== undefined &&
     (backgroundTasks.summary.activeCount > 0 || backgroundTasks.summary.totalTasks > 0)
   const [backgroundTasksExpanded, setBackgroundTasksExpanded] = useState(false)
+  const isImported = Boolean(activeSession?.packageOrigin)
   const activeBranchPlan = selectActiveBranchPlan(activeSession)
   const subagentSummary = projectSessionSubagents(activeSession, pendingPermissions)
   const hasSubagents = subagentSummary.children.length > 0
@@ -796,7 +869,7 @@ const ConversationPanel = ({
   const saveAsSkillDisabledReason = hasRunningSubagents
     ? t('Wait for all subagents to finish.')
     : saveAsSkillDisabledReasonFromParent
-  const effectiveCanSend = canSendMessage && !isStopping
+  const effectiveCanSend = canSendMessage && !isStopping && !isResuming
   const activePendingPlan = activeBranchPlan?.approval === 'pending' ? activeBranchPlan : undefined
   // Keep the mounted editor stable across receipts and run completion. Only a
   // different Plan or an explicit review request owns a fresh draft/collapse state.
@@ -839,15 +912,66 @@ const ConversationPanel = ({
     activeSession?.status === 'waiting-plan-approval'
       ? activePendingPlan
       : undefined
-  const resolvedRunError =
-    (isClaudeCliCompatibilityError(activeSession?.error ?? '')
-      ? t(
-          'The installed Claude Code CLI is incompatible or its version could not be verified. Update Claude Code to 2.1.118 or later, then re-detect it in Settings.'
-        )
-      : undefined) ??
-    localizeImageAnnotationSourceError(activeSession?.error, t) ??
-    localizeVisionRunFailure(activeSession?.error, t) ??
-    normalizeRunFailureError(activeSession?.error)
+  const resolveRunError = useCallback(
+    (error: string | undefined): string => {
+      switch (error) {
+        case 'This turn was interrupted. Resume to continue.':
+          return t('This turn was interrupted. Resume to continue.')
+        case 'ACP connection closed':
+        case 'Connection lost — Resume to reconnect and continue.':
+          return t('Connection lost — Resume to reconnect and continue.')
+        case 'Session was interrupted before the app closed.':
+          return t('Session was interrupted before the app closed.')
+        default:
+          return (
+            (isClaudeCliCompatibilityError(error ?? '')
+              ? t(
+                  'The installed Claude Code CLI is incompatible or its version could not be verified. Update Claude Code to 2.1.118 or later, then re-detect it in Settings.'
+                )
+              : undefined) ??
+            localizeImageAnnotationSourceError(error, t) ??
+            localizeVisionRunFailure(error, t) ??
+            (error?.trim()
+              ? normalizeRunFailureError(error)
+              : t('The run failed with no error message.'))
+          )
+      }
+    },
+    [t]
+  )
+  const latestTurnAnchor = activeSession ? latestOutcomePrompt(activeSession) : undefined
+  const currentTurnOutcome = resolveCurrentTurnOutcomeItem(activeSession)
+  const preparationNoticeBaseline = activeSession && resolvePreparationNoticeBaseline(activeSession)
+  const preparedRecoveryPromptMessageId =
+    preparationNoticeBaseline?.state.resumeRecovery?.promptMessageId ??
+    activeSession?.promptPreparation?.previousState.resumeRecovery?.promptMessageId
+  const resumePromptMessageId =
+    activeSession?.resumeRecovery?.promptMessageId ??
+    (currentTurnOutcome?.promptMessageId === preparedRecoveryPromptMessageId
+      ? preparedRecoveryPromptMessageId
+      : undefined)
+  const latestTurnIsUnadmittedPreparation = Boolean(
+    latestTurnAnchor &&
+    !latestTurnAnchor.turnOutcome &&
+    activeSession?.promptPreparation?.promptMessageId === latestTurnAnchor.id
+  )
+  const hasCurrentTurnAnchor = Boolean(
+    currentTurnOutcome || (latestTurnAnchor && !latestTurnIsUnadmittedPreparation)
+  )
+  const legacyDisplayState =
+    latestTurnIsUnadmittedPreparation &&
+    preparationNoticeBaseline &&
+    !preparationNoticeBaseline.promptMessageId
+      ? preparationNoticeBaseline.state
+      : activeSession
+  const legacyInterrupted = Boolean(
+    activeSession?.interrupted || legacyDisplayState?.resumeRecovery
+  )
+  const resolvedRunError = resolveRunError(legacyDisplayState?.error)
+  // Anchorless legacy diagnostics remain readable. A hidden or historical turn is still an anchor,
+  // so neither its failure nor the live terminal-write exception returns to the composer. A newly
+  // saved preparation is not an anchor yet and cannot displace anchorless attachment recovery.
+  const showLegacyRunError = legacyDisplayState?.status === 'error' && !hasCurrentTurnAnchor
   const resolvedActionError =
     (isClaudeCliCompatibilityError(actionError ?? '')
       ? t(
@@ -859,24 +983,33 @@ const ConversationPanel = ({
     actionError
   const errorKey = JSON.stringify([
     activeSession?.id,
-    activeSession?.status === 'error' ? activeSession.error : null,
-    actionError
+    legacyDisplayState?.status === 'error' ? legacyDisplayState.error : null,
+    actionError,
+    // An explicit recovery attempt must reveal its failure even when the provider
+    // returns the same diagnostic that the user previously dismissed.
+    isResuming
   ])
   const showVisionModelSettings =
     visionRunFailureMessage(actionError) === VISION_MODEL_NOT_CONFIGURED_MESSAGE ||
-    visionRunFailureMessage(activeSession?.error) === VISION_MODEL_NOT_CONFIGURED_MESSAGE
-  const hasUnsupportedCodexAcpRunError = isUnsupportedCodexAcpVersionError(activeSession?.error)
-  const showCodexAcpSettings =
-    isUnsupportedCodexAcpVersionError(actionError) || hasUnsupportedCodexAcpRunError
+    (showLegacyRunError &&
+      visionRunFailureMessage(legacyDisplayState?.error) === VISION_MODEL_NOT_CONFIGURED_MESSAGE)
+  const hasUnsupportedCodexRunError =
+    isUnsupportedCodexAcpVersionError(legacyDisplayState?.error) ||
+    isCodexCliCompatibilityError(legacyDisplayState?.error)
+  const showLegacyRunErrorRow =
+    showLegacyRunError && (!legacyInterrupted || hasUnsupportedCodexRunError)
+  const showCodexSettings =
+    isUnsupportedCodexAcpVersionError(actionError) ||
+    isCodexCliCompatibilityError(actionError) ||
+    (showLegacyRunError && hasUnsupportedCodexRunError)
   // Only unknown/opaque ACP-layer failures offer the "Report error → GitHub issue" affordance. The
-  // reportability is resolved at failure time and persisted on the session: a model-provider error is
-  // tagged non-reportable at the ACP layer, and an app-crafted reminder is recognized by its own text.
-  // Fall back to classifying the raw error for sessions persisted before the flag existed (undefined).
+  // reportability is resolved at failure time and persisted on the Turn Outcome (errorReportable):
+  // a model-provider error is tagged non-reportable at the ACP layer, and an app-crafted reminder is
+  // recognized by its own text. The Session-level flag is only read for legacy display; fall back to
+  // classifying the raw error for sessions persisted before the flag existed (undefined).
   const isRunErrorReportable =
-    !hasUnsupportedCodexAcpRunError &&
-    (activeSession?.errorReportable ?? isReportableRunFailure(activeSession?.error))
-  const canRetryArtifactFinalization = isRetryableArtifactFinalizationError(activeSession?.error)
-
+    !hasUnsupportedCodexRunError &&
+    (legacyDisplayState?.errorReportable ?? isReportableRunFailure(legacyDisplayState?.error))
   const activeSpecialist = specialistId
     ? specialistItems.find((item) => item.kind === 'custom' && item.id === specialistId)
     : undefined
@@ -904,11 +1037,12 @@ const ConversationPanel = ({
         ? []
         : undefined
 
-  const sessionActivities = activeSession?.activities ?? []
-  const sessionPendingElicitations = activeSession
-    ? pendingElicitations.filter((request) => request.sessionId === activeSession.id)
-    : []
-  const pendingCredentialRequest = permissions.credentialRequests[0]
+  const sessionActivities = isImported ? [] : (activeSession?.activities ?? [])
+  const sessionPendingElicitations =
+    activeSession && !isImported
+      ? pendingElicitations.filter((request) => request.sessionId === activeSession.id)
+      : []
+  const pendingCredentialRequest = isImported ? undefined : permissions.credentialRequests[0]
   // Runtime requests and activity events can reach the renderer in either order. Whichever arrives
   // first must reserve the single bottom interaction lane so the ordinary composer never competes
   // with a question that is waiting for an answer. A projection without a live request is
@@ -951,7 +1085,9 @@ const ConversationPanel = ({
             state: 'pending'
           }
         : undefined
-  const rootPermissionRequests = pendingPermissions.filter((request) => !request.delegated)
+  const rootPermissionRequests = isImported
+    ? []
+    : pendingPermissions.filter((request) => !request.delegated)
   const rootPermissionPending =
     rootPermissionRequests.length > 0 ? true : pendingPermissions.length > 0 ? false : undefined
   const actionability = activeSession
@@ -985,6 +1121,58 @@ const ConversationPanel = ({
   const packageOperation = usePackageOperationStore((state) => state.operation)
   const packageLocked = sessionExportLocked(packageOperation, activeSession)
   const ordinaryComposerBlocked = Boolean(blockingInteraction || packageLocked)
+
+  useEffect(() => {
+    let tooltipEscape: KeyboardEvent | undefined
+    const rememberTooltipEscape = (event: KeyboardEvent): void => {
+      const target = event.target
+      // Radix consumes Escape while dismissing a tooltip. Remember that non-interactive layer
+      // before dismissal removes it, so the same key can also leave keyboard navigation.
+      tooltipEscape =
+        event.key === 'Escape' &&
+        target instanceof HTMLElement &&
+        target
+          .getAttribute('aria-describedby')
+          ?.split(/\s+/)
+          .some((id) => document.getElementById(id)?.getAttribute('role') === 'tooltip')
+          ? event
+          : undefined
+    }
+    const returnToComposer = (event: KeyboardEvent): void => {
+      const target = event.target
+      if (
+        event.key !== 'Escape' ||
+        (event.defaultPrevented && tooltipEscape !== event) ||
+        event.isComposing ||
+        event.repeat ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        !canEditDraft ||
+        ordinaryComposerBlocked ||
+        !(target instanceof HTMLElement) ||
+        !target.matches(':focus-visible') ||
+        target.closest(
+          'input, textarea, [contenteditable="true"], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]'
+        ) ||
+        document.querySelector(
+          '[role="dialog"]:not([data-state="closed"]), [role="alertdialog"]:not([data-state="closed"])'
+        )
+      ) {
+        return
+      }
+      event.preventDefault()
+      setComposerRestoreFocusRequest((request) => (request ?? 0) + 1)
+    }
+    // Bubble after control, menu and mention handlers have had a chance to consume Escape.
+    window.addEventListener('keydown', rememberTooltipEscape, true)
+    window.addEventListener('keydown', returnToComposer)
+    return () => {
+      window.removeEventListener('keydown', rememberTooltipEscape, true)
+      window.removeEventListener('keydown', returnToComposer)
+    }
+  }, [canEditDraft, ordinaryComposerBlocked])
   const rootTurnBusy = Boolean(
     blockingInteraction ||
     actionability?.activity === 'running' ||
@@ -995,21 +1183,65 @@ const ConversationPanel = ({
   // Re-attaches the interrupted session; on success the banner unmounts, so guard the state update.
   const handleResume = async (): Promise<void> => {
     const sessionId = activeSession?.id
-    if (!canResumeSession || !sessionId || isResuming) return
+    if (!canResumeSession || !sessionId || isResuming || isStopping || rootTurnBusy) return
 
-    setResumingSessionId(sessionId)
-    try {
-      await onResumeSession()
-    } finally {
-      setResumingSessionId((current) => (current === sessionId ? undefined : current))
-    }
+    await submissions.submitResume(sessionId, onResumeSession)
   }
-
-  // Drag-and-drop shares the same staging callback as the picker and paste paths.
-  const { isDragging, dropZoneProps } = useFileDropZone({
-    enabled: canEditDraft && !isUploadingAttachments,
-    onFiles: onStageAttachmentFiles
+  // The scroller memo compares this object by identity, so keep it stable across draft edits:
+  // callbacks read the latest render's handlers through a ref instead of being recreated.
+  const turnOutcomeHandlers = {
+    resume: handleResume,
+    retryArtifact: (promptMessageId: string): void => {
+      if (activeSession) workflows.artifactFinalization.request(activeSession.id, promptMessageId)
+    },
+    reportError: openReportDialog
+  }
+  const turnOutcomeHandlersRef = useRef(turnOutcomeHandlers)
+  useLayoutEffect(() => {
+    turnOutcomeHandlersRef.current = turnOutcomeHandlers
   })
+  const isTurnOutcomeDisabled = isStopping || rootTurnBusy
+  const artifactRetryingPromptMessageId = workflows.artifactFinalization.retryingPromptMessageId
+  const artifactRetryDisabled = isImported || workflows.artifactFinalization.running
+  const settingsAction = useCallback(
+    (error: string | undefined): { label: string; onClick: () => void } | undefined => {
+      const vision = visionRunFailureMessage(error) === VISION_MODEL_NOT_CONFIGURED_MESSAGE
+      const codex = isUnsupportedCodexAcpVersionError(error) || isCodexCliCompatibilityError(error)
+      return vision || codex
+        ? {
+            label: vision ? t('Model settings') : t('Agent settings'),
+            onClick: () => openSettingsToPanel(vision ? 'model' : 'agent')
+          }
+        : undefined
+    },
+    [openSettingsToPanel, t]
+  )
+  const turnOutcomeActions = useMemo<TurnOutcomeActions>(
+    () => ({
+      resumePromptMessageId,
+      canResume: canResumeSession,
+      isResuming,
+      isDisabled: isTurnOutcomeDisabled,
+      onResume: () => void turnOutcomeHandlersRef.current.resume(),
+      artifactRetryingPromptMessageId,
+      artifactRetryDisabled,
+      onRetryArtifact: (promptMessageId) =>
+        turnOutcomeHandlersRef.current.retryArtifact(promptMessageId),
+      resolveError: resolveRunError,
+      onReportError: (error) => turnOutcomeHandlersRef.current.reportError(error),
+      settingsAction
+    }),
+    [
+      artifactRetryDisabled,
+      artifactRetryingPromptMessageId,
+      canResumeSession,
+      isResuming,
+      isTurnOutcomeDisabled,
+      resolveRunError,
+      resumePromptMessageId,
+      settingsAction
+    ]
+  )
 
   // Submits the current doc, passing the ids of any skills picked as inline chips.
   const handleWslSetupCommand = async (): Promise<void> => {
@@ -1025,10 +1257,10 @@ const ConversationPanel = ({
         return
       }
       if (!(await workflows.wslSetup.start())) {
-        onSetComposerError(t('MedResearch Agent could not open the WSL2 setup conversation.'))
+        onSetComposerError(t('DRA could not open the WSL2 setup conversation.'))
       }
     } catch {
-      onSetComposerError(t('MedResearch Agent could not open the WSL2 setup conversation.'))
+      onSetComposerError(t('DRA could not open the WSL2 setup conversation.'))
     }
   }
 
@@ -1229,14 +1461,22 @@ const ConversationPanel = ({
 
   return (
     <ResizablePanel id="main-content" defaultSize="60%" minSize="30%">
-      <section
-        className="flex h-full min-w-0 flex-col overflow-hidden bg-bg-10 p-[6px] pl-4 max-md:p-0"
+      <ProjectPackageDropZone
+        projectId={sessionImport?.projectId ?? ''}
+        projectName={sessionImport?.projectName ?? t('Project')}
+        canImport={sessionImport?.canImport ?? false}
+        canAttach={canEditDraft && !isUploadingAttachments && !ordinaryComposerBlocked}
+        onFiles={onStageAttachmentFiles}
+        data-testid="workspace-file-drop-zone"
+        className="relative flex h-full min-w-0 flex-col overflow-hidden bg-bg-10 p-[6px] pl-4 max-md:p-0"
         data-session-id={activeSession?.id ?? ''}
         data-agent-running={activeSession?.status === 'running' ? 'true' : 'false'}
       >
         <header
           data-testid="conversation-header"
-          className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-2 max-md:px-2 max-md:pb-2 max-md:pt-[max(env(safe-area-inset-top),0.5rem)]"
+          className={`flex shrink-0 items-center gap-2 px-4 pb-3 pt-2 max-md:px-2 max-md:pb-2 max-md:pt-[max(env(safe-area-inset-top),0.5rem)] ${
+            isPreviewPanelCollapsed ? 'md:pr-12' : ''
+          }`}
         >
           <button
             type="button"
@@ -1271,7 +1511,7 @@ const ConversationPanel = ({
                 >
                   <button
                     type="button"
-                    className="grid size-8 shrink-0 place-items-center rounded-lg text-text-300 transition-colors hover:bg-surface-control-hover hover:text-text-000 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="grid size-8 shrink-0 place-items-center rounded-lg text-text-300 transition-colors hover:bg-surface-control-hover hover:text-text-000 focus-visible:keyboard-focus"
                     aria-label={t('Export diagnostics…')}
                     onClick={() => sessionTools.exportDiagnostics?.(activeSession)}
                   >
@@ -1294,6 +1534,16 @@ const ConversationPanel = ({
               </Tooltip>
             </TooltipProvider>
           )}
+          {activeSession && (
+            <SessionHeaderMenu
+              key={activeSession.id}
+              session={activeSession}
+              bindings={sessionTools.menuBindings}
+              createSideChat={sideChatController.createDraft}
+              credentialPending={pendingCredentialRequest !== undefined}
+              disabledReason={openSideChatReason}
+            />
+          )}
           <PackageExportProgressButton />
           <NotificationBell className="md:hidden" />
           <button
@@ -1313,12 +1563,23 @@ const ConversationPanel = ({
         </header>
         <PackageOperationIndicator />
 
-        {activeSession?.contentLoaded === false ? (
+        {isNewConversation ? null : activeSession?.contentLoaded === false ? (
           <SessionSwitchSkeleton />
         ) : (
           <WorkspaceMessageEditStateProvider canEditMessage={canEditMessage}>
             <WorkspaceMessageScroller
               activeSession={activeSession}
+              sessionImport={sessionImport}
+              onStartResearch={
+                canEditDraft &&
+                !draftDoc.nodes.some((node) => node.type !== 'text' || node.text.trim())
+                  ? (prompt) => {
+                      onValidatedDraftDocChange(docFromText(prompt))
+                      window.dispatchEvent(new CustomEvent(FOCUS_COMPOSER_EVENT))
+                    }
+                  : undefined
+              }
+              onOpenLibraryMention={layout.onOpenLibraryMention}
               forkSourceContent={
                 activeSession?.branchSource && sessionTools.openSession ? (
                   <div className="mb-2 flex items-center gap-2 text-xs">
@@ -1340,7 +1601,7 @@ const ConversationPanel = ({
                 ) : null
               }
               credentialPending={pendingCredentialRequest !== undefined}
-              visiblePermissionPending={pendingPermissions.length > 0}
+              visiblePermissionPending={!isImported && pendingPermissions.length > 0}
               optimisticMessage={optimisticMessage}
               isResumingSession={isResuming}
               notebookReference={notebookReference}
@@ -1351,6 +1612,7 @@ const ConversationPanel = ({
               handoffLifecycleSource={workspaceHandoffLifecycleClient}
               onRetryHandoff={(request) => workspaceHandoffLifecycleClient.retry(request)}
               reportPresentationRevealing
+              turnOutcomeActions={turnOutcomeActions}
               annotations={annotations}
               onAddAnnotation={handleAddTranscriptAnnotation}
               onUpdateAnnotationNote={handleUpdateTranscriptAnnotation}
@@ -1360,20 +1622,52 @@ const ConversationPanel = ({
           </WorkspaceMessageEditStateProvider>
         )}
 
-        <div className="relative shrink-0">
+        <div
+          data-testid="conversation-composer-dock"
+          data-placement={isNewConversation ? 'start' : 'bottom'}
+          className={cn('relative shrink-0', isNewConversation && 'min-h-0 flex-1 overflow-y-auto')}
+        >
           <div
             aria-hidden="true"
             data-testid="composer-surface-fade"
             className={cn(
               'pointer-events-none absolute inset-x-0 bg-gradient-to-t from-bg-10 to-bg-10/0',
+              isNewConversation && 'hidden',
               hasPendingPermission || pendingElicitation ? '-top-18 h-18' : '-top-12 h-12'
             )}
           />
 
-          <div className="px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] md:px-4 md:pb-[6px]">
+          <div
+            className={cn(
+              'px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] md:px-4 md:pb-[6px]',
+              isNewConversation && 'pt-[max(24px,calc((100dvh-360px)/2))]'
+            )}
+          >
             {/* Runtime and session errors stay near the composer so recovery is visible. */}
-            <div className={composerContentClassName}>
+            <div className={cn(composerContentClassName, isNewConversation && 'max-w-3xl')}>
+              {isNewConversation && (
+                <NewConversationStart
+                  onStartResearch={canEditDraft ? insertResearchPrompt : undefined}
+                />
+              )}
               <div className="px-1 md:px-3">
+                {persistenceBlocked ? (
+                  <ErrorNotice
+                    inline
+                    role="alert"
+                    title={t('Conversation storage limit reached')}
+                    description={t(
+                      'This conversation exceeded the 256 MiB storage limit. Its current run was stopped. Start a new conversation to keep working. Changes after the last successful save are not durable.'
+                    )}
+                  />
+                ) : null}
+                {currentTurnOutcome ? (
+                  <TurnOutcomeNotice
+                    promptMessageId={currentTurnOutcome.promptMessageId}
+                    outcome={currentTurnOutcome.outcome}
+                    actions={turnOutcomeActions}
+                  />
+                ) : null}
                 {conversation.planProjectionRecoveryError && activeSession ? (
                   <UnavailablePlanNotice
                     key={`${activeSession.id}:${String(activeSession.runtimeContext?.revision)}`}
@@ -1388,72 +1682,55 @@ const ConversationPanel = ({
                 {composerError && composerErrorDetail ? (
                   <DiagnosticDetails detail={composerErrorDetail} />
                 ) : null}
-                {/* Interrupted sessions get a neutral banner with a Resume action instead of the
-                    red error box, so the user can re-attach and continue the interrupted turn. */}
-                {activeSession?.interrupted && !hasUnsupportedCodexAcpRunError ? (
+                {legacyInterrupted && !hasCurrentTurnAnchor ? (
                   <SessionInterruptedBanner
-                    message={activeSession.error ?? t('This session was interrupted.')}
-                    isDisabled={!canResumeSession}
+                    message={
+                      hasUnsupportedCodexRunError
+                        ? t('This session was interrupted.')
+                        : (legacyDisplayState?.error ?? t('This session was interrupted.'))
+                    }
+                    isDisabled={!canResumeSession || isStopping || rootTurnBusy}
                     isResuming={isResuming}
                     onResume={() => void handleResume()}
                   />
-                ) : activeSession?.compacting ? (
+                ) : null}
+                {activeSession?.compacting ? (
                   // Auto-recovery after a request-size overflow: a neutral note, not the red error box,
                   // while the agent context is reset and the conversation is replayed as text.
                   <div className="mb-2 flex items-center gap-2 rounded-lg border border-border-200 bg-bg-200 px-3 py-2 text-[12px] leading-5 text-text-300">
                     <Loader2 className="size-3.5 animate-spin" strokeWidth={2} aria-hidden="true" />
                     {t('Compacting conversation to fit the context limit…')}
                   </div>
-                ) : resolvedActionError || activeSession?.status === 'error' ? (
+                ) : resolvedActionError || showLegacyRunErrorRow ? (
                   <DismissibleConversationError key={errorKey}>
                     {/* Transient action errors and a run failure can coexist; show each on its own row
                         so the run's report affordance is never suppressed by a transient error. */}
                     {resolvedActionError ? (
                       <span className="min-w-0 break-words pr-6">{resolvedActionError}</span>
                     ) : null}
-                    {activeSession?.status === 'error' ? (
+                    {showLegacyRunErrorRow ? (
                       <div className="flex flex-col items-stretch gap-2">
                         <span className="min-w-0 break-words pr-6">{resolvedRunError}</span>
                         {/* Actions stay with the run's own error, so the shown and reported text are
                             always the same error. Shown only for an unknown failure — a recognized one
                             (app guidance or a known provider error) keeps its message but is not a bug
                             worth a GitHub issue. */}
-                        {canRetryArtifactFinalization || isRunErrorReportable ? (
+                        {isRunErrorReportable ? (
                           <div className="flex flex-wrap items-center justify-end gap-1 self-end">
-                            {canRetryArtifactFinalization ? (
-                              <button
-                                type="button"
-                                onClick={workflows.artifactFinalization.request}
-                                disabled={workflows.artifactFinalization.running}
-                                className="inline-flex h-6 items-center gap-1 rounded-md border border-red-200 bg-red-100/60 px-2 font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800/50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/40"
-                                aria-label={t('Retry Artifact publication')}
-                              >
-                                {workflows.artifactFinalization.running ? (
-                                  <Loader2
-                                    className="size-3 animate-spin"
-                                    strokeWidth={2.2}
-                                    aria-hidden="true"
-                                  />
-                                ) : null}
-                                {t('Retry Artifact publication')}
-                              </button>
-                            ) : null}
-                            {isRunErrorReportable ? (
-                              <button
-                                type="button"
-                                onClick={openReportDialog}
-                                className="inline-flex h-6 items-center gap-1 rounded-md border border-red-200 bg-red-100/60 px-2 font-medium text-red-700 hover:bg-red-100 dark:border-red-800/50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/40"
-                                aria-label={t('Report this error')}
-                              >
-                                <Flag className="size-3" strokeWidth={2.2} aria-hidden="true" />
-                                {t('Report error')}
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => openReportDialog()}
+                              className="inline-flex h-6 items-center gap-1 rounded-md border border-red-200 bg-red-100/60 px-2 font-medium text-red-700 hover:bg-red-100 dark:border-red-800/50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/40"
+                              aria-label={t('Report this error')}
+                            >
+                              <Flag className="size-3" strokeWidth={2.2} aria-hidden="true" />
+                              {t('Report error')}
+                            </button>
                           </div>
                         ) : null}
                       </div>
                     ) : null}
-                    {showVisionModelSettings || showCodexAcpSettings ? (
+                    {showVisionModelSettings || showCodexSettings ? (
                       <div>
                         <button
                           type="button"
@@ -1489,7 +1766,7 @@ const ConversationPanel = ({
 
                 {/* Delegated permission cards stay in the transcript; the root card owns the
                     resizable composer surface below. Side chat hides both main interaction lanes. */}
-                {pendingPermissions.some((request) => request.delegated) ? (
+                {!isImported && pendingPermissions.some((request) => request.delegated) ? (
                   <PermissionApprovalControls
                     requests={pendingPermissions.filter((request) => request.delegated)}
                     onRespond={onRespondToPermission}
@@ -1791,19 +2068,44 @@ const ConversationPanel = ({
                             'Read-only. Browse the conversation, files and recorded results. Code execution and continuation are disabled.'
                           )}
                         </p>
-                        {sessionForkAvailable() ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {sessionForkAvailable() ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                void forkSession(activeSession)
+                              }}
+                            >
+                              <GitBranch className="size-4" aria-hidden="true" />
+                              {t('Fork to continue')}
+                            </Button>
+                          ) : null}
                           <Button
                             variant="outline"
                             size="sm"
-                            className="mt-2"
+                            aria-controls="right-panel"
                             onClick={() => {
-                              void forkSession(activeSession)
+                              usePreviewWorkbenchStore
+                                .getState()
+                                .upsertAndActivateItem(
+                                  createSessionReplayItem(
+                                    activeSession.projectId,
+                                    activeSession.id,
+                                    activeSession.title
+                                  )
+                                )
                             }}
                           >
-                            <GitBranch className="size-4" aria-hidden="true" />
-                            {t('Fork to continue')}
+                            <Play className="size-4" aria-hidden="true" />
+                            {t('View replay')}
                           </Button>
-                        ) : null}
+                          <SessionDiscussionButton
+                            key={activeSession.id}
+                            projectId={activeSession.projectId}
+                            sessionId={activeSession.id}
+                          />
+                        </div>
                         <details className="mt-2 text-xs leading-5 text-muted-foreground">
                           <summary className="cursor-pointer">{t('Package source')}</summary>
                           <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
@@ -1843,6 +2145,7 @@ const ConversationPanel = ({
                       </section>
                     ) : (
                       <form
+                        ref={composerFormRef}
                         aria-hidden={ordinaryComposerBlocked || undefined}
                         data-testid="ordinary-composer-form"
                         inert={ordinaryComposerBlocked || undefined}
@@ -1852,8 +2155,21 @@ const ConversationPanel = ({
                         )}
                         data-specialist-color={specialistComposerColor}
                         onSubmit={(event) => event.preventDefault()}
-                        {...dropZoneProps}
-                        {...annotationDrop.props}
+                        // Both drop hooks own the same capture-phase props, so compose them instead
+                        // of spreading one over the other: each handler ignores foreign transfers and
+                        // only the matching lane acts, keeping annotation drops and file mentions alive.
+                        onDragOverCapture={(event) => {
+                          annotationDrop.props.onDragOverCapture(event)
+                          fileMentionDrop.props.onDragOverCapture(event)
+                        }}
+                        onDragLeaveCapture={(event) => {
+                          annotationDrop.props.onDragLeaveCapture(event)
+                          fileMentionDrop.props.onDragLeaveCapture(event)
+                        }}
+                        onDropCapture={(event) => {
+                          annotationDrop.props.onDropCapture(event)
+                          fileMentionDrop.props.onDropCapture(event)
+                        }}
                       >
                         {annotationDrop.over ? (
                           <div className="rounded-md border border-primary px-2 py-1 text-xs text-text-200">
@@ -1867,6 +2183,16 @@ const ConversationPanel = ({
                             )}
                           </p>
                         ) : null}
+                        {fileMentionDrop.over ? (
+                          <div className="rounded-md border border-primary px-2 py-1 text-xs text-text-200">
+                            {t('Drop to mention in chat')}
+                          </div>
+                        ) : null}
+                        {fileMentionDrop.error ? (
+                          <p role="alert" className="text-xs text-danger-000">
+                            {t('Could not resolve file version.')}
+                          </p>
+                        ) : null}
                         {specialistComposerColor && selectedSpecialist ? (
                           <span
                             key={selectedSpecialist.id}
@@ -1875,186 +2201,266 @@ const ConversationPanel = ({
                             aria-hidden="true"
                           />
                         ) : null}
-                        {/* File-drag overlay is scoped to the composer input card only. */}
-                        {isDragging ? (
-                          <FileDropOverlay
-                            label={
-                              sessionPackageImportAvailable()
-                                ? t('Drop files')
-                                : t('Drop files to attach')
-                            }
-                            className="rounded-2xl"
-                          />
-                        ) : null}
-                        {pdfContext.bindings.length > 0 ? (
+                        {annotations.some((annotation) => replayAnnotationTarget(annotation)) ||
+                        activeSession?.runtimeContext?.sessionContext?.bindings.length ||
+                        pdfContext.bindings.length > 0 ||
+                        pdfContext.automaticAttachmentCount > 0 ? (
                           <div
-                            data-testid="pdf-context-bar"
-                            className="-mx-3 -mt-2 flex min-h-9 items-center gap-1 rounded-t-2xl border-b border-border-200 bg-bg-10 px-2 py-1"
+                            className="-mx-3 -mt-2 overflow-hidden rounded-t-2xl"
+                            data-testid="composer-context-header"
                           >
-                            {activeSession ? (
-                              <ReadingContextPicker
+                            <AnnotationDraftCards
+                              annotations={annotations.filter((annotation) =>
+                                replayAnnotationTarget(annotation)
+                              )}
+                              disabled={!canEditDraft || pdfContext.isPending}
+                              onReveal={requestAnnotationReveal}
+                              onUpdateNote={onUpdateAnnotationNote}
+                              onRemove={onRemoveAnnotation}
+                            />
+                            {activeSession &&
+                            !annotations.some((annotation) =>
+                              replayAnnotationTarget(annotation)
+                            ) ? (
+                              <SessionDiscussionSource
+                                key={activeSession.id}
                                 projectId={activeSession.projectId}
-                                linkedSources={pdfContext.bindings.flatMap((binding) =>
-                                  'sourceKind' in binding
-                                    ? [
-                                        {
-                                          sourceKind: binding.sourceKind,
-                                          sourceFileId: binding.sourceFileId,
-                                          sourceVersionId: binding.sourceVersionId
-                                        }
-                                      ]
-                                    : []
-                                )}
-                                atLimit={pdfContext.bindings.length >= MAX_SESSION_PDF_CONTEXTS}
-                                onSelect={linkReadingContext}
+                                sessionId={activeSession.id}
+                                context={activeSession.runtimeContext}
+                              />
+                            ) : null}
+                            {pdfContext.bindings.length > 0 ? (
+                              <div
+                                data-testid="pdf-context-bar"
+                                className={composerContextRowClassName}
                               >
-                                <button
-                                  type="button"
-                                  disabled={pdfContext.isPending}
-                                  aria-label={t('Choose PDFs for Reading')}
-                                  className={cn(
-                                    'flex h-7 shrink-0 items-center gap-1 rounded-lg px-1.5 text-[12px] font-medium leading-4 text-text-000 hover:bg-bg-200 active:translate-y-px focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:active:translate-y-0',
-                                    composerInteractiveTransitionClassName
-                                  )}
-                                >
-                                  <Link2
+                                {activeSession ? (
+                                  <ReadingContextPicker
+                                    projectId={activeSession.projectId}
+                                    linkedSources={pdfContext.bindings.flatMap((binding) =>
+                                      'sourceKind' in binding
+                                        ? [
+                                            {
+                                              sourceKind: binding.sourceKind,
+                                              sourceFileId: binding.sourceFileId,
+                                              sourceVersionId: binding.sourceVersionId
+                                            }
+                                          ]
+                                        : []
+                                    )}
+                                    atLimit={pdfContext.bindings.length >= MAX_SESSION_PDF_CONTEXTS}
+                                    onSelect={linkReadingContext}
+                                  >
+                                    <button
+                                      type="button"
+                                      disabled={pdfContext.isPending}
+                                      aria-label={t('Choose PDFs for Reading')}
+                                      className={cn(
+                                        'flex h-7 shrink-0 items-center gap-1 rounded-lg px-1.5 text-[12px] font-medium leading-4 text-text-000 hover:bg-bg-200 active:translate-y-px focus-visible:keyboard-focus motion-reduce:active:translate-y-0',
+                                        composerInteractiveTransitionClassName
+                                      )}
+                                    >
+                                      <BookOpen
+                                        className="size-4 shrink-0 text-primary"
+                                        strokeWidth={2}
+                                        aria-hidden="true"
+                                      />
+                                      {t('Reading')}
+                                      <ChevronDown
+                                        className="size-3 shrink-0 text-text-300"
+                                        strokeWidth={2}
+                                        aria-hidden="true"
+                                      />
+                                    </button>
+                                  </ReadingContextPicker>
+                                ) : (
+                                  <div className="flex h-7 shrink-0 items-center gap-1 px-1.5">
+                                    <BookOpen
+                                      className="size-4 shrink-0 text-primary"
+                                      strokeWidth={2}
+                                      aria-hidden="true"
+                                    />
+                                    <span className="shrink-0 text-[12px] font-medium leading-4 text-text-000">
+                                      {t('Reading')}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+                                  <TooltipProvider>
+                                    {pdfContext.bindings.map((binding) => {
+                                      const pending =
+                                        pdfContext.pendingBindingId === binding.bindingId
+                                      return (
+                                        <span
+                                          key={binding.bindingId}
+                                          className="flex min-w-0 max-w-56 shrink items-center rounded-lg bg-bg-200 text-text-100"
+                                        >
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button
+                                                type="button"
+                                                className={cn(
+                                                  'flex min-w-0 flex-1 items-center gap-1.5 rounded-l-lg px-2 py-1 text-left hover:bg-bg-300 hover:text-text-000 active:translate-y-px focus-visible:keyboard-focus focus-visible:-outline-offset-2 motion-reduce:active:translate-y-0',
+                                                  composerInteractiveTransitionClassName
+                                                )}
+                                                aria-label={t('Open PDF context {{name}}', {
+                                                  name: binding.name
+                                                })}
+                                                onClick={() =>
+                                                  openReadingContext(binding.bindingId)
+                                                }
+                                              >
+                                                <FileTypeIcon
+                                                  name={binding.name}
+                                                  mimeType="application/pdf"
+                                                  className="size-4 rounded-none border-0 bg-transparent p-0"
+                                                />
+                                                <ExtensionPreservingFileName
+                                                  name={binding.name}
+                                                  className="min-w-0 text-[12px] font-medium leading-4"
+                                                />
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top">
+                                              {t(
+                                                'Linked to this conversation. The Agent reads only the pages needed for your question.'
+                                              )}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button
+                                                type="button"
+                                                className={cn(
+                                                  attachmentRemoveButtonClassName,
+                                                  'focus-visible:-outline-offset-2'
+                                                )}
+                                                disabled={pending || pdfContext.isPending}
+                                                aria-label={t('Remove PDF context {{name}}', {
+                                                  name: binding.name
+                                                })}
+                                                onClick={() =>
+                                                  unlinkReadingContext(binding.bindingId)
+                                                }
+                                              >
+                                                {pending ? (
+                                                  <Loader2
+                                                    className="size-3.5 animate-spin"
+                                                    strokeWidth={2}
+                                                    aria-hidden="true"
+                                                  />
+                                                ) : (
+                                                  <X
+                                                    className="size-3.5"
+                                                    strokeWidth={2.2}
+                                                    aria-hidden="true"
+                                                  />
+                                                )}
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top">
+                                              {t('Remove PDF context {{name}}', {
+                                                name: binding.name
+                                              })}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </span>
+                                      )
+                                    })}
+                                  </TooltipProvider>
+                                </div>
+                              </div>
+                            ) : null}
+                            {pdfContext.automaticAttachmentCount > 0 ? (
+                              <div
+                                data-testid="automatic-reading-suggestion"
+                                className={composerContextRowClassName}
+                              >
+                                <div className="flex h-7 shrink-0 items-center gap-1 px-1.5">
+                                  <BookOpen
                                     className="size-4 shrink-0 text-primary"
                                     strokeWidth={2}
                                     aria-hidden="true"
                                   />
-                                  {t('Reading')}
-                                  <ChevronDown
-                                    className="size-3 shrink-0 text-text-300"
-                                    strokeWidth={2}
-                                    aria-hidden="true"
-                                  />
-                                </button>
-                              </ReadingContextPicker>
-                            ) : (
-                              <>
-                                <Link2
-                                  className="size-4 shrink-0 text-primary"
-                                  strokeWidth={2}
-                                  aria-hidden="true"
-                                />
-                                <span className="shrink-0 text-[12px] font-medium leading-4 text-text-000">
-                                  {t('Reading')}
-                                </span>
-                              </>
-                            )}
-                            <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-                              <TooltipProvider>
-                                {pdfContext.bindings.map((binding) => {
-                                  const pending = pdfContext.pendingBindingId === binding.bindingId
-                                  return (
-                                    <span
-                                      key={binding.bindingId}
-                                      className="flex min-w-0 max-w-56 shrink items-center rounded-lg bg-bg-200 text-text-100"
-                                    >
-                                      <Tooltip>
+                                  <span className="text-[12px] font-medium leading-4 text-text-000">
+                                    {t('Reading')}
+                                  </span>
+                                </div>
+                                <TooltipProvider>
+                                  <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+                                    {pdfContext.automaticAttachments.map((attachment) => (
+                                      <Tooltip key={attachment.id}>
                                         <TooltipTrigger asChild>
-                                          <button
-                                            type="button"
-                                            className={cn(
-                                              'min-w-0 flex-1 rounded-l-lg px-2 py-1 text-left hover:bg-bg-300 hover:text-text-000 active:translate-y-px focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:active:translate-y-0',
-                                              composerInteractiveTransitionClassName
-                                            )}
-                                            aria-label={t('Open PDF context {{name}}', {
-                                              name: binding.name
-                                            })}
-                                            onClick={() => openReadingContext(binding.bindingId)}
+                                          <span
+                                            tabIndex={0}
+                                            className="flex min-w-0 max-w-56 shrink-0 items-center gap-1.5 rounded-lg bg-bg-200 px-2 py-1 text-text-300 focus-visible:keyboard-focus"
                                           >
+                                            <FileTypeIcon
+                                              name={attachment.name}
+                                              mimeType="application/pdf"
+                                              className="size-4 rounded-none border-0 bg-transparent p-0"
+                                            />
                                             <ExtensionPreservingFileName
-                                              name={binding.name}
+                                              name={attachment.name}
                                               className="min-w-0 text-[12px] font-medium leading-4"
                                             />
-                                          </button>
+                                          </span>
                                         </TooltipTrigger>
                                         <TooltipContent side="top">
-                                          {t(
-                                            'Linked to this conversation. The Agent reads only the pages needed for your question.'
-                                          )}
+                                          {attachment.name}
+                                          <p>
+                                            {pdfContext.isPending
+                                              ? t('Linking PDFs…')
+                                              : t('{{count}} PDFs will be linked when sent', {
+                                                  count: pdfContext.automaticAttachmentCount,
+                                                  defaultValue_one:
+                                                    '{{count}} PDF will be linked when sent'
+                                                })}
+                                          </p>
                                         </TooltipContent>
                                       </Tooltip>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <button
-                                            type="button"
-                                            className={attachmentRemoveButtonClassName}
-                                            disabled={pending || pdfContext.isPending}
-                                            aria-label={t('Remove PDF context {{name}}', {
-                                              name: binding.name
-                                            })}
-                                            onClick={() => unlinkReadingContext(binding.bindingId)}
-                                          >
-                                            {pending ? (
-                                              <Loader2
-                                                className="size-3.5 animate-spin"
-                                                strokeWidth={2}
-                                                aria-hidden="true"
-                                              />
-                                            ) : (
-                                              <X
-                                                className="size-3.5"
-                                                strokeWidth={2.2}
-                                                aria-hidden="true"
-                                              />
-                                            )}
-                                          </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top">
-                                          {t('Remove PDF context {{name}}', { name: binding.name })}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </span>
-                                  )
-                                })}
-                              </TooltipProvider>
-                            </div>
-                          </div>
-                        ) : null}
-                        {pdfContext.automaticAttachmentCount > 0 ? (
-                          <div
-                            data-testid="automatic-reading-suggestion"
-                            className={cn(
-                              '-mx-3 flex min-h-9 items-center gap-2 border-b border-border-200 bg-primary/[0.05] px-2 py-1',
-                              pdfContext.bindings.length === 0 && '-mt-2 rounded-t-2xl'
-                            )}
-                          >
-                            <Link2
-                              className="size-4 shrink-0 text-primary"
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                            <span className="shrink-0 text-[12px] font-medium leading-4 text-text-000">
-                              {t('Reading')}
-                            </span>
-                            <span className="min-w-0 flex-1 truncate text-[12px] leading-4 text-text-300">
-                              {t('{{count}} PDFs will be linked when sent', {
-                                count: pdfContext.automaticAttachmentCount,
-                                defaultValue_one: '{{count}} PDF will be linked when sent'
-                              })}
-                            </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    aria-label={t('Keep as attachments')}
-                                    onClick={dismissAutomaticReading}
-                                    className={cn(
-                                      'relative flex size-7 shrink-0 items-center justify-center rounded-lg text-text-300 before:absolute before:-inset-2 hover:bg-bg-200 hover:text-text-000 active:translate-y-px focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:active:translate-y-0',
-                                      composerInteractiveTransitionClassName
-                                    )}
-                                  >
-                                    <X className="size-3.5" strokeWidth={2.2} aria-hidden="true" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  {t('Keep as attachments')}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                                    ))}
+                                  </div>
+                                </TooltipProvider>
+                                <span
+                                  role="status"
+                                  className="flex shrink-0 items-center gap-1.5 px-1 text-[11px] leading-4 text-text-300"
+                                >
+                                  {pdfContext.isPending ? (
+                                    <Loader2
+                                      className="size-3 animate-spin motion-reduce:animate-none"
+                                      aria-hidden="true"
+                                    />
+                                  ) : null}
+                                  {pdfContext.isPending ? t('Linking PDFs…') : t('Link on send')}
+                                </span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        aria-label={t('Keep as attachments')}
+                                        disabled={pdfContext.isPending}
+                                        onClick={dismissAutomaticReading}
+                                        className={cn(
+                                          'relative flex size-7 shrink-0 items-center justify-center rounded-lg text-text-300 before:absolute before:-inset-2 hover:bg-bg-200 hover:text-text-000 active:translate-y-px focus-visible:keyboard-focus motion-reduce:active:translate-y-0',
+                                          composerInteractiveTransitionClassName
+                                        )}
+                                      >
+                                        <X
+                                          className="size-3.5"
+                                          strokeWidth={2.2}
+                                          aria-hidden="true"
+                                        />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      {t('Keep as attachments')}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
                         <ComposerMessageQueueContent
@@ -2107,7 +2513,7 @@ const ConversationPanel = ({
                             <button
                               type="button"
                               onClick={composer.actions.cancelQueuedEdit}
-                              className="rounded px-2 py-1 hover:bg-bg-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              className="rounded px-2 py-1 hover:bg-bg-200 focus-visible:keyboard-focus"
                               disabled={!canEditDraft}
                             >
                               {t('Exit queued editing')}
@@ -2123,7 +2529,9 @@ const ConversationPanel = ({
                           onRemove={onRemoveAnnotation}
                         >
                           <AnnotationDraftCards
-                            annotations={annotations}
+                            annotations={annotations.filter(
+                              (annotation) => !replayAnnotationTarget(annotation)
+                            )}
                             disabled={!canEditDraft}
                             onReveal={requestAnnotationReveal}
                             onUpdateNote={(id, note) => {
@@ -2336,6 +2744,7 @@ const ConversationPanel = ({
                           <div className="relative min-w-0 flex-1">
                             {/* Draft editing waits for persistence hydration to avoid targeting the wrong session. */}
                             <ComposerEditor
+                              className={isNewConversation ? 'min-h-20' : undefined}
                               doc={draftDoc}
                               onDocChange={onValidatedDraftDocChange}
                               onSubmit={handleSubmit}
@@ -2427,6 +2836,7 @@ const ConversationPanel = ({
                                 </Tooltip>
                               </>
                               <DropdownMenuContent side="top" align="start" className="w-56">
+                                <DropdownMenuLabel>{t('Files')}</DropdownMenuLabel>
                                 <>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -2499,6 +2909,7 @@ const ConversationPanel = ({
                                     <DropdownMenuSeparator />
                                   </>
                                 ) : null}
+                                <DropdownMenuLabel>{t('Conversation actions')}</DropdownMenuLabel>
                                 <DropdownMenuItem
                                   data-testid="menu-request-review"
                                   disabled={!canEditDraft || isRequestReviewDisabled || isReviewing}
@@ -2614,7 +3025,9 @@ const ConversationPanel = ({
                               delegationHasLiveAttempts={delegationHasLiveAttempts}
                               delegationDisabledReason={delegationDisabledReason}
                               memoryDisabledReason={memoryDisabledReason}
-                              readOnly={!canChangeAgentControls}
+                              readOnly={
+                                !canChangeAgentControls || activeSession?.isPending === true
+                              }
                               autoReviewReadOnly={!canChangeAutoReview}
                               memoryReadOnly={!canChangeMemory}
                               delegationReadOnly={!canChangeDelegation}
@@ -2946,6 +3359,12 @@ const ConversationPanel = ({
                   </TooltipProvider>
                 </div>
               </div>
+              {isNewConversation &&
+              sessionImport?.canImport &&
+              sessionImport.projectId &&
+              sessionPackageImportAvailable() ? (
+                <SessionPackageEntryRow projectId={sessionImport.projectId} compact />
+              ) : null}
             </div>
           </div>
         </div>
@@ -2954,13 +3373,18 @@ const ConversationPanel = ({
         <ReportErrorDialog
           key={reportDialogEpoch}
           open={isReportOpen}
-          error={resolvedRunError}
-          subject={{
-            agentFrameworkId: activeSession?.agentFrameworkId,
-            agentBackendId: activeSession?.agentBackendId,
-            model: activeSession?.agentModel
+          error={reportSnapshot?.error ?? resolvedRunError}
+          subject={
+            reportSnapshot?.subject ?? {
+              agentFrameworkId: activeSession?.agentFrameworkId,
+              agentBackendId: activeSession?.agentBackendId,
+              model: activeSession?.agentModel
+            }
+          }
+          onClose={() => {
+            setIsReportOpen(false)
+            setReportSnapshot(undefined)
           }}
-          onClose={() => setIsReportOpen(false)}
         />
         <ContextWindowDialog
           open={isContextWindowOpen}
@@ -2968,7 +3392,7 @@ const ConversationPanel = ({
           contextUsage={contextUsage}
           onOpenChange={setIsContextWindowOpen}
         />
-      </section>
+      </ProjectPackageDropZone>
     </ResizablePanel>
   )
 }

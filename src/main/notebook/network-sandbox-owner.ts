@@ -16,7 +16,16 @@ import {
 } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { performance } from 'node:perf_hooks'
+import { setTimeout as delay } from 'node:timers/promises'
 import { assertProcessTreeSupport } from '../process-tree'
+import { WindowsNotebookRuntimeManager } from './windows-runtime-manager'
+import {
+  configureWindowsNotebookRuntime,
+  type WindowsNotebookRuntime
+} from './windows-notebook-runtime'
+import { probeWindowsRuntimeComponent } from './windows-runtime-probe'
+import type { ShellRuntimeBinding } from '../../shared/notebook'
 
 import {
   buildNotebookNetworkPolicy,
@@ -180,6 +189,7 @@ const blockedDestinationKey = (sessionId: string, hostname: string): string =>
   `${sessionId}\0${hostname}`
 
 type NotebookNetworkSandboxOwnerOptions = Readonly<{
+  windowsRuntimeRoot?: string
   packaged?: boolean
   resourceRoot: string
   allowRuntimeAccessPrompt?: boolean
@@ -304,13 +314,69 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
   private runtimeAccessRevision = 0
   private pendingRuntimeAccessChanges = 0
   private readonly cancelledRuntimeAccess = new Set<string>()
+  private readonly windowsRuntime?: WindowsNotebookRuntimeManager
+  private readonly releaseWindowsRuntime?: () => void
+  private preparingWindowsRuntime = false
+  private windowsSetupController?: AbortController
+  private windowsSetupCancelled = false
+  private windowsSetupFailure?: WindowsNotebookRuntimeManager['failure']
 
   constructor(private readonly options: NotebookNetworkSandboxOwnerOptions) {
     this.platform = options.platform ?? process.platform
     this.log = options.logger ?? createLogger('notebook:network-sandbox')
+    if (this.platform === 'win32' && options.windowsRuntimeRoot) {
+      this.windowsRuntime = new WindowsNotebookRuntimeManager(
+        options.windowsRuntimeRoot,
+        (selection, signal) =>
+          probeWindowsRuntimeComponent(
+            selection,
+            (request) => this.prepare(request),
+            signal,
+            (message) => this.log.warn(message)
+          )
+      )
+      this.releaseWindowsRuntime = configureWindowsNotebookRuntime(() => this.windowsRuntime!.get())
+    }
+  }
+
+  async windowsProtectionConfigured(): Promise<boolean> {
+    return this.platform === 'win32' && this.getOrCreateSandbox().isWindowsProtectionConfigured()
+  }
+
+  async windowsProtectionReady(): Promise<boolean> {
+    if (!(await this.windowsProtectionConfigured())) return false
+    if ((await this.getOrCreateSandbox().status('win32')).kind !== 'ready')
+      throw new Error('Prepare Notebook protection in Settings before protected execution.')
+    if (this.windowsRuntime) await this.windowsRuntime.prepare(false)
+    return true
+  }
+
+  async resolveWindowsRuntime(request: {
+    runtime: 'repl' | 'bash'
+    binding?: ShellRuntimeBinding
+    signal?: AbortSignal
+  }): Promise<WindowsNotebookRuntime | null | undefined> {
+    if (!this.windowsRuntime) return undefined
+    const protectedMode = await this.windowsProtectionConfigured()
+    if (
+      request.binding?.kind === 'powershell' &&
+      request.binding.version !== (protectedMode ? '7.6' : '5.1')
+    ) {
+      throw new Error(
+        'Notebook protection changed. Retry in the same conversation after the Shell capability refresh completes.'
+      )
+    }
+    if (!protectedMode) return null
+    // Executing a cell never starts a download. Setup is the only download-authorized entry point.
+    return this.windowsRuntime.prepare(false, request.signal)
   }
 
   async status(): Promise<NotebookNetworkStatus> {
+    if (this.windowsSetupController || this.preparingWindowsRuntime)
+      return this.recordStatus({
+        kind: 'checking',
+        runtimePreparation: this.windowsRuntime?.progress
+      })
     if (this.initializePromise) return this.recordStatus({ kind: 'checking' })
     try {
       await resolveNotebookTrustBundle(await this.options.getCaBundlePath?.())
@@ -322,7 +388,29 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
     }
     try {
       assertProcessTreeSupport(this.platform)
-      return this.recordStatus(presentStatus(await this.getOrCreateSandbox().status(this.platform)))
+      const status = presentStatus(await this.getOrCreateSandbox().status(this.platform))
+      if (
+        this.windowsRuntime &&
+        status.kind === 'setupRequired' &&
+        (await this.windowsProtectionConfigured())
+      ) {
+        return this.recordStatus({ kind: 'error', reason: status.reasons[0] ?? 'runtimeFailure' })
+      }
+      if (status.kind === 'ready' && this.windowsRuntime) {
+        try {
+          this.windowsRuntime.get()
+        } catch {
+          try {
+            await this.windowsRuntime.prepare(false)
+          } catch {
+            return this.recordStatus({
+              kind: 'error',
+              reason: 'runtimeFailure'
+            })
+          }
+        }
+      }
+      return this.recordStatus(status)
     } catch (error) {
       return this.recordStatus(
         { kind: 'error', reason: 'runtimeFailure' },
@@ -343,6 +431,54 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
   }
 
   async wrap(invocation: NotebookSandboxInvocation): Promise<NotebookSandboxedSpawn> {
+    if (
+      this.windowsRuntime &&
+      invocation.target?.kind !== 'wsl2' &&
+      (await this.windowsProtectionConfigured())
+    ) {
+      if (invocation.runtime === 'bash' || invocation.runtime === 'repl') {
+        const runtime = this.windowsRuntime.get()
+        const expected = invocation.runtime === 'bash' ? runtime.powershell : runtime.node
+        if (invocation.executable.toLowerCase() !== expected.toLowerCase()) {
+          throw new Error(
+            'The selected interpreter does not match the prepared protected runtime. Prepare protection in Settings, then retry after the Shell capability refresh.'
+          )
+        }
+      }
+    }
+    try {
+      return await this.prepare(invocation)
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.name === 'NotebookSandboxPreparationCleanupError' ||
+          error.message === 'SHELL_CLEANUP_INCOMPLETE: Retained command cleanup is unverified.' ||
+          error.message ===
+            'SHELL_CLEANUP_INCOMPLETE: Previous shell cleanup could not be reconciled.')
+      ) {
+        const target = invocation.target ?? { kind: 'native' as const }
+        // Retain only the original cleanup capabilities. Admission of another command is not
+        // proof that these resources were reaped (notably on macOS).
+        const pending = [...this.pendingCommandCleanups].filter((cleanup) =>
+          sameCleanupDomain(cleanup.target, target)
+        )
+        if (pending.length > 0) {
+          Object.assign(error, {
+            retryCleanup: async (): Promise<boolean> => {
+              const results = await Promise.all(pending.map((cleanup) => cleanup.retry()))
+              if (!results.every(cleanupComplete)) return false
+              await this.reconcilePendingCommandCleanups(target)
+              return true
+            }
+          })
+        }
+      }
+      throw error
+    }
+  }
+
+  private async prepare(invocation: NotebookSandboxInvocation): Promise<NotebookSandboxedSpawn> {
+    const preparationStartedAt = performance.now()
     assertProcessTreeSupport(this.platform)
     const runtimeAccessRevision = this.runtimeAccessRevision
     await this.initialize()
@@ -361,6 +497,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
     }
     let activeExecutionGrants: ReadonlySet<string> = new Set()
     let executionActive = false
+    let activeCommandText = invocation.commandText
     const allowedNetworkHosts = new Set(
       (invocation.allowedNetworkHosts ?? []).flatMap((host) => {
         const normalized = validateCustomAllowedDomain(host)
@@ -378,6 +515,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
         ...(this.platform === 'win32' && invocation.target?.kind !== 'wsl2'
           ? { executable: invocation.executable, args: invocation.args }
           : {}),
+        ...(invocation.electronAsNode ? { electronAsNode: true } : {}),
         windowsProtectionRequired: invocation.windowsProtectionRequired,
         windowsRuntimeAccessRequired: invocation.windowsRuntimeAccessRequired,
         cwd: invocation.cwd,
@@ -390,6 +528,9 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
           ? { inheritedFileDescriptorCount: invocation.inheritedFileDescriptorCount }
           : {}),
         ...(invocation.superviseProcessTree ? { superviseProcessTree: true } : {}),
+        ...(invocation.windowsShellControlPipe
+          ? { windowsShellControlPipe: invocation.windowsShellControlPipe }
+          : {}),
         filesystem: {
           privateRoot: homedir(),
           readOnlyRoots: [
@@ -428,7 +569,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
           this.isCommandGrantAllowed(
             invocation.sessionId,
             invocation.runtime,
-            invocation.commandText,
+            activeCommandText,
             executionActive,
             activeExecutionGrants,
             allowedNetworkHosts,
@@ -444,18 +585,23 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
         executionReference: invocation.executionReference,
         phase: 'sandbox-prepare',
         result: 'complete',
+        durationMs: Math.round(performance.now() - preparationStartedAt),
         platform: this.platform,
         target: invocation.target?.kind ?? 'native',
         runtime: invocation.runtime
       })
     } catch (error) {
+      const preparationDurationMs = Math.round(performance.now() - preparationStartedAt)
       if (retained) {
         retained.debt = true
         retained.blocked = true
       }
       if (wrapped) {
         const cleanup = await wrapped
-          .cleanup('spawn-failed', { processesTerminated: true })
+          .cleanup('spawn-failed', {
+            processesTerminated: true,
+            processState: 'never-started'
+          })
           .catch(() => undefined)
         if (!cleanup || !cleanupComplete(cleanup)) {
           throw new Error(
@@ -523,6 +669,10 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
         }
       }
       this.log.error('sandbox process preparation failed', {
+        executionReference: invocation.executionReference,
+        phase: 'sandbox-prepare',
+        result: 'failed',
+        durationMs: preparationDurationMs,
         platform: this.platform,
         runtime: invocation.runtime,
         ...diagnosticErrorFields(error)
@@ -550,6 +700,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
       activeExecutionGrants = new Set()
       executionActive = false
       cleanupPromise = (async () => {
+        const cleanupStartedAt = performance.now()
         const sandboxCleanup = await Promise.resolve(
           wrapped.cleanup(cleanupReason!, cleanupOutcome!)
         ).then(
@@ -585,6 +736,9 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
         }
         const result: NotebookSandboxCleanupResult = {
           ...(admission ? { admission } : {}),
+          ...(sandboxCleanup.status === 'fulfilled' && sandboxCleanup.value.processState
+            ? { processState: sandboxCleanup.value.processState }
+            : {}),
           processesTerminated:
             sandboxCleanup.status === 'fulfilled' && sandboxCleanup.value.processesTerminated,
           networkClosed:
@@ -598,12 +752,19 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
           executionReference: invocation.executionReference,
           phase: 'sandbox-cleanup',
           result: cleanupComplete(result) ? 'complete' : 'incomplete',
+          durationMs: Math.round(performance.now() - cleanupStartedAt),
           platform: this.platform,
           target: invocation.target?.kind ?? 'native',
           runtime: invocation.runtime,
           reason: cleanupReason,
           ...result,
-          incompleteStageCount: Object.values(result).filter((complete) => !complete).length
+          incompleteStageCount: Object.values(result).filter((complete) => !complete).length,
+          ...(backendComplete && temporaryCleanup.status === 'rejected'
+            ? {
+                temporaryCleanupErrorCode:
+                  (temporaryCleanup.reason as NodeJS.ErrnoException)?.code ?? 'unknown'
+              }
+            : {})
         })
         return result
       })()
@@ -627,7 +788,10 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
     }
     const [executable, ...args] = wrapped.argv
     if (!executable) {
-      await cleanup('spawn-failed', { processesTerminated: true })
+      await cleanup('spawn-failed', {
+        processesTerminated: true,
+        processState: 'never-started'
+      })
       throw new Error('Notebook network sandbox returned an empty command.')
     }
     return {
@@ -637,6 +801,10 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
       ...(wrapped.confirmProcessTreeTermination
         ? { confirmProcessTreeTermination: wrapped.confirmProcessTreeTermination }
         : {}),
+      ...(wrapped.requestProcessTreeTermination
+        ? { requestProcessTreeTermination: wrapped.requestProcessTreeTermination }
+        : {}),
+      ...(wrapped.confirmProcessState ? { confirmProcessState: wrapped.confirmProcessState } : {}),
       ...(this.platform === 'win32' && invocation.windowsProtectionRequired !== undefined
         ? {
             beginSpawn: () => {
@@ -654,7 +822,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
         : wrapped.beginSpawn
           ? { beginSpawn: wrapped.beginSpawn }
           : {}),
-      beginExecution: () => {
+      beginExecution: (request) => {
         // Cleanup can be retried, but the command can never execute again.
         if (cleanupReason !== undefined) {
           throw new Error('Notebook sandbox process is already closed.')
@@ -662,11 +830,12 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
         if (executionActive) throw new Error('Notebook sandbox execution is already active.')
         wrapped.resetNetworkConnections()
         executionActive = true
+        activeCommandText = request?.commandText ?? invocation.commandText
         wrapped.setExecutionActive(true)
         const grantKey = commandGrantKey(
           invocation.sessionId,
           invocation.runtime,
-          invocation.commandText
+          activeCommandText
         )
         activeExecutionGrants = this.nextExecutionGrants.get(grantKey) ?? new Set()
         this.nextExecutionGrants.delete(grantKey)
@@ -699,7 +868,10 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
     )
     this.settings = settings
     if (notebookNetworkSettingsAllowDomain(settings, normalized.hostname)) {
-      return this.networkAccessResult(normalized.hostname, 'alreadyAllowed', request.runtime)
+      return this.networkAccessResult(normalized.hostname, 'alreadyAllowed', request.runtime, {
+        message:
+          'Public-domain policy already allows this hostname. Address checks still apply. For private-network access, review the service and port in Settings > Network > Notebook network access.'
+      })
     }
 
     const destinationKey = blockedDestinationKey(request.sessionId, normalized.hostname)
@@ -836,29 +1008,68 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
     return notebookTrustBundleStatus(next)
   }
 
+  cancelWindowsSetup(): boolean {
+    if (
+      !this.preparingWindowsRuntime ||
+      !this.windowsSetupController ||
+      this.windowsSetupController.signal.aborted
+    )
+      return false
+    this.windowsSetupController.abort()
+    return true
+  }
+
   async installWindows(): Promise<{ cancelled: boolean }> {
+    if (this.windowsSetupController)
+      throw new Error('Notebook protection setup is already running.')
+    const controller = new AbortController()
+    this.windowsSetupController = controller
+    this.windowsSetupCancelled = false
+    this.windowsSetupFailure = undefined
     const operation = startDiagnosticOperation(this.log, {
       operation: 'notebook-network-windows-setup',
       fields: { platform: this.platform }
     })
     try {
       const result = await this.getOrCreateSandbox().installWindows()
+      if (!result.cancelled && this.windowsRuntime) {
+        this.preparingWindowsRuntime = true
+        try {
+          await this.windowsRuntime.prepare(true, controller.signal)
+        } finally {
+          this.preparingWindowsRuntime = false
+        }
+      }
       if (result.cancelled) operation.cancel()
       else operation.complete()
       return result
     } catch (error) {
+      if (controller.signal.aborted && error === controller.signal.reason) {
+        this.windowsSetupCancelled = true
+        operation.cancel()
+        return { cancelled: true }
+      }
+      this.windowsSetupFailure = this.windowsRuntime?.failure
       operation.fail(error)
       throw error
+    } finally {
+      this.windowsSetupController = undefined
     }
   }
 
   async removeWindows(): Promise<{ cancelled: boolean }> {
+    if (this.windowsSetupController)
+      throw new Error('Wait for Notebook protection setup to finish cancelling.')
     const operation = startDiagnosticOperation(this.log, {
       operation: 'notebook-network-windows-remove',
       fields: { platform: this.platform }
     })
     try {
       const result = await this.getOrCreateSandbox().removeWindows()
+      if (!result.cancelled) {
+        this.windowsSetupCancelled = false
+        this.windowsSetupFailure = undefined
+      }
       if (result.cancelled) operation.cancel()
       else operation.complete()
       return result
@@ -903,7 +1114,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
         throw new NotebookRuntimeAccessCancelledError('R access preparation was cancelled.')
       if (isMigrationInProgress())
         throw new Error(
-          'MedResearch Agent is moving your data. Wait for the move to finish before running this.'
+          'DRA is moving your data. Wait for the move to finish before running this.'
         )
       diagnostic.phase('data-root-write-wait')
       const result = await withDataRootWrite(async () => {
@@ -942,7 +1153,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
           throw new NotebookRuntimeAccessCancelledError('R access preparation was cancelled.')
         if (!this.options.allowRuntimeAccessPrompt)
           throw new Error(
-            'R access requires administrator authorization on the local MedResearch Agent desktop.'
+            'R access requires administrator authorization on the local DRA desktop.'
           )
         diagnostic.phase('authorize')
         return {
@@ -1292,6 +1503,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
     }
     this.log.info('sandbox disposed')
     this.initialized = false
+    this.releaseWindowsRuntime?.()
     this.sandbox = undefined
     this.nextExecutionGrants.clear()
     this.blockedDestinationCommands.clear()
@@ -1326,6 +1538,18 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
     status: NotebookNetworkStatus,
     extraFields: Record<string, unknown> = {}
   ): NotebookNetworkStatus {
+    if (this.windowsRuntime)
+      status = {
+        ...status,
+        windowsRuntimeSetup: {
+          downloadBytes: this.windowsRuntime.downloadBytes,
+          canCancel:
+            this.preparingWindowsRuntime &&
+            Boolean(this.windowsSetupController && !this.windowsSetupController.signal.aborted),
+          cancelled: this.windowsSetupCancelled,
+          ...(this.windowsSetupFailure ? { failure: this.windowsSetupFailure } : {})
+        }
+      }
     const signature = JSON.stringify(status)
     if (signature === this.lastStatusSignature) return status
     this.lastStatusSignature = signature
@@ -1417,11 +1641,31 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
     receipt: string,
     retained = this.retainedCommandRoots.get(root)
   ): Promise<void> {
-    if (retained) await this.validateRetainedCommandRoot(root, receipt, retained)
-    await rm(root, { recursive: true, force: true })
-    if (retained) await this.validateRetainedCommandRoot(root, receipt, retained)
-    await rm(receipt, { force: true })
-    this.retainedCommandRoots.delete(root)
+    for (let attempt = 0; ; attempt++) {
+      try {
+        if (retained) await this.validateRetainedCommandRoot(root, receipt, retained)
+        await rm(root, { recursive: true, force: true })
+        if (retained) await this.validateRetainedCommandRoot(root, receipt, retained)
+        await rm(receipt, { force: true })
+        this.retainedCommandRoots.delete(root)
+        return
+      } catch (error) {
+        // Windows readers can briefly deny deletion even after the workload's Job is empty.
+        // Share one bounded retry budget across the directory and its receipt. Only retry
+        // fs.rm's transient error codes; process/network cleanup must already have succeeded.
+        // EACCES joins the list because Node's fs.rm retries omit it, which hosted Windows
+        // runners can surface for a recently exited probe cwd.
+        if (
+          this.platform !== 'win32' ||
+          attempt >= 5 ||
+          !['EBUSY', 'EMFILE', 'ENFILE', 'ENOTEMPTY', 'EPERM', 'EACCES'].includes(
+            (error as NodeJS.ErrnoException)?.code ?? ''
+          )
+        )
+          throw error
+        await delay(200 * (attempt + 1))
+      }
+    }
   }
 
   private async validateRetainedCommandRoot(

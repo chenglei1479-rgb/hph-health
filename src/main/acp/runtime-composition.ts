@@ -1,11 +1,11 @@
+import { SessionReadingOwner } from '../session-replay/session-reading'
+import { SessionReplayRepository } from '../session-replay/repository'
 import type { PdfElementTools } from '../literature/pdf-structure/agent-reader'
 import { homedir } from 'node:os'
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { readFile, stat } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
-
-import { app } from 'electron'
 
 import type { AcpPermissionRequest, AcpRuntimeEvent, AcpStateUpdate } from '../../shared/acp'
 import type { ShellRuntimeBinding } from '../../shared/notebook'
@@ -133,6 +133,7 @@ type AcpRuntimeArtifacts = {
 }
 
 type AcpRuntimeCompositionOptions = AcpRuntimeArtifacts & {
+  appVersion: string
   mcpEntryPath: string
   uploadRepository: UploadRepository
   notebookRpcServer: NotebookLocalRpcServer
@@ -177,7 +178,15 @@ type AcpRuntimeCompositionOptions = AcpRuntimeArtifacts & {
   beforeSessionDelete?: (sessionId: string) => Promise<void>
   afterSessionDelete?: (sessionId: string, retained: boolean) => void
   specialistService?: SpecialistService
-  sessionPersistenceCoordinator?: SessionRuntimeContextCommands & SessionMutation & SessionCatalog
+  sessionPersistenceCoordinator?: SessionRuntimeContextCommands &
+    SessionMutation &
+    SessionCatalog &
+    Partial<
+      Pick<
+        import('../session-persistence/coordinator').SessionPersistenceCommands,
+        'recordRuntimeTerminalFailure'
+      >
+    >
   finalizeRuntimeArtifacts?: (request: {
     claimId: string
     messageId: string
@@ -237,6 +246,7 @@ const isPdfAttachmentVersion = (version: { filename: string; contentType: string
 
 // Composes the compatibility façade while the coordinator remains the cross-generation Session owner.
 const createAcpRuntime = ({
+  appVersion,
   mcpEntryPath,
   repository,
   runRegistry,
@@ -328,7 +338,13 @@ const createAcpRuntime = ({
             ),
           mutateSession: (scope, mutate) =>
             sessionPersistenceCoordinator.mutateRuntimeSession(scope, mutate),
-          finalizeArtifacts: finalizeRuntimeArtifacts
+          finalizeArtifacts: finalizeRuntimeArtifacts,
+          onTerminalCommitExhausted: (_scope, event, retry, waitForWriteRelease) =>
+            sessionPersistenceCoordinator.recordRuntimeTerminalFailure?.(
+              event,
+              retry,
+              waitForWriteRelease
+            )
         })
       : undefined
   const eventBroadcast = createAcpRuntimeEventBroadcastCoalescer({
@@ -417,7 +433,7 @@ const createAcpRuntime = ({
           ? undefined
           : settingsService.captureActiveAgentBackendSelection()
       const runtimeOptions: AcpRuntimeOptions = {
-        appVersion: app.getVersion(),
+        appVersion,
         auxiliaryUsage,
         classifySkills: delegatedNotebookConnection ? undefined : classifySkills,
         classifyReadingRoute: delegatedNotebookConnection ? undefined : classifyReadingRoute,
@@ -898,6 +914,14 @@ const createAcpRuntime = ({
           : {}),
         callbacks: runtimeCallbacks,
         sideChatRelays,
+        prepareSessionReading:
+          !delegatedNotebookConnection && sessionPersistenceCoordinator
+            ? (request) =>
+                new SessionReadingOwner(
+                  new SessionReplayRepository(() => getProjectDbClient(resolveConfigRoot())),
+                  sessionPersistenceCoordinator
+                ).prepare(request)
+            : undefined,
         hasPendingCredentialRequest,
         ...(!delegatedNotebookConnection && memory ? { memory } : {}),
         permissionGrantStore,

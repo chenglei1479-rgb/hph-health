@@ -24,7 +24,9 @@ const installApi = (overrides: Partial<MockStorageApi> = {}): MockStorageApi => 
   const api: MockStorageApi = {
     pickDirectory: vi.fn().mockResolvedValue(null),
     // Default: resolving the move destination (from defaultParent) yields the visible OpenScience path.
-    inspectDataRoot: vi.fn().mockResolvedValue({ kind: 'move', dataRoot: '/home/u/MedResearch Agent' }),
+    inspectDataRoot: vi
+      .fn()
+      .mockResolvedValue({ kind: 'move', dataRoot: '/home/u/MedResearch Agent' }),
     dismissLegacyMovePrompt: vi.fn().mockResolvedValue(undefined),
     detectActive: vi.fn().mockResolvedValue([]),
     migrate: vi.fn().mockResolvedValue({ ok: true, cleanupPending: false }),
@@ -122,7 +124,7 @@ describe('LegacyDataMoveDialog', () => {
         element.className.includes('border-t border-border-300/90 px-5 py-3.5')
       )
     ).toBe(true)
-    expect(document.body.textContent).toContain('Move to MedResearch Agent')
+    expect(document.body.textContent).toContain('Move data to the default location')
     expect(document.body.textContent).toContain('Choose another folder')
     expect(document.body.textContent).toContain('Keep it in the current folder')
   })
@@ -134,7 +136,7 @@ describe('LegacyDataMoveDialog', () => {
     expect(document.body.textContent).toContain('/home/u/.open-science')
     expect(document.body.textContent).toContain('/home/u/MedResearch Agent')
     for (const label of [
-      /Move to MedResearch Agent/,
+      /Move data to the default location/,
       /Choose another folder/,
       /Keep it in the current/
     ]) {
@@ -160,12 +162,12 @@ describe('LegacyDataMoveDialog', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
 
-  it('"Move to MedResearch Agent" hands off to the migration flow (detects sessions first)', async () => {
+  it('"Move data to the default location" hands off to the migration flow (detects sessions first)', async () => {
     const api = installApi()
     await renderDialog()
 
     await act(async () => {
-      clickButton(/Move to MedResearch Agent/)
+      clickButton(/Move data to the default location/)
       await Promise.resolve()
     })
 
@@ -189,7 +191,7 @@ describe('LegacyDataMoveDialog', () => {
     await renderDialog()
 
     await act(async () => {
-      clickButton(/Move to MedResearch Agent/)
+      clickButton(/Move data to the default location/)
       await Promise.resolve()
       await Promise.resolve()
     })
@@ -208,7 +210,7 @@ describe('LegacyDataMoveDialog', () => {
     expect(api.inspectDataRoot).toHaveBeenCalledTimes(2)
 
     await act(async () => {
-      clickButton(/Move to MedResearch Agent/)
+      clickButton(/Move data to the default location/)
       await Promise.resolve()
       await Promise.resolve()
     })
@@ -231,7 +233,7 @@ describe('LegacyDataMoveDialog', () => {
     await renderDialog()
 
     const moveButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Move to MedResearch Agent'
+      (button) => button.textContent?.trim() === 'Move data to the default location'
     )
     expect(moveButton?.disabled).toBe(true)
 

@@ -1,3 +1,4 @@
+import type { PrivateDestinationRequest } from '../../shared/notebook-network'
 import { ipcMainHandle } from '../ipc-handler-registry'
 import type { WebContents } from 'electron'
 
@@ -357,6 +358,11 @@ const registerSettingsIpcHandlers = ({
   )
 
   ipcMainHandle('settings:get-package-mirror', () => service.getPackageMirror())
+  ipcMainHandle(
+    'settings:review-notebook-private-destination',
+    (_event, request: PrivateDestinationRequest) =>
+      service.reviewNotebookPrivateDestination(request)
+  )
   ipcMainHandle('settings:get-notebook-network-status', () => service.getNotebookNetworkStatus())
   ipcMainHandle('settings:get-wsl2-bash-preview-status', () => service.getWsl2BashPreviewStatus())
   ipcMainHandle('settings:get-wsl-setup-status', () => service.getWslSetupStatus())
@@ -395,6 +401,9 @@ const registerSettingsIpcHandlers = ({
     snapshotCommits.projectAfter(service.setNotebookNetwork(request))
   )
   ipcMainHandle('settings:install-notebook-network', () => service.installNotebookNetwork())
+  ipcMainHandle('settings:cancel-notebook-network-setup', () =>
+    service.cancelNotebookNetworkSetup()
+  )
   ipcMainHandle('settings:remove-notebook-network', () => service.removeNotebookNetwork())
 
   ipcMainHandle('settings:list-skills', () => service.listSkills())

@@ -165,7 +165,7 @@ const parseCitationStyle = (
   if (!citation || !bibliography) {
     throw new ApplicationCommandError(
       'csl-missing-sections',
-      'MedResearch Agent requires CSL styles with both citation and bibliography sections.'
+      'DRA requires CSL styles with both citation and bibliography sections.'
     )
   }
 

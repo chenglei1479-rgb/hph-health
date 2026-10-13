@@ -238,7 +238,7 @@ const createFakeService = (): FakeSettingsService => ({
   markOnboardingComplete: vi.fn().mockResolvedValue({ claude: {}, providers: [] }),
   switchLocalShellToPowerShell: vi.fn().mockResolvedValue({
     result: {
-      runtimeBinding: { kind: 'powershell', version: '5.1' },
+      runtimeBinding: { kind: 'powershell', version: '7.6' },
       appliesTo: 'subsequent-executions',
       wslProfilePreserved: true
     },
@@ -618,7 +618,7 @@ describe('settings IPC handlers', () => {
     service.logoutIsolatedCodex.mockResolvedValue({
       ok: false,
       category: 'unknown',
-      message: 'The MedResearch Agent Codex login could not be removed.'
+      message: 'The DRA Codex login could not be removed.'
     })
     const onActiveProviderChanged = vi.fn()
     registerTestSettingsIpcHandlers({

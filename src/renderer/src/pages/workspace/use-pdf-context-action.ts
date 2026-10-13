@@ -155,7 +155,8 @@ export const usePdfContextAction = (
       : undefined
 
   const updatePdfContext = async (): Promise<void> => {
-    if (!activeSession || !pdfContextTarget || pdfContextPending) return
+    if (!activeSession || activeSession.packageOrigin || !pdfContextTarget || pdfContextPending)
+      return
     setPdfContextPending(true)
     onError?.(null)
     try {
@@ -193,6 +194,10 @@ export const usePdfContextAction = (
   const updatePendingPdfContext = (): void => {
     if (!projectId || activeSession || (!stagedAttachmentInDraft && !pdfContextTarget)) return
     if (pendingSelection) {
+      if (mutations.unlink) {
+        mutations.unlink(pendingPdfContextBindingId(pendingSelection))
+        return
+      }
       usePreviewWorkbenchStore
         .getState()
         .clearPdfReadingPosition(pendingPdfContextBindingId(pendingSelection))
@@ -222,6 +227,8 @@ export const usePdfContextAction = (
   }
 
   if (!item) return { action: undefined, readingContextBindingId: undefined }
+
+  if (activeSession?.packageOrigin) return { action: undefined, readingContextBindingId }
 
   if (activeSession && pdfContextTarget) {
     return {

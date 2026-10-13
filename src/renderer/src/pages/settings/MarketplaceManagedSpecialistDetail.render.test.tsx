@@ -55,18 +55,18 @@ describe('MarketplaceManagedSpecialistDetail', () => {
             origin: 'marketplace',
             marketplaceProvenance: {
               sourceId: 'official',
-              publisher: 'MedResearch Agent',
+              publisher: 'DRA',
               version: '1.0.0'
             }
           }}
           update={{
             sourceId: 'official',
-            sourceName: 'MedResearch Agent Marketplace',
+            sourceName: 'DRA Marketplace',
             sourceTrust: 'official',
             id: 'managed-specialist',
             displayName: 'Managed Specialist',
             summary: 'Publisher-owned description',
-            publisher: { id: 'open-science', name: 'MedResearch Agent' },
+            publisher: { id: 'open-science', name: 'DRA' },
             version: '1.1.0',
             installedVersion: '1.0.0',
             updateAvailable: true

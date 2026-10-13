@@ -48,7 +48,10 @@
     "src/main/session-package/ro-crate.test.ts",
     "src/main/session-package/ro-crate.integration.test.ts",
     "src/main/session-package/sensitive-content.ts",
-    "src/main/session-package/sensitive-content.test.ts"
+    "src/main/session-package/sensitive-content.test.ts",
+    "src/main/session-package/json-syntax.ts",
+    "src/main/session-package/json-syntax.test.ts",
+    "src/main/session-package/pdf-notes.ts"
   ],
   "interfacePaths": [
     "src/main/session-package/desktop.ts",
@@ -57,7 +60,8 @@
     "src/main/session-package/inspection-worker.ts",
     "src/main/session-package/literature-reader.ts",
     "src/main/session-package/quit-guard.ts",
-    "src/main/session-package/service.ts"
+    "src/main/session-package/service.ts",
+    "src/main/session-package/pdf-notes.ts"
   ],
   "consumerModules": [],
   "testFiles": {
@@ -82,7 +86,8 @@
       "src/main/session-package/fork.test.ts",
       "src/main/session-package/ro-crate.test.ts",
       "src/main/session-package/ro-crate.integration.test.ts",
-      "src/main/session-package/sensitive-content.test.ts"
+      "src/main/session-package/sensitive-content.test.ts",
+      "src/main/session-package/json-syntax.test.ts"
     ],
     "contract": [
       "src/preload/index.test.ts",
@@ -94,7 +99,8 @@
       "src/main/index-fatal-errors.test.ts",
       "src/main/index-startup-failure.test.ts",
       "src/main/runtime-electron-wiring.test.ts",
-      "src/main/session-package/desktop-composition.test.ts"
+      "src/main/session-package/desktop-composition.test.ts",
+      "src/main/session-persistence/prompt-preparation-restart.test.ts"
     ]
   },
   "capabilityOverlays": ["e2e_regressions", "e2e_delegation", "windows_sensitive"],

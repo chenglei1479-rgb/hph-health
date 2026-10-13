@@ -29,6 +29,8 @@ import {
 } from '../../shared/settings'
 import {
   buildUnsupportedCodexAcpVersionMessage,
+  CODEX_CLI_INCOMPATIBLE_MESSAGE,
+  isSupportedCodexCliVersion,
   isSupportedCodexAcpVersion,
   MINIMUM_CODEX_ACP_VERSION
 } from '../../shared/codex-runtime'
@@ -62,6 +64,7 @@ import {
 } from './codebuddy-detect'
 import {
   detectCodex,
+  detectCodexComponents,
   parseVersion as parseCodexVersion,
   runAcpInitializeSmoke,
   type CodexDetectDeps
@@ -289,7 +292,10 @@ const codexVersionsFromProbe = (
 ): Pick<StoredCodexInfo, 'version' | 'nativeVersion'> | undefined => {
   const version = probe.adapter?.output ? parseCodexVersion(probe.adapter.output) : undefined
   const nativeVersion = probe.native?.output ? parseCodexVersion(probe.native.output) : undefined
-  return version && nativeVersion && isSupportedCodexAcpVersion(version)
+  return version &&
+    nativeVersion &&
+    isSupportedCodexCliVersion(nativeVersion) &&
+    isSupportedCodexAcpVersion(version)
     ? { version, nativeVersion }
     : undefined
 }
@@ -651,6 +657,24 @@ export class AgentRuntimeManager {
           nativeVersion: detected.nativeCodexVersion
         })
       } else {
+        const components = await detectCodexComponents(this.codexDetectDeps, operationSignal)
+        operationSignal.throwIfAborted()
+        if (
+          components.adapterPath &&
+          components.adapterVersion &&
+          components.nativeCliPath &&
+          components.nativeCliVersion &&
+          (!isSupportedCodexCliVersion(components.nativeCliVersion) ||
+            !isSupportedCodexAcpVersion(components.adapterVersion))
+        ) {
+          await this.repository.setCodexInfo({
+            resolvedPath: components.adapterPath,
+            version: components.adapterVersion,
+            nativePath: components.nativeCliPath,
+            nativeVersion: components.nativeCliVersion
+          })
+          return
+        }
         const cached = (await this.repository.getSettings()).codex?.resolvedPath
         if (cached && !(await this.pathExists(cached))) await this.repository.clearCodexInfo()
       }
@@ -1102,7 +1126,7 @@ export class AgentRuntimeManager {
     const adapterPath =
       this.codexDetectDeps.managedAdapterPath ?? managedCodexAdapterEntry(this.configRoot)
     if (!(await this.pathExists(adapterPath))) {
-      throw new Error('MedResearch Agent Codex ACP adapter not found. Install Codex in settings.')
+      throw new Error('DRA Codex ACP adapter not found. Install Codex in settings.')
     }
 
     const adapterOutput = await this.codexDetectDeps
@@ -1110,10 +1134,14 @@ export class AgentRuntimeManager {
       .catch(() => undefined)
     const adapterVersion = adapterOutput ? parseCodexVersion(adapterOutput) : undefined
     if (!adapterVersion) {
-      throw new Error('MedResearch Agent could not determine the Codex ACP adapter version.')
+      throw new Error('DRA could not determine the Codex ACP adapter version.')
     }
     if (!isSupportedCodexAcpVersion(adapterVersion)) {
       throw new Error(buildUnsupportedCodexAcpVersionMessage(adapterVersion))
+    }
+
+    if (!isSupportedCodexCliVersion(await this.probeCodexNativeVersion(nativePath))) {
+      throw new Error(CODEX_CLI_INCOMPATIBLE_MESSAGE)
     }
 
     await ensureManagedCodexContextUsage(adapterPath)
@@ -1152,6 +1180,11 @@ export class AgentRuntimeManager {
         await this.executeClaudeProbe(executablePath, env, [
           '--settings',
           runtimeConfig.settingsPath,
+          '--setting-sources',
+          '',
+          '--strict-mcp-config',
+          '--permission-mode',
+          'default',
           '--add-dir',
           runtimeConfig.skillProjection.root
         ])
@@ -1364,23 +1397,41 @@ export class AgentRuntimeManager {
       await this.repository.clearCodexInfo()
     }
 
-    const { detectCodexComponents } = await import('./codex-detect')
     const components = await detectCodexComponents(detectDeps, signal)
+    // Retain discovered obsolete installs so Settings can offer repair with accurate versions.
+    if (
+      components.adapterPath &&
+      components.adapterVersion &&
+      components.nativeCliPath &&
+      components.nativeCliVersion &&
+      (!isSupportedCodexCliVersion(components.nativeCliVersion) ||
+        !isSupportedCodexAcpVersion(components.adapterVersion))
+    ) {
+      await this.repository.setCodexInfo({
+        resolvedPath: components.adapterPath,
+        version: components.adapterVersion,
+        nativePath: components.nativeCliPath,
+        nativeVersion: components.nativeCliVersion
+      })
+      signal.throwIfAborted()
+    }
     let diagnostic: string | undefined
-    if (components.nativeCliFound && !components.adapterFound) {
-      diagnostic = `Native Codex ${components.nativeCliVersion} is installed at ${components.nativeCliPath}, but the Codex ACP adapter required by MedResearch Agent is missing.`
+    if (components.nativeCliFound && !isSupportedCodexCliVersion(components.nativeCliVersion)) {
+      diagnostic = CODEX_CLI_INCOMPATIBLE_MESSAGE
+    } else if (components.nativeCliFound && !components.adapterFound) {
+      diagnostic = `Native Codex ${components.nativeCliVersion} is installed at ${components.nativeCliPath}, but the Codex ACP adapter required by DRA is missing.`
     } else if (!components.nativeCliFound && components.adapterFound) {
       diagnostic =
         components.adapterFailureReason === 'smoke-test-failed'
           ? `Codex ACP adapter ${components.adapterVersion} is installed at ${components.adapterPath}, but it failed to initialize (native Codex CLI may be missing or incompatible).`
           : components.adapterFailureReason === 'unsupported-version'
-            ? `Codex ACP adapter ${components.adapterVersion} is installed at ${components.adapterPath}, but MedResearch Agent requires ${MINIMUM_CODEX_ACP_VERSION} or later.`
+            ? `Codex ACP adapter ${components.adapterVersion} is installed at ${components.adapterPath}, but DRA requires ${MINIMUM_CODEX_ACP_VERSION} or later.`
             : `Codex ACP adapter is installed at ${components.adapterPath}, but version detection failed.`
     } else if (components.nativeCliFound && components.adapterFound) {
       if (components.adapterFailureReason === 'smoke-test-failed') {
         diagnostic = `Both native Codex ${components.nativeCliVersion} and ACP adapter ${components.adapterVersion} are installed, but the adapter failed to initialize with the native CLI.`
       } else if (components.adapterFailureReason === 'unsupported-version') {
-        diagnostic = `Native Codex ${components.nativeCliVersion} and ACP adapter ${components.adapterVersion} are installed, but MedResearch Agent requires ACP adapter ${MINIMUM_CODEX_ACP_VERSION} or later.`
+        diagnostic = `Native Codex ${components.nativeCliVersion} and ACP adapter ${components.adapterVersion} are installed, but DRA requires ACP adapter ${MINIMUM_CODEX_ACP_VERSION} or later.`
       } else if (components.adapterFailureReason === 'version-probe-failed') {
         diagnostic = `Native Codex ${components.nativeCliVersion} is installed, and an ACP adapter exists at ${components.adapterPath}, but the adapter's version could not be determined.`
       }
@@ -1601,7 +1652,9 @@ export class AgentRuntimeManager {
           ? !!version &&
             isSupportedCodexAcpVersion(parseCodexVersion(version) ?? '') &&
             !!settings.codex?.nativePath &&
-            !!(await this.codexDetectDeps.getCodexVersion(settings.codex.nativePath))
+            isSupportedCodexCliVersion(
+              await this.probeCodexNativeVersion(settings.codex.nativePath)
+            )
           : candidate === 'claude-code'
             ? isSupportedClaudeCliVersion(version)
             : candidate === 'codebuddy'

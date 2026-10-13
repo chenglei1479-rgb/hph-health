@@ -69,6 +69,7 @@ const requestByMethod = {
     code: 'print(1)',
     language: 'python',
     kernelSkillIds: ['figure-style'],
+    inputVersionIds: ['cohort-upload-v1'],
     background: true
   },
   getBackgroundRun: { ...request, action: 'query', runId: 'run-1' },
@@ -180,7 +181,8 @@ describe('notebook local RPC adapter', () => {
       code: 'print(1)',
       language: 'python',
       background: true,
-      helperModules: ['figure-style']
+      helperModules: ['figure-style'],
+      inputVersionIds: ['cohort-upload-v1']
     })
     expect(runtimeRequest).not.toHaveProperty('kernelSkillIds')
     expect(capability.execute).not.toHaveBeenCalled()

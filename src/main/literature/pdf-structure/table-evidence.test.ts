@@ -8,6 +8,24 @@ const moduleUrl = pathToFileURL(
 ).href
 const { hasTableEvidence } = await import(moduleUrl)
 
+it('rejects an article-history and keyword sidebar crossing into an abstract without requiring a DOI', () => {
+  const table = {
+    cropRect: [0, 0, 500, 220],
+    grid: [
+      [
+        'Received 2 January 2015 Accepted 5 March 2015 Available online xxxx',
+        'Background: An ordinary narrative abstract.'
+      ],
+      ['Keywords:', 'Methods: An ordinary narrative paragraph.'],
+      ['Clinical trial', 'Results: A further prose paragraph.']
+    ],
+    unassigned: ['Article history:'],
+    issues: []
+  }
+  expect(hasTableEvidence(table)).toBe(false)
+  expect(hasTableEvidence(table, { lines: ['Table 1. Publication metadata.'] })).toBe(true)
+})
+
 it('retains a bulleted table continuation without a repeated caption or numeric values', () => {
   const table = readPdfFixture(
     resolve('src/main/literature/pdf-structure/fixtures/ruled-bulleted-table-continuation.jsonl')
@@ -88,6 +106,57 @@ it('rejects incomplete glossary grids, unnumbered references and corresponding-a
     ]
   }
   expect(hasTableEvidence(abstract, undefined, [{ text: 'K E Y W O R D S' }])).toBe(false)
+})
+
+it('rejects captionless bibliography keys and boxed algorithm steps', () => {
+  const bibliography = {
+    grid: [
+      ['References', 'Author list'],
+      ...Array.from({ length: 8 }, (_, index) => [
+        `[Ref${index + 1}]`,
+        `Author et al. ${2020 + index}; reference title and journal details arXiv:${index}2345`
+      ])
+    ],
+    unassigned: [],
+    issues: []
+  }
+  expect(hasTableEvidence(bibliography)).toBe(false)
+  expect(hasTableEvidence(bibliography, { text: 'Table 1. Reference dataset' })).toBe(true)
+
+  const algorithm = {
+    grid: [
+      ['Algorithm 1', 'Procedure'],
+      ['1:', 'Initialize the state'],
+      ['2:', 'Update the estimate'],
+      ['3:', 'Return the result'],
+      ['4:', 'Stop']
+    ],
+    issues: []
+  }
+  expect(hasTableEvidence(algorithm)).toBe(false)
+  expect(hasTableEvidence(algorithm, { text: 'Table 2. Measured steps' })).toBe(true)
+})
+
+it('rejects a short captionless bibliography tail with dense citation keys', () => {
+  const bibliography = {
+    grid: [
+      ['[A1]', 'Nguyen et al. 2020. A reference title and journal details. arXiv:2001.00001'],
+      [
+        '[A2]',
+        'Patel et al. 2021. Another reference title and journal details. doi:10.1000/example'
+      ],
+      [
+        '[A3]',
+        'Garcia et al. 2022. A further reference title with publication details. https://doi.org/10.1000/next'
+      ],
+      ['[A4]', 'Lee et al. 2023. The final reference title and journal details. arXiv:2301.00004'],
+      ['[A5]', 'Kim et al. 2024. A wrapped reference title and journal details. doi:10.1000/final']
+    ],
+    unassigned: [],
+    issues: []
+  }
+  expect(hasTableEvidence(bibliography)).toBe(false)
+  expect(hasTableEvidence(bibliography, { text: 'Table 1. Reference dataset' })).toBe(true)
 })
 
 it('rejects parallel abbreviation lists and fragmented affiliation directories', () => {
@@ -234,6 +303,97 @@ it('rejects a keyword sidebar beside an abstract without rejecting prose tables'
       [heading]
     )
   ).toBe(true)
+})
+
+it('rejects an uncaptioned syntax-highlighted code listing mistaken for a table', () => {
+  const table = {
+    cropRect: [0, 0, 500, 160],
+    grid: [
+      ['', ''],
+      ['def preprocess ( X_train ) :', ''],
+      ['return X_train', ''],
+      ['def engineer ( X_train ) :', ''],
+      ['return X_train', '']
+    ],
+    unassigned: [
+      'import numpy as np',
+      'def sample ( X_train , max_rows ) :',
+      'return [ np . arange ( len ( X_train ) ) ]',
+      'def postprocess ( pred ) :',
+      'return pred'
+    ],
+    issues: ['span-conflicts-with-source-columns', 'unassigned-source-text']
+  }
+  const items = [
+    'def preprocess ( X_train ) :',
+    'return X_train',
+    'def engineer ( X_train ) :',
+    'return X_train',
+    'def sample ( X_train , max_rows ) :',
+    'return [ np . arange ( len ( X_train ) ) ]',
+    'def postprocess ( pred ) :',
+    'return pred'
+  ].map((text, index) => ({
+    text,
+    rect: [20, index * 18, 480, index * 18 + 10],
+    horizontal: true
+  }))
+  expect(hasTableEvidence(table, undefined, items)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 1. Pseudocode listing.' }, items)).toBe(true)
+})
+
+it('rejects an uncaptioned numbered algorithm listing mistaken for a table', () => {
+  const table = {
+    cropRect: [0, 0, 500, 220],
+    grid: [
+      ['1:', 'Input: model set M, task set K'],
+      ['2:', 'Initialize: P ~ U(-0.01, 0.01)'],
+      ['3:', 'for n = 1, 2, ..., N do'],
+      ['4:', 'if r = 0 then'],
+      ['5:', 'continue'],
+      ['6:', 'end if'],
+      ['7:', 'Output: optimized patch P*']
+    ],
+    unassigned: [],
+    issues: ['text-crosses-crop-boundary']
+  }
+  const items = table.grid.flatMap((row, rowIndex) =>
+    row.map((text, column) => ({
+      text,
+      rect: [20 + column * 180, rowIndex * 20, 180 + column * 180, rowIndex * 20 + 12],
+      horizontal: true
+    }))
+  )
+  expect(hasTableEvidence(table, undefined, items)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 2: Algorithm details.' }, items)).toBe(true)
+})
+
+it('rejects an uncaptioned boxed procedure without an Algorithm heading', () => {
+  const table = {
+    cropRect: [0, 0, 500, 220],
+    grid: [
+      ['3', 'plan ← π.PLAN(c) ▷ sub-goals from the phases', ''],
+      [
+        '5 6',
+        'while g not satisfied and steps remain do if π needs more detail on g then',
+        '▷ re-enter'
+      ],
+      ['7', 'n ← NODE(g, D)', ''],
+      ['8', 'if VIEWS(n) < B then', ''],
+      ['9', 'for sub-goal g in plan do', '']
+    ],
+    unassigned: [],
+    issues: ['text-crosses-crop-boundary']
+  }
+  const items = table.grid.flatMap((row, rowIndex) =>
+    row.map((text, column) => ({
+      text,
+      rect: [20 + column * 160, rowIndex * 18, 160 + column * 160, rowIndex * 18 + 10],
+      horizontal: true
+    }))
+  )
+  expect(hasTableEvidence(table, undefined, items)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 3. Procedure details.' }, items)).toBe(true)
 })
 
 it('rejects two-column prose cut into artificial rows without discarding labelled text tables', () => {
@@ -424,6 +584,54 @@ it('rejects overlapping or single-row guesses without a caption', () => {
   expect(hasTableEvidence({ grid: [['A', 'B']], issues: [] })).toBe(false)
 })
 
+it('rejects a lettered contents directory with dotted page leaders', () => {
+  const fixture = readPdfFixture(
+    resolve(
+      'src/main/literature/pdf-structure/fixtures/source-grids/lettered-contents-directory.jsonl'
+    )
+  )
+  expect(hasTableEvidence(fixture.table, undefined, fixture.tokens)).toBe(false)
+  expect(
+    hasTableEvidence(fixture.table, { text: 'Table 1. Lettered results' }, fixture.tokens)
+  ).toBe(true)
+  expect(
+    hasTableEvidence(
+      {
+        ...fixture.table,
+        grid: fixture.table.grid.map(([marker, entry]: [string, string]) => [
+          marker,
+          entry.replace(/\./g, '')
+        ])
+      },
+      undefined,
+      fixture.tokens
+    )
+  ).toBe(true)
+})
+
+it('rejects a hierarchical contents directory with dotted leaders and page numbers', () => {
+  const table = {
+    grid: [
+      ['A', 'Overview ........................ 1'],
+      ['A.1', 'Data sources ..................... 2'],
+      ['A.2', 'Evaluation protocol .............. 4'],
+      ['B', 'Results .......................... 8'],
+      ['B.1', 'Ablations ....................... 10'],
+      ['C.1', 'Limitations ..................... 14']
+    ],
+    issues: ['unassigned-source-text'],
+    unassigned: ['Contents']
+  }
+  const tokens = [{ text: 'Contents', horizontal: true, height: 12, rect: [260, 80, 320, 92] }]
+  expect(hasTableEvidence(table, undefined, tokens)).toBe(false)
+  expect(hasTableEvidence(table, { lines: ['Table 1. Hierarchical results'] }, tokens)).toBe(true)
+  expect(
+    hasTableEvidence({ ...table, cropRect: [40, 90, 540, 240] }, undefined, tokens, [
+      [40, 120, 540, 120]
+    ])
+  ).toBe(true)
+})
+
 // SIM: a bibliography heading and one wrapped reference became four artificial rows.
 it('rejects a standalone references section split into columns', () => {
   const table = {
@@ -543,6 +751,42 @@ it('rejects bibliographies whose publication years fell into unassigned text', (
   }
   expect(hasTableEvidence(table)).toBe(false)
   expect(hasTableEvidence(table, { text: 'Table 1. Publications' })).toBe(true)
+})
+
+it('rejects a short numbered citation tail cut into a detector crop', () => {
+  const table = {
+    grid: [
+      [
+        '25',
+        'Brandt A, Bermejo JL, Sundquist J, Hemminki K. Familial risks of breast and prostate cancers: does the definition of the at risk period matter? Eur J Cancer 2010;46:752–757.'
+      ],
+      [
+        '26',
+        'Tulinius H, Egilsson V, Olafsdottir GH, Sigvaldason H. Risk of prostate, ovarian, and endometrial cancer among relatives of women with breast cancer. BMJ 1992;305:855–857.'
+      ]
+    ],
+    issues: ['text-crosses-crop-boundary']
+  }
+  expect(hasTableEvidence(table)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 1. References' })).toBe(true)
+})
+
+it('rejects a multiple-choice question outline mistaken for a table', () => {
+  const table = {
+    grid: [
+      ['', 'a. early morning awakenings', 'a. adolescent and premenopausal'],
+      ['', '14. Subjective sleep can be summarized as?', 'b. peri and postmenopausal'],
+      ['', 'b. fairly poor', '18. Sleep can be measured using?'],
+      ['', 'c. very poor', 'a. actigraph'],
+      ['', '15. The outcome was?', 'b. questionnaire'],
+      ['', 'a. hot flashes', 'c. polysomnography'],
+      ['', 'b. sleep efficiency', ''],
+      ['', 'c. total sleep time', '']
+    ],
+    issues: ['text-crosses-crop-boundary']
+  }
+  expect(hasTableEvidence(table)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 1. Questions' })).toBe(true)
 })
 
 it('rejects a paragraph split through ordinary word spaces but retains real prose columns', () => {
@@ -816,4 +1060,78 @@ it('rejects uncaptioned quoted callouts and article metadata blocks', () => {
   expect(hasTableEvidence(metadata)).toBe(false)
   for (const table of [quote, metadata])
     expect(hasTableEvidence(table, { lines: ['Table 1. Explicitly captioned content'] })).toBe(true)
+})
+
+it('rejects uncaptioned section prose that uses numbered headings as a fake table column', () => {
+  const table = {
+    grid: [
+      ['', 'experienced between zero and three social stressors in the prior 24 hours'],
+      ['3.2', 'Manipulation Check: Injection Type and Inflammatory Response'],
+      ['', 'As reported in our initial publication, both inflammatory responses increased']
+    ],
+    repairs: ['text-supported-row-recovered'],
+    issues: ['text-crosses-crop-boundary', 'unassigned-source-text']
+  }
+  expect(hasTableEvidence(table)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 1. Results' })).toBe(true)
+})
+
+it('rejects mixed full-width notes and prose columns without a caption', () => {
+  const table = {
+    grid: [
+      ['e Higher education or equivalent.', ''],
+      ['f Not applicable.', ''],
+      ['g Definition of the abbreviated outcome measure.', ''],
+      ['h Additional explanatory note for the preceding section.', ''],
+      ['Section heading', 'Follow-up responses were collected at the first assessment point.'],
+      [
+        'The study had adequate power to detect the prespecified effect size.',
+        'Completion rates remained stable across the later assessments.'
+      ]
+    ],
+    cells: [0, 1, 2, 3].map((row) => ({
+      row,
+      column: 0,
+      colSpan: 2,
+      origin: 'model-span'
+    })),
+    issues: ['text-crosses-crop-boundary', 'unassigned-source-text']
+  }
+  expect(hasTableEvidence(table)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 1. Explanatory outcomes' })).toBe(true)
+})
+
+it('rejects a small prose crop with detached source fragments', () => {
+  const table = {
+    cropRect: [80, 900, 400, 1100],
+    grid: [
+      ['the study was completed after the final assessment', ''],
+      ['the journal issue continued on the next page', ''],
+      ['volume 87 - no. 7', 'Journal title']
+    ],
+    unassigned: ['preceding sentence fragment', 'clipped footer text'],
+    issues: ['text-crosses-crop-boundary', 'unassigned-source-text']
+  }
+  expect(hasTableEvidence(table)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 1. Narrative outcomes' })).toBe(true)
+})
+
+it('rejects reference columns detected across a crop boundary', () => {
+  const table = {
+    grid: [
+      ['First citation author', 'First citation title'],
+      ['Second citation author', 'Second citation title'],
+      ['Third citation author', 'Third citation title']
+    ],
+    issues: ['text-crosses-crop-boundary', 'unassigned-source-text']
+  }
+  const source = [
+    { text: 'References' },
+    { text: '1.' },
+    { text: '2.' },
+    { text: '3.' },
+    { text: '2019 2020 2021' }
+  ]
+  expect(hasTableEvidence(table, undefined, source)).toBe(false)
+  expect(hasTableEvidence(table, { text: 'Table 1. Included studies' }, source)).toBe(true)
 })

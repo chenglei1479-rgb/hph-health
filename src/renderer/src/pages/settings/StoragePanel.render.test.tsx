@@ -152,6 +152,38 @@ afterEach(() => {
 })
 
 describe('StoragePanel', () => {
+  it('warns about a historical spaced root and lets the user cancel without changing it', async () => {
+    const dataRoot = '/Users/test/Library/Application Support/OpenScience'
+    vi.mocked(window.api.storage.getInfo).mockResolvedValue({ ...richInfo, dataRoot })
+    vi.mocked(window.api.storage.getStatus).mockResolvedValue({ ...richInfo, dataRoot })
+    await act(async () => root.render(<StoragePanel />))
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      'The current data location contains spaces'
+    )
+    expect(container.textContent).toContain('keep the current location')
+    await act(async () => clickButton((button) => button.textContent === 'Change location'))
+    const dialog = document.body.querySelector('[role="alertdialog"]')!
+    await act(async () => {
+      Array.from(dialog.querySelectorAll<HTMLButtonElement>('button'))
+        .find((button) => button.textContent === 'Cancel')!
+        .click()
+    })
+    expect(document.body.querySelector('[role="alertdialog"]')).toBeNull()
+    expect(container.querySelector('[aria-label="Data root path"]')?.textContent).toBe(dataRoot)
+    expect(window.api.storage.migrate).not.toHaveBeenCalled()
+    expect(window.api.storage.setDataRootAndRelaunch).not.toHaveBeenCalled()
+    expect(window.api.storage.commitAndRelaunch).not.toHaveBeenCalled()
+  })
+
+  it('does not warn about spaced Windows data roots', async () => {
+    Object.assign(window.api, { platform: 'win32' })
+    const dataRoot = 'C:\\Users\\Test User\\Open-Science'
+    vi.mocked(window.api.storage.getInfo).mockResolvedValue({ ...richInfo, dataRoot })
+    vi.mocked(window.api.storage.getStatus).mockResolvedValue({ ...richInfo, dataRoot })
+    await act(async () => root.render(<StoragePanel />))
+    expect(container.textContent).not.toContain('The current data location contains spaces')
+  })
+
   const renderEditor = async (): Promise<void> => {
     vi.mocked(window.api.storage.getInfo).mockResolvedValue({ ...richInfo, isDefault: false })
     await act(async () => root.render(<StoragePanel />))
@@ -616,7 +648,7 @@ describe('StoragePanel', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'failed',
-          summary: 'MedResearch Agent cannot write to its private data folder.',
+          summary: 'DRA cannot write to its private data folder.',
           detail
         }
       ])
@@ -640,7 +672,7 @@ describe('StoragePanel', () => {
         id: 'storage',
         label: 'App storage permission',
         status: 'passed',
-        summary: 'MedResearch Agent can write to its private data folder.',
+        summary: 'DRA can write to its private data folder.',
         detail: '/home/u/.open-science'
       }
     ])
@@ -654,7 +686,7 @@ describe('StoragePanel', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'failed',
-          summary: 'MedResearch Agent cannot write to its private data folder.',
+          summary: 'DRA cannot write to its private data folder.',
           detail: '/home/u/.open-science — EACCES: permission denied'
         }
       ]),
@@ -690,7 +722,7 @@ describe('StoragePanel', () => {
         id: 'storage',
         label: 'App storage permission',
         status: 'passed',
-        summary: 'MedResearch Agent can write to its private data folder.',
+        summary: 'DRA can write to its private data folder.',
         detail: '/home/u/.open-science'
       },
       {
@@ -711,7 +743,7 @@ describe('StoragePanel', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'failed',
-          summary: 'MedResearch Agent cannot write to its private data folder.',
+          summary: 'DRA cannot write to its private data folder.',
           detail: '/home/u/.open-science — EACCES: permission denied'
         }
       ]),
@@ -745,7 +777,7 @@ describe('StoragePanel', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'failed',
-          summary: 'MedResearch Agent cannot write to its private data folder.',
+          summary: 'DRA cannot write to its private data folder.',
           detail: '/home/u/.open-science — EACCES: permission denied'
         }
       ]),
@@ -769,7 +801,7 @@ describe('StoragePanel', () => {
         id: 'storage',
         label: 'App storage permission',
         status: 'passed',
-        summary: 'MedResearch Agent can write to its private data folder.'
+        summary: 'DRA can write to its private data folder.'
       },
       {
         id: 'agent',
@@ -788,7 +820,7 @@ describe('StoragePanel', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'failed',
-          summary: 'MedResearch Agent cannot write to its private data folder.'
+          summary: 'DRA cannot write to its private data folder.'
         }
       ]),
       checkEnvironment
@@ -808,7 +840,7 @@ describe('StoragePanel', () => {
             id: 'storage',
             label: 'App storage permission',
             status: 'passed',
-            summary: 'MedResearch Agent can write to its private data folder.'
+            summary: 'DRA can write to its private data folder.'
           }
         ])
       })
@@ -824,7 +856,7 @@ describe('StoragePanel', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'failed',
-          summary: 'MedResearch Agent cannot write to its private data folder.'
+          summary: 'DRA cannot write to its private data folder.'
         }
       ])
     })
@@ -857,7 +889,7 @@ describe('StoragePanel', () => {
           id: 'storage',
           label: 'App storage permission',
           status: 'failed',
-          summary: 'MedResearch Agent cannot write to its private data folder.'
+          summary: 'DRA cannot write to its private data folder.'
         }
       ]),
       checkEnvironment
@@ -894,14 +926,14 @@ describe('StoragePanel', () => {
     })
 
     // The warning is gated behind the confirm step — not shown on the collapsed panel.
-    expect(container.textContent).not.toContain('MedResearch Agent manages this folder')
+    expect(container.textContent).not.toContain('DRA manages this folder')
 
     await act(async () => {
       clickButton((button) => button.textContent?.trim() === 'Change location')
       await Promise.resolve()
     })
 
-    expect(document.body.textContent).toContain('MedResearch Agent manages this folder')
+    expect(document.body.textContent).toContain('DRA manages this folder')
     expect(document.body.textContent).toContain(
       "Don't move, rename, or delete files inside it — doing so can break your projects and history."
     )
@@ -1158,7 +1190,7 @@ describe('StoragePanel', () => {
       await Promise.resolve()
     })
 
-    expect(container.textContent).toContain('already contains MedResearch Agent data')
+    expect(container.textContent).toContain('already contains DRA data')
     expect(container.textContent).toContain('Data will be stored in')
     expect(container.textContent).toContain('/mnt/existing/OpenScience')
     expect(

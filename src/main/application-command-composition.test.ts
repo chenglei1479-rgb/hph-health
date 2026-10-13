@@ -105,6 +105,7 @@ const dependencies = (): ApplicationCommandCompositionDependencies =>
     memory: EMPTY_OWNER,
     literature: EMPTY_OWNER,
     bookmarks: EMPTY_OWNER,
+    sessionReplay: EMPTY_OWNER,
     pdfAnnotations: EMPTY_OWNER,
     dataContent: EMPTY_OWNER,
     host: EMPTY_OWNER
@@ -231,6 +232,44 @@ const invocation = (
 }
 
 describe('application command composition', () => {
+  it('requires an account across Electron, Web and Task dispatch, and rechecks after async work', async () => {
+    let authorized = false
+    const list = vi.fn(async () => [project('private')])
+    const composition = createApplicationCommandComposition({
+      ...dependencies(),
+      authorizeCommand: () => {
+        if (!authorized) throw new Error('DRA account login required.')
+      },
+      dataContent: {
+        projects: { list },
+        withDataRootWrite: async (operation: () => Promise<unknown>) => operation()
+      } as never
+    })
+    try {
+      for (const view of [
+        composition.electron,
+        composition.localWeb,
+        composition.remoteWeb,
+        composition.task
+      ]) {
+        await expect(view.invoke('projects:list', invocation())).rejects.toThrow('login required')
+      }
+      expect(list).not.toHaveBeenCalled()
+      authorized = true
+      await expect(composition.localWeb.invoke('projects:list', invocation())).resolves.toEqual([
+        project('private')
+      ])
+      list.mockImplementationOnce(async () => {
+        authorized = false
+        return [project('private')]
+      })
+      await expect(composition.task.invoke('projects:list', invocation())).rejects.toThrow(
+        'login required'
+      )
+    } finally {
+      composition.dispose()
+    }
+  })
   it('joins the runtime-validated contracts into the Electron view', () => {
     const composition = createApplicationCommandComposition(dependencies())
 
@@ -245,6 +284,7 @@ describe('application command composition', () => {
       'bookmarks:resolve-pdf-source',
       'bookmarks:update-note',
       'lifecycle:claim-runtime-writer',
+      'literature:add-pdf',
       'literature:cancel-pdf-import',
       'literature:citation-styles',
       'literature:complete-metadata',
@@ -256,6 +296,7 @@ describe('application command composition', () => {
       'literature:import-pdf',
       'literature:import-records',
       'literature:jobs',
+      'literature:journals',
       'literature:lookup-metadata',
       'literature:search',
       'literature:sources',
@@ -274,6 +315,7 @@ describe('application command composition', () => {
       'pdf-annotations:delete',
       'pdf-annotations:import-native',
       'pdf-annotations:list',
+      'pdf-annotations:reconcile',
       'pdf-annotations:update',
       'pdf-structure:cancel',
       'pdf-structure:clear-cache',
@@ -288,6 +330,13 @@ describe('application command composition', () => {
       'projects:retry-deletion-cleanup',
       'projects:update',
       'projects:update-archive',
+      'session-replay:get',
+      'session-replay:get-selection-snapshot',
+      'session-replay:list',
+      'session-replay:list-selection-snapshots',
+      'session-replay:save-selection-snapshot',
+      'session-replay:save-view',
+      'session-replay:unlink-session',
       'sessions:cancel-diagnostics',
       'sessions:delete-session',
       'sessions:edit-details',
@@ -299,6 +348,7 @@ describe('application command composition', () => {
       'sessions:inspect-diagnostics',
       'sessions:link-pdf-context',
       'sessions:package-operation',
+      'sessions:retry-runtime-terminal-commit',
       'sessions:set-delegation-policy',
       'sessions:unlink-pdf-context',
       'sessions:update-archive',
@@ -755,6 +805,7 @@ describe('TB-01 remote preview admission', () => {
     const resolvePath = vi.fn(async (_source, request) => localFs.resolveFilePath(request))
     const trustedLease = {
       path,
+      checksum: 'a'.repeat(64),
       size: content.length,
       versionToken: 1,
       snapshot: { dev: 1n, ino: 1n, size: BigInt(content.length), mtimeNs: 1n },
@@ -801,6 +852,7 @@ describe('TB-01 remote preview admission', () => {
         expect(resolvePath, 'reject before filesystem resolution').not.toHaveBeenCalled()
       } else {
         resource = await acquired
+        expect(resource.sourceChecksum).toBe(source === 'local' ? undefined : trustedLease.checksum)
         const range = (await dispatcher.invoke('preview-resources:read-range', {
           ...caller,
           args: [{ resourceId: resource.id, begin: 0, end: content.length }]

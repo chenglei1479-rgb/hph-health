@@ -128,7 +128,9 @@ describe('ProvidersPanel: unexpected command failures', () => {
     const alert = container.querySelector('[role="alert"]')
     expect(alert?.textContent).toBe('无法测试模型服务商连接。')
     expect(alert?.textContent).not.toContain('/private/provider.sock')
-    const details = container.querySelector('details')
+    const details = [...container.querySelectorAll('details')].find((item) =>
+      item.textContent?.includes('/private/provider.sock')
+    )
     expect(details?.open).toBe(false)
     expect(details?.textContent).toContain('/private/provider.sock')
   })
@@ -495,12 +497,12 @@ describe('ProvidersPanel: claude-shared actions', () => {
 
     render()
     const disconnect = document.body.querySelector<HTMLButtonElement>(
-      '[aria-label="Disconnect from MedResearch Agent"]'
+      '[aria-label="Disconnect from DRA"]'
     )
     await act(async () => disconnect?.click())
 
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      'Could not disconnect Claude from MedResearch Agent.'
+      'Could not disconnect Claude from DRA.'
     )
   })
 })

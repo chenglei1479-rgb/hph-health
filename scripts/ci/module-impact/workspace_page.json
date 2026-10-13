@@ -1,5 +1,9 @@
 {
   "ownerPaths": [
+    "src/shared/scientific-status.ts",
+    "src/shared/scientific-status.test.ts",
+    "src/renderer/src/pages/workspace/ScientificStatusPanel.tsx",
+    "src/renderer/src/pages/workspace/ScientificStatusPanel.test.tsx",
     "src/renderer/src/pages/workspace/WorkspacePage.tsx",
     "src/renderer/src/pages/workspace/notebook-preview-availability.ts",
     "src/renderer/src/pages/workspace/workspace-panel-layout.tsx",
@@ -65,6 +69,8 @@
   "consumerModules": [],
   "testFiles": {
     "owner": [
+      "src/shared/scientific-status.test.ts",
+      "src/renderer/src/pages/workspace/ScientificStatusPanel.test.tsx",
       "src/renderer/src/pages/workspace/WorkspacePage.draft-preservation.test.tsx",
       "src/renderer/src/pages/workspace/WorkspacePage.customize-prefill.test.tsx",
       "src/renderer/src/pages/workspace/WorkspacePage.edit-message.test.tsx",
@@ -135,9 +141,7 @@
       "src/renderer/src/main.render.test.tsx",
       "src/renderer/src/pages/home/HomePage.persistence.test.tsx",
       "src/renderer/src/pages/home/HomePage.render.test.tsx",
-      "src/renderer/src/pages/literature/LiteratureFullTextLookup.render.test.tsx",
       "src/renderer/src/pages/literature/LiteratureLibraryPage.render.test.tsx",
-      "src/renderer/src/pages/literature/LiteraturePdfBatchImportDialog.test.tsx",
       "src/renderer/src/pages/onboarding/AgentStep.render.test.tsx",
       "src/renderer/src/pages/onboarding/EnvironmentStep.render.test.tsx",
       "src/renderer/src/pages/onboarding/LocationStep.render.test.tsx",
@@ -230,6 +234,8 @@
       "src/renderer/src/pages/workspace/PreviewPanel.test.tsx",
       "src/renderer/src/pages/workspace/ProjectFilesView.test.tsx",
       "src/renderer/src/pages/workspace/ReportErrorDialog.interaction.test.tsx",
+      "src/renderer/src/pages/workspace/SessionReplayEvidence.test.tsx",
+      "src/renderer/src/pages/workspace/SessionReplayPreview.test.tsx",
       "src/renderer/src/pages/workspace/SessionMessageMarkdown.image-loading.test.tsx",
       "src/renderer/src/pages/workspace/SessionMessageMarkdown.integration.test.tsx",
       "src/renderer/src/pages/workspace/SessionMessageMarkdown.test.tsx",
@@ -267,6 +273,8 @@
       "src/renderer/src/pages/workspace/previews/PreviewToolContent.reviewer.integration.test.tsx",
       "src/renderer/src/pages/workspace/previews/PreviewToolContent.test.tsx",
       "src/renderer/src/pages/workspace/previews/preview-registry.test.tsx",
+      "src/renderer/src/pages/workspace/replay/ReplayPanel.test.tsx",
+      "src/renderer/src/pages/workspace/replay/ReplayToolRecord.test.tsx",
       "src/renderer/src/pages/workspace/workspace-session-agent-configuration-controller.availability.test.ts",
       "src/renderer/src/stores/network-store.test.ts",
       "src/renderer/src/stores/settings-navigation-slice.test.ts",
@@ -275,7 +283,13 @@
       "src/renderer/src/stores/specialist-store.upload.test.ts",
       "src/renderer/web/bootstrap.test.ts",
       "src/renderer/web/renderer-argument-shape-characterization.test.ts",
-      "src/renderer/src/pages/literature/SmartCollectionPanel.test.tsx"
+      "src/renderer/src/pages/literature/detail/LiteratureFullTextLookup.render.test.tsx",
+      "src/renderer/src/pages/literature/imports/LiteraturePdfBatchImportDialog.test.tsx",
+      "src/renderer/src/pages/literature/collections/SmartCollectionPanel.test.tsx",
+      "src/renderer/src/pages/workspace/NotebookFolderAccessNotice.interaction.test.tsx",
+      "src/renderer/src/pages/workspace/previews/renderers/PdfTranslationControls.test.tsx",
+      "src/renderer/src/pages/workspace/previews/renderers/PdfPreview.test.tsx",
+      "src/renderer/src/pages/workspace/previews/renderers/PdfTranslationEditions.test.tsx"
     ]
   },
   "capabilityOverlays": ["renderer_state"],

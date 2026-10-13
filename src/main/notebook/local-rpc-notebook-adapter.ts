@@ -57,6 +57,7 @@ const notebookSessionRequestSchema = z
     workspaceCwd: z.string(),
     provenanceContext: provenanceContextSchema.optional(),
     executionInvocationId: z.string().optional(),
+    rootExecutionId: z.string().optional(),
     registeredInputFiles: z.array(registeredInputFileSchema).optional(),
     registeredHelperSkillIds: z.array(z.string()).optional(),
     inputRunLeaseId: z.string().optional(),
@@ -104,6 +105,7 @@ const notebookLocalRpcRequestSchemas = {
     background: z.boolean().optional(),
     kernelSkillIds: z.array(z.string().min(1).max(128)).optional(),
     artifactVersionInputs: z.array(z.string().min(1).max(256)).max(64).optional(),
+    inputVersionIds: z.array(z.string().min(1).max(256)).max(64).optional(),
     timeoutMs: positiveTimeoutSchema.optional(),
     cellId: z.string().optional(),
     source: runSourceSchema.optional(),
@@ -260,8 +262,8 @@ type NotebookLocalRpcCapability = {
     signal?: AbortSignal
   ): Promise<ManageEnvironmentsResult>
   listRuntimes(request: NotebookSessionRequest): Promise<unknown>
-  bindRuntime(request: NotebookRuntimeBindingRequest): Promise<unknown>
-  switchRuntime(request: NotebookRuntimeBindingRequest): Promise<unknown>
+  bindRuntime(request: NotebookRuntimeBindingRequest, signal?: AbortSignal): Promise<unknown>
+  switchRuntime(request: NotebookRuntimeBindingRequest, signal?: AbortSignal): Promise<unknown>
 }
 
 const NOTEBOOK_LOCAL_RPC_METHODS = [
@@ -413,11 +415,11 @@ const resolveNotebookLocalRpcHandler = (
       return (request) =>
         capability.listRuntimes(parseNotebookLocalRpcRequest('listRuntimes', request))
     case 'bindRuntime':
-      return (request) =>
-        capability.bindRuntime(parseNotebookLocalRpcRequest('bindRuntime', request))
+      return (request, signal) =>
+        capability.bindRuntime(parseNotebookLocalRpcRequest('bindRuntime', request), signal)
     case 'switchRuntime':
-      return (request) =>
-        capability.switchRuntime(parseNotebookLocalRpcRequest('switchRuntime', request))
+      return (request, signal) =>
+        capability.switchRuntime(parseNotebookLocalRpcRequest('switchRuntime', request), signal)
   }
 }
 

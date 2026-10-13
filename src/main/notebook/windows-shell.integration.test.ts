@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import * as fsPromises from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { execFile, spawn } from 'node:child_process'
@@ -19,7 +19,7 @@ import {
 import { ShellProcessOwnershipRegistry } from './shell-process-ownership.windows-posix'
 import { createNotebookEnvironmentLifecycle } from './environment-lifecycle-workflows'
 import { windowsSupervisedLaunch } from '../../../packages/notebook-network-sandbox/runtime/src/platform/windows-appcontainer'
-import type { NotebookProcessSandbox } from './process-sandbox'
+import type { NotebookProcessSandbox, NotebookSandboxProcessState } from './process-sandbox'
 import { NotebookRuntimeService } from './runtime-service'
 import { NotebookRunRepository } from './repository'
 import { NotebookNetworkSandboxOwner } from './network-sandbox-owner'
@@ -74,7 +74,9 @@ const fixtureSandbox = (
               const confirmed = await launch.confirmProcessTreeTermination()
               observe?.({ phase: 'native-proof', confirmed })
               return confirmed
-            }
+            },
+            requestProcessTreeTermination: async () => launch.requestProcessTreeTermination(),
+            confirmProcessState: async () => launch.confirmProcessState()
           }
         : {}),
       annotateStderr: (stderr) => stderr,
@@ -107,9 +109,10 @@ const shellRequest = (root: string): NotebookShellProcessRequest => ({
   timeoutMs: POWERSHELL_PROCESS_TIMEOUT_MS
 })
 
-const runPowerShell = (command: string): ReturnType<typeof runShellCommand> =>
+const runPowerShell = (command: string, version?: '7.6'): ReturnType<typeof runShellCommand> =>
   runShellCommand({
     command,
+    ...(version ? { runtimeBinding: { kind: 'powershell' as const, version } } : {}),
     cwd: process.cwd(),
     handoffDir: process.cwd(),
     runtimeRoot: join(process.cwd(), '.open-science-test-runtime'),
@@ -122,6 +125,157 @@ const runPowerShell = (command: string): ReturnType<typeof runShellCommand> =>
   })
 
 describe.runIf(process.platform === 'win32')('Windows notebook shell integration', () => {
+  it.for([false, true])(
+    'shares npm tools across live Sessions and retains them after Session deletion (protected: %s)',
+    { timeout: 180_000 },
+    async (protectedMode, { skip }) => {
+      if (protectedMode && process.env.OPEN_SCIENCE_TEST_PROTECTED_SHELL !== '1') skip()
+      const root = await mkdtemp(join(tmpdir(), 'shell-shared-tools-目录 with spaces-'))
+      if (!protectedMode) vi.stubEnv('OPEN_SCIENCE_E2E_STORAGE_ROOT', root)
+      const runtimeRoot = join(root, 'runtime')
+      const first = join(root, 'session-one')
+      const second = join(root, 'session-two')
+      await mkdir(runtimeRoot)
+      await mkdir(first)
+      await mkdir(second)
+      await mkdir(join(first, 'fixture'))
+      await writeFile(
+        join(first, 'fixture/package.json'),
+        JSON.stringify({
+          name: 'fixture-shared-cli',
+          version: '1.0.0',
+          bin: { 'fixture-cli': 'cli.js' }
+        })
+      )
+      await writeFile(
+        join(first, 'fixture/cli.js'),
+        '#!/usr/bin/env node\nprocess.stdout.write("SHARED_TOOL_READY")\n'
+      )
+      const owner = new NotebookNetworkSandboxOwner({
+        resourceRoot: join(process.cwd(), 'packages/notebook-network-sandbox/vendor'),
+        temporaryRoot: join(root, 'commands'),
+        getSettings: async () => DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+        persistAlwaysAllow: async () => DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+        requestDecision: async () => 'deny'
+      })
+      let adapter = new NotebookShellProcessAdapter('win32', owner)
+      const request = (cwd: string, command: string): NotebookShellProcessRequest => ({
+        ...shellRequest(root),
+        runtimeRoot,
+        cwd,
+        handoffDir: cwd,
+        sessionId: cwd === first ? 'fixture-session-one' : 'fixture-session-two',
+        runtimeBinding: { kind: 'powershell', version: '7.6' },
+        command
+      })
+      try {
+        expect(
+          await adapter.execute(request(second, '[Console]::Write("SESSION_READY")'))
+        ).toMatchObject({
+          exitCode: 0,
+          stdout: 'SESSION_READY'
+        })
+        const installed = await adapter.execute(
+          request(
+            first,
+            'npm.cmd install -g ./fixture --offline --install-links --ignore-scripts --no-audit --no-fund'
+          )
+        )
+        expect(installed, JSON.stringify(installed)).toMatchObject({ exitCode: 0 })
+        const shared = await adapter.execute(request(second, 'fixture-cli.cmd'))
+        expect(shared, JSON.stringify(shared)).toMatchObject({
+          exitCode: 0,
+          stdout: 'SHARED_TOOL_READY'
+        })
+        expect(await adapter.shutdown()).toEqual({ reaped: true })
+        await rm(first, { recursive: true, force: true })
+        adapter = new NotebookShellProcessAdapter('win32', owner)
+        expect(await adapter.execute(request(second, 'fixture-cli.cmd'))).toMatchObject({
+          exitCode: 0,
+          stdout: 'SHARED_TOOL_READY'
+        })
+        const tools = join(runtimeRoot, 'npm', `win32-${process.arch}`)
+        expect(
+          JSON.parse(
+            await readFile(join(tools, 'node_modules/fixture-shared-cli/package.json'), 'utf8')
+          ).name
+        ).toBe('fixture-shared-cli')
+      } finally {
+        expect(await adapter.shutdown()).toEqual({ reaped: true })
+        await owner.dispose()
+        vi.unstubAllEnvs()
+        await rm(root, { recursive: true, force: true })
+      }
+    }
+  )
+
+  it.for([false, true])(
+    'separates PowerShell control input through the native owner (protected: %s)',
+    { timeout: 60_000 },
+    async (protectedMode, { skip }) => {
+      if (protectedMode && process.env.OPEN_SCIENCE_TEST_PROTECTED_SHELL !== '1') skip()
+      const root = await mkdtemp(join(tmpdir(), 'shell-native-stdin-'))
+      if (!protectedMode) vi.stubEnv('OPEN_SCIENCE_E2E_STORAGE_ROOT', root)
+      await mkdir(join(root, 'workspace'))
+      await mkdir(join(root, 'runtime'))
+      const owner = new NotebookNetworkSandboxOwner({
+        resourceRoot: join(process.cwd(), 'packages/notebook-network-sandbox/vendor'),
+        temporaryRoot: join(root, 'commands'),
+        getSettings: async () => DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+        persistAlwaysAllow: async () => DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+        requestDecision: async () => 'deny'
+      })
+      const registry = new ShellProcessOwnershipRegistry(root)
+      const adapter = new NotebookShellProcessAdapter('win32', owner, registry)
+      const wrap = owner.wrap.bind(owner)
+      const launches: string[] = []
+      const wrapping = vi.spyOn(owner, 'wrap').mockImplementation(async (invocation) => {
+        const wrapped = await wrap(invocation)
+        launches.push(wrapped.args[0])
+        return wrapped
+      })
+      const request = {
+        ...shellRequest(root),
+        cwd: join(root, 'workspace'),
+        handoffDir: join(root, 'workspace'),
+        runtimeRoot: join(root, 'runtime')
+      }
+      try {
+        const executable = process.execPath.replaceAll("'", "''")
+        const script = `process.stdout.write(require('node:fs').readFileSync(0,'utf8') || 'eof')`
+        const child = `& '${executable}' -e '${script.replaceAll("'", "''")}'`
+        const first = await adapter.execute({
+          ...request,
+          command: `$value = "kept"; [Console]::Write($null -eq [Console]::ReadLine()); ${protectedMode ? '' : child}`
+        })
+        expect(first, JSON.stringify(first)).toMatchObject({
+          stdout: protectedMode ? 'True' : 'Trueeof',
+          exitCode: 0
+        })
+        // The installed protected runtime checks IPC without depending on this machine's drive
+        // authorization. The isolated standard fixture also checks native invocation and cwd/state.
+        if (!protectedMode) {
+          const second = await adapter.execute({
+            ...request,
+            command: `#${'x'.repeat(24_000)}\n[Console]::Write($value)`
+          })
+          expect(second, JSON.stringify(second)).toMatchObject({ stdout: 'kept', exitCode: 0 })
+        }
+        expect(registry.hasReceipts()).toBe(true)
+        expect(launches).toEqual([protectedMode ? 'launch' : 'supervise'])
+      } finally {
+        const shutdown = await adapter.shutdown()
+        await owner.dispose()
+        wrapping.mockRestore()
+        vi.unstubAllEnvs()
+        expect(shutdown).toEqual({ reaped: true })
+        expect(registry.hasReceipts()).toBe(false)
+        expect(await readdir(join(root, 'commands'))).toEqual([])
+        await rm(root, { recursive: true, force: true })
+      }
+    }
+  )
+
   it('persists two real standard REPL commands and releases their native owner on shutdown', async () => {
     const root = await mkdtemp(join(tmpdir(), 'repl-native-persistence-'))
     vi.stubEnv('OPEN_SCIENCE_E2E_STORAGE_ROOT', root)
@@ -194,7 +348,10 @@ describe.runIf(process.platform === 'win32')('Windows notebook shell integration
       await service.dispose().catch(() => undefined)
       await owner.dispose().catch(() => undefined)
       vi.unstubAllEnvs()
-      if (cleanupVerified || shutdown.reaped) await rm(root, { recursive: true, force: true })
+      // Termination is verified before removal; Windows may still hold a transient directory lock.
+      if (cleanupVerified || shutdown.reaped) {
+        await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+      }
     }
   }, 60_000)
 
@@ -237,6 +394,7 @@ describe.runIf(process.platform === 'win32')('Windows notebook shell integration
           const wrapped = await launch.call(this, request)
           expect(wrapped.argv[1]).toBe('supervise')
           expect(wrapped.confirmProcessTreeTermination).toBeTypeOf('function')
+          expect(wrapped.confirmProcessState).toBeTypeOf('function')
           const first = proofs.length === 0
           const index = proofs.length
           proofReads.push(0)
@@ -247,12 +405,22 @@ describe.runIf(process.platform === 'win32')('Windows notebook shell integration
             confirmed ||= result
             return result
           }
-          proofs.push(async () => confirmed || confirm())
+          const confirmState = async (): Promise<NotebookSandboxProcessState> => {
+            proofReads[index]++
+            const result = await wrapped.confirmProcessState!()
+            confirmed ||= result !== 'termination-unknown'
+            return result
+          }
+          proofs.push(async () => confirmed || (await confirmState()) !== 'termination-unknown')
           return {
             ...wrapped,
             // Inject only unavailable evidence. The real native Job and original receipt remain in use.
             confirmProcessTreeTermination: () =>
-              first && !allowProof ? Promise.resolve(false) : confirm()
+              first && !allowProof ? Promise.resolve(false) : confirm(),
+            confirmProcessState: () =>
+              first && !allowProof
+                ? Promise.resolve('termination-unknown' as const)
+                : confirmState()
           }
         })
       const scope = (sessionId: string): { sessionId: string; workspaceCwd: string } => ({
@@ -264,7 +432,10 @@ describe.runIf(process.platform === 'win32')('Windows notebook shell integration
       let receiptRemoval: ReturnType<typeof vi.spyOn> | undefined
       let allNativeProofs = false
       try {
-        const a = await service.executeShell({ ...scope('A'), command: `Write-Output '${nonceA}'` })
+        const a = await service.executeShell({
+          ...scope('A'),
+          command: `Write-Output '${nonceA}'; exit 0`
+        })
         expect(a).toMatchObject({ errorCode: 'shell-cleanup-incomplete' })
         expect(a.stdout).toContain(nonceA)
         expect(info).toHaveBeenCalledWith(
@@ -284,7 +455,7 @@ describe.runIf(process.platform === 'win32')('Windows notebook shell integration
         for (let attempt = 0; attempt < 2; attempt++) {
           const blocked = await service.executeShell({
             ...scope('B'),
-            command: `Write-Output '${nonceB}'`
+            command: `Write-Output '${nonceB}'; exit 0`
           })
           expect(blocked).toMatchObject({
             errorCode: 'shell-cleanup-incomplete',
@@ -314,13 +485,16 @@ describe.runIf(process.platform === 'win32')('Windows notebook shell integration
         if (receiptRetry) {
           const stillBlocked = await service.executeShell({
             ...scope('B'),
-            command: `Write-Output '${nonceB}'`
+            command: `Write-Output '${nonceB}'; exit 0`
           })
           expect(stillBlocked).toMatchObject({ errorCode: 'shell-cleanup-incomplete' })
           expect(proofs).toHaveLength(1)
           expect(await readFile(join(root, 'commands', receiptName), 'utf8')).toBe(receipt)
         }
-        const b = await service.executeShell({ ...scope('B'), command: `Write-Output '${nonceB}'` })
+        const b = await service.executeShell({
+          ...scope('B'),
+          command: `Write-Output '${nonceB}'; exit 0`
+        })
         expect(b).toMatchObject({ exitCode: 0 })
         expect(b.errorCode).toBeUndefined()
         expect(b.stdout.trim()).toBe(nonceB)
@@ -455,7 +629,8 @@ describe.runIf(process.platform === 'win32')('Windows notebook shell integration
         await expect(lifecycle.status(), JSON.stringify(result)).resolves.toMatchObject({
           provisioning: false
         })
-        expect(result).toMatchObject({ stdout: 'finished', stderr: '', exitCode: 0 })
+        expect(result).toMatchObject({ stdout: 'finished', exitCode: 0 })
+        expect(result.stderr).toContain('interpreter state was reset')
         expect(registry.hasReceipts()).toBe(false)
         const service = new NotebookRuntimeService({
           configRoot: root,
@@ -626,6 +801,46 @@ ${ending === 'exit' ? '' : 'setInterval(() => {}, 1000);'}
     POWERSHELL_TEST_TIMEOUT_MS
   )
 
+  it(
+    'releases ownership after retrying temporary cleanup with termination already proved',
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), 'shell-cleanup-retry-'))
+      const registry = new ShellProcessOwnershipRegistry(root)
+      const sandbox = fixtureSandbox(root, 'process.stdout.write("finished")')
+      const outcomes: boolean[] = []
+      const adapter = new NotebookShellProcessAdapter(
+        'win32',
+        {
+          wrap: async (invocation) => {
+            const wrapped = await sandbox.wrap(invocation)
+            return {
+              ...wrapped,
+              cleanup: async (reason, outcome) => {
+                outcomes.push(outcome.processesTerminated)
+                const result = await wrapped.cleanup(reason, outcome)
+                return { ...result, temporaryResourcesRemoved: outcomes.length > 1 }
+              }
+            }
+          }
+        },
+        registry
+      )
+      try {
+        const result = await adapter.execute(shellRequest(root))
+        expect(result).toMatchObject({ errorCode: 'shell-cleanup-incomplete', stdout: 'finished' })
+        expect(outcomes).toEqual([true])
+        expect(registry.hasReceipts()).toBe(true)
+        expect(await adapter.shutdown()).toEqual({ reaped: true })
+        expect(outcomes).toEqual([true, true])
+        expect(registry.hasReceipts()).toBe(false)
+      } finally {
+        const shutdown = await adapter.shutdown()
+        if (shutdown.reaped) await rm(root, { recursive: true, force: true })
+      }
+    },
+    POWERSHELL_TEST_TIMEOUT_MS
+  )
+
   it('retains the receipt when the native termination proof cannot be verified', async () => {
     const root = await mkdtemp(join(tmpdir(), 'shell-missing-proof-'))
     const registry = new ShellProcessOwnershipRegistry(root)
@@ -641,7 +856,9 @@ ${ending === 'exit' ? '' : 'setInterval(() => {}, 1000);'}
               // Reap the real fixture but model an unreadable proof at the existing system port.
               await wrapped.confirmProcessTreeTermination?.()
               return false
-            }
+            },
+            requestProcessTreeTermination: async () => false,
+            confirmProcessState: async () => 'termination-unknown' as const
           }
         }
       },
@@ -674,7 +891,7 @@ ${ending === 'exit' ? '' : 'setInterval(() => {}, 1000);'}
       const result = await adapter.execute(shellRequest(root))
       expect(result).toMatchObject({
         stdout: 'x'.repeat(256 * 1024),
-        stderr: 'y'.repeat(12 * 1024),
+        stderr: 'y'.repeat(12 * 1024) + '\nShell interpreter exited; interpreter state was reset.',
         exitCode: 0
       })
       expect(result.truncated).not.toBe(true)
@@ -708,27 +925,40 @@ ${ending === 'exit' ? '' : 'setInterval(() => {}, 1000);'}
     POWERSHELL_TEST_TIMEOUT_MS
   )
 
-  it(
-    'preserves UTF-8 output with only standard machine module paths',
-    async () => {
-      const result = await runPowerShell(`
+  it.each(['5.1', '7.6'] as const)(
+    'preserves UTF-8 output with only the selected PowerShell %s module paths',
+    async (version) => {
+      const result = await runPowerShell(
+        `
 Write-Output "分析完成"
+Write-Output "__OPEN_SCIENCE_VERSION__=$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
 Write-Output "__OPEN_SCIENCE_PSMODULEPATH__=$env:PSModulePath"
 Write-Output "__OPEN_SCIENCE_INTERNAL__=[$env:OPEN_SCIENCE_PSMODULEPATH]"
-`)
+`,
+        version === '7.6' ? version : undefined
+      )
 
       expect(result).toMatchObject({ exitCode: 0 })
       expect(result.stdout).toContain('分析完成')
-      const programFiles = process.env.ProgramFiles
-      const windowsRoot = process.env.SystemRoot ?? process.env.WINDIR
-      expect(programFiles).toBeTruthy()
-      expect(windowsRoot).toBeTruthy()
-      if (!programFiles || !windowsRoot) throw new Error('Missing standard Windows path variables.')
+      expect(result.stdout).toContain(`__OPEN_SCIENCE_VERSION__=${version}`)
+      const modules =
+        version === '7.6'
+          ? [
+              join(
+                process.cwd(),
+                'packages/notebook-network-sandbox/vendor/windows-runtime',
+                process.arch,
+                'powershell/Modules'
+              )
+            ]
+          : [
+              join(process.env.ProgramFiles!, 'WindowsPowerShell', 'Modules'),
+              join(process.env.SystemRoot!, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules')
+            ]
       const modulePath = result.stdout.match(/^__OPEN_SCIENCE_PSMODULEPATH__=(.*)$/mu)?.[1]?.trim()
-      expect(modulePath?.split(';').map((entry) => entry.toLowerCase())).toEqual([
-        `${programFiles}\\WindowsPowerShell\\Modules`.toLowerCase(),
-        `${windowsRoot}\\System32\\WindowsPowerShell\\v1.0\\Modules`.toLowerCase()
-      ])
+      expect(modulePath?.split(';').map((entry) => entry.toLowerCase())).toEqual(
+        modules.map((entry) => entry.toLowerCase())
+      )
       expect(result.stdout).toContain('__OPEN_SCIENCE_INTERNAL__=[]')
     },
     POWERSHELL_TEST_TIMEOUT_MS

@@ -358,6 +358,56 @@ describe('notebook run repository', () => {
     ])
   })
 
+  it('does not block startup recovery when an unrelated Notebook document is corrupt', async () => {
+    const root = await createStorageRoot()
+    const repository = new NotebookRunRepository(root)
+    const validProjectId = 'default-project'
+    const validSessionId = 'valid-session'
+    const validLane = createRootNotebookLane(
+      validProjectId,
+      validSessionId,
+      'root-frame-valid-session'
+    )
+    await repository.loadOrCreate({
+      projectId: validProjectId,
+      sessionId: validSessionId,
+      workspaceCwd: '/workspace',
+      lane: validLane
+    })
+    const validRun = admittedRun({
+      runId: 'background-run',
+      executionMode: 'background',
+      status: 'completed',
+      endedAt: 2
+    })
+    await repository.appendRun({
+      projectId: validProjectId,
+      sessionId: validSessionId,
+      lane: validLane,
+      run: validRun
+    })
+
+    const corruptProjectId = 'corrupt-project'
+    const corruptSessionId = 'corrupt-session'
+    const corruptDocument = await repository.loadOrCreate({
+      projectId: corruptProjectId,
+      sessionId: corruptSessionId,
+      workspaceCwd: '/workspace',
+      lane: createRootNotebookLane(corruptProjectId, corruptSessionId, 'root-frame-corrupt')
+    })
+    const corruptPath = join(corruptDocument.notebookSessionRoot, 'run.json')
+    await writeFile(corruptPath, '{ not-json', 'utf8')
+
+    await expect(repository.recoverAllRunLifecycles()).resolves.toEqual([
+      {
+        projectId: validProjectId,
+        sessionId: validSessionId,
+        run: expect.objectContaining({ runId: validRun.runId, status: 'completed' })
+      }
+    ])
+    await expect(readFile(corruptPath, 'utf8')).resolves.toBe('{ not-json')
+  })
+
   it('replays every durable terminal background Run even after its terminal fact is gone', async () => {
     const root = await createStorageRoot()
     const repository = new NotebookRunRepository(root)
@@ -956,6 +1006,8 @@ describe('notebook run repository', () => {
 
   it.each([
     ['helper modules', { helperModules: {} }],
+    ['REPL marker value', { kernelKind: 'repl', replPersistentBindings: false }],
+    ['REPL marker kernel', { kernelKind: 'python', replPersistentBindings: true }],
     ['helper evidence status', { helperEvidenceStatus: { state: 'unknown' } }]
   ])('rejects a run with malformed persisted %s', async (_label, malformedRun) => {
     const root = await createStorageRoot()
@@ -1771,11 +1823,37 @@ describe('notebook run repository', () => {
     const window = await reader.readSessionRunWindow('default-project', 'session-1', 2)
     expect(window.runs.map((run) => run.runId)).toEqual(['run-6', 'run-7'])
     expect(window.total).toBe(runCount)
+    const index = await reader.readSessionRunIndex('default-project', 'session-1')
+    expect(index).toHaveLength(runCount)
+    expect(index[0]).toMatchObject({ runId: 'run-0', scriptCharacters: 8, hasOutput: true })
+    expect(index[0]).not.toHaveProperty('script')
+    expect(index[0]).not.toHaveProperty('text')
+    expect(await reader.readSessionRun('default-project', 'session-1', 'run-6')).toMatchObject({
+      script: 'print(6)'
+    })
+    expect(await reader.readSessionRun('default-project', 'session-1', 'missing')).toBeUndefined()
 
     const cache = reader as unknown as {
       documentCache: Map<string, { document: { runs: Array<{ runId: string }> } }>
     }
     expect([...cache.documentCache.values()][0]?.document.runs).toHaveLength(runCount)
+
+    // Simulate a large imported archive and verify replacement invalidates the compact index.
+    const largeDocument = JSON.parse(await readFile(runJsonPath, 'utf8'))
+    largeDocument.runs = Array.from({ length: 2000 }, (_, i) => ({
+      ...largeDocument.runs[0],
+      runId: `large-${i}`,
+      startedAt: i + 1,
+      text: { stdout: 'x'.repeat(4096), stderr: '', traceback: '', plain: [] }
+    }))
+    await writeFile(runJsonPath, JSON.stringify(largeDocument))
+    const largeIndex = await reader.readSessionRunIndex('default-project', 'session-1')
+    expect(largeIndex).toHaveLength(2000)
+    expect(Buffer.byteLength(JSON.stringify(largeIndex))).toBeLessThan(1024 * 1024)
+    expect(await reader.readSessionRun('default-project', 'session-1', 'large-1999')).toMatchObject(
+      { text: { stdout: 'x'.repeat(4096) } }
+    )
+    expect(await reader.readSessionRun('default-project', 'session-1', 'run-6')).toBeUndefined()
   })
 
   it('leaves Session workspace output files in place when another run is appended', async () => {

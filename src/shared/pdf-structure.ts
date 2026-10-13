@@ -19,6 +19,32 @@ export const pdfTextRunsSchema = z
   .max(2048)
 const id = z.string().regex(/^[a-z0-9-]{1,80}$/)
 const pageNumber = z.number().int().positive()
+// Exact PDF.js strings and original getTextContent().items indexes, before repair/filtering.
+// Optional evidence only: absence never makes a cell eligible for translation.
+export const pdfTableSourceItemsSchema = z
+  .array(
+    z
+      .object({
+        pageNumber,
+        index: z.number().int().nonnegative().safe(),
+        text: z.string().refine((text) => text.trim().length > 0)
+      })
+      .strict()
+  )
+  .min(1)
+  .max(8192)
+  .refine(
+    (items) =>
+      items.every((item, index) => {
+        const previous = items[index - 1]
+        return (
+          !previous ||
+          item.pageNumber > previous.pageNumber ||
+          (item.pageNumber === previous.pageNumber && item.index > previous.index)
+        )
+      }),
+    'Table source items must be sorted and unique.'
+  )
 const issue = z.object({ code: z.string().min(1), detail: z.string() }).strict()
 const region = z
   .object({
@@ -38,6 +64,7 @@ const cell = z
     columnSpan: z.number().int().positive(),
     text: z.string(),
     textRuns: pdfTextRunsSchema.optional(),
+    sourceItems: pdfTableSourceItemsSchema.optional(),
     regions: z.array(region)
   })
   .strict()
@@ -219,12 +246,24 @@ export const parsePdfStructureResult = (
     left.length === right.length && left.every((page, index) => page === right[index])
   const auxiliary = result.auxiliaryPages ?? []
   const requested = new Set(expected.requestedPages)
-  const figureCaptionPages = new Set(
-    result.elements
-      .filter((e) => e.kind === 'figure')
-      .flatMap((e) => e.caption?.regions.map((r) => r.page) ?? [])
-  )
   const coveredPages = [...result.requestedPages, ...auxiliary].sort((a, b) => a - b)
+  const isContinuedTableCaptionPage = (
+    element: PdfStructureResult['elements'][number],
+    page: number
+  ): boolean =>
+    element.kind === 'table' &&
+    coveredPages.includes(page + 1) &&
+    element.regions.some((region) => region.page === page + 2)
+  const captionPages = new Set(
+    result.elements.flatMap(
+      (element) =>
+        element.caption?.regions
+          .filter(
+            ({ page }) => element.kind === 'figure' || isContinuedTableCaptionPage(element, page)
+          )
+          .map(({ page }) => page) ?? []
+    )
+  )
   if (
     !samePages(result.requestedPages, expected.requestedPages) ||
     !samePages(result.processedPages, expected.requestedPages) ||
@@ -237,7 +276,7 @@ export const parsePdfStructureResult = (
         page > result.pageCount ||
         requested.has(page) ||
         (index > 0 && page <= auxiliary[index - 1]) ||
-        (!requested.has(page - 1) && !requested.has(page + 1) && !figureCaptionPages.has(page))
+        (!requested.has(page - 1) && !requested.has(page + 1) && !captionPages.has(page))
     ) ||
     result.requestedPages.some(
       (page, index, pages) => page > result.pageCount || (index > 0 && page <= pages[index - 1])
@@ -260,6 +299,7 @@ export const parsePdfStructureResult = (
     throw new Error('PDF thumbnail inventory does not match its elements.')
   }
   const processed = new Set(result.processedPages)
+  const sourceTexts = new Map<string, string>()
   for (const element of result.elements) {
     const tables =
       element.tableParts?.map((part) => part.table) ?? (element.table ? [element.table] : [])
@@ -270,6 +310,19 @@ export const parsePdfStructureResult = (
     ]
     if (regions.some(({ page }) => !processed.has(page)))
       throw new Error('PDF element refers to an unprocessed page.')
+    for (const cell of tables.flatMap((table) => table.cells)) {
+      for (const item of cell.sourceItems ?? []) {
+        if (
+          !processed.has(item.pageNumber) ||
+          !cell.regions.some((r) => r.page === item.pageNumber)
+        )
+          throw new Error('PDF table source item does not belong to its cell page.')
+        const key = `${item.pageNumber}:${item.index}`
+        if (sourceTexts.has(key) && sourceTexts.get(key) !== item.text)
+          throw new Error('PDF table source item has conflicting original text.')
+        sourceTexts.set(key, item.text)
+      }
+    }
     const noteRegions = [
       ...tables.flatMap((table) => table.notes?.flatMap(({ regions }) => regions) ?? []),
       ...(element.tableNotes?.flatMap(({ regions }) => regions) ?? [])
@@ -287,7 +340,9 @@ export const parsePdfStructureResult = (
       element.caption?.regions.some(
         ({ page }) =>
           !coveredPages.includes(page) ||
-          (element.kind !== 'figure' && !element.regions.some((r) => Math.abs(r.page - page) <= 1))
+          (element.kind !== 'figure' &&
+            !element.regions.some((r) => Math.abs(r.page - page) <= 1) &&
+            !isContinuedTableCaptionPage(element, page))
       )
     )
       throw new Error('PDF caption refers to an unread or unsupported source page.')
@@ -298,33 +353,47 @@ export const parsePdfStructureResult = (
   return result
 }
 
-export type ParsePdfStructureRequest = Readonly<{
-  attachmentVersionId: string
-  page: number
-  requestId: string
-}>
-export type ReadPdfStructureThumbnailRequest = Readonly<{
-  attachmentVersionId: string
-  page: number
-  extractionId: string
-  thumbnailId: string
-}>
-export type ReadCachedPdfStructureRequest = Pick<
-  ParsePdfStructureRequest,
-  'attachmentVersionId' | 'page'
->
+const managedSource = z
+  .object({
+    kind: z.literal('managed'),
+    projectId: z.string().min(1).max(200),
+    sourceKind: z.enum(['upload-version', 'artifact-version']),
+    sourceFileId: z.string().min(1).max(200),
+    sourceVersionId: z.string().min(1).max(200)
+  })
+  .strict()
 
-const sourceRequest = z.object({
+export type ManagedPdfStructureSource = z.infer<typeof managedSource>
+export type PdfStructureSource =
+  Readonly<{ attachmentVersionId: string }> | Readonly<{ source: ManagedPdfStructureSource }>
+export type ReadCachedPdfStructureRequest = PdfStructureSource & Readonly<{ page: number }>
+export type ParsePdfStructureRequest = ReadCachedPdfStructureRequest &
+  Readonly<{ requestId: string }>
+export type ReadPdfStructureThumbnailRequest = ReadCachedPdfStructureRequest &
+  Readonly<{
+    extractionId: string
+    thumbnailId: string
+  }>
+
+const literatureRequest = z.object({
   attachmentVersionId: z.string().min(1).max(200),
   page: z.number().int().positive()
 })
-export const readCachedPdfStructureRequest = sourceRequest.strict()
-export const parsePdfStructureRequest = sourceRequest
-  .extend({ requestId: z.string().uuid() })
-  .strict()
-export const readPdfStructureThumbnailRequest = sourceRequest
-  .extend({ extractionId: z.string().uuid(), thumbnailId: id })
-  .strict()
+const managedRequest = z.object({ source: managedSource, page: z.number().int().positive() })
+export const readCachedPdfStructureRequest = z.union([
+  literatureRequest.strict(),
+  managedRequest.strict()
+])
+const parseFields = { requestId: z.string().uuid() }
+export const parsePdfStructureRequest = z.union([
+  literatureRequest.extend(parseFields).strict(),
+  managedRequest.extend(parseFields).strict()
+])
+const thumbnailFields = { extractionId: z.string().uuid(), thumbnailId: id }
+export const readPdfStructureThumbnailRequest = z.union([
+  literatureRequest.extend(thumbnailFields).strict(),
+  managedRequest.extend(thumbnailFields).strict()
+])
 export const pdfStructureCommandContracts = {
   readCached: defineApplicationCommandContract(z.tuple([readCachedPdfStructureRequest]), {
     parse(value: unknown): PdfStructureResult | undefined {

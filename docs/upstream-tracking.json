@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/aipoch/open-science",
+  "draVersionAtAudit": "0.1.19",
+  "referenceBase": {
+    "tag": "v0.36.0",
+    "commit": "724d95e208209cc5fd12ffc54e715fa590454ba5",
+    "status": "unified-candidate-source-merged-pending-validation",
+    "previousTag": "v0.35.1"
+  },
+  "lastObservedRelease": {
+    "tag": "v0.36.0",
+    "commit": "724d95e208209cc5fd12ffc54e715fa590454ba5",
+    "url": "https://github.com/aipoch/open-science/releases/tag/v0.36.0",
+    "observedOn": "2026-10-10",
+    "status": "unified-candidate-pending-validation"
+  },
+  "lastNotifiedRelease": "v0.35.0",
+  "monitor": {
+    "automationId": "aipoch",
+    "intervalHours": 6,
+    "mode": "thread-heartbeat",
+    "notifications": "Only new actionable releases, candidate completion, material failures, or required user action"
+  },
+  "integrationAcceptance": {
+    "codeIntegrated": true,
+    "compatibilityTestsRun": true,
+    "newInstallerBuilt": true,
+    "installedOrPublished": false
+  },
+  "previousReferenceBase": {
+    "tag": "v0.33.3",
+    "commit": "3cc68699d616d80325ad893be4c1a65659d29aed",
+    "status": "customized-snapshot-reference",
+    "lineage": "Independent snapshot history; no common ancestor established. File comparison identifies the upstream reference.",
+    "upstreamFiles": 5969,
+    "identicalLocalFiles": 5462,
+    "differentLocalFiles": 507,
+    "missingLocalFiles": 0
+  },
+  "lastIntegrationComparison": {
+    "changedFiles": 1525,
+    "withoutLocalConflict": 693,
+    "newFiles": 718,
+    "requiringThreeWayReview": 113,
+    "alreadyMatchingTarget": 1,
+    "auditFile": "D:/DRA/work/aipoch-0333-0341-audit.json",
+    "upstreamBareRepository": "D:/DRA/work/aipoch-v0.34.1.git"
+  },
+  "verification": {
+    "regression": 210,
+    "ui": 123,
+    "totalScopedTests": 333,
+    "nodeTypes": true,
+    "webTypes": true,
+    "sandboxTypes": true,
+    "desktopBuild": true,
+    "webBuild": true,
+    "packageContents": true,
+    "packagedStartup": true,
+    "liveAuthenticationTested": false,
+    "i18nFailures": 53,
+    "newI18nFailures": 0,
+    "productionDependencyAdvisories": {
+      "high": 2,
+      "moderate": 10
+    },
+    "installerSha256": "c934c2e9716b097c07204b865551b073cbe645c6e4cebdd729b64a6059ab6782"
+  },
+  "paths": {
+    "project": "D:/DRA/project",
+    "work": "D:/DRA/work",
+    "backup": "D:/DRA/work/dra-before-v0341"
+  },
+  "pendingIntegration": {
+    "status": "source-integrated-open-runtime-validation",
+    "candidateSource": "C:\\Users\\developer\\Documents\\Codex\\2026-10-02\\new-chat\\dra-membership-fix\\dra-v0350-candidate",
+    "referenceSource": "C:\\Users\\developer\\Documents\\Codex\\2026-10-02\\new-chat\\dra-membership-fix\\project",
+    "upstreamChanges": 1679,
+    "cleanAppliedChanges": 1644,
+    "pendingReviews": 0,
+    "helperPythonTestsPassed": 11,
+    "compatibilityTestsRun": false,
+    "installerBuilt": true,
+    "canonicalSourceModified": false,
+    "preserved023SourceModified": false
+  },
+  "candidateIntegration": {
+    "version": "0.1.24",
+    "tag": "v0.35.0",
+    "commit": "098cddfd64e15f5de4d4477594c49cf240b93821",
+    "sourceIntegrated": true,
+    "status": "candidate-only-open-Windows-stop-validation",
+    "pendingContentConflicts": 0,
+    "installerBuilt": true,
+    "installerSha256": "d889f98f74aae77cf36af63b0ed4fd2efba2dfaf7f542975fc35ceb7b1c87b53",
+    "packageContentsVerified": true,
+    "isolatedStartupVerified": true,
+    "remainingNotebookStopTestsFailed": 8,
+    "knownTranslationFailures": 53,
+    "installedOrPublished": false
+  },
+  "brandingCandidate": {
+    "draVersion": "0.1.25",
+    "productName": "DRA",
+    "tagline": "AI Research Infrastructure for Medicine",
+    "previousCandidate": "0.1.24",
+    "acceptance": "candidate with inherited failures",
+    "unchangedOpenNotebookCleanupChecks": 8,
+    "installerBuilt": true,
+    "installerSha256": "39e6860bb5631f6b12fdfb484086274005eed3b70b7c8f43751590fac9d513b4",
+    "packageChecksPassed": true,
+    "isolatedStartupPassed": true
+  },
+  "pending0351Integration": {
+    "source": "C:\\Users\\developer\\Documents\\Codex\\2026-10-02\\new-chat\\dra-membership-fix\\dra-v0351-candidate",
+    "previousSource": "C:\\Users\\developer\\Documents\\Codex\\2026-10-02\\new-chat\\dra-membership-fix\\dra-brand-025-candidate",
+    "draVersion": "0.1.26",
+    "upstreamChanges": 397,
+    "pendingReviews": 0,
+    "testsRun": true,
+    "installerBuilt": true,
+    "canonicalSourceModified": false,
+    "targetedPassed": 1052,
+    "targetedSkipped": 7,
+    "packageContentsVerified": true,
+    "isolatedStartupVerified": true,
+    "allChangedTestsCompleted": false,
+    "typecheck": "main-web-sandbox passed",
+    "databaseSchema": "regenerated and checked",
+    "status": "candidate-only-open-validation",
+    "installerBuildResolution": "NSIS 3.12 in ordinary terminal; D-drive temporary and output paths; generated installer SHA256 verified"
+  },
+  "logoRepair027": {
+    "actualInstallationNotRun": true,
+    "version": "0.1.27",
+    "changes": "AppBrand, three-line tagline, theme-aware logo and workspace home button",
+    "relatedTestsPassed": 125,
+    "desktopAndWebBuildPassed": true,
+    "mainPreloadBundleHashesPreserved": 100,
+    "baseline": "Installed upstream-integrated DRA 0.1.26",
+    "homeRegressionPassed": true,
+    "fullTypecheckCompleted": false,
+    "installerGenerated": true,
+    "installerSha256": "8604b9611eeb67ffe6be34f62c0118943250b817d2f8a4f5a35ce0cdf5ae9f5b"
+  },
+  "unifiedCandidate": {
+    "version": "0.1.33-unified.1",
+    "source": "D:\\DRA\\work\\active\\dra-unified-033-candidate",
+    "japanIntegrated": true,
+    "bbjIntegrated": true,
+    "hospitalConfigAndProfilesIncluded": true,
+    "built": true,
+    "installed": false,
+    "published": false,
+    "researchExecuted": false,
+    "desktopBuildPassed": true,
+    "webBuildPassed": true,
+    "windowsPackageBuilt": true,
+    "status": "unified-unsigned-test-candidate"
+  }
+}

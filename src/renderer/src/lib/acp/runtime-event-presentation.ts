@@ -1,4 +1,5 @@
 import type { AcpRuntimeEvent } from '../../../../shared/acp'
+import { latestTurnAnchor } from '../../../../shared/session-persistence'
 import {
   getActivityGroupTitleFromToolEvent,
   isActivityGroupToolEvent
@@ -42,9 +43,9 @@ const isActivityGroupControlEvent = (
 const isTerminalToolActivity = (activity: ToolActivity | undefined): boolean =>
   activity?.status === 'completed' || activity?.status === 'failed'
 
+// Without a local run the owning turn is the latest anchor; a routed reply is not a new prompt.
 const getCurrentPromptMessageId = (session: ChatSession): string | undefined =>
-  session.activeRun?.promptMessageId ??
-  session.messages.findLast((message) => message.role === 'user')?.id
+  session.activeRun?.promptMessageId ?? latestTurnAnchor(session.messages)?.id
 
 const ownsForegroundPrompt = (session: ChatSession): boolean =>
   Boolean(
@@ -163,6 +164,7 @@ const applyRuntimePresentationEvent = (
       status: event.status,
       toolDisposition: event.toolDisposition,
       executionInvocationId: event.executionInvocationId,
+      appOwned: event.appOwned,
       providerToolName: event.providerToolName,
       toolKind: event.toolKind,
       toolContent: event.toolContent,

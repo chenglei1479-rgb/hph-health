@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { dirname, join, posix, win32 } from 'node:path'
 
 import type { NotebookLanguage } from '../../shared/notebook'
+import { APP } from '../../shared/app-config'
 
 // Default environment version; bump when the default package set changes so a newer app triggers an
 // additive upgrade of an older user's environments (spec §6.3).
@@ -18,7 +19,7 @@ import type { NotebookLanguage } from '../../shared/notebook'
 //      manifest is live before packaging an installer.
 export const DEFAULT_ENV_VERSION = 2
 
-export const DEFAULT_RUNTIME_CDN_BASE = 'https://statics.aipoch.com/open-science'
+export const DEFAULT_RUNTIME_CDN_BASE = APP.cdnBaseUrl
 
 // The runtime bundle publisher and consumer must agree on the conda platform segment. Keep this
 // mapping here rather than letting each caller infer a CDN key independently.
@@ -29,10 +30,10 @@ export const runtimeSubdir = (
   if (platform === 'darwin' && arch === 'arm64') return 'osx-arm64'
   if (platform === 'darwin' && arch === 'x64') return 'osx-64'
   if (platform === 'linux' && arch === 'x64') return 'linux-64'
+  if (platform === 'linux' && arch === 'arm64') return 'linux-aarch64'
   if (platform === 'win32' && arch === 'x64') return 'win-64'
-  // Only the four subdirs above are staged/published by stage-runtime-bundle.yml. linux-aarch64 (and
-  // win32/arm64) are NOT — so reject them here with a clear "unsupported" error at resolution time,
-  // rather than mapping to a subdir whose CDN fetch would 404 and look like a transient outage.
+  // Keep unsupported targets out of CDN resolution; build.yml verifies publication of every
+  // supported subdir before a release can ship.
   throw new Error(`Unsupported notebook runtime platform: ${platform}/${arch}`)
 }
 

@@ -1,9 +1,14 @@
+import { JAPAN_RESEARCH_TOOLS } from './descriptors/japan-research'
+import { BBJ_DOWNLOAD_TOOLS } from './descriptors/bbj-downloads'
 import Ajv2020, { type ErrorObject, type ValidateFunction } from 'ajv/dist/2020.js'
 
+import { ALLIANCE_TOOLS } from './descriptors/alliance'
 import { BIOMART_TOOLS } from './descriptors/biomart'
 import { BIORXIV_TOOLS } from './descriptors/biorxiv'
 import { CANCER_MODELS_TOOLS } from './descriptors/cancer-models'
+import { CELLOSAURUS_TOOLS } from './descriptors/cellosaurus'
 import { CELLGUIDE_TOOLS } from './descriptors/cellguide'
+import { CELLXGENE_DISCOVER_TOOLS } from './descriptors/cellxgene-discover'
 import { CHEMBL_TOOLS } from './descriptors/chembl'
 import { CHEMISTRY_TOOLS } from './descriptors/chemistry'
 import { CLINICAL_GENOMICS_TOOLS } from './descriptors/clinical-genomics'
@@ -14,12 +19,16 @@ import { EXPRESSION_TOOLS } from './descriptors/expression'
 import { GENES_TOOLS } from './descriptors/genes'
 import { GENOMES_TOOLS } from './descriptors/genomes'
 import { GDC_TOOLS } from './descriptors/gdc'
+import { PDC_TOOLS } from './descriptors/pdc'
 import { HUMAN_GENETICS_TOOLS } from './descriptors/human-genetics'
 import { HMMER_TOOLS } from './descriptors/hmmer'
+import { IEDB_TOOLS } from './descriptors/iedb'
 import { INTERPROSCAN_TOOLS } from './descriptors/interproscan'
 import { LITERATURE_TOOLS } from './descriptors/literature'
+import { MONARCH_TOOLS } from './descriptors/monarch'
 import { MOLECULE_TOOLS } from './descriptors/molecule'
 import { OMICS_ARCHIVES_TOOLS } from './descriptors/omics-archives'
+import { PATHWAY_COMMONS_TOOLS } from './descriptors/pathway-commons'
 import { PROTEIN_ANNOTATION_TOOLS } from './descriptors/protein-annotation'
 import { PUBMED_TOOLS } from './descriptors/pubmed'
 import { REGULATION_TOOLS } from './descriptors/regulation'
@@ -32,10 +41,15 @@ import { ZINC_TOOLS } from './descriptors/zinc'
 import type { ToolDescriptor } from './types'
 
 const ALL_TOOLS: ToolDescriptor[] = [
+  ...JAPAN_RESEARCH_TOOLS,
+  ...BBJ_DOWNLOAD_TOOLS,
+  ...ALLIANCE_TOOLS,
   ...BIOMART_TOOLS,
   ...BIORXIV_TOOLS,
   ...CANCER_MODELS_TOOLS,
+  ...CELLOSAURUS_TOOLS,
   ...CELLGUIDE_TOOLS,
+  ...CELLXGENE_DISCOVER_TOOLS,
   ...CHEMBL_TOOLS,
   ...CHEMISTRY_TOOLS,
   ...CLINICAL_GENOMICS_TOOLS,
@@ -46,12 +60,16 @@ const ALL_TOOLS: ToolDescriptor[] = [
   ...GENES_TOOLS,
   ...GENOMES_TOOLS,
   ...GDC_TOOLS,
+  ...PDC_TOOLS,
   ...HUMAN_GENETICS_TOOLS,
   ...HMMER_TOOLS,
+  ...IEDB_TOOLS,
   ...INTERPROSCAN_TOOLS,
   ...LITERATURE_TOOLS,
+  ...MONARCH_TOOLS,
   ...MOLECULE_TOOLS,
   ...OMICS_ARCHIVES_TOOLS,
+  ...PATHWAY_COMMONS_TOOLS,
   ...PROTEIN_ANNOTATION_TOOLS,
   ...PUBMED_TOOLS,
   ...REGULATION_TOOLS,

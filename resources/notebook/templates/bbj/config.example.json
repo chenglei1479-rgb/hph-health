@@ -1,0 +1,29 @@
+{
+  "target_build": "GRCh38",
+  "reference": {"path": "data/GRCh38.fa", "build": "GRCh38"},
+  "chains": {
+    "GRCh37_to_GRCh38": {
+      "path": "data/hg19ToHg38.over.chain.gz", "from": "GRCh37", "to": "GRCh38", "sha256": "REPLACE_WITH_REVIEWED_CHAIN_SHA256"
+    },
+    "GRCh38_to_GRCh37": {
+      "path": "data/hg38ToHg19.over.chain.gz", "from": "GRCh38", "to": "GRCh37", "sha256": "REPLACE_WITH_REVIEWED_CHAIN_SHA256"
+    }
+  },
+  "exposure": {
+    "path": "data/exposure.tsv.gz", "source": "NBDC", "source_url": "REPLACE_WITH_SELECTED_NHA_DATASET_URL",
+    "accession": "REPLACE", "trait": "REPLACE", "build": "GRCh37", "position_base": 1,
+    "alleles_reviewed": false, "effect_scale": "beta", "delimiter": "\t",
+    "columns": {"SNP": "SNP", "CHR": "CHR", "POS": "POS", "REF": "REF", "ALT": "ALT", "EA": "EA", "OA": "OA", "BETA": "BETA", "SE": "SE", "P": "P", "EAF": "EAF"}
+  },
+  "outcome": {
+    "path": "data/outcome.tsv.gz", "source": "JENGER", "source_url": "REPLACE_WITH_SELECTED_DOWNLOAD_URL",
+    "accession": "REPLACE", "trait": "REPLACE", "build": "GRCh37", "position_base": 1,
+    "alleles_reviewed": false, "effect_scale": "OR", "delimiter": "\t",
+    "columns": {"SNP": "SNP", "CHR": "CHR", "POS": "POS", "REF": "REF", "ALT": "ALT", "EA": "EA", "OA": "OA", "BETA": "OR", "SE": "SE_LOG_OR", "P": "P", "EAF": "EAF"}
+  },
+  "jmorp": {"path": "data/jmorp.vcf.gz", "build": "GRCh38", "version": "REPLACE_WITH_PANEL_VERSION", "af_info_key": "AF", "terms_reviewed": false},
+  "mr": {
+    "researcher_approved": false, "overlap_reviewed": false, "overlap_notes": "",
+    "ld_ancestry": "JPN", "ld_build": "GRCh38", "ld_bfile": "data/jpn_ld", "plink": "tools/plink.exe"
+  }
+}

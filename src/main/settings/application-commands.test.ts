@@ -43,6 +43,7 @@ const expectedChannels = [
   'settings:get-classification',
   'settings:get-github-token-status',
   'settings:get-package-mirror',
+  'settings:review-notebook-private-destination',
   'settings:get-notebook-network-status',
   'settings:get-local-shell-runtime-preference',
   'settings:get-wsl2-bash-preview-status',
@@ -55,6 +56,7 @@ const expectedChannels = [
   'settings:install-codex',
   'settings:install-opencode',
   'settings:install-notebook-network',
+  'settings:cancel-notebook-network-setup',
   'settings:remove-notebook-network',
   'settings:encryption-available',
   'settings:npm-available',
@@ -353,7 +355,7 @@ describe('Settings core application commands', () => {
       )
     ).resolves.toBe(snapshot)
     const switched = {
-      runtimeBinding: { kind: 'powershell' as const, version: '5.1' as const },
+      runtimeBinding: { kind: 'powershell' as const, version: '7.6' as const },
       appliesTo: 'subsequent-executions' as const,
       wslProfilePreserved: true
     }
@@ -498,13 +500,14 @@ describe('Settings core application commands', () => {
     expect(serviceMethod('validateProvider')).toHaveBeenCalledWith({ providerId: 'provider-1' })
   })
 
-  it('rejects all sixteen local-only commands before an owner can run', async () => {
+  it('rejects local-only commands before an owner can run', async () => {
     const { appearance, dependencies, serviceMethod } = createDependencies()
     const router = createApplicationCommandRouter()
     registerCoreSettingsApplicationCommands(router.registrar, dependencies)
 
     const attempts = [
       [settingsCoreApplicationCommands.cancelClaudeLogin, []],
+      [settingsCoreApplicationCommands.cancelNotebookNetworkSetup, []],
       [settingsCoreApplicationCommands.cancelCodexLogin, []],
       [settingsCoreApplicationCommands.cancelIsolatedClaudeLogin, []],
       [settingsCoreApplicationCommands.installClaude, [{ source: 'managed' }]],
@@ -519,7 +522,21 @@ describe('Settings core application commands', () => {
       [settingsCoreApplicationCommands.setNotificationsEnabled, [{ enabled: true }]],
       [settingsCoreApplicationCommands.setShowNotificationContent, [{ enabled: true }]],
       [settingsCoreApplicationCommands.setPackageMirror, [{}]],
-      [settingsCoreApplicationCommands.setNetworkProxy, [{ mode: 'direct' }]]
+      [settingsCoreApplicationCommands.setNetworkProxy, [{ mode: 'direct' }]],
+      [
+        settingsCoreApplicationCommands.reviewNotebookPrivateDestination,
+        [{ hostname: 'lab.internal.example', port: 8443 }]
+      ],
+      [
+        settingsCoreApplicationCommands.setNotebookNetwork,
+        [
+          {
+            allowedDomains: [],
+            disabledOpenScienceDomains: [],
+            disabledOpenScienceDomainGroups: []
+          }
+        ]
+      ]
     ] as const
 
     for (const [command, args] of attempts) {
@@ -527,6 +544,9 @@ describe('Settings core application commands', () => {
         `Channel only available from the local app: ${command.name}`
       )
     }
+    expect(serviceMethod('reviewNotebookPrivateDestination')).not.toHaveBeenCalled()
+    expect(serviceMethod('setNotebookNetwork')).not.toHaveBeenCalled()
+    expect(serviceMethod('cancelNotebookNetworkSetup')).not.toHaveBeenCalled()
     expect(serviceMethod('cancelClaudeLogin')).not.toHaveBeenCalled()
     expect(serviceMethod('cancelCodexLogin')).not.toHaveBeenCalled()
     expect(serviceMethod('cancelClaudeIsolatedLogin')).not.toHaveBeenCalled()

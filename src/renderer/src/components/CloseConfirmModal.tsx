@@ -1,4 +1,4 @@
-import { AlertDialog } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -96,17 +96,17 @@ export const CloseConfirmModal = ({
         hasDelegatedWork
           ? 'Subagents are still running'
           : isQuitVariant
-            ? 'Quit MedResearch Agent?'
+            ? 'Quit DRA?'
             : 'Minimize or quit?'
       )
   const description = isPersistenceFailure
     ? t(
-        'MedResearch Agent could not confirm that all recent changes were saved. Retry saving, or force quit and risk losing recent changes.',
+        'DRA could not confirm that all recent changes were saved. Retry saving, or force quit and risk losing recent changes.',
         { ns: 'common' }
       )
     : t(
         hasDelegatedWork
-          ? 'Return to the listed tasks and stop their subagents before quitting MedResearch Agent.'
+          ? 'Return to the listed tasks and stop their subagents before quitting DRA.'
           : isQuitVariant
             ? 'Work is still running and will be interrupted if you quit.'
             : 'This app can keep running in the tray, or you can quit.'

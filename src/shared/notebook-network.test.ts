@@ -43,7 +43,7 @@ describe('disabled automatic domain access', () => {
 })
 
 describe('notebook network policy', () => {
-  it('enables every MedResearch Agent domain group by default', () => {
+  it('enables every DRA domain group by default', () => {
     const policy = buildNotebookNetworkPolicy(DEFAULT_NOTEBOOK_NETWORK_SETTINGS)
 
     expect(policy.allowedDomains).toContain('pypi.org')
@@ -139,5 +139,29 @@ describe('notebook network policy', () => {
 
     expect(policy.deniedDomains).toEqual([])
     expect(policy.deniedDomainReasons).toEqual({})
+  })
+})
+
+describe('private trust persistence contract', () => {
+  it('preserves historical defaults and never promotes a private grant to a public domain grant', () => {
+    expect(normalizeNotebookNetworkSettings({})).toEqual(DEFAULT_NOTEBOOK_NETWORK_SETTINGS)
+    const rule = { hostname: 'lab.internal.example', port: 8443, approvedAddresses: ['10.32.0.7'] }
+    const settings = normalizeNotebookNetworkSettings({ trustedPrivateDestinations: [rule] })
+    expect(buildNotebookNetworkPolicy(settings).trustedPrivateDestinations).toEqual([rule])
+    expect(notebookNetworkSettingsAllowDomain(settings, rule.hostname)).toBe(false)
+    expect(settings.allowedDomains).toEqual([])
+    expect(normalizeNotebookNetworkSettings(JSON.parse(JSON.stringify(settings)))).toEqual(settings)
+  })
+  it('fails closed for ambiguous duplicate services and malformed records', () => {
+    const rule = { hostname: 'lab.internal.example', port: 8443, approvedAddresses: ['10.32.0.7'] }
+    expect(
+      normalizeNotebookNetworkSettings({
+        trustedPrivateDestinations: [rule, { ...rule, approvedAddresses: ['10.32.0.8'] }]
+      }).trustedPrivateDestinations
+    ).toEqual([])
+    expect(
+      normalizeNotebookNetworkSettings({ trustedPrivateDestinations: [{ ...rule, port: 0 }] })
+        .trustedPrivateDestinations
+    ).toEqual([])
   })
 })

@@ -23,7 +23,8 @@ import {
   Upload,
   X
 } from 'lucide-react'
-import { AlertDialog, Collapsible } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
+import { Collapsible } from 'radix-ui'
 import { OwlScholarIcon } from '@/components/app-icons/custom-glyphs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -558,7 +559,7 @@ const InstalledSpecialistsPanel = ({
           </div>
           <h3 className="mt-4 text-lg font-semibold">{t('Template saved')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            {t('medresearch-agent-specialist-template.zip is ready for contributor editing.')}
+            {t('{{filename}} is ready for contributor editing.', { filename: 'medresearch-agent-specialist-template.zip' })}
           </p>
           <Button type="button" className="mt-5" onClick={() => setTemplateSaved(false)}>
             {t('Done')}
@@ -1630,7 +1631,7 @@ const InstalledSpecialistsPanel = ({
         <ErrorNotice
           role="alert"
           className="mb-4"
-          description={t('MedResearch Agent could not load Specialists. Retry to continue.')}
+          description={t('DRA could not load Specialists. Retry to continue.')}
           primaryButton={{ label: t('Retry'), onClick: () => void load({ force: true }) }}
         />
       ) : null}

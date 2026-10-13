@@ -9,6 +9,7 @@ export const startUpdateScheduler = (
   strategy: UpdateStrategy,
   intervalMs: number = SIX_HOURS_MS
 ): (() => void) => {
+  if (strategy.getStatus().state === 'disabled') return () => undefined
   void strategy.check().then((status) => {
     if (process.argv.includes(MAC_INSTALLATION_RESUME_UPDATE_ARG) && status.state === 'available') {
       return strategy.download()

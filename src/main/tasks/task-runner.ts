@@ -313,7 +313,7 @@ class PartialTaskCompletionError extends Error {
 }
 
 const MAX_RETAINED_RUNS = 200
-const PROCESS_RESTARTED_MESSAGE = 'Run interrupted because MedResearch Agent restarted.'
+const PROCESS_RESTARTED_MESSAGE = 'Run interrupted because DRA restarted.'
 const TASK_RUN_HEARTBEAT_INTERVAL_MS = 10_000
 export const TASK_RUN_DISPOSAL_BUDGET_MS = 1000
 const VISIBLE_PROVIDER_EVENT_KINDS = new Set<AcpRuntimeEvent['kind']>([
@@ -2696,26 +2696,9 @@ class TaskRunner {
         continue
       }
       const error = current.error ?? PROCESS_RESTARTED_MESSAGE
-      if (current.runtimeTranscriptOwner === 'main') {
-        await this.dependencies.sessions.failRun({
-          projectId: current.projectId,
-          sessionId: current.id,
-          promptMessageId: run.promptMessageId,
-          taskRunCommitId: run.id,
-          artifacts: [],
-          error,
-          updatedAt: this.dependencies.now()
-        })
-      } else {
-        await this.dependencies.sessions.save({
-          ...current,
-          status: 'error',
-          activeRun: undefined,
-          taskRunCommitId: run.id,
-          error,
-          updatedAt: this.dependencies.now()
-        })
-      }
+      // One unadoptable Session must not reject initialize(): the journal keeps the failed Run and
+      // its witness, so the next startup retries the exact same repair.
+      await this.failRecoveredRun(current, run, error)
       run.status = 'failed'
     }
     for (const run of terminalSessionRepairs) {
@@ -2724,28 +2707,36 @@ class TaskRunner {
       )
       if (!current) continue
       const error = current.error ?? run.error ?? PROCESS_RESTARTED_MESSAGE
-      if (current.runtimeTranscriptOwner === 'main') {
-        await this.dependencies.sessions.failRun({
-          projectId: current.projectId,
-          sessionId: current.id,
-          promptMessageId: run.promptMessageId,
-          taskRunCommitId: run.id,
-          artifacts: [],
-          error,
-          updatedAt: this.dependencies.now()
-        })
-      } else {
-        await this.dependencies.sessions.save({
-          ...current,
-          status: 'error',
-          activeRun: undefined,
-          taskRunCommitId: run.id,
-          error,
-          updatedAt: this.dependencies.now()
-        })
-      }
+      await this.failRecoveredRun(current, run, error)
     }
     if (interrupted.length > 0) await this.persistRuns()
+  }
+
+  private async failRecoveredRun(
+    session: PersistedChatSession,
+    run: MutableTaskRun,
+    error: string
+  ): Promise<void> {
+    try {
+      await this.dependencies.sessions.failRun({
+        projectId: session.projectId,
+        sessionId: session.id,
+        promptMessageId: run.promptMessageId,
+        taskRunCommitId: run.id,
+        artifacts: [],
+        error,
+        ...(run.failureCode === 'process_restarted'
+          ? { interruptionCause: 'app-restart' as const }
+          : {}),
+        updatedAt: this.dependencies.now()
+      })
+    } catch (failure) {
+      log.error('Failed to record a recovered Task Run on its Session.', {
+        error: toErrorMessage(failure),
+        runId: run.id,
+        sessionId: session.id
+      })
+    }
   }
 
   private persistRuns(): Promise<void> {

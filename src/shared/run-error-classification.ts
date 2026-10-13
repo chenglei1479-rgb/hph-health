@@ -1,4 +1,5 @@
 import { isMediaOverflowError } from './media-overflow'
+import { membershipRequirement } from './membership'
 import { isUnsupportedCodexAcpVersionError } from './codex-runtime'
 import { CLAUDE_CLI_INCOMPATIBLE_MESSAGE } from './claude-runtime'
 export { CLAUDE_CLI_INCOMPATIBLE_MESSAGE, isClaudeCliCompatibilityError } from './claude-runtime'
@@ -160,6 +161,7 @@ export const isExpectedRunFailure = (error: string | null | undefined): boolean 
 
   // An empty message is itself an unknown failure (a run failed with nothing to explain it).
   if (!message) return false
+  if (membershipRequirement(message)) return true
 
   if (EXPECTED_RUN_FAILURE_MESSAGES.has(message)) return true
   if (visionRunFailureMessage(message)) return true

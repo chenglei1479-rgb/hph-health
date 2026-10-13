@@ -18,6 +18,7 @@
     "src/renderer/src/pages/settings/ProviderList.tsx",
     "src/renderer/src/pages/settings/ProvidersPanel.race.test.tsx",
     "src/renderer/src/pages/settings/ProvidersPanel.tsx",
+    "src/renderer/src/pages/settings/provider-brand-icons.tsx",
     "src/renderer/src/pages/settings/ReasoningEffortSelect.render.test.tsx",
     "src/renderer/src/pages/settings/ReasoningEffortSelect.tsx",
     "src/renderer/src/pages/settings/ScenarioModelList.render.test.tsx",
@@ -37,7 +38,11 @@
     "src/renderer/src/pages/settings/provider-key-security.ts",
     "src/renderer/src/pages/settings/skill-marketplace-model.ts",
     "src/renderer/src/pages/settings/ClassificationPanel.tsx",
-    "src/renderer/src/pages/settings/ClassificationPanel.render.test.tsx"
+    "src/renderer/src/pages/settings/ClassificationPanel.render.test.tsx",
+    "src/shared/research-data-flow.ts",
+    "src/shared/research-data-flow.test.ts",
+    "src/renderer/src/components/ResearchDataFlowNotice.tsx",
+    "src/renderer/src/components/ResearchDataFlowNotice.test.tsx"
   ],
   "interfacePaths": [
     "src/renderer/src/pages/settings/AgentHomeImportView.tsx",
@@ -71,7 +76,9 @@
       "src/renderer/src/pages/settings/model-panel-i18n.render.test.tsx",
       "src/renderer/src/pages/settings/provider-form-value.test.ts",
       "src/renderer/src/pages/settings/provider-icons.render.test.tsx",
-      "src/renderer/src/pages/settings/ClassificationPanel.render.test.tsx"
+      "src/renderer/src/pages/settings/ClassificationPanel.render.test.tsx",
+      "src/shared/research-data-flow.test.ts",
+      "src/renderer/src/components/ResearchDataFlowNotice.test.tsx"
     ],
     "contract": [],
     "consumer": [
@@ -109,7 +116,6 @@
       "src/renderer/src/main.render.test.tsx",
       "src/renderer/src/pages/home/HomePage.persistence.test.tsx",
       "src/renderer/src/pages/home/HomePage.render.test.tsx",
-      "src/renderer/src/pages/literature/LiteratureFullTextLookup.render.test.tsx",
       "src/renderer/src/pages/literature/LiteratureLibraryPage.render.test.tsx",
       "src/renderer/src/pages/onboarding/AgentStep.render.test.tsx",
       "src/renderer/src/pages/onboarding/EnvironmentStep.render.test.tsx",
@@ -193,6 +199,8 @@
       "src/renderer/src/pages/workspace/PreviewPanel.test.tsx",
       "src/renderer/src/pages/workspace/ProjectFilesView.test.tsx",
       "src/renderer/src/pages/workspace/ReportErrorDialog.interaction.test.tsx",
+      "src/renderer/src/pages/workspace/SessionReplayEvidence.test.tsx",
+      "src/renderer/src/pages/workspace/SessionReplayPreview.test.tsx",
       "src/renderer/src/pages/workspace/SessionMessageMarkdown.image-loading.test.tsx",
       "src/renderer/src/pages/workspace/SessionMessageMarkdown.integration.test.tsx",
       "src/renderer/src/pages/workspace/SessionMessageMarkdown.test.tsx",
@@ -241,6 +249,8 @@
       "src/renderer/src/pages/workspace/previews/PreviewToolContent.reviewer.integration.test.tsx",
       "src/renderer/src/pages/workspace/previews/PreviewToolContent.test.tsx",
       "src/renderer/src/pages/workspace/previews/preview-registry.test.tsx",
+      "src/renderer/src/pages/workspace/replay/ReplayPanel.test.tsx",
+      "src/renderer/src/pages/workspace/replay/ReplayToolRecord.test.tsx",
       "src/renderer/src/pages/workspace/use-side-chat-controller.test.ts",
       "src/renderer/src/pages/workspace/workspace-composer-controller.test.ts",
       "src/renderer/src/pages/workspace/workspace-conversation-controller.test.ts",
@@ -252,7 +262,12 @@
       "src/renderer/src/stores/settings-store.test.ts",
       "src/renderer/web/bootstrap.test.ts",
       "src/renderer/web/renderer-argument-shape-characterization.test.ts",
-      "src/renderer/src/pages/literature/SmartCollectionPanel.test.tsx"
+      "src/renderer/src/pages/literature/detail/LiteratureFullTextLookup.render.test.tsx",
+      "src/renderer/src/pages/literature/collections/SmartCollectionPanel.test.tsx",
+      "src/renderer/src/pages/workspace/NotebookFolderAccessNotice.interaction.test.tsx",
+      "src/renderer/src/pages/workspace/previews/renderers/PdfTranslationControls.test.tsx",
+      "src/renderer/src/pages/workspace/previews/renderers/PdfPreview.test.tsx",
+      "src/renderer/src/pages/workspace/previews/renderers/PdfTranslationEditions.test.tsx"
     ]
   },
   "capabilityOverlays": [],

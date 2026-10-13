@@ -1,0 +1,11 @@
+{
+  "mode": "required",
+  "issuer": "https://REPLACE_WITH_PRODUCTION_TENANT.auth0.com/",
+  "clientId": "REPLACE_WITH_NATIVE_APPLICATION_CLIENT_ID",
+  "callbackPort": 49174,
+  "audience": "https://REPLACE_WITH_API_AUDIENCE",
+  "organization": "org_REPLACE_WITH_ORGANIZATION",
+  "connections": {
+    "institution": "REPLACE_WITH_ENTERPRISE_CONNECTION_NAME"
+  }
+}

@@ -37,6 +37,8 @@
       "src/shared/renderer-contract-catalog.test.ts"
     ],
     "consumer": [
+      "src/main/composition/notebook-environment.test.ts",
+      "src/main/composition/reviewer.test.ts",
       "src/main/acp/application-commands.test.ts",
       "src/main/acp/artifact-code-reconstruction-runner.test.ts",
       "src/main/acp/codex-completion-handoff.integration.test.ts",
@@ -200,7 +202,18 @@
       "src/shared/renderer-surface-inventory.test.ts",
       "src/shared/renderer-surface-matrix.test.ts",
       "src/main/session-plan/plan-context-file.shell.integration.test.ts",
-      "src/renderer/src/pages/workspace/workspace-message-queue-controller.test.ts"
+      "src/renderer/src/pages/workspace/workspace-message-queue-controller.test.ts",
+      "src/main/notebook/wsl2-scheduling.integration.test.ts",
+      "src/main/notebook/shell-cell-session.integration.test.ts",
+      "src/main/notebook/scientific-replay.test.ts",
+      "src/main/notebook/real-notebook-lineage.integration.test.ts",
+      "src/main/notebook/real-parquet-lineage.integration.test.ts",
+      "src/main/notebook/r-connection-guard.test.ts",
+      "src/main/notebook/dependency-analysis.lineage-regressions.test.ts",
+      "src/main/session-persistence/ipc.test.ts",
+      "src/main/acp/approved-handoff-outcome.integration.test.ts",
+      "src/main/acp/approved-handoff-outcome.test.ts",
+      "src/main/notebook/code-risk-admission.test.ts"
     ]
   },
   "capabilityOverlays": ["e2e_regressions", "e2e_delegation", "windows_sensitive"],

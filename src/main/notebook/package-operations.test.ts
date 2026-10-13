@@ -238,13 +238,21 @@ describe('NotebookPackageOperations', () => {
     'E06 does not recommend restart after an unstructured R %s preflight failure',
     async (operation) => {
       const commands: string[][] = []
-      const { owner, options } = harness(
+      const { owner, options, runtimeRoot } = harness(
         session('session-1', binding('r', 'analysis', 'managed', 'analysis')),
         {
           installPackages: (request, deps) =>
             installPackages(request, {
               ...deps,
               micromamba: '/test/micromamba',
+              // This test owns a mocked installer, not Windows cache discovery or ACL changes.
+              micromambaEnv: {
+                ...deps?.micromambaEnv,
+                selectCache: () => ({
+                  path: join(runtimeRoot, 'pkgs'),
+                  lockKey: join(runtimeRoot, 'pkgs')
+                })
+              },
               pathExists: () => true,
               readCondaPackageIdentity: () => ({
                 name: 'r-base',
@@ -444,6 +452,29 @@ describe('NotebookPackageOperations', () => {
       packages: [{ name: 'numpy', version: '2.2.0' }]
     })
     expect(sharedCalls).toEqual([['inspection', 'analysis']])
+    expect(options.installPackages).not.toHaveBeenCalled()
+  })
+
+  it('preflights missing survival and readxl without changing the bound runtime', async () => {
+    const managed = binding('r', '/runtime/clinical/r', 'managed', 'clinical')
+    const { owner, options, sharedCalls } = harness(session('session-1', managed))
+    vi.mocked(options.environmentStateTracker.inspectPackages).mockResolvedValue({
+      inventory: { source: 'full-scan', validation: 'full-scan' },
+      packages: ['survival', 'readxl'].map((name) => ({ requested: name, name, status: 'missing' }))
+    })
+    const result = await owner.inspect({
+      sessionId: 'session-1',
+      workspaceCwd: '/workspace',
+      language: 'r',
+      packages: ['survival', 'readxl']
+    })
+    expect(result.packagePreflight).toMatchObject({
+      status: 'blocked',
+      modelQuota: 'unknown',
+      executionPermissions: 'not-checked',
+      recovery: { tool: 'manage_packages', language: 'r', packages: ['survival', 'readxl'] }
+    })
+    expect(sharedCalls).toEqual([['inspection', 'clinical']])
     expect(options.installPackages).not.toHaveBeenCalled()
   })
 

@@ -49,7 +49,9 @@ AIPOCH Open-Science は科学者と研究者のための AI 研究ワークベ�
 
 AIPOCH Open-Science は、機械学習、統計学、生命科学、化学、材料科学、物理学、環境科学など、幅広い分野の計算集約型・データ集約型研究を支援します。文献レビューと仮説構築から、コード実行、データ分析、シミュレーション、可視化、追跡可能な研究成果の作成まで、研究プロセス全体を支えます。
 
-> 💡 **[AIPOCH Open-Science v0.33.3 をリリースしました](https://github.com/aipoch/open-science/releases/latest)** _(2026年9月更新)_。 AIPOCH Open-Science v0.33.3 では、ドキュメントプレビューがページ分割された Office 閲覧と検索に加えてページ単位の PowerPoint レビューへと強化され、遺伝子コネクタに Enrichr の遺伝子セットエンリッチメントツールが追加され、ワークスペースにコンパクトなライブラリプレビューが追加されました。Windows 署名は同梱されるすべての実行可能ファイルをカバーするようになり、Literature のスクリーニングには「評価の破棄」アクションが追加され、セッションパッケージは適応的な速度で転送できるようになりました。詳細は[最新のリリースノート](https://github.com/aipoch/open-science/releases/latest)をご覧ください。
+完了した研究セッションは、選択した会話分岐、ファイルバージョン、Notebook 記録、検証証拠を含む持ち運び可能な `.science` パッケージとして、レビュー、引き継ぎ、アーカイブのためにエクスポートできます。
+
+> 💡 **[AIPOCH Open-Science v0.36.0 をリリースしました](https://github.com/aipoch/open-science/releases/latest)** _(2026年10月更新)_。 AIPOCH Open-Science v0.36.0 では、実行ごとにリスクをレビューできる Notebook 実行、原文・訳文・対照表示の読書モードを備えた再開可能な共有 PDF 翻訳、がんタンパク質組学の PDC コネクター、集団特異的な連鎖不平衡クエリを備えた Genomes コネクター、Claude Haiku 5.5 のサポートが追加されました。修正には、科学 PDF のネイティブレイアウト保持、公式モデルカタログの整理、空の会話での検索復元、ファイルメンション・Remote Web マーケットプレイス・コンポーザーチップの信頼性向上などが含まれます。詳細は[最新のリリースノート](https://github.com/aipoch/open-science/releases/latest)をご覧ください。
 
 <p align="center">
  <img width="1920" height="1140" alt="AIPOCH Open-Science のヒーローバナー：Science, Open to All — オープンソース、モデル非依存、セルフホスト対応の科学 AI 研究ワークベンチ" src="../images/readme/open-science-banner.png" />
@@ -59,6 +61,7 @@ AIPOCH Open-Science は、機械学習、統計学、生命科学、化学、材
 
 - [クイックスタート](#-クイックスタート)
 - [製品ツアー](#製品ツアー)
+- [AIPOCH Open-Science `.science` 研究パッケージ](#aipoch-open-science-science-研究パッケージ)
 - [ベンチマーク性能](#ベンチマーク性能)
 - [主な機能](#主な機能)
 - [モデルプロバイダー](#モデルプロバイダー)
@@ -154,6 +157,18 @@ Windows での再インストールでは研究データが保持されます。
   <img src="../images/readme/product-tour-provenance.jpg" alt="生成結果を追跡する Provenance 入口を備えた AIPOCH Open-Science の研究アーティファクトプレビュー" width="900">
 </p>
 
+## AIPOCH Open-Science `.science` 研究パッケージ
+
+完了した研究セッションを、レビュー、引き継ぎ、アーカイブに使える持ち運び可能な `.science` パッケージとしてエクスポートできます。研究記録に含める会話分岐、ファイルバージョン、Notebook 記録、検証証拠を選択して、別のプロジェクトやコンピューターにインポートできます。
+
+**エクスポート → 転送 → 確認**
+
+1. 完了したセッションをエクスポートし、含める内容を選択します。
+2. `.science` ファイルを共同研究者または別のコンピューターに移します。
+3. プロジェクトにインポートし、読み取り専用の履歴、含まれるファイル、Notebook 記録、検証証拠を確認します。
+
+インポートしたパッケージは読み取り専用です。コードを実行したり、認証情報を復元したりしません。続きの作業は新しいセッションで行います。結果を再実行するには、完全なレシピ、必要な入力、利用可能なランタイムが必要です。
+
 ## ベンチマーク性能
 
 ### 🏆 BiomniBench-DA Public 50 で第 1 位
@@ -224,7 +239,7 @@ AIPOCH Open-Science は React、TypeScript、Prisma/SQLite、ACP ベースのエ
 
 ソース開発の前提条件：
 
-- Node.js 22（[`.nvmrc`](../../.nvmrc) を参照）と npm
+- Node.js 24（[`.nvmrc`](../../.nvmrc) を参照）と npm
 - Git
 - Notebook の実行は任意で、アプリ管理の Python/R 環境または自分で設定した互換インタープリターを使用できます。
 
@@ -321,7 +336,7 @@ AIPOCH Open-Science では、バグ報告、機能提案、設計に関する議
 
 > ⭐ **リポジトリに Star：** このプロジェクトが役立った場合は、GitHub で Star を付けていただけると助かります。Star は継続的な開発を後押しします。数秒ででき、プロジェクトに大きな意味があります。
 
-提供済み、一部実装、計画中の機能は[機能マップ](../../ROADMAP.md#capability-map)を参照してください。
+提供済み、一部実装、計画中の機能は[機能マップ](../ROADMAP.md#capability-map)を参照してください。
 
 ## ライセンス
 

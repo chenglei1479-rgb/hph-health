@@ -1,4 +1,9 @@
 {
   "version": 1,
-  "specialists": []
+  "specialists": [
+    "biomedical-research",
+    "dra-literature-expert",
+    "dra-statistics-expert",
+    "dra-writing-reviewer"
+  ]
 }

@@ -19,7 +19,7 @@ import type {
   NotebookRunRecord,
   NotebookWorkingFile
 } from '../../shared/notebook'
-import { assertDiskReserve } from '../bounded-file-io'
+import { assertDiskReserve, digestFileWithinBudget } from '../bounded-file-io'
 import { createLogger, diagnosticErrorFields } from '../logger'
 import { LOCAL_RESOURCE_BUDGETS } from '../resource-budget'
 import { availableBytes } from '../storage/usage'
@@ -60,6 +60,7 @@ type WorkingFileObservationRequest = {
     reasonCodes: ExecutionFileEvidenceReason[]
   }
   sourceFileAccessContext?: NotebookSourceFileAccessContext
+  executionOutcome?: 'completed' | 'incomplete'
 }
 
 type WorkingFileObservationResult = {
@@ -69,7 +70,10 @@ type WorkingFileObservationResult = {
 }
 
 type WorkingFileObservation = {
-  finish: (signal?: AbortSignal) => Promise<WorkingFileObservationResult>
+  finish: (
+    signal?: AbortSignal,
+    executionOutcome?: WorkingFileObservationRequest['executionOutcome']
+  ) => Promise<WorkingFileObservationResult>
 }
 
 type WorkingFileObservationDependencies = {
@@ -1637,14 +1641,30 @@ const companionStemMatches = (
   stem: string,
   suffixes: readonly string[]
 ): boolean => {
-  const lowerCandidate = candidate.toLocaleLowerCase('en-US')
+  const normalizeCase = (value: string): string =>
+    process.platform === 'win32' ? value.toLocaleLowerCase('en-US') : value
+  const normalizedCandidate = normalizeCase(candidate)
+  const normalizedStem = normalizeCase(stem)
   return suffixes.some(
-    (suffix) => lowerCandidate.endsWith(suffix) && candidate.slice(0, -suffix.length) === stem
+    (suffix) =>
+      normalizedCandidate.endsWith(suffix) &&
+      normalizeCase(candidate.slice(0, -suffix.length)) === normalizedStem
   )
 }
 
 const matchesWriteScope = (scope: NotebookSourceFileWriteScope, candidate: string): boolean => {
-  if (scope.kind === 'directory') return candidate.startsWith(`${scope.path}/`)
+  if (scope.kind === 'directory') {
+    const normalizeDirectoryPath = (value: string): string => {
+      const portable = value
+        .replaceAll('\\', '/')
+        .replace(/\/{2,}/gu, '/')
+        .replace(/\/$/u, '')
+      return process.platform === 'win32' ? portable.toLocaleLowerCase('en-US') : portable
+    }
+    const normalizedScope = normalizeDirectoryPath(scope.path)
+    const normalizedCandidate = normalizeDirectoryPath(candidate)
+    return normalizedCandidate.startsWith(`${normalizedScope}/`)
+  }
   if (scope.kind === 'timestamped-log')
     return (
       candidate.startsWith(scope.path) &&
@@ -1816,13 +1836,23 @@ const persistEvidence = async (
     changes,
     rootResults.every((result) => result.available)
   )
+  const adjustedCoverage: ReturnType<typeof corroboratedCoverage> =
+    request.executionOutcome === 'incomplete'
+      ? {
+          ...coverage,
+          evidenceState: coverage.evidenceState === 'unavailable' ? 'unavailable' : 'partial',
+          writerAttribution:
+            coverage.writerAttribution === 'unavailable' ? 'unavailable' : 'partial',
+          reasonCodes: uniqueReasons([...coverage.reasonCodes, 'execution-incomplete'])
+        }
+      : coverage
   const rootReasonCodes = rootResults
     .flatMap((result) => result.reasonCodes)
     .filter(
       (reason) =>
         reason !== 'watcher-unavailable' ||
         coverage.fileReads !== 'complete' ||
-        coverage.writerAttribution !== 'complete'
+        adjustedCoverage.writerAttribution !== 'complete'
     )
 
   const plannedBytes = Math.min(
@@ -1865,12 +1895,12 @@ const persistEvidence = async (
         blobStorageKeyPrefix: capture.blobStorageKeyPrefix,
         rootKinds,
         rootsAvailable: rootResults.every((result) => result.available),
-        evidenceState: coverage.evidenceState,
-        fileReads: coverage.fileReads,
-        externalPaths: coverage.externalPaths,
-        writerAttribution: coverage.writerAttribution,
-        ...(coverage.readPaths ? { readPaths: coverage.readPaths } : {}),
-        reasonCodes: [...rootReasonCodes, ...coverage.reasonCodes],
+        evidenceState: adjustedCoverage.evidenceState,
+        fileReads: adjustedCoverage.fileReads,
+        externalPaths: adjustedCoverage.externalPaths,
+        writerAttribution: adjustedCoverage.writerAttribution,
+        ...(adjustedCoverage.readPaths ? { readPaths: adjustedCoverage.readPaths } : {}),
+        reasonCodes: [...rootReasonCodes, ...adjustedCoverage.reasonCodes],
         scientificOutputs,
         changes: changes.map((change) => ({
           change:
@@ -1997,7 +2027,7 @@ const startWorkingFileObservation = async (
   }
   let finished = false
   return {
-    finish: async (signal) => {
+    finish: async (signal, executionOutcome) => {
       if (finished) {
         return {
           workingFiles: [],
@@ -2006,8 +2036,71 @@ const startWorkingFileObservation = async (
       }
       finished = true
       const results = await Promise.all(observations.map((observation) => observation.finish()))
+      // A flushed memory map can change bytes without changing file metadata (notably
+      // on Windows). Recheck only declared write targets against the frozen baseline;
+      // opening a writable handle alone must not create a fictitious output generation.
+      let remainingBytes = capture?.maxActivityBytes ?? 0
+      const declaredWrites = new Set(preparedRequest.sourceFileAccess?.writes)
+      for (let index = 0; capture && index < observations.length; index++) {
+        const result = results[index]
+        const changed = new Set(result.changes.map((change) => change.relativePath))
+        for (const before of observations[index].initialFiles) {
+          if (!declaredWrites.has(before.relativePath) || changed.has(before.relativePath)) continue
+          const baseline = capture.initialGenerationChecksums.get(before.relativePath)
+          if (!baseline) continue
+          try {
+            if (before.size > Math.min(capture.maxGenerationBytes, remainingBytes)) {
+              result.available = false
+              result.reasonCodes.push('observer-limit-exceeded')
+              continue
+            }
+            const observedRoot = await realpath(roots[index].path)
+            const after = await snapshotEntry(
+              observedRoot,
+              roots[index].logicalPath,
+              logicalSessionRoot,
+              before.physicalPath
+            )
+            if (!after) throw new Error('Write target is no longer an observable file.')
+            if (after.size > Math.min(capture.maxGenerationBytes, remainingBytes)) {
+              result.available = false
+              result.reasonCodes.push('observer-limit-exceeded')
+              continue
+            }
+            // Reserve before reading so failed/growing files cannot reset the turn budget.
+            remainingBytes -= after.size
+            const digest = await digestFileWithinBudget(
+              after.physicalPath,
+              after.size,
+              signal ?? request.signal
+            )
+            const verified = await snapshotEntry(
+              observedRoot,
+              roots[index].logicalPath,
+              logicalSessionRoot,
+              after.physicalPath
+            )
+            if (
+              !verified ||
+              !sameSnapshotEntry(after, verified) ||
+              digest.sizeBytes !== verified.size
+            )
+              throw new Error('Write target changed during content comparison.')
+            if (digest.checksum !== baseline)
+              result.changes.push({
+                relation: 'modified',
+                relativePath: before.relativePath,
+                before,
+                after: verified
+              })
+          } catch {
+            result.available = false
+            result.reasonCodes.push('observer-failed')
+          }
+        }
+      }
       const result = await persistEvidence(
-        { ...preparedRequest, signal: signal ?? request.signal },
+        { ...preparedRequest, signal: signal ?? request.signal, executionOutcome },
         roots.map((root) => root.kind),
         results,
         capture,
@@ -2475,6 +2568,7 @@ export {
   recoverPublishedComputeJobFileEvidence,
   settleComputeJobFileEvidence,
   startWorkingFileObservation,
+  matchesWriteScope,
   toPortableNotebookRelativePath
 }
 export type { WorkingFileEvidenceLocation, WorkingFileObservation, WorkingFileObservationResult }

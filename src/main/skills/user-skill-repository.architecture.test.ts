@@ -225,7 +225,10 @@ describe('User Skill repository architecture', () => {
       'src/main/skills/user-skill-repository.ts',
       'src/main/skills/user-skill-store.ts'
     ])
-    expect(importersOf(catalogObserverPath)).toEqual(['src/main/ipc.ts'])
+    expect(importersOf(catalogObserverPath)).toEqual([
+      'src/main/composition/agent-activation.ts',
+      'src/main/composition/session-foundation.ts'
+    ])
     expect(readSource(repositoryPath)).not.toContain('skillMutationOwnerFor(')
     expect(readSource(repositoryPath)).toContain('mutationOwner?: SkillMutationOwner')
     expect(readSource(repositoryPath)).toContain(
@@ -386,6 +389,11 @@ describe('User Skill repository architecture', () => {
           'src/shared/renderer-contract-catalog.test.ts'
         ],
         consumer: [
+          'src/main/notebook/windows-runtime-manager.test.ts',
+          'src/main/storage/wsl-npm-migration.integration.test.ts',
+          'src/main/composition/notebook-environment.test.ts',
+          'src/main/literature/command-owner.test.ts',
+          'src/main/composition/reviewer.test.ts',
           'src/main/session-persistence/runtime-session-owner.test.ts',
           'src/main/session-plan/adversarial-session-plan.test.ts',
           'src/main/skills/conversation-import.test.ts',
@@ -865,9 +873,9 @@ describe('User Skill repository architecture', () => {
           'src/main/window-find-ipc.test.ts',
           'src/renderer/src/hooks/useLifecycleSync.test.tsx',
           'src/renderer/src/lib/acp/useWorkspaceAgentRuntime.test.ts',
-          'src/renderer/src/pages/literature/LiteratureFullTextLookup.render.test.tsx',
+          'src/renderer/src/pages/literature/detail/LiteratureFullTextLookup.render.test.tsx',
           'src/renderer/src/pages/literature/LiteratureLibraryPage.render.test.tsx',
-          'src/renderer/src/pages/literature/LiteratureMetadataEditor.test.tsx',
+          'src/renderer/src/pages/literature/detail/LiteratureMetadataEditor.test.tsx',
           'src/renderer/src/pages/onboarding/OnboardingWizard.regressions.test.tsx',
           'src/renderer/src/pages/settings/ConnectorAddForm.render.test.tsx',
           'src/renderer/src/pages/settings/SpecialistEditor.persistence.render.test.tsx',
@@ -902,6 +910,7 @@ describe('User Skill repository architecture', () => {
           'src/main/settings/classification-settings.test.ts',
           'src/main/connectors/descriptors/genomes-blast.test.ts',
           'src/main/connectors/descriptors/genomes-clustal.test.ts',
+          'src/main/connectors/descriptors/interproscan.test.ts',
           'src/main/connectors/descriptors/genomes.test.ts',
           'src/main/artifacts/resumed-finalization-ownership.test.ts',
           'src/main/session-persistence/resumed-artifact-publication.integration.test.ts',
@@ -914,7 +923,38 @@ describe('User Skill repository architecture', () => {
           'src/main/session-package/ro-crate.test.ts',
           'src/main/settings/codex-bridge-tools.test.ts',
           'src/main/literature/smart-collections.test.ts',
-          'src/main/acp/library-auto-policy.test.ts'
+          'src/main/acp/library-auto-policy.test.ts',
+          'src/main/notebook/wsl2-scheduling.integration.test.ts',
+          'src/main/literature/journal-attributes.test.ts',
+          'src/main/notebook/shell-cell-session.integration.test.ts',
+          'src/main/notebook/scientific-replay.test.ts',
+          'src/main/notebook/real-notebook-lineage.integration.test.ts',
+          'src/main/notebook/real-parquet-lineage.integration.test.ts',
+          'src/main/notebook/r-connection-guard.test.ts',
+          'src/main/notebook/dependency-analysis.lineage-regressions.test.ts',
+          'src/main/session-diagnostics/export-evidence.integration.test.ts',
+          'src/main/permission-grants/connector-broker.test.ts',
+          'src/main/session-persistence/missing-runtime-session-repro.test.ts',
+          'src/main/session-persistence/prompt-preparation-restart.test.ts',
+          'src/main/session-persistence/terminal-commit-scheduler.test.ts',
+          'src/main/session-persistence/reconciliation-renderer-parity.test.ts',
+          'src/main/session-persistence/turn-outcome-reconciliation.test.ts',
+          'src/main/session-persistence/attention-projection.test.ts',
+          'src/main/acp/approved-handoff-outcome.integration.test.ts',
+          'src/main/acp/approved-handoff-outcome.test.ts',
+          'src/main/agent-framework/claude-shared-settings.integration.test.ts',
+          'src/main/literature/pdf-translation/index.test.ts',
+          'src/main/literature/pdf-translation/ipc.test.ts',
+          'src/main/literature/pdf-translation/checkpoints.test.ts',
+          'src/main/settings/provider-text-generation.test.ts',
+          'src/main/literature/pdf-translation/usage.test.ts',
+          'src/main/literature/pdf-translation/api-target.test.ts',
+          'src/main/literature/pdf-translation/diagnostics.test.ts',
+          'src/main/literature/pdf-translation/reader-ownership.test.ts',
+          'src/main/literature/pdf-translation/local.test.ts',
+          'src/main/local-models/ipc.test.ts',
+          'src/main/literature/pdf-translation/pdf-cache.test.ts',
+          'src/main/notebook/code-risk-admission.test.ts'
         ]
       },
       capabilityOverlays: ['windows_sensitive', 'e2e_regressions', 'e2e_delegation'],

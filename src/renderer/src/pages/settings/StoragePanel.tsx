@@ -1,7 +1,7 @@
 import { storageErrorMessage } from '@/lib/storage-error'
 import { Notice } from '@/components/notice'
 import { InlineNotice } from '@/components/ui/inline-notice'
-import { AlertDialog } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
 import {
   CheckCircle2,
   ChevronRight,
@@ -392,7 +392,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
       {storageRepairActive && storageCheck ? (
         <SettingsSection
           title={t('Application storage')}
-          description={t('MedResearch Agent needs write access to its private configuration directory.')}
+          description={t('DRA needs write access to its private configuration directory.')}
           aria-label={t('Application storage')}
         >
           {/* Keep the failure visibly actionable, then remove the warning treatment as soon as a
@@ -467,7 +467,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
         data-settings-anchor="storage.location"
         title={t('Data location')}
         description={t(
-          'Where MedResearch Agent stores your projects, artifacts, and other app data on this device.'
+          'Where DRA stores your projects, artifacts, and other app data on this device.'
         )}
         aria-label={t('Data location')}
         action={
@@ -495,6 +495,13 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
             <pre className={cn('mt-1', PATH_PILL)} aria-label={t('Data root path')}>
               {storageStatus.dataRoot}
             </pre>
+            {window.api.platform !== 'win32' && /\s/u.test(storageStatus.dataRoot) ? (
+              <InlineNotice className="mt-2" role="alert">
+                {t(
+                  'The current data location contains spaces. R environments cannot run reliably here. Use Change location to move your data to a path without spaces. You can cancel and keep the current location; your existing data will remain available.'
+                )}
+              </InlineNotice>
+            ) : null}
             <p className="mt-1.5 text-xs text-muted-foreground">
               {info
                 ? info.isDefault
@@ -596,7 +603,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
                 {kind === 'adopt' ? (
                   <p className="mt-2 text-xs text-muted-foreground">
                     <Trans
-                      i18nKey="This folder already contains MedResearch Agent data. It will be <em>used as-is (not merged)</em> — <em>your current data folder is kept, so you can switch back</em>. The app will restart."
+                      i18nKey="This folder already contains DRA data. It will be <em>used as-is (not merged)</em> — <em>your current data folder is kept, so you can switch back</em>. The app will restart."
                       components={{ em: <strong className="font-semibold text-foreground" /> }}
                     />
                   </p>
@@ -894,7 +901,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
 
             <div className={dialogBodyClassName}>
               <AlertDialog.Description className={dialogDescriptionClassName}>
-                {t("You can move MedResearch Agent's data to another folder on this device.")}
+                {t("You can move DRA's data to another folder on this device.")}
               </AlertDialog.Description>
               <div className="mt-3">
                 <DataRootWarning />
@@ -952,7 +959,7 @@ const StoragePanel = ({ onContinueToAgent }: StoragePanelProps): React.JSX.Eleme
               <pre className={PATH_PILL}>{inspection?.dataRoot ?? trimmedNewPath}</pre>
               <AlertDialog.Description className={cn(dialogDescriptionClassName, 'mt-3')}>
                 <Trans
-                  i18nKey="MedResearch Agent will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>"
+                  i18nKey="DRA will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>"
                   components={{ em: <strong className="font-semibold text-text-000" /> }}
                 />
               </AlertDialog.Description>

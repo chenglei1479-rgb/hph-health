@@ -13,6 +13,24 @@ const request = (overrides: Partial<AcpPermissionRequest>): AcpPermissionRequest
 })
 
 describe('describePermissionRequest', () => {
+  it('distinguishes one-run code review from runtime selection only for app-owned requests', () => {
+    expect(
+      describePermissionRequest(
+        request({ appOwned: true, rawInput: { notebookCodeRisk: { risks: [] } } })
+      )
+    ).toMatchObject({
+      actionTitle: 'Review potentially destructive code',
+      description: 'Approval applies only to this run.'
+    })
+    expect(
+      describePermissionRequest(
+        request({ appOwned: true, rawInput: { notebookRuntimeSelection: { language: 'python' } } })
+      )
+    ).toMatchObject({ actionTitle: 'Confirm Notebook kernel and environment' })
+    expect(
+      describePermissionRequest(request({ rawInput: { notebookCodeRisk: {} } }))
+    ).toHaveProperty('actionTitle', 'Allow tool access?')
+  })
   it('uses the Notebook network card only for a main-owned approval', () => {
     const rawInput = {
       notebookNetworkApproval: { hostname: 'data.example.org', port: 443, runtime: 'python' }
@@ -20,7 +38,7 @@ describe('describePermissionRequest', () => {
 
     expect(
       describePermissionRequest(
-        request({ appOwned: true, providerToolName: 'MedResearch Agent', rawInput })
+        request({ appOwned: true, providerToolName: 'DRA', rawInput })
       )
     ).toMatchObject({
       actionTitle: 'Connect to data.example.org?',
@@ -47,7 +65,7 @@ describe('describePermissionRequest', () => {
       describePermissionRequest(
         request({
           title: 'Switch to Data Analyst?',
-          providerToolName: 'MedResearch Agent',
+          providerToolName: 'DRA',
           rawInput: {
             specialistApproval: { kind: 'switch', targetName: 'Data Analyst' }
           }
@@ -330,9 +348,9 @@ describe('describePermissionRequest', () => {
     expect(
       describePermissionRequest(request({ title: 'open-science-notebook', isMcp: true }))
     ).toMatchObject({
-      actionTitle: 'Use MedResearch Agent Notebook?',
+      actionTitle: 'Use DRA Notebook?',
       categoryLabel: 'External service',
-      actionDetail: 'MedResearch Agent Notebook'
+      actionDetail: 'DRA Notebook'
     })
   })
 

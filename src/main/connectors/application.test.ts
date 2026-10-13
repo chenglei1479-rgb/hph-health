@@ -1,9 +1,18 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { composeApplicationRuntime } from '../application-runtime'
 import { createConnectorApplicationModule, type ConnectorApplicationDeps } from './application'
 
 type TestDoubles = Record<string, ReturnType<typeof vi.fn>>
+
+const testSkillsDirectories: string[] = []
+afterEach(() => {
+  for (const directory of testSkillsDirectories.splice(0))
+    rmSync(directory, { recursive: true, force: true })
+})
 
 interface ConnectorApplicationHarness {
   settings: TestDoubles
@@ -14,6 +23,8 @@ interface ConnectorApplicationHarness {
 }
 
 const createHarness = (): ConnectorApplicationHarness => {
+  const skillsDir = mkdtempSync(join(tmpdir(), 'dra-connector-application-'))
+  testSkillsDirectories.push(skillsDir)
   const settings = {
     getConnectors: vi.fn().mockResolvedValue({ customMcpServers: [] }),
     saveCustomServerOAuthState: vi.fn().mockResolvedValue(undefined),
@@ -59,7 +70,7 @@ const createHarness = (): ConnectorApplicationHarness => {
   }
   const deps: ConnectorApplicationDeps = {
     settings: settings as unknown as ConnectorApplicationDeps['settings'],
-    skillsDir: '/tmp/skills',
+    skillsDir,
     openExternal: vi.fn(),
     notifyStatusChanged: vi.fn(),
     broadcastConnectorApproval: vi.fn(),

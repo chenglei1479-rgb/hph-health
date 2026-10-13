@@ -74,6 +74,11 @@ describe('ProviderForm field switching', () => {
     const onChange = vi.fn()
     render(createEmptyProviderFormValue({ type: 'custom' }), { onChange })
 
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-controls="provider-local-model-server"]')
+        ?.click()
+    })
     const ollama = [...container.querySelectorAll<HTMLButtonElement>('button[type="button"]')].find(
       (button) => button.textContent?.includes('Ollama')
     )
@@ -84,6 +89,59 @@ describe('ProviderForm field switching', () => {
       apiEndpoint: 'openai',
       name: 'Ollama'
     })
+  })
+
+  it('uses the shared disclosure for local model server presets', () => {
+    render(createEmptyProviderFormValue({ type: 'custom' }))
+
+    const disclosure = container.querySelector<HTMLButtonElement>(
+      'button[aria-controls="provider-local-model-server"]'
+    )
+    expect(disclosure?.getAttribute('aria-expanded')).toBe('false')
+    expect(container.querySelector('details')).toBeNull()
+
+    act(() => disclosure?.click())
+
+    expect(disclosure?.getAttribute('aria-expanded')).toBe('true')
+    expect(
+      container.querySelector('[role="group"][aria-label="Local model server"]')
+    ).not.toBeNull()
+  })
+
+  it('opens local model presets for a loopback gateway', () => {
+    render(
+      createEmptyProviderFormValue({
+        type: 'custom',
+        baseUrl: 'http://localhost:11434'
+      })
+    )
+
+    const disclosure = container.querySelector<HTMLButtonElement>(
+      'button[aria-controls="provider-local-model-server"]'
+    )
+    expect(disclosure?.getAttribute('aria-expanded')).toBe('true')
+
+    act(() => disclosure?.click())
+
+    expect(disclosure?.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('opens local model presets when the base URL becomes loopback', () => {
+    const onChange = vi.fn()
+    render(createEmptyProviderFormValue({ type: 'custom' }), { onChange })
+
+    const baseUrl = container.querySelector<HTMLInputElement>('[aria-label="Base URL"]')
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    act(() => {
+      setter?.call(baseUrl, 'http://localhost:11434')
+      baseUrl?.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    expect(
+      container
+        .querySelector<HTMLButtonElement>('button[aria-controls="provider-local-model-server"]')
+        ?.getAttribute('aria-expanded')
+    ).toBe('true')
   })
 
   it('marks the API key optional for a loopback custom gateway', () => {
@@ -196,13 +254,7 @@ describe('ProviderForm field switching', () => {
     expect(container.querySelector<HTMLInputElement>('[aria-label="Model"]')?.placeholder).toBe(
       'e.g. deepseek-v4-flash'
     )
-    const contextWindow = container.querySelector<HTMLInputElement>('[aria-label="Context window"]')
-    expect(contextWindow?.placeholder).toBe('Use provider default')
-    expect(contextWindow?.getAttribute('role')).toBeNull()
-    expect(
-      container.querySelector('[role="group"][aria-labelledby="provider-context-window-label"]')
-        ?.textContent
-    ).toBe('32K64K128K200K256K1M')
+    expect(container.querySelector('[aria-label="Context window"]')).toBeNull()
     expect(container.querySelector('[aria-label="Maximum input tokens"]')).toBeNull()
     expect(container.querySelector('[aria-label="Maximum output tokens"]')).toBeNull()
 
@@ -247,17 +299,16 @@ describe('ProviderForm field switching', () => {
   it('shows context and input/output presets as inline shortcuts', () => {
     render(createEmptyProviderFormValue({ type: 'custom' }))
 
-    expect(
-      container.querySelector('[role="group"][aria-labelledby="provider-context-window-label"]')
-        ?.textContent
-    ).toBe('32K64K128K200K256K1M')
-
     act(() => {
       Array.from(container.querySelectorAll('button'))
         .find((button) => button.textContent === 'Advanced settings')
         ?.click()
     })
 
+    expect(
+      container.querySelector('[role="group"][aria-labelledby="provider-context-window-label"]')
+        ?.textContent
+    ).toBe('32K64K128K200K256K1M')
     expect(
       container.querySelector('[role="group"][aria-labelledby="provider-max-input-tokens-label"]')
         ?.textContent
@@ -475,7 +526,7 @@ describe('ProviderForm field switching', () => {
     expect(container.querySelector('[aria-label="API key"]')).toBeNull()
     expect(container.querySelector('[aria-label="Model"]')).toBeNull()
     expect(container.textContent).toContain(
-      "Copies Codex authentication and, when compatible, the active provider's non-secret loopback route into MedResearch Agent"
+      "Copies Codex authentication and, when compatible, the active provider's non-secret loopback route into DRA"
     )
     expect(container.textContent).toContain('Skills and sessions are not imported')
   })
@@ -692,15 +743,15 @@ describe('ProviderForm field switching', () => {
     )
   })
 
-  it('moves custom-provider descriptions into generic field-help tooltips', async () => {
+  it('identifies field-help tooltips by the field they explain', async () => {
     render(createEmptyProviderFormValue({ type: 'custom' }))
     const helpButtons = Array.from(
       container.querySelectorAll<HTMLButtonElement>('[data-slot="field-help"]')
     )
 
-    expect(helpButtons).toHaveLength(5)
+    expect(helpButtons).toHaveLength(4)
     expect(
-      helpButtons.every((button) => button.getAttribute('aria-label') === 'More information')
+      helpButtons.every((button) => button.getAttribute('aria-label')?.startsWith('Help for '))
     ).toBe(true)
     expect(container.textContent).not.toContain(
       'Base URL, key, and model for an Anthropic or OpenAI-compatible endpoint'
@@ -753,12 +804,12 @@ describe('ProviderForm field switching', () => {
     expect(resolve(true)).toEqual({
       title: 'Your key stays private.',
       description:
-        'It is stored only on this device and never uploaded to MedResearch Agent. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
+        'It is stored only on this device and never uploaded to DRA. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
     })
     expect(resolve(false)).toEqual({
       title: 'Secure storage is unavailable.',
       description:
-        'MedResearch Agent will not save API keys until the operating-system credential vault is available. Unlock or authorize the system keychain, then retry.'
+        'DRA will not save API keys until the operating-system credential vault is available. Unlock or authorize the system keychain, then retry.'
     })
   })
 

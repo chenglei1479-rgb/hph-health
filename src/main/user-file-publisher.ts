@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
 import { chmod, copyFile, link, mkdtemp, rename, rm, stat } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, toNamespacedPath } from 'node:path'
 
 import { defaultFileDurability, type FileDurability } from './storage/file-durability'
 import { retryFileReplacement } from './storage/file-replacement'
@@ -80,7 +80,10 @@ const publishUserFile = async (
   options: PublishUserFileOptions = {}
 ): Promise<void> => {
   const directory = dirname(destinationPath)
-  const temporaryDirectory = await mkdtemp(join(directory, '.open-science-save-'))
+  const temporaryPrefix = join(directory, '.open-science-save-')
+  const temporaryDirectory = await mkdtemp(
+    process.platform === 'win32' ? toNamespacedPath(temporaryPrefix) : temporaryPrefix
+  )
   const temporaryPath = join(temporaryDirectory, basename(destinationPath))
   const durability = options.durability ?? defaultFileDurability
 

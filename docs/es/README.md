@@ -49,7 +49,9 @@ AIPOCH Open-Science es un entorno de investigación con IA para científicos e i
 
 AIPOCH Open-Science respalda la investigación computacional y con uso intensivo de datos en todas las disciplinas, incluidos el aprendizaje automático, la estadística, las ciencias biológicas, la química, la ciencia de los materiales, la física y las ciencias ambientales. Acompaña todo el proceso de investigación, desde la revisión bibliográfica y el desarrollo de hipótesis hasta la ejecución de código, el análisis de datos, la simulación, la visualización y la producción de resultados rastreables.
 
-> 💡 **[AIPOCH Open-Science v0.33.3 publicado](https://github.com/aipoch/open-science/releases/latest)** _(actualizado por última vez en septiembre de 2026)_. AIPOCH Open-Science v0.33.3 mejora la vista previa de documentos con lectura paginada de Office y búsqueda, además de revisión de PowerPoint por páginas; añade herramientas de enriquecimiento de conjuntos de genes de Enrichr al conector de genes; e incorpora una vista previa compacta de la biblioteca al espacio de trabajo. La firma de Windows ahora cubre todos los ejecutables incluidos, Literature screening gana una acción de evaluación abandonada, y los paquetes de sesión pueden transferirse a velocidades adaptativas. Consulta las [notas de la versión más recientes](https://github.com/aipoch/open-science/releases/latest) para más detalles.
+Las sesiones de investigación terminadas también pueden exportarse como paquetes `.science` portátiles para revisión, traspaso y archivo, con ramas de conversación, versiones de archivos, registros de Notebook y evidencias de verificación seleccionados.
+
+> 💡 **[AIPOCH Open-Science v0.36.0 publicado](https://github.com/aipoch/open-science/releases/latest)** _(actualizado por última vez en octubre de 2026)_. AIPOCH Open-Science v0.36.0 añade ejecución de Notebook con revisión de riesgos por ejecución, traducción PDF compartida y reanudable con modos de lectura de original, traducción y comparación, un conector PDC para estudios de proteómica del cáncer, consultas de desequilibrio de ligamiento por población en el conector de genomas y compatibilidad con Claude Haiku 5.5. Las correcciones preservan el diseño nativo de los PDF científicos, limpian el catálogo oficial de modelos, restablecen la búsqueda en conversaciones vacías y refuerzan las menciones de archivos, la navegación del Marketplace en Remote Web y los chips del compositor. Consulta las [notas de la versión más recientes](https://github.com/aipoch/open-science/releases/latest) para más detalles.
 
 <p align="center">
  <img width="1920" height="1140" alt="Banner principal de AIPOCH Open-Science: Science, Open to All — un entorno de investigación de IA científica de código abierto, independiente del modelo y autohospedado" src="../images/readme/open-science-banner.png" />
@@ -59,6 +61,7 @@ AIPOCH Open-Science respalda la investigación computacional y con uso intensivo
 
 - [Inicio rápido](#-inicio-rápido)
 - [Recorrido por el producto](#recorrido-por-el-producto)
+- [Paquetes de investigación `.science` de AIPOCH Open-Science](#paquetes-de-investigación-science-de-aipoch-open-science)
 - [Rendimiento en benchmarks](#rendimiento-en-benchmarks)
 - [Capacidades principales](#capacidades-principales)
 - [Proveedores de modelos](#proveedores-de-modelos)
@@ -155,6 +158,18 @@ Cada artefacto generado se almacena como una versión inmutable con suma de comp
   <img src="../images/readme/product-tour-provenance.jpg" alt="Vista previa de un artefacto de investigación de AIPOCH Open-Science con acceso a Provenance para rastrear un resultado generado" width="900">
 </p>
 
+## Paquetes de investigación `.science` de AIPOCH Open-Science
+
+Exporte una sesión de investigación terminada como un paquete `.science` portátil para revisión, traspaso y archivo. Elija las ramas de conversación, versiones de archivos, registros de Notebook y evidencias de verificación que desea incluir, y luego importe el paquete en otro proyecto o equipo.
+
+**Exportar → transferir → inspeccionar**
+
+1. Exporte una sesión terminada y elija el contenido que desea incluir.
+2. Transfiera el archivo `.science` a un colaborador o a otro equipo.
+3. Importe el paquete en un proyecto e inspeccione el historial de solo lectura, los archivos incluidos, los registros de Notebook y las evidencias de verificación.
+
+Los paquetes importados son de solo lectura. No ejecutan código ni restauran credenciales. Continúe el trabajo posterior en una sesión nueva. Para volver a ejecutar un resultado se necesitan una receta completa, las entradas necesarias y un entorno de ejecución disponible.
+
 ## Rendimiento en benchmarks
 
 ### 🏆 N.º 1 en BiomniBench-DA Public 50
@@ -225,7 +240,7 @@ AIPOCH Open-Science es una aplicación Electron creada con React, TypeScript, Pr
 
 Requisitos previos para desarrollar desde el código fuente:
 
-- Node.js 22 (consulte [`.nvmrc`](../../.nvmrc)) con npm
+- Node.js 24 (consulte [`.nvmrc`](../../.nvmrc)) con npm
 - Git
 - La ejecución de Notebook es opcional y usa entornos Python/R gestionados por la aplicación o un intérprete compatible que usted configure.
 
@@ -322,7 +337,7 @@ Antes de abrir una incidencia pública, elimine de los registros y las capturas 
 
 > **Dar Star al repositorio:** Si este proyecto le ha resultado útil, agradeceríamos que le diera Star en GitHub. Ayuda a sostener el desarrollo y solo lleva un segundo.
 
-Las capacidades entregadas, parciales y previstas aparecen en el [mapa de capacidades](../../ROADMAP.md#capability-map).
+Las capacidades entregadas, parciales y previstas aparecen en el [mapa de capacidades](../ROADMAP.md#capability-map).
 
 ## Licencia
 

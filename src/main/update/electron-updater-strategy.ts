@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import type { DraUpdateDeployment } from '../../shared/dra-update-deployment'
 import { spawnSync } from 'node:child_process'
 import { autoUpdater, CancellationToken, AppImageUpdater, DebUpdater } from 'electron-updater'
 
@@ -48,6 +49,7 @@ export interface MinimalCancellationToken {
 // Structural subset of electron-updater's autoUpdater we depend on, so tests can inject a fake without
 // pulling a real Electron runtime.
 export interface MinimalAutoUpdater {
+  setFeedURL?(config: DraUpdateDeployment): void
   autoDownload: boolean
   autoInstallOnAppQuit: boolean
   on(event: string, listener: (...args: unknown[]) => void): unknown
@@ -57,6 +59,7 @@ export interface MinimalAutoUpdater {
 }
 
 export type ElectronUpdaterDeps = {
+  deployment?: DraUpdateDeployment
   installationGuard?: (interactive: boolean, knownReadOnly?: boolean) => boolean
   updater?: MinimalAutoUpdater
   currentVersion?: string
@@ -233,6 +236,11 @@ export class ElectronUpdaterStrategy implements UpdateStrategy {
 
   constructor(deps: ElectronUpdaterDeps = {}) {
     this.updater = deps.updater ?? (autoUpdater as unknown as MinimalAutoUpdater)
+    if (deps.deployment) {
+      if (!this.updater.setFeedURL)
+        throw new Error('The updater cannot load DRA deployment configuration.')
+      this.updater.setFeedURL(deps.deployment)
+    }
     this.currentVersion = deps.currentVersion ?? app?.getVersion?.() ?? '0.0.0'
     this.platform = deps.platform ?? process.platform
     // Resolve the effective arch: an x64 app under Rosetta on Apple Silicon downloads the arm64

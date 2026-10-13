@@ -69,7 +69,13 @@ export type PackageSelectableFile = PackageExcludedFile & {
   dependentFiles: string[]
 }
 
+export type PackageFileSelection = {
+  excludedStorageKeys: readonly string[]
+  includePdfNotes: boolean
+}
+
 export type PackageSelectionSummary = {
+  pdfNotesAvailable?: boolean
   retainedFiles: PackageExcludedFile[]
   metadataBytes: number
 }
@@ -140,6 +146,7 @@ export const packageOperationRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('next-import'), operationId: identity }).strict(),
   z.object({ action: z.literal('dismiss-queue-warning'), operationId: identity }).strict(),
   z.object({ action: z.literal('retry-import'), operationId: identity }).strict(),
+  z.object({ action: z.literal('export-with-sensitive-content'), operationId: identity }).strict(),
   z.object({ action: z.literal('reveal'), operationId: identity }).strict(),
   z.object({ action: z.literal('retry-cleanup'), operationId: identity }).strict(),
   z
@@ -153,7 +160,8 @@ export const packageOperationRequestSchema = z.discriminatedUnion('action', [
     .object({
       action: z.literal('select'),
       operationId: identity,
-      excludedStorageKeys: z.array(z.string().max(2048)).max(10000)
+      excludedStorageKeys: z.array(z.string().max(2048)).max(10000),
+      includePdfNotes: z.boolean().optional()
     })
     .strict()
 ])
@@ -193,9 +201,10 @@ export const packageInventoryEntrySchema = z
 export const sessionPackageManifestSchema = z
   .object({
     format: z.literal('open-science-session'),
+    // content-dedupe lets logical inventory entries share one content-addressed object path.
     requiredFeatures: z
-      .array(z.enum(['literature', 'ro-crate']))
-      .max(2)
+      .array(z.enum(['literature', 'ro-crate', 'content-dedupe']))
+      .max(3)
       .optional(),
     schemaVersion: z.literal(1),
     createdAt: z.number().int().nonnegative(),
@@ -325,7 +334,8 @@ const packageOperationSnapshotSchema: z.ZodType<PackageOperationSnapshot> = z
     summary: z
       .object({
         retainedFiles: z.array(packageExcludedFileSchema).max(10000),
-        metadataBytes: z.number().nonnegative()
+        metadataBytes: z.number().nonnegative(),
+        pdfNotesAvailable: z.boolean().optional()
       })
       .strict()
       .optional(),

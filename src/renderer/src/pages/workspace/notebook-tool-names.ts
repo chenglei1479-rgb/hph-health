@@ -1,4 +1,4 @@
-// Single source of truth for identifying the MedResearch Agent notebook MCP server's kernel-run tools.
+// Single source of truth for identifying the DRA notebook MCP server's kernel-run tools.
 // Both the transcript (workspace-tool-activity-details) and the permission dialog
 // (PermissionApprovalControls) must agree on which tools carry previewable code, so the suffix
 // list and the identity check live here rather than being duplicated per call site.
@@ -142,6 +142,14 @@ const resolveNotebookLanguage = (
   input: Record<string, unknown> | undefined,
   code: string | undefined
 ): string => {
+  const shellRuntime = input?.shellRuntime
+  const shellLanguage =
+    shellRuntime &&
+    typeof shellRuntime === 'object' &&
+    'kind' in shellRuntime &&
+    shellRuntime.kind === 'powershell'
+      ? 'powershell'
+      : 'bash'
   // 1. Explicit kernel field (kernelKind, kernel, or language) in the input.
   const explicit = ['kernelKind', 'kernel', 'language'].reduce<string | undefined>(
     (found, key) =>
@@ -153,7 +161,7 @@ const resolveNotebookLanguage = (
       python: 'python',
       r: 'r',
       repl: 'javascript',
-      bash: 'bash'
+      bash: shellLanguage
     }
     const mapped = kernelMap[explicit.toLowerCase()]
     if (mapped) return mapped
@@ -162,7 +170,7 @@ const resolveNotebookLanguage = (
   // 2. Tool-name suffix: repl_execute → javascript, bash_execute → bash.
   const suffix = matchNotebookRunTool(toolName)
   if (suffix === 'repl_execute') return 'javascript'
-  if (suffix === 'bash_execute') return 'bash'
+  if (suffix === 'bash_execute') return shellLanguage
 
   // 3. Code heuristics when the notebook server left kernelKind blank (infer R cells, etc).
   if (code) {

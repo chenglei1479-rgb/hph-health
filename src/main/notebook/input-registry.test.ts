@@ -182,6 +182,20 @@ const setup = async (): Promise<NotebookInputRegistry> => {
         select: { artifactId: true }
       })
       return version ? { sourceFileId: version.artifactId } : undefined
+    },
+    resolveInputVersionIdentity: async (projectId, versionId) => {
+      const upload = await client!.uploadVersion.findFirst({
+        where: { id: versionId, state: 'ready', uploadFile: { is: { projectId } } },
+        select: { uploadFileId: true }
+      })
+      if (upload) return { sourceKind: 'upload-version', sourceFileId: upload.uploadFileId }
+      const artifact = await client!.artifactVersion.findFirst({
+        where: { id: versionId, state: 'finalized', artifact: { is: { projectId } } },
+        select: { artifactId: true }
+      })
+      return artifact
+        ? { sourceKind: 'artifact-version', sourceFileId: artifact.artifactId }
+        : undefined
     }
   })
 }
@@ -764,6 +778,62 @@ describe('NotebookInputRegistry', () => {
         artifactVersionInputs: ['missing-panel-version']
       })
     ).rejects.toThrow('Artifact Version is unavailable in this Project: missing-panel-version')
+  })
+
+  it.each(['inputVersionIds', 'artifactVersionInputs'] as const)(
+    'resolves an earlier Upload by its actual source through %s without reattaching it',
+    async (field) => {
+      const registry = await setup()
+      await createUpload({
+        projectId: 'project-1',
+        sessionId: 'earlier-session',
+        uploadFileId: 'cohort',
+        versionId: 'cohort-v1',
+        filename: 'cohort.csv',
+        content: 'id,event\n1,0\n'
+      })
+      const lease = await registry.openRun({
+        projectId: 'project-1',
+        appSessionId: 'active-session',
+        promptMessageId: 'next-turn',
+        [field]: ['cohort-v1', 'cohort-v1']
+      })
+      expect(lease.getRunInputFiles()).toEqual([
+        expect.objectContaining({
+          sourceKind: 'upload-version',
+          sourceFileId: 'cohort',
+          inputFileVersionId: 'cohort-v1'
+        })
+      ])
+      const path = await lease.resolve({
+        sourceKind: 'upload-version',
+        inputFileVersionId: 'cohort-v1'
+      })
+      expect(await readFile(path, 'utf8')).toBe('id,event\n1,0\n')
+      expect(await lease.close()).toEqual([
+        expect.objectContaining({ association: 'resolver-accessed' })
+      ])
+    }
+  )
+
+  it('rejects selected Upload Versions from another Project before staging content', async () => {
+    const registry = await setup()
+    await createUpload({
+      projectId: 'project-2',
+      sessionId: 'other-session',
+      uploadFileId: 'private',
+      versionId: 'private-v1',
+      filename: 'private.csv',
+      content: 'id\n1\n'
+    })
+    await expect(
+      registry.openRun({
+        projectId: 'project-1',
+        appSessionId: 'active-session',
+        promptMessageId: 'next-turn',
+        inputVersionIds: ['private-v1']
+      })
+    ).rejects.toThrow('Input Version is unavailable in this Project: private-v1')
   })
 
   it(

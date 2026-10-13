@@ -1,4 +1,6 @@
+import { AppBrand } from '@/components/AppBrand'
 import { ErrorNotice } from '@/components/error-notice'
+import { AccountButton } from '@/components/AccountGate'
 import {
   PackageExportProgressButton,
   PackageOperationIndicator
@@ -48,19 +50,16 @@ import { useArchiveUndoStore } from '@/stores/archive-undo-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useProjectFormDialog } from '@/hooks/useProjectFormDialog'
 import { startWslSetupConversation } from '@/lib/wsl-support-handoff'
-import { GitHubStarBadge } from '@/components/GitHubStarBadge'
+import { LanguageSelect } from '@/components/LanguageControls'
 import { NetworkStatusIndicator } from '@/components/NetworkStatusIndicator'
 import { NotificationBell } from '@/components/NotificationBell'
 import { ProjectDeletionCleanupNotice } from '@/components/ProjectDeletionCleanupNotice'
 import { UpdateCapsule } from '@/components/UpdateCapsule'
-import {
-  MedicalResearchLaunchpad,
-  type MedicalResearchWorkflow
-} from './MedicalResearchLaunchpad'
+import { MedicalResearchLaunchpad, type MedicalResearchWorkflow } from './MedicalResearchLaunchpad'
 import { sessionWaitReasonLabelKeys } from '@/lib/session-wait-reason-labels'
 import { APP } from '../../../../shared/app-config'
 import { earliestCurrentDelegatedAttemptStartedAt } from '../../../../shared/delegated-work-projection'
-import type { Project } from '../../../../shared/projects'
+import { PROJECT_NAME_MAX_LENGTH, type Project } from '../../../../shared/projects'
 import type { EnvironmentCheckItem, EnvironmentCheckResult } from '../../../../shared/settings'
 import { getEnvironmentRepairPanel } from '../settings/settings-navigation'
 import {
@@ -155,7 +154,7 @@ const rowClassName =
   'group flex w-full items-center gap-2 rounded-xl px-2.5 py-2.5 text-left hover:bg-bg-300 sm:px-3'
 
 const rowActionClassName =
-  'shrink-0 rounded p-0.5 text-text-300 opacity-100 transition-opacity duration-150 ease-out hover:bg-bg-400 hover:text-text-000 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 data-[state=open]:opacity-100'
+  'inline-flex size-7 shrink-0 items-center justify-center rounded text-text-300 opacity-100 transition-opacity duration-150 ease-out hover:bg-bg-400 hover:text-text-000 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 data-[state=open]:opacity-100'
 
 const withSessionDescriptionTooltip = (
   description: string | undefined,
@@ -216,8 +215,10 @@ const HomePage = ({
   const pendingCredentialRequests = useSettingsStore((state) => state.pendingCredentialRequests)
   const requiredEnvironmentFailures = getRequiredEnvironmentFailures(environmentCheck)
   const environmentRepairPanel = getEnvironmentRepairPanel(requiredEnvironmentFailures)
-  const [selectedMedicalWorkflow, setSelectedMedicalWorkflow] =
-    useState<MedicalResearchWorkflow>()
+  const [selectedMedicalWorkflow, setSelectedMedicalWorkflow] = useState<{
+    workflow: MedicalResearchWorkflow
+    theme: string
+  }>()
 
   const {
     openCreateDialog,
@@ -230,20 +231,43 @@ const HomePage = ({
     },
     onCreated: (project) => {
       if (!pendingWslSetupAfterProjectCreation) {
-        const workflow = selectedMedicalWorkflow
+        const selection = selectedMedicalWorkflow
         setSelectedMedicalWorkflow(undefined)
-        if (!workflow) {
+        if (!selection) {
           openProject(project.id, 'user')
           return
         }
-        const prompt =
-          workflow === 'evidence'
-            ? t('Review evidence for my research question. Confirm PICO, databases, date range, and inclusion criteria first; search only available sources and return a traceable evidence table with PMID/DOI and limitations. Do not invent sources or claim a search that was not performed.')
-            : workflow === 'protocol'
-              ? t('Draft a study protocol from my research question. Ask for missing details about population, design, outcomes, sample-size rationale, analysis, ethics, and registration; mark unknowns rather than inventing them.')
-              : workflow === 'analysis'
-                ? t('Inspect my dataset before analysis. Propose a plan first, preserve raw data, and use reproducible R/Python only after I approve. Report effect sizes, uncertainty, and limitations without fabricating results.')
-                : t('Draft from my supplied protocol, verified sources, and real results only. Check claims against evidence, mark gaps as placeholders, and never invent references, statistics, approvals, or registrations.')
+        const workflowNames: Record<MedicalResearchWorkflow, string> = {
+          'mentor-pack': t('Mentor discussion pack'),
+          'consultation-pack': t('Data audit and statistical consultation pack'),
+          'writing-pack': t('Conference abstract or English draft'),
+          novelty: t('Research novelty check'),
+          evidence: t('Literature review'),
+          protocol: t('Study planning'),
+          analysis: t('Data analysis'),
+          manuscript: t('Manuscript writing'),
+          'academic-english': t('Academic English writing')
+        }
+        const corePrompt = t(
+          'Start a reviewable medical research workflow for “{{theme}}”, beginning with {{startingPoint}}. Show the first stage as an editable draft, identify the evidence or data needed, and ask the researcher to confirm or revise it before proceeding. Respond in the app’s selected language.',
+          { theme: selection.theme, startingPoint: workflowNames[selection.workflow] }
+        )
+        const analysisPrompt =
+          selection.workflow === 'analysis'
+            ? `\n\n${t('For data analysis, ask the researcher to attach an anonymized CSV if none is attached. Preserve the original and stop if direct identifiers or likely patient identifiers are found; do not reproduce them. First provide a reviewable data profile: row and column counts, schema, variable names and types, units, coding, duplicates, ranges, missingness by variable, and appropriate descriptive statistics. Explain limitations and any data-quality decisions. Recommend a statistical plan based on the design, outcomes, distributions, sample size, and missingness; state assumptions, alternatives, effect measures, and missing-data handling. Propose Table 1 and figure specifications. Then stop and wait for explicit researcher approval of the plan. Only after approval run Python or R. Provide the exact reproducible code, software and package versions, input-file checksum, parameters, and generated tables and figures. Report only computed results with effect sizes and uncertainty, then draft Methods and Results from those outputs and request researcher review. If the environment cannot execute an analysis or generate an artifact, say so and provide the code as a draft instead of claiming completion.')}`
+            : ''
+        const noveltyPrompt =
+          selection.workflow === 'novelty'
+            ? `\n\n${t('For a novelty check, draft Japanese and English search terms and exact queries for PubMed, Crossref, OpenAlex, and ClinicalTrials.gov. Ask the researcher to approve the search plan first. Search only available sources and record each source, query, date, result count, and limit. If a connector is unavailable, mark it as not searched. Provide the official jRCT search page (https://jrct.mhlw.go.jp/search?language=en) for manual checking; do not scrape it or claim it was searched automatically. After searching, deduplicate prior studies and map established or conflicting evidence, underrepresented populations or outcomes, method gaps, ongoing trials, and possible novelty opportunities. Link every finding to its source. Label novelty as tentative, explain coverage limits, and never infer that no prior work exists from zero results. Ask the researcher to validate the Research Gap Map and novelty claim.')}`
+            : ''
+        const academicEnglishPrompt =
+          selection.workflow === 'academic-english'
+            ? `\n\n${t('For Japanese-to-English biomedical writing, infer Methods, Results, or Discussion only from supplied context; ask if it is ambiguous. Preserve facts, study details, numbers, citations, uncertainty, and causal strength. Write idiomatic, section-appropriate academic English and explain key choices in the selected app language; show aligned Japanese and English when useful. Follow journal style only after checking current author instructions; otherwise label it general biomedical style. Never invent methods, results, claims, or references. Flag missing context and request researcher approval before finalizing.')}`
+            : ''
+        const deliverablePrompt = selection.workflow.endsWith('-pack')
+          ? `\n\n${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: workflowNames[selection.workflow] })}\nPackage mode: ${selection.workflow}`
+          : ''
+        const prompt = `${corePrompt}${noveltyPrompt}${analysisPrompt}${academicEnglishPrompt}${deliverablePrompt}`
         if (!startResearchConversation(project.id, prompt)) openProject(project.id, 'user')
         return
       }
@@ -549,7 +573,7 @@ const HomePage = ({
         )
       }
       if (effectiveCatalogRecovery.kind === 'unsupported-version') {
-        return t('Update MedResearch Agent before archiving this project.')
+        return t('Update DRA before archiving this project.')
       }
       return t('Repair the project index before archiving.')
     }
@@ -559,32 +583,68 @@ const HomePage = ({
     return undefined
   }
 
-  const selectMedicalWorkflow = (workflow: MedicalResearchWorkflow): void => {
-    setSelectedMedicalWorkflow(workflow)
+  const selectMedicalWorkflow = (workflow: MedicalResearchWorkflow, theme: string): void => {
     const templates: Record<MedicalResearchWorkflow, { name: string; description: string }> = {
+      'mentor-pack': {
+        name: t('Mentor discussion pack'),
+        description: t(
+          'Input: research question and available evidence. Output: one-page brief, evidence table, study options, and questions for your mentor.'
+        )
+      },
+      'consultation-pack': {
+        name: t('Data audit and statistical consultation pack'),
+        description: t(
+          'Input: anonymized dataset and variable definitions. Output: data audit, statistical plan, and consultation checklist; computed results require approved execution.'
+        )
+      },
+      'writing-pack': {
+        name: t('Conference abstract or English draft'),
+        description: t(
+          'Input: verified study facts, results, and submission requirements. Output: abstract or English draft, source map, and items requiring author review.'
+        )
+      },
+      novelty: {
+        name: t('Research novelty check'),
+        description: t(
+          'Search existing studies and ongoing trials, then map potential research gaps with source links and coverage limits.'
+        )
+      },
       evidence: {
-        name: t('Evidence synthesis'),
+        name: t('Literature review'),
         description: t('Frame a PICO question and build a traceable evidence table.')
       },
       protocol: {
-        name: t('Study protocol'),
-        description: t('Turn a research question into an editable study protocol.')
+        name: t('Study planning'),
+        description: t('Convert a research question into an editable study protocol.')
       },
       analysis: {
-        name: t('Statistical analysis'),
-        description: t('Plan a reproducible analysis and preserve the raw data.')
+        name: t('Data analysis'),
+        description: t(
+          'Upload an anonymized CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
+        )
       },
       manuscript: {
-        name: t('Manuscript drafting'),
+        name: t('Manuscript writing'),
         description: t('Draft from verified sources and real study results.')
+      },
+      'academic-english': {
+        name: t('Academic English writing'),
+        description: t(
+          'Convert Japanese research notes into section-aware academic English; preserve meaning and flag missing context.'
+        )
       }
     }
+    setSelectedMedicalWorkflow({ workflow, theme })
     openCreateDialog({
-      name: templates[workflow].name,
+      name: theme.slice(0, PROJECT_NAME_MAX_LENGTH),
       description: templates[workflow].description,
-      agentContext: t(
-        'You are an assistant for academic medical research. Do not diagnose, recommend treatment, or replace a clinician. Never invent citations, identifiers, data, results, approvals, or registrations. Separate evidence from interpretation, state uncertainty and limitations, and use only sources that can be verified. Do not reproduce identifiable patient information. Preserve raw data and ask before changing files or taking external actions. Treat protocols, analyses, and manuscripts as drafts for qualified human review. For Japan-related research, flag ethics review and study registration items for confirmation against current institutional and official guidance.'
-      )
+      agentContext:
+        (workflow.endsWith('-pack')
+          ? `${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: templates[workflow].name })}\nPackage mode: ${workflow}\n\n`
+          : '') +
+        t(
+          'Support academic medical research without diagnosing, recommending treatment, or replacing a clinician. Work one stage at a time and wait for the researcher’s explicit confirmation before advancing or taking external action; silence is not approval. For every material conclusion, show a traceable evidence record with verified PMID, DOI when available, journal, year, supporting excerpt or result, and a clickable source link. Distinguish evidence from interpretation and label unverified details. Preserve Answer → Evidence → Data → Code → Result by recording source evidence, anonymized input files and variables, cohort filters, exclusions, analysis code and version, methods, parameters, and actual outputs. Require confirmation of PICO before search planning, search strategy before retrieval, included studies before synthesis, study design and statistical plan before analysis, and the final manuscript before completion. Never invent citations, identifiers, data, statistics, results, approvals, or registrations. Do not reproduce identifiable patient information; preserve raw data and ask before modifying files. Treat all plans, analyses, and manuscripts as drafts for qualified human review. For Japan-related research, flag ethics review and study registration for confirmation against current institutional and official guidance.'
+        )
     })
   }
 
@@ -711,7 +771,7 @@ const HomePage = ({
                   rel="noreferrer"
                   className="font-serif text-[26px] font-medium leading-none tracking-[-0.02em] text-text-000 hover:text-text-100"
                 >
-                  {APP.name}
+                  <AppBrand />
                 </a>
                 {hasCompleteSessionCatalog &&
                 (activeSessionCounts.waiting > 0 || activeSessionCounts.running > 0) ? (
@@ -734,7 +794,6 @@ const HomePage = ({
                   </div>
                 ) : null}
               </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">{t('Beta')}</div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-1">
               {requiredEnvironmentFailures.length > 0 && environmentRepairPanel ? (
@@ -758,10 +817,8 @@ const HomePage = ({
                 </button>
               ) : null}
               <NetworkStatusIndicator variant="pill" withTooltipProvider={false} />
+              <LanguageSelect compact />
               <PackageExportProgressButton iconOnly />
-              <span className="hidden sm:inline-flex">
-                <GitHubStarBadge variant="home" withTooltipProvider={false} />
-              </span>
               <Tooltip>
                 <TooltipTrigger
                   asChild
@@ -810,7 +867,7 @@ const HomePage = ({
                 >
                   <button
                     type="button"
-                    aria-label={t('Model settings')}
+                    aria-label={t('Settings')}
                     onClick={openSettings}
                     className="inline-flex size-9 items-center justify-center rounded-lg text-text-300 hover:bg-bg-300 hover:text-text-000"
                   >
@@ -820,7 +877,7 @@ const HomePage = ({
                 <TooltipContent side="bottom">{t('Settings')}</TooltipContent>
               </Tooltip>
               <UpdateCapsule withTooltipProvider={false} />
-              {/* Account button hidden for now; restore when the account flow lands. */}
+              <AccountButton />
               <Tooltip>
                 <TooltipTrigger
                   asChild
@@ -832,7 +889,7 @@ const HomePage = ({
                     variant="outline"
                     size="sm"
                     className="h-8 gap-1 rounded-md px-3 text-xs"
-                    onClick={openCreateDialog}
+                    onClick={() => openCreateDialog()}
                     aria-label={t('New project')}
                   >
                     <Plus className="size-3.5" strokeWidth={2} aria-hidden="true" />
@@ -1022,7 +1079,7 @@ const HomePage = ({
               {loadError ? (
                 <ErrorNotice
                   role="alert"
-                  description={t('MedResearch Agent could not load projects. Retry to continue.')}
+                  description={t('DRA could not load projects. Retry to continue.')}
                   primaryButton={{
                     label: isRetryingProjects ? t('Retrying...') : t('Retry'),
                     loading: isRetryingProjects,

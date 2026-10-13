@@ -356,11 +356,21 @@ describe('preview workbench store', () => {
     const store = usePreviewWorkbenchStore.getState()
     store.activateProject('project-a')
     store.upsertAndActivateItem(createProjectLibraryPreviewItem())
-    store.upsertAndActivateItem(createProjectLibraryPreviewItem())
+    store.upsertAndActivateItem(
+      createProjectLibraryPreviewItem({ collectionId: 'collection-a', collectionName: 'Evidence' })
+    )
     expect(usePreviewWorkbenchStore.getState().items).toHaveLength(1)
     expect(usePreviewWorkbenchStore.getState().items[0]).toMatchObject({
-      toolKind: 'library'
+      toolKind: 'library',
+      libraryScopeRequest: { collectionId: 'collection-a', collectionName: 'Evidence' }
     })
+    store.upsertAndActivateItem(createProjectLibraryPreviewItem({ section: 'inbox' }))
+    store.upsertAndActivateItem(createProjectLibraryPreviewItem({ section: 'inbox' }))
+    expect(usePreviewWorkbenchStore.getState().items).toHaveLength(1)
+    expect(usePreviewWorkbenchStore.getState().items[0]).toMatchObject({
+      libraryScopeRequest: { section: 'inbox' }
+    })
+    expect(usePreviewWorkbenchStore.getState().panelState).toBe('open')
     store.activateProject('project-b')
     expect(usePreviewWorkbenchStore.getState().items).toHaveLength(0)
     store.activateProject('project-a')

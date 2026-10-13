@@ -15,6 +15,15 @@ const createStrategy = (): UpdateStrategy => ({
 })
 
 describe('startUpdateScheduler', () => {
+  it('does not schedule checks or resume downloads when updates are disabled', async () => {
+    const strategy = createStrategy()
+    vi.mocked(strategy.getStatus).mockReturnValue({ state: 'disabled', current: '0.1.29' })
+    const stop = startUpdateScheduler(strategy, 1_000)
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(strategy.check).not.toHaveBeenCalled()
+    expect(strategy.download).not.toHaveBeenCalled()
+    stop()
+  })
   beforeEach(() => {
     vi.useFakeTimers()
   })

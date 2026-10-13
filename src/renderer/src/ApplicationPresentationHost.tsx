@@ -105,12 +105,17 @@ const ApplicationPresentationContent = ({
   const { t } = useTranslation()
   const settingsPageRef = useRef<SettingsPageHandle>(null)
   const closeActiveSettingsPane = useCallback(() => settingsPageRef.current?.closeActivePane(), [])
+  const requestSettingsLeave = useCallback((leave: () => void) => {
+    if (settingsPageRef.current) settingsPageRef.current.requestLeave(leave)
+    else leave()
+  }, [])
   const events = useApplicationEventBindings({
     startupView: startup.settings.startupView,
     sessionPersistence: startup.sessions,
     hasDataRootRecovery: startup.storageRecovery.missingDataRoot !== undefined,
     hasLegacyDataMove: startup.storageRecovery.legacyMove !== undefined,
-    closeActiveSettingsPane
+    closeActiveSettingsPane,
+    requestSettingsLeave
   })
   const { sessions } = startup
   const { presentation } = events
@@ -161,9 +166,16 @@ const ApplicationPresentationContent = ({
       <>
         <EnvStatusBanner
           ui={startup.environment.ui}
-          onRetry={() => void startup.environment.retry()}
+          onRetry={startup.environment.retry}
+          statusError={startup.environment.statusError}
         />
-        <Suspense fallback={<OpenScienceLogoLoader />}>
+        <Suspense
+          fallback={
+            <main className="flex min-h-svh items-center justify-center bg-background text-foreground">
+              <OpenScienceLogoLoader />
+            </main>
+          }
+        >
           <OnboardingWizard loadStorageInfo={startup.storageRecovery.loadInfo} />
         </Suspense>
       </>
@@ -340,7 +352,8 @@ const ApplicationPresentationContent = ({
               >
                 <EnvStatusBanner
                   ui={startup.environment.ui}
-                  onRetry={() => void startup.environment.retry()}
+                  onRetry={startup.environment.retry}
+                  statusError={startup.environment.statusError}
                   onOpenRuntimes={events.settings.openRuntimes}
                 />
                 {sessions.catalogRecovery.kind !== 'ready' ? (
@@ -373,6 +386,7 @@ const ApplicationPresentationContent = ({
           hasCompleteSessionCatalog={sessions.hasCompleteSessionCatalog}
           catalogRecovery={sessions.catalogRecovery}
           onRetryCatalogRecovery={sessions.retryLoad}
+          sessionLoadError={sessions.loadError}
         />
       </Suspense>
       <Suspense fallback={null}>
@@ -411,6 +425,11 @@ const ApplicationPresentationContent = ({
             open
             onOpenChange={events.globalSearch.setOpen}
             isSessionPersistenceReady={sessions.isReady}
+            onOpenRecovery={
+              sessions.catalogRecovery.kind !== 'ready'
+                ? events.globalSearch.openRecovery
+                : undefined
+            }
           />
         </Suspense>
       ) : null}

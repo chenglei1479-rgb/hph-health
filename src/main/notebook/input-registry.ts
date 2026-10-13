@@ -39,6 +39,7 @@ type ResolveNotebookInputPreviewRequest = {
 }
 
 type OpenNotebookInputRunRequest = GetNotebookTurnInputsRequest & {
+  inputVersionIds?: readonly string[]
   artifactVersionInputs?: readonly string[]
   producerScope?: ArtifactProducerInputScope
 }
@@ -67,6 +68,16 @@ type NotebookInputRegistryOptions = {
     projectId: string,
     versionId: string
   ) => Promise<{ sourceFileId: string } | undefined>
+  resolveInputVersionIdentity?: (
+    projectId: string,
+    versionId: string
+  ) => Promise<
+    | {
+        sourceKind: NotebookRunInputFile['sourceKind']
+        sourceFileId: string
+      }
+    | undefined
+  >
 }
 
 type RegisteredTurn = {
@@ -222,8 +233,40 @@ class NotebookInputRegistry {
       throw new Error('Notebook producer input is unavailable in this Session.')
     const registered = this.turns.get(turnKey(request))?.inputs ?? []
     const producerInputs = new Set<string>()
+    const selectedProjectInputs = await Promise.all(
+      [...new Set(request.inputVersionIds ?? [])].map(async (inputFileVersionId) => {
+        const identity = await this.options.resolveInputVersionIdentity?.(
+          request.projectId,
+          inputFileVersionId
+        )
+        if (!identity) {
+          throw new Error(`Input Version is unavailable in this Project: ${inputFileVersionId}`)
+        }
+        return this.resolveVersion({
+          projectId: request.projectId,
+          sourceKind: identity.sourceKind,
+          inputFileVersionId,
+          expectedSourceFileId: identity.sourceFileId
+        })
+      })
+    )
     const workflowArtifacts = await Promise.all(
       [...new Set(request.artifactVersionInputs ?? [])].map(async (inputFileVersionId) => {
+        // Older clients may put a selected Upload Version in artifactVersionInputs. Resolve any
+        // already-published catalog entry by its actual source before considering the producer-only
+        // Artifact fallback, so an Upload ID is never misclassified as an Artifact ID.
+        const selectedIdentity = await this.options.resolveInputVersionIdentity?.(
+          request.projectId,
+          inputFileVersionId
+        )
+        if (selectedIdentity) {
+          return this.resolveVersion({
+            projectId: request.projectId,
+            sourceKind: selectedIdentity.sourceKind,
+            inputFileVersionId,
+            expectedSourceFileId: selectedIdentity.sourceFileId
+          })
+        }
         const identity = await this.options.resolveArtifactVersionIdentity?.(
           request.projectId,
           inputFileVersionId
@@ -240,7 +283,10 @@ class NotebookInputRegistry {
     )
     const requested = [
       ...new Map(
-        [...registered, ...workflowArtifacts].map((input) => [versionKey(input), input])
+        [...registered, ...selectedProjectInputs, ...workflowArtifacts].map((input) => [
+          versionKey(input),
+          input
+        ])
       ).values()
     ]
     const inputs = await Promise.all(

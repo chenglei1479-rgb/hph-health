@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { Page } from 'playwright'
+import type { JSHandle, Page } from 'playwright'
 import { test } from './fixtures/electron-app'
 
 const PROJECT_NAME = 'Agent journey project'
@@ -294,7 +294,7 @@ test('explains disabled revision navigation while a turn is running', async ({ a
   await page.screenshot({ path: testInfo.outputPath('revision-navigation-idle.png') })
 })
 
-test('edits and navigates message revisions that persist after relaunch @pr-mainline-conversation', async ({
+test('edits and navigates message revisions that persist after relaunch', async ({
   app
 }, testInfo) => {
   await app.completeOnboarding()
@@ -853,14 +853,37 @@ test('previews and opens an Agent HTTPS source link in the isolated preview tab'
   await app.setMainWindowZoomFactor(1.25)
   await expect(sourceFrame).toBeVisible()
   const rightClickTarget = nativePage.getByRole('heading', { name: 'Fixture source' })
-  const sourceBounds = (await sourceFrame.boundingBox())!
-  const headingBounds = (await rightClickTarget.boundingBox())!
+  // Capture the real guest click: resize/zoom can invalidate bounds read before input dispatch.
+  await rightClickTarget.evaluate((element) => {
+    element.addEventListener(
+      'contextmenu',
+      (event) => {
+        const pointer = event as MouseEvent
+        element.setAttribute(
+          'data-e2e-context-pointer',
+          JSON.stringify({ x: pointer.clientX, y: pointer.clientY })
+        )
+      },
+      { once: true }
+    )
+  })
   await rightClickTarget.click({ button: 'right', position: { x: 8, y: 10 } })
   const sourceMenu = page.getByRole('menu')
   await expect(sourceMenu.getByText('Copy link', { exact: true })).toBeVisible()
-  const menuBounds = (await sourceMenu.boundingBox())!
-  expect(Math.abs(menuBounds.x - (sourceBounds.x + headingBounds.x + 8))).toBeLessThan(5)
-  expect(Math.abs(menuBounds.y - (sourceBounds.y + headingBounds.y + 10))).toBeLessThan(5)
+  const sourceBounds = (await sourceFrame.boundingBox())!
+  const clickPointer = JSON.parse(
+    (await rightClickTarget.getAttribute('data-e2e-context-pointer'))!
+  )
+  await expect
+    .poll(async () => {
+      const sourceBounds = (await sourceFrame.boundingBox())!
+      const menuBounds = (await sourceMenu.boundingBox())!
+      return Math.max(
+        Math.abs(menuBounds.x - (sourceBounds.x + clickPointer.x)),
+        Math.abs(menuBounds.y - (sourceBounds.y + clickPointer.y))
+      )
+    })
+    .toBeLessThan(5)
   await page.screenshot({ path: testInfo.outputPath('source-context-menu-zoom.png') })
   await page.keyboard.press('Escape')
   await expect(sourceMenu).toHaveCount(0)
@@ -1268,6 +1291,15 @@ test('exports a CLI conversation first opened after completion', async ({ app },
       .getByRole('region', { name: 'Conversation' })
       .getByText('CLI export completed before opening.', { exact: true })
   ).toBeVisible()
+  // The first visible message does not mean the throttled renderer has finished presenting the
+  // completed transcript. Open the menu only after its existing export prerequisite is visible.
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Sessions' })
+      .locator('button[data-slot="session-open-button"]')
+      .filter({ hasText: saved!.title })
+      .getByText('Session status: Idle', { exact: true })
+  ).toBeVisible()
   await page.getByRole('button', { name: `Open actions for ${saved!.title}` }).click()
   await page.getByRole('menuitem', { name: 'Export', exact: true }).hover()
   await page.getByRole('menuitem', { name: 'Export conversation…' }).click()
@@ -1290,4 +1322,125 @@ test('exports a CLI conversation first opened after completion', async ({ app },
   await page.getByRole('textbox', { name: 'Ask anything' }).fill('Continue after export.')
   await page.getByRole('button', { name: 'Send message' }).click()
   await expect(page.getByText(AGENT_REPLY, { exact: true })).toHaveCount(2)
+})
+
+test.describe('New conversation transition', () => {
+  test.use({ windowMode: 'normal' })
+  test('keeps new conversation starters stable and docks the same editor after sending', async ({
+    app
+  }, testInfo) => {
+    await app.completeOnboarding()
+    const page = await app.configureFakeAgent()
+    await page.setViewportSize({ width: 1270, height: 925 })
+    await createProject(page)
+    const capture = async (name: string): Promise<void> => {
+      await page.evaluate(() => window.api.locale.setPreference({ preference: 'zh-Hans' }))
+      await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
+      await page.screenshot({ path: testInfo.outputPath(name) })
+      await page.evaluate(() => window.api.locale.setPreference({ preference: 'en' }))
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+    }
+    const dock = page.getByTestId('conversation-composer-dock')
+    const start = page.getByTestId('new-conversation-start')
+    const composer = page.getByRole('textbox', { name: 'Ask anything' })
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    const originalEditor = await composer.elementHandle()
+    // Observe every DOM commit, including the brief seed notification before pending binding.
+    const sidebarRows = await page.evaluateHandle(() => {
+      const samples: number[] = []
+      const sidebar = document.querySelector('aside[aria-label="Workspace navigation"]')!
+      const observer = new MutationObserver(() => {
+        samples.push(sidebar.querySelectorAll('[data-session-id]').length)
+      })
+      observer.observe(sidebar, { childList: true, subtree: true })
+      return { samples, observer }
+    })
+    const observeDockMotion = (): Promise<JSHandle<number[]>> =>
+      page.evaluateHandle(() => {
+        const result: number[] = []
+        const dock = document.querySelector('[data-testid="conversation-composer-dock"]')!
+        const observer = new MutationObserver(() => {
+          if (dock.getAttribute('data-placement') !== 'bottom') return
+          const form = dock.querySelector('form')!
+          result.push(
+            ...form
+              .getAnimations()
+              .map((animation) => Number(animation.effect?.getTiming().duration))
+          )
+          observer.disconnect()
+        })
+        observer.observe(dock, { attributes: true, attributeFilter: ['data-placement'] })
+        return result
+      })
+    await expect(dock).toHaveAttribute('data-placement', 'start')
+    await capture('01-new-conversation.png')
+    const initialTop = (await composer.boundingBox())!.y
+    await composer.fill('Study the relationship between dose and response.')
+    await expect(start).toBeVisible()
+    expect(Math.abs((await composer.boundingBox())!.y - initialTop)).toBeLessThan(2)
+    await page.getByRole('button', { name: 'Analyze data', exact: true }).click()
+    await expect(composer).toContainText('Study the relationship between dose and response.')
+    await expect(composer).toContainText('Analyze my data and explain the main findings.')
+    await expect(composer).toBeFocused()
+    await composer.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
+    await expect(composer).toHaveText('Study the relationship between dose and response.')
+    await composer.press(process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z')
+    await expect(composer).toContainText('Analyze my data and explain the main findings.')
+    await expect(dock).toHaveAttribute('data-placement', 'start')
+    await capture('02-draft-and-starters.png')
+    const rail = page.getByTestId('research-scenario-rail')
+    await expect(page.getByRole('button', { name: 'Previous research ideas' })).toBeHidden()
+    await page.getByRole('button', { name: 'Next research ideas' }).click()
+    await expect.poll(() => rail.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0)
+    await expect(page.getByRole('button', { name: 'Previous research ideas' })).toBeVisible()
+    await capture('05-scenario-rail-scrolled.png')
+    // Reset the pointer scenario: Next may already be hidden at the scroll boundary.
+    await page.getByRole('button', { name: 'Previous research ideas' }).click()
+    await expect(page.getByRole('button', { name: 'Previous research ideas' })).toBeHidden()
+    // A keyboard-activated arrow remains focusable at the boundary until the user leaves it.
+    await page.keyboard.press('Tab')
+    const nextIdeas = page.getByRole('button', { name: 'Next research ideas' })
+    await nextIdeas.focus()
+    await nextIdeas.press('Enter')
+    await expect(nextIdeas).toHaveAttribute('aria-disabled', 'true')
+    await expect(nextIdeas).toBeFocused()
+    await expect(nextIdeas).toBeVisible()
+    await page.getByRole('button', { name: 'Draft a report', exact: true }).focus()
+    expect(
+      await rail.evaluate((node) => {
+        const last = node.lastElementChild!.getBoundingClientRect()
+        const viewport = node.getBoundingClientRect()
+        return last.left >= viewport.left && last.right <= viewport.right + 1
+      })
+    ).toBe(true)
+    await expect(page.getByRole('button', { name: 'Next research ideas' })).toBeHidden()
+    const scrollBeforeTyping = await rail.evaluate((node) => node.scrollLeft)
+    await composer.fill(USER_MESSAGE)
+    expect(await rail.evaluate((node) => node.scrollLeft)).toBe(scrollBeforeTyping)
+    const motion = await observeDockMotion()
+    await page.getByRole('button', { name: 'Send message' }).click()
+    await expect(dock).toHaveAttribute('data-placement', 'bottom')
+    await expect(page.getByText(AGENT_REPLY, { exact: false })).toBeVisible()
+    expect(await originalEditor!.evaluate((node) => node.isConnected)).toBe(true)
+    await expect(start).toHaveCount(0)
+    expect(await motion.jsonValue()).toEqual([200])
+    expect((await composer.boundingBox())!.y).toBeGreaterThan(initialTop + 100)
+    expect(await sidebarRows.evaluate(({ samples }) => Math.max(...samples))).toBe(1)
+    await capture('03-conversation-bottom.png')
+    await page.getByRole('button', { name: 'New', exact: true }).click()
+    await expect(dock).toHaveAttribute('data-placement', 'start')
+    await expect(start).toBeVisible()
+    await page.setViewportSize({ width: 820, height: 760 })
+    await capture('04-narrow-new-conversation.png')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const reducedMotion = await observeDockMotion()
+    await composer.fill('Check reduced motion.')
+    await page.getByRole('button', { name: 'Send message' }).click()
+    await expect(dock).toHaveAttribute('data-placement', 'bottom')
+    await expect(page.getByText(AGENT_REPLY, { exact: false })).toBeVisible()
+    expect(await reducedMotion.jsonValue()).toEqual([])
+    expect(await sidebarRows.evaluate(({ samples }) => Math.max(...samples))).toBe(2)
+    await sidebarRows.evaluate(({ observer }) => observer.disconnect())
+    await capture('06-sidebar-after-new-session.png')
+  })
 })

@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import { useResourceSelection, useStickyResourceFilters } from './use-resource-selection'
 import { ErrorNotice } from '@/components/error-notice'
 import {
@@ -33,7 +34,7 @@ import { useProjectStore } from '@/stores/project-store'
 import { useTagStore } from '@/stores/tag-store'
 import { resolveCustomizeProjectId } from '@/lib/last-opened-project'
 import { SkillDetailView } from './SkillDetailView'
-import { SkillEditor, SkillEditLoader } from './SkillEditor'
+import { SkillEditor, SkillEditLoader, type SkillEditorLeaveState } from './SkillEditor'
 import { SkillImportView } from './SkillImportView'
 import { SkillUploadView } from './SkillUploadView'
 import { AgentHomeImportView } from './AgentHomeImportView'
@@ -59,6 +60,64 @@ import {
   ResourceTagSummary,
   TagFilter
 } from './ResourceTagControls'
+
+const skillDescription = (
+  skill: { id: string; source: string; description: string },
+  t: TFunction
+): string => {
+  if (skill.source !== 'featured') return skill.description
+  switch (skill.id) {
+    case 'alphafold2':
+      return t('Predict protein structures and complexes.')
+    case 'boltz':
+    case 'chai1':
+    case 'openfold3':
+    case 'esmfold2':
+      return t('Predict protein, nucleic-acid and ligand complexes.')
+    case 'borzoi':
+      return t('Predict regulatory signals from DNA sequences.')
+    case 'diffdock':
+      return t('Predict how small molecules bind to proteins.')
+    case 'evo2':
+      return t('Score, embed and generate DNA sequences.')
+    case 'fair-esm2':
+      return t('Embed protein sequences and score mutations.')
+    case 'ligandmpnn':
+      return t('Design protein sequences around ligands.')
+    case 'proteinmpnn':
+      return t('Design protein sequences from a backbone structure.')
+    case 'solublempnn':
+      return t('Design sequences for soluble protein expression.')
+    case 'scgpt':
+      return t('Embed and annotate single-cell expression data.')
+    case 'scvi-tools':
+      return t('Integrate single-cell data and compare gene expression.')
+    case 'indication-dossier':
+      return t('Review disease biology, care and clinical evidence.')
+    case 'literature-review':
+      return t('Find, verify and synthesize scientific literature.')
+    case 'env-management':
+      return t('Inspect and manage Notebook packages.')
+    case 'compute-env-setup':
+      return t('Prepare reproducible software environments on SSH hosts.')
+    case 'remote-compute-ssh':
+      return t('Run research jobs on SSH compute hosts.')
+    case 'customize':
+      return t('Create and manage Specialists and Skills.')
+    case 'figure-composer':
+      return t('Compose multi-panel scientific figures.')
+    case 'figure-style':
+      return t('Check scientific figure accuracy and readability.')
+    case 'paper-narrative':
+      return t('Organize figures into a clear research narrative.')
+    case 'self-awareness':
+      return t('Discover available app tools and research files.')
+    case 'skill-creator':
+      return t('Create and improve reusable Skills.')
+    default:
+      return skill.description
+  }
+}
 
 // The skills panel sub-view, driven by the settings navigation history so each is a breadcrumb page.
 export type SkillsView =
@@ -98,7 +157,7 @@ const SOURCE_GROUPS = [
   {
     source: 'imported',
     labelKey: 'Imported',
-    subtitleKey: 'Skills you imported into MedResearch Agent.'
+    subtitleKey: 'Skills you imported into DRA.'
   },
   {
     source: 'personal',
@@ -108,6 +167,8 @@ const SOURCE_GROUPS = [
 ] as const satisfies ReadonlyArray<{ source: SkillSource; labelKey: string; subtitleKey: string }>
 
 type SkillsPanelProps = {
+  onEditorLeaveStateChange?: (state: SkillEditorLeaveState | null) => void
+  onSaved?: () => void
   view: SkillsView
   onNavigate: (view: SkillsView) => void
   onOpenTag?: (tagId: string) => void
@@ -119,6 +180,8 @@ type SkillsPanelProps = {
 const SkillsPanel = ({
   view,
   onNavigate,
+  onEditorLeaveStateChange,
+  onSaved,
   onOpenTag,
   onOpenSpecialist,
   onOpenGitHubCredential,
@@ -285,13 +348,14 @@ const SkillsPanel = ({
         !(
           skill.displayName.toLowerCase().includes(term) ||
           skill.name.toLowerCase().includes(term) ||
+          skillDescription(skill, t).toLowerCase().includes(term) ||
           skill.description.toLowerCase().includes(term)
         )
       )
         return []
       return [{ skill, usages, owners }]
     })
-  }, [filter, query, skills, specialistFilter, specialistItems, tagAssignments, tagFilter])
+  }, [filter, query, skills, specialistFilter, specialistItems, tagAssignments, tagFilter, t])
   if (
     view.kind === 'marketplace' ||
     view.kind === 'marketplace-detail' ||
@@ -331,6 +395,7 @@ const SkillsPanel = ({
     return (
       <SkillEditor
         initial={{ name: '', description: '', body: '' }}
+        onLeaveStateChange={onEditorLeaveStateChange}
         onCancel={() => onNavigate({ kind: 'list' })}
         onSave={async (draft) => {
           await createSkill({
@@ -340,7 +405,7 @@ const SkillsPanel = ({
             ...(draft.metadata === undefined ? {} : { metadata: draft.metadata }),
             references: draft.references
           })
-          onNavigate({ kind: 'list' })
+          ;(onSaved ?? (() => onNavigate({ kind: 'list' })))()
         }}
       />
     )
@@ -356,6 +421,8 @@ const SkillsPanel = ({
         <SkillEditLoader
           key={view.id}
           skillId={view.id}
+          onLeaveStateChange={onEditorLeaveStateChange}
+          onSaved={onSaved}
           onDone={() => onNavigate({ kind: 'list' })}
         />
       </div>
@@ -391,7 +458,7 @@ const SkillsPanel = ({
         <SettingsLoadNotice
           state={catalogState === 'error' ? 'error' : 'loading'}
           loadingLabel={t('Loading Skills…')}
-          errorMessage={t('MedResearch Agent could not load Skills.')}
+          errorMessage={t('DRA could not load Skills.')}
           onRetry={retryCatalog}
         />
       </div>
@@ -497,7 +564,7 @@ const SkillsPanel = ({
           </Select>
           <TagFilter resourceType="catalog.skill" value={tagFilter} onChange={setTagFilter} />
           <SettingsSearchInput
-            containerClassName="min-w-48"
+            containerClassName="basis-full min-w-0"
             aria-label={t('Search skills')}
             placeholder={t('Search skills…')}
             value={query}
@@ -523,7 +590,7 @@ const SkillsPanel = ({
         <SettingsLoadNotice
           state="error"
           loadingLabel={t('Loading Skills…')}
-          errorMessage={t('MedResearch Agent could not load Skills.')}
+          errorMessage={t('DRA could not load Skills.')}
           onRetry={retryCatalog}
           className="mb-3"
         />
@@ -658,8 +725,11 @@ const SkillsPanel = ({
                                 <span className="block truncate text-sm text-foreground">
                                   {skill.displayName}
                                 </span>
-                                <span className="block truncate text-xs text-muted-foreground">
-                                  {skill.description}
+                                <span
+                                  className="block truncate text-xs leading-5 text-muted-foreground"
+                                  title={skillDescription(skill, t)}
+                                >
+                                  {skillDescription(skill, t)}
                                 </span>
                               </button>
                               <div className="mt-0.5 flex min-w-0 items-center gap-2">
@@ -845,7 +915,7 @@ const SkillsPanel = ({
                 ) : (
                   <p className="mt-2 py-2 text-xs text-muted-foreground">
                     {group.source === 'personal'
-                      ? t('Create a skill to teach Claude a workflow you use.')
+                      ? t('Create a skill to teach the Agent a workflow you use.')
                       : group.source === 'imported'
                         ? t('No imported skills yet.')
                         : t('No skills match your search.')}
@@ -859,7 +929,7 @@ const SkillsPanel = ({
       <SettingsSection
         data-settings-anchor="skills.conversation-imports"
         title={t('Conversation imports')}
-        description={t('Choose what conversations can import into MedResearch Agent.')}
+        description={t('Choose what conversations can import into DRA.')}
         aria-label={t('Conversation imports')}
         className="mt-8 border-t border-border pt-4"
         contentClassName="mt-1"

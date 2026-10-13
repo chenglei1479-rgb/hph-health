@@ -20,11 +20,15 @@ const SCRIPT_CONTENT = '#!/bin/bash\n# stable\necho "old"\n'
 const SCRIPT_VERSION_TWO_CONTENT = '#!/bin/bash\n# stable\necho "new"\n'
 
 const createTwoPagePdf = (): Buffer => {
+  const content =
+    'BT /F1 20 Tf 54 730 Td (Research methods - sample paper) Tj 0 -40 Td /F1 12 Tf (1. Research question) Tj 0 -24 Td (How does treatment dose affect the measured response?) Tj 0 -40 Td (2. Study design) Tj 0 -24 Td (Compare a control group with three treatment groups.) Tj 0 -24 Td (Record observations, then inspect uncertainty and limitations.) Tj ET'
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << >> >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << >> >>'
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 6 0 R >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 6 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${Buffer.byteLength(content)} >>\nstream\n${content}\nendstream`
   ]
   const offsets: number[] = []
   let body = '%PDF-1.4\n'
@@ -215,29 +219,99 @@ test('edits uploaded Markdown versions and keeps diff navigation coherent @pr-ma
   await expect(preview).toBeHidden()
 })
 
-test('links a multi-page PDF upload as Reading context in a new project @pr-mainline-files', async ({
-  app
-}) => {
+test('links a multi-page PDF upload as Reading context in a new project', async ({ app }) => {
   await app.completeOnboarding()
   const page = await app.configureFakeAgent()
   await createProject(page)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const captureChinese = async (name: string): Promise<void> => {
+    await page.keyboard.press('Escape')
+    await page.mouse.move(5, 5)
+    await page.evaluate(() => window.api.locale.setPreference({ preference: 'zh-Hans' }))
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
+    await page.screenshot({ path: test.info().outputPath(name) })
+    await page.evaluate(() => window.api.locale.setPreference({ preference: 'en' }))
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  }
 
   await page.locator('input[type="file"][multiple]').setInputFiles({
     name: 'paper.pdf',
     mimeType: 'application/pdf',
     buffer: createTwoPagePdf()
   })
-  await expect(page.getByTestId('automatic-reading-suggestion')).toContainText(
-    '1 PDF will be linked when sent'
-  )
+  const readingSuggestion = page.getByTestId('automatic-reading-suggestion')
+  await expect(readingSuggestion).toContainText('paper.pdf')
+  await expect(readingSuggestion.getByRole('status')).toHaveText('Link on send')
 
+  await expect(page.getByTestId('new-conversation-start')).toBeVisible()
+  await captureChinese('pdf-staged-new-conversation.png')
+  const originalEditor = await page.getByRole('textbox', { name: 'Ask anything' }).elementHandle()
   await page.getByRole('textbox', { name: 'Ask anything' }).fill('Summarize the attached paper.')
   await page.getByRole('button', { name: 'Send message' }).click()
 
   await expect(page.getByTestId('pdf-context-bar')).toContainText('paper.pdf')
+  const readingPicker = page.getByRole('button', { name: 'Choose PDFs for Reading' })
+  await readingPicker.focus()
+  for (const name of ['Open PDF context paper.pdf', 'Remove PDF context paper.pdf']) {
+    await page.keyboard.press('Tab')
+    const control = page.getByRole('button', { name, exact: true })
+    await expect(control).toBeFocused()
+    const outline = await control.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return {
+        style: style.outlineStyle,
+        width: parseFloat(style.outlineWidth),
+        offset: parseFloat(style.outlineOffset)
+      }
+    })
+    expect(outline.style).toBe('solid')
+    expect(outline.width).toBeGreaterThanOrEqual(2)
+    // The horizontal scroller clips outside paint: both halves must keep their outline inside.
+    expect(outline.offset).toBeLessThanOrEqual(-outline.width)
+  }
+  await page.keyboard.press('Shift+Tab')
+  await expect(
+    page.getByRole('button', { name: 'Open PDF context paper.pdf', exact: true })
+  ).toBeFocused()
+  await page.screenshot({ path: test.info().outputPath('reading-context-focus.png') })
+
   await expect(page.getByRole('button', { name: 'Page 1 of 2' })).toBeVisible()
   await expect(page.getByText('PDF context Version is unavailable in this Project.')).toHaveCount(0)
   await expect(page.getByText('Managed file reference requires a logical identity.')).toHaveCount(0)
+
+  await expect(page.getByText('Deterministic reply:', { exact: false })).toBeVisible()
+  expect(await originalEditor!.evaluate((node) => node.isConnected)).toBe(true)
+  await expect(page.getByTestId('conversation-composer-dock')).toHaveAttribute(
+    'data-placement',
+    'bottom'
+  )
+  await captureChinese('pdf-reading-after-send.png')
+  // Both ordinary and Reading conversations share the workspace annotation authority.
+  // Starting/binding a Session must not recreate its unrelated open file preview.
+  for (const reading of [false, true]) {
+    await page.getByRole('button', { name: 'New', exact: true }).click()
+    if (reading) {
+      await page.getByRole('button', { name: 'Read with agent', exact: true }).click()
+      await expect(page.getByTestId('new-conversation-start')).toBeVisible()
+      await captureChinese('pdf-reading-new-conversation.png')
+    }
+    const preview = page.getByTestId('preview-card')
+    await preview.getByRole('button', { name: 'Zoom in', exact: true }).click()
+    const zoom = reading ? '150%' : '125%'
+    await expect(preview.getByText(zoom, { exact: true })).toBeVisible()
+    const scroller = await preview
+      .getByRole('region', { name: 'paper.pdf scrollable preview' })
+      .elementHandle()
+    await sendPrompt(
+      page,
+      `Keep the ${reading ? 'Reading' : 'ordinary'} preview.`,
+      'Deterministic reply:'
+    )
+    expect(await scroller!.evaluate((node) => node.isConnected)).toBe(true)
+    await expect(preview.getByText(zoom, { exact: true })).toBeVisible()
+    if (reading) await expect(page.getByTestId('pdf-context-bar')).toContainText('paper.pdf')
+    await scroller!.dispose()
+  }
 })
 
 test('shows structured text replacements with character-level highlights', async ({ app }) => {
@@ -291,11 +365,20 @@ test('loads managed image previews from Project files', async ({ app }) => {
   await expect(page.getByRole('button', { name: `Remove attachment ${IMAGE_NAME}` })).toBeVisible()
   await page.getByRole('textbox', { name: 'Ask anything' }).fill('Use the attached image.')
   await page.getByRole('button', { name: 'Send message' }).click()
-  // File previews depend on the committed upload, not on the agent finishing its reply.
-  await expect(
-    page.getByRole('button', { name: `Preview uploaded attachment ${IMAGE_NAME}`, exact: true })
-  ).toBeVisible()
-
+  // The attachment chip is optimistic. Wait for Main to commit the upload before
+  // navigating away from the new Session and asking the Project index for its files.
+  await expect
+    .poll(() =>
+      page.evaluate(async (name) => {
+        const { sessions } = await window.api.sessions.loadAll()
+        return sessions.some((session) =>
+          session.messages.some((message) =>
+            message.uploads?.some((upload) => upload.name === name && Boolean(upload.versionId))
+          )
+        )
+      }, IMAGE_NAME)
+    )
+    .toBe(true)
   await page.getByRole('button', { name: 'Files', exact: true }).click()
   const image = page.getByRole('img', { name: `Preview of ${IMAGE_NAME}` })
   await expect(image).toBeVisible()
@@ -491,6 +574,58 @@ test.describe('Workspace dividers', () => {
       'aria-selected',
       'true'
     )
+  })
+
+  test('keeps Session actions clear of the collapsed preview toggle', async ({ app }, testInfo) => {
+    const page = app.page
+    await sendPrompt(page, 'Check the session header layout.', 'Deterministic reply:')
+    const previewToggle = page.getByTestId('workspace-preview-toggle')
+    const actions = page.getByTestId('session-header-menu-trigger')
+    await previewToggle.click()
+    await expect(previewToggle).toHaveAttribute('aria-expanded', 'false')
+
+    for (const [width, zoom] of [
+      [1280, 1],
+      [1100, 1.25],
+      [1100, 0.8]
+    ]) {
+      await app.setMainWindowSize(width, 900)
+      await app.setMainWindowZoomFactor(zoom)
+      await expect(previewToggle).toBeVisible()
+      await expect
+        .poll(() =>
+          page.getByTestId('conversation-header').evaluate((header) => {
+            const toggle = document.querySelector('[data-testid="workspace-preview-toggle"]')!
+            const toggleRect = toggle.getBoundingClientRect()
+            return [...header.querySelectorAll('button')]
+              .filter((button) => button.getBoundingClientRect().width > 0)
+              .every((button) => button.getBoundingClientRect().right <= toggleRect.left - 8)
+          })
+        )
+        .toBe(true)
+      await actions.click()
+      await expect(page.getByTestId('session-header-menu')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await previewToggle.click()
+      await expect(previewToggle).toHaveAttribute('aria-expanded', 'true')
+      await previewToggle.click()
+      await expect(previewToggle).toHaveAttribute('aria-expanded', 'false')
+    }
+    await page.screenshot({ path: testInfo.outputPath('session-header-spacing.png') })
+
+    // Electron's minimum window width is wider than the mobile breakpoint; zoom into it.
+    await app.setMainWindowSize(1100, 900)
+    await app.setMainWindowZoomFactor(1.5)
+    await expect(previewToggle).toHaveCount(0)
+    const mobileToggle = page.getByTestId('conversation-header').getByRole('button', {
+      name: 'Expand preview panel'
+    })
+    await expect(mobileToggle).toBeVisible()
+    const actionsBox = (await actions.boundingBox())!
+    const toggleBox = (await mobileToggle.boundingBox())!
+    expect(actionsBox.x + actionsBox.width).toBeLessThanOrEqual(toggleBox.x - 8)
+    await mobileToggle.click()
+    await expect(page.getByRole('dialog', { name: 'Preview', exact: true })).toBeVisible()
   })
 
   test('keeps decoded message images visible when resizing and opening their preview', async ({

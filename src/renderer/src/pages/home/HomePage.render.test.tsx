@@ -388,7 +388,7 @@ afterEach(() => {
 })
 
 describe('HomePage package export progress', () => {
-  it('shows background progress before the GitHub action and reopens its detail', () => {
+  it('shows background progress in the DRA header before Search and reopens its detail', () => {
     usePackageOperationStore.setState({
       operation: {
         id: 'export-1',
@@ -410,7 +410,7 @@ describe('HomePage package export progress', () => {
     )
     expect(button).not.toBeNull()
     expect(button?.closest('header')).not.toBeNull()
-    expect(button?.nextElementSibling?.classList.contains('sm:inline-flex')).toBe(true)
+    expect(button?.nextElementSibling?.getAttribute('aria-label')).toBe('Search')
     act(() => button?.click())
     expect(usePackageOperationStore.getState().open).toBe(true)
   })
@@ -854,7 +854,7 @@ describe('HomePage activity overview', () => {
     expect(header).not.toBeNull()
     expect(header?.querySelector('[aria-label^="Language:"]')).toBeNull()
     expect(header?.querySelector('[aria-label^="Theme:"]')).toBeNull()
-    const settings = header?.querySelector<HTMLButtonElement>('[aria-label="Model settings"]')
+    const settings = header?.querySelector<HTMLButtonElement>('[aria-label="Settings"]')
     expect(settings).not.toBeNull()
     expect(useSettingsStore.getState().isSettingsOpen).toBe(false)
 
@@ -871,7 +871,7 @@ describe('HomePage activity overview', () => {
       )
     )
 
-    const settings = container.querySelector('[aria-label="Model settings"]')
+    const settings = container.querySelector('[aria-label="Settings"]')
     const update = container.querySelector('[data-testid="home-update-capsule"]')
     const newProject = Array.from(container.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('New project')
@@ -1429,7 +1429,15 @@ describe('HomePage activity overview', () => {
       reason: 'the question belongs to an inactive root Branch',
       mutate: (candidate: ChatSession) => {
         const rootFrame = candidate.conversationGraph?.frames.find(({ id }) => id === 'root')
-        if (rootFrame) rootFrame.activeBranchId = 'inactive-root-branch'
+        if (rootFrame && candidate.conversationGraph) {
+          candidate.conversationGraph.branches.push({
+            id: 'inactive-root-branch',
+            agentFrameId: rootFrame.id,
+            createdAt: 1,
+            updatedAt: 1
+          })
+          rootFrame.activeBranchId = 'inactive-root-branch'
+        }
       }
     },
     {
@@ -1814,7 +1822,7 @@ describe('HomePage activity overview', () => {
     )
     expect(retry).toBeDefined()
     expect(container.querySelector('[role="alert"] p')?.textContent).toBe(
-      'MedResearch Agent could not load projects. Retry to continue.'
+      'DRA could not load projects. Retry to continue.'
     )
     expect(container.textContent).not.toContain('database is locked')
 
@@ -1846,6 +1854,19 @@ describe('HomePage recent session ordering', () => {
 
   beforeEach(() => {
     useProjectStore.setState({ projects: [project], isLoaded: true })
+  })
+
+  it('keeps the logo and three-line DRA signature in the home header', async () => {
+    await renderHome()
+    const brand = container.querySelector('header .dra-app-brand')
+    expect(brand).not.toBeNull()
+    expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('DRA')
+    expect(Array.from(brand?.querySelectorAll('.dra-app-brand-tagline > span') ?? []).map((line) => line.textContent)).toEqual(['AI Research', 'Infrastructure', 'for Medicine'])
+    const images = brand?.querySelectorAll('img')
+    expect(images).toHaveLength(2)
+    expect(images?.[0].getAttribute('src')).toMatch(/logo/)
+    expect(images?.[0].className).toContain('dark:hidden')
+    expect(images?.[1].className).toContain('dark:block')
   })
 
   it('refreshes concurrent output in place, preserving focused rows, and resorts on a new visit', async () => {

@@ -20,6 +20,11 @@ const writeOptions: Record<'python' | 'r', ReadonlyMap<string, WriteOption>> = {
     ['to_netcdf', { keyword: 'mode', position: 1, defaultValue: 'w' }]
   ]),
   r: new Map<string, WriteOption>([
+    ['cat', { keyword: 'append', defaultValue: false }],
+    [
+      'write',
+      { keyword: 'append', precedingArguments: ['x', 'file', 'ncolumns'], defaultValue: false }
+    ],
     ['write.table', { keyword: 'append', precedingArguments: ['x', 'file'], defaultValue: false }],
     ['fwrite', { keyword: 'append', defaultValue: false }],
     ...['write_csv', 'write_csv2', 'write_tsv'].map(

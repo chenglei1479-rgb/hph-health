@@ -83,7 +83,7 @@ const gzipAsync = promisify(gzip)
 const log = createLogger('web-service')
 const STATIC_RESPONSE_SECURITY_HEADERS = {
   'content-security-policy':
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; media-src 'self' https: blob:; frame-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'",
+    "default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; media-src 'self' https: blob:; frame-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'",
   'x-frame-options': 'DENY',
   'referrer-policy': 'no-referrer'
 } as const
@@ -106,6 +106,7 @@ const MIME_TYPES: Record<string, string> = {
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -113,7 +114,15 @@ const MIME_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2'
 }
 
-const COMPRESSIBLE_EXTENSIONS = new Set(['.css', '.html', '.js', '.mjs', '.json', '.svg'])
+const COMPRESSIBLE_EXTENSIONS = new Set([
+  '.css',
+  '.html',
+  '.js',
+  '.mjs',
+  '.json',
+  '.webmanifest',
+  '.svg'
+])
 
 type WebServerOptions = {
   host: string
@@ -175,6 +184,7 @@ type WebServerOptions = {
       >
     >
   waitUntilTasksReady?: () => Promise<void>
+  accountAccess?: () => boolean
   onShutdownRequest?: () => void
   bootstrap: {
     appName: string
@@ -1352,7 +1362,10 @@ const serveStatic = async (
       ...STATIC_RESPONSE_SECURITY_HEADERS,
       'content-type': MIME_TYPES[extension] ?? 'application/octet-stream',
       'content-length': String(body.byteLength),
-      'cache-control': filePath.endsWith('index.html') ? 'no-store' : 'public, max-age=31536000',
+      'cache-control':
+        filePath.endsWith('index.html') || extension === '.webmanifest'
+          ? 'no-store'
+          : 'public, max-age=31536000',
       'x-content-type-options': 'nosniff',
       ...(canCompress ? { vary: 'Accept-Encoding' } : {}),
       ...(body !== content ? { 'content-encoding': 'gzip' } : {})
@@ -1424,6 +1437,10 @@ const startWebHttpServer = async (options: WebServerOptions): Promise<RunningWeb
   })
 
   const isWebSocketAuthorizationCurrent = (socket: WebSocket): boolean => {
+    if (options.accountAccess && !options.accountAccess()) {
+      socket.close(1008, 'DRA account login required')
+      return false
+    }
     const authorization = externalSockets.get(socket)
     if (!authorization) return true
     try {
@@ -1458,6 +1475,16 @@ const startWebHttpServer = async (options: WebServerOptions): Promise<RunningWeb
       if (!authorized || (externalAuthorization && !externalAuthorization.isCurrent())) {
         response.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' })
         response.end('Unauthorized')
+        return
+      }
+      if (options.accountAccess && !options.accountAccess()) {
+        response.writeHead(401, {
+          'content-type': 'text/plain; charset=utf-8',
+          'cache-control': 'no-store'
+        })
+        response.end(
+          'Sign in to your DRA account on the desktop, then reload. / 请先在桌面端登录 DRA 账号，再刷新。'
+        )
         return
       }
       if (externalAuthorization) replayFloorFor(externalAuthorization.principalId)
@@ -1759,6 +1786,7 @@ const startWebHttpServer = async (options: WebServerOptions): Promise<RunningWeb
             ? await options.externalAccess.authorizeWebSocket(request, url)
             : undefined
         if (
+          (options.accountAccess && !options.accountAccess()) ||
           (!auth.ok && (!externalAuthorization || !externalAuthorization.isCurrent())) ||
           !['/events', '/api/v1/events'].includes(url.pathname)
         ) {

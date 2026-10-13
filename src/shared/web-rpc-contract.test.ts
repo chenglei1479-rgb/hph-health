@@ -51,10 +51,13 @@ describe('Web RPC contract', () => {
       'specialist.abortPackageUpload',
       'specialist.beginPackageUpload',
       'specialist.cancelPackage',
+      'specialist.getMarketplaceRelease',
       'specialist.installPackage',
       'specialist.list',
+      'specialist.listMarketplace',
       'specialist.previewPackageUpload',
       'specialist.setEnabled',
+      'specialist.setSessionSpecialist',
       'specialist.update'
     ])
     expect(eventPaths.filter((path) => path.startsWith('specialist.'))).toEqual([
@@ -152,6 +155,7 @@ describe('Web RPC contract', () => {
       'notebook.readInputPreview',
       'notebook.restart',
       'notebook.runCell',
+      'notebook.runIndex',
       'notebook.shutdown',
       'notebook.state'
     ])

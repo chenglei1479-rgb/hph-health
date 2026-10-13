@@ -101,6 +101,11 @@ import {
   registerBookmarkApplicationCommands,
   type BookmarkCommandOwner
 } from './bookmarks/application-commands'
+import {
+  sessionReplayCommandGroup,
+  registerSessionReplayCommands,
+  type SessionReplayCommandOwner
+} from './session-replay/application-commands'
 
 type AnyApplicationCommand = ApplicationCommand<string, readonly unknown[], unknown>
 type AnyApplicationCommandGroup = ApplicationCommandGroup<string, readonly AnyApplicationCommand[]>
@@ -127,6 +132,7 @@ type ApplicationCommandModuleDescriptor = Readonly<{
 }>
 
 type ApplicationCommandCompositionDependencies = Readonly<{
+  authorizeCommand?: (channel: string) => void
   acp: AcpApplicationCommandDependencies
   notebook: NotebookApplicationCommandDependencies
   notebookEnvironment: NotebookEnvironmentDependencies
@@ -141,6 +147,7 @@ type ApplicationCommandCompositionDependencies = Readonly<{
   specialist: SpecialistApplicationOwner
   literature: LiteratureCommandOwner
   bookmarks: BookmarkCommandOwner
+  sessionReplay: SessionReplayCommandOwner
   pdfAnnotations: PdfAnnotationCommandOwner
   dataContent: DataContentApplicationCommandDependencies
   host: Omit<HostApplicationCommandDependencies, 'remoteAccess'>
@@ -303,6 +310,9 @@ const createApplicationCommandModules = (
     ),
     defineApplicationCommandModule([bookmarkApplicationCommandGroup], (registrar) =>
       registerBookmarkApplicationCommands(registrar, dependencies.bookmarks)
+    ),
+    defineApplicationCommandModule([sessionReplayCommandGroup], (registrar) =>
+      registerSessionReplayCommands(registrar, dependencies.sessionReplay)
     ),
     defineApplicationCommandModule([pdfAnnotationApplicationCommandGroup], (registrar) =>
       registerPdfAnnotationApplicationCommands(registrar, dependencies.pdfAnnotations)
@@ -479,7 +489,8 @@ const createApplicationCommandComposition = (
     const rejected = new Set(rejectedNames)
     return Object.freeze({
       commandNames: (): readonly string[] => names,
-      invoke: (commandName, invocation): Promise<unknown> => {
+      invoke: async (commandName, invocation): Promise<unknown> => {
+        dependencies.authorizeCommand?.(commandName)
         if (rejected.has(commandName)) {
           return Promise.reject(
             new ApplicationCommandError(
@@ -496,7 +507,12 @@ const createApplicationCommandComposition = (
             )
           )
         }
-        return router.dispatcher.invoke(certified.commands.get(commandName)!, invocation)
+        const result = await router.dispatcher.invoke(
+          certified.commands.get(commandName)!,
+          invocation
+        )
+        dependencies.authorizeCommand?.(commandName)
+        return result
       }
     })
   }

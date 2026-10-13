@@ -395,6 +395,60 @@ describe('ProjectFilesView', () => {
     expect(container.textContent).toContain('No files yet')
   })
 
+  it.each([
+    ['Grid view', 'session-1'],
+    ['List view', 'session-1'],
+    ['Grid view', undefined],
+    ['List view', undefined]
+  ])(
+    'shows mention failures on a file card in %s with selected session %s',
+    async (view, selectedSessionId) => {
+      const { useNavigationStore } = await import('@/stores/navigation-store')
+      const { useSessionStore } = await import('@/stores/session-store')
+      await renderView(
+        [
+          createSession({
+            artifacts: [
+              {
+                id: 'artifact-1',
+                kind: 'managed-file',
+                path: '/workspace/result.txt',
+                name: 'result.txt'
+              }
+            ]
+          })
+        ],
+        false,
+        () => {
+          useSessionStore.setState({ selectedSessionId })
+          useNavigationStore.setState({
+            pendingArtifactMention: undefined,
+            artifactMentionAvailability: { projectId: 'default', canMention: true }
+          })
+          window.api.managedFileVersions = {
+            inspect: vi.fn().mockResolvedValue({ ok: false })
+          } as unknown as Window['api']['managedFileVersions']
+        }
+      )
+      if (view === 'List view')
+        await act(async () =>
+          container.querySelector<HTMLButtonElement>('[aria-label="List view"]')!.click()
+        )
+      const mention = container.querySelector<HTMLButtonElement>(
+        '[aria-label="Mention result.txt"]'
+      )!
+      expect(mention.disabled).toBe(false)
+      await act(async () => mention.click())
+      expect(container.textContent).toContain('Could not resolve file version.')
+      expect(useNavigationStore.getState().pendingArtifactMention).toBeUndefined()
+      await act(async () =>
+        container.querySelector<HTMLButtonElement>('[aria-label="Dismiss"]')!.click()
+      )
+      expect(container.textContent).not.toContain('Could not resolve file version.')
+      useNavigationStore.setState({ artifactMentionAvailability: undefined })
+    }
+  )
+
   it('keeps the files index stable while terminal output streams', async () => {
     await renderView([
       createSession({
@@ -856,7 +910,7 @@ describe('ProjectFilesView', () => {
     expect(clearButton?.className).toContain('text-text-100')
     expect(clearButton?.className).toContain('hover:bg-bg-200')
     expect(clearButton?.className).not.toContain('hover:text-text-000')
-    expect(clearButton?.className).toContain('focus-visible:ring-3')
+    expect(clearButton?.className).toContain('focus-visible:keyboard-focus')
     expect(clearButton?.className).not.toContain('focus-visible:ring-2')
 
     await act(async () => clearButton?.focus())

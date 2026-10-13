@@ -47,7 +47,9 @@ AIPOCH Open-Science is an AI research workbench for scientists and researchers, 
 
 AIPOCH Open-Science supports computational and data-intensive research across disciplines, including machine learning, statistics, life sciences, chemistry, materials science, physics and environmental science. It supports the research process from literature review and hypothesis development to code execution, data analysis, simulation, visualization, and the production of traceable research outputs.
 
-> 💡 **[AIPOCH Open-Science v0.33.3 released](https://github.com/aipoch/open-science/releases/latest)** _(last updated September 2026)_. AIPOCH Open-Science v0.33.3 upgrades document preview with paginated Office reading and search plus paged PowerPoint review, adds Enrichr gene-set enrichment tools to the genes connector, and brings a compact library preview to the workspace. Windows signing now covers every bundled executable, Literature screening gains an abandoned-evaluation action, and session packages can transfer at adaptive speeds. See the [latest release notes](https://github.com/aipoch/open-science/releases/latest) for full details.
+Completed research sessions can also be exported as portable `.science` packages for review, handoff, and archiving, with selected conversation branches, file versions, Notebook records, and verification evidence.
+
+> 💡 **[AIPOCH Open-Science v0.34.1 released](https://github.com/aipoch/open-science/releases/latest)** _(last updated September 2026)_. AIPOCH Open-Science v0.34.1 adds CELLxGENE Discover and Alliance of Genome Resources connectors alongside expanded MaveDB and Metabolomics Workbench sources, brings an Inbox tab to the workspace library preview, and adds the gpt-6.1-sol model option. Fixes preserve notebook interpreter state across cells, restore Linux KWallet startup, and allow Windows reinstalls after removing an old parent installation. See the [latest release notes](https://github.com/aipoch/open-science/releases/latest) for full details.
 
 <p align="center">
  <img width="1920" height="1140" alt="AIPOCH Open-Science banner: Science, Open to All — an open-source, model-agnostic, self-hosted scientific AI research workbench" src="docs/images/readme/open-science-banner.png" />
@@ -57,6 +59,7 @@ AIPOCH Open-Science supports computational and data-intensive research across di
 
 - [Quick Start](#-quick-start)
 - [Product Tour](#product-tour)
+- [AIPOCH Open-Science `.science` Research Packages](#aipoch-open-science-science-research-packages)
 - [Benchmark Performance](#benchmark-performance)
 - [Core Capabilities](#core-capabilities)
 - [Model Providers](#model-providers)
@@ -153,6 +156,18 @@ Each generated artifact is stored as an immutable, checksummed version. Its **Pr
   <img src="docs/images/readme/product-tour-provenance.jpg" alt="AIPOCH Open-Science research artifact preview with the Provenance entry for tracing a generated result" width="900">
 </p>
 
+## AIPOCH Open-Science `.science` Research Packages
+
+Export a completed research session as a portable `.science` package for review, handoff, and archiving. Choose the conversation branches, file versions, Notebook records, and verification evidence to include, then import the package into another project or computer.
+
+**Export → transfer → inspect**
+
+1. Export a completed session and choose the contents to include.
+2. Move the `.science` file to a collaborator or another computer.
+3. Import it into a project and inspect the read-only history, included files, Notebook records, and verification evidence.
+
+Imported packages are read-only. They do not execute code or restore credentials. Continue follow-up work in a new session. Replaying a result still requires a complete recipe, required inputs, and an available runtime.
+
 ## Benchmark Performance
 
 ### 🏆 #1 on BiomniBench-DA Public 50
@@ -223,7 +238,7 @@ AIPOCH Open-Science is an Electron application built with React, TypeScript, Pri
 
 Prerequisites for source development:
 
-- Node.js 22 (see [`.nvmrc`](.nvmrc)) with npm
+- Node.js 24 (see [`.nvmrc`](.nvmrc)) with npm
 - Git
 - Notebook execution optionally uses app-managed Python/R environments or a compatible interpreter you configure.
 

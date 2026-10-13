@@ -106,6 +106,7 @@ const renderItem = async (
         onPreviewArtifact={noop}
         onPreviewUploadAttachment={noop}
         onOpenSkillMention={noop}
+        onOpenLibraryMention={noop}
         onPreviewMentionArtifact={options.onPreviewMentionArtifact ?? noop}
         canEditMessage={options.canEditMessage ?? false}
         showUserActions={options.showUserActions}
@@ -856,6 +857,39 @@ describe('WorkspaceMessageItem user message actions', () => {
     expect(getButton('Show less').getAttribute('aria-expanded')).toBe('true')
   })
 
+  it('keeps a Collection mention non-interactive until a long message is expanded', async () => {
+    const text = 'Long prompt line\n'.repeat(13)
+    const message = createMessage({
+      content: `${text}@TP53 evidence`,
+      parts: [
+        { type: 'text', text },
+        {
+          type: 'literature-scope',
+          scope: 'collection',
+          collectionId: 'collection-1',
+          name: 'TP53 evidence'
+        }
+      ]
+    })
+    await renderItem(message)
+
+    const content = container.querySelector<HTMLElement>('[data-slot="user-message-content"]')
+    const measurement = container.querySelector<HTMLElement>(
+      '[data-slot="user-message-measurement"]'
+    )
+    if (!content || !measurement) throw new Error('user message content not found')
+    measurement.style.lineHeight = '20px'
+    Object.defineProperty(measurement, 'scrollHeight', { configurable: true, value: 260 })
+    act(() => notifyResize?.())
+
+    expect(getButton('Show more')).not.toBeNull()
+    expect(container.querySelector('[aria-label="Open TP53 evidence"]')).toBeNull()
+    expect(content.textContent).toBe(message.content)
+
+    await click(getButton('Show more'))
+    expect(content.contains(getButton('Open TP53 evidence'))).toBe(true)
+  })
+
   it('labels an interrupted user turn without creating another message item', async () => {
     await renderItem(createMessage({ interrupted: true }))
 
@@ -934,8 +968,7 @@ describe('WorkspaceMessageItem user message actions', () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     const copyButton = actions.querySelector('[aria-label="Copy message"]')
     expect(copyButton?.getAttribute('data-state')).toBe('closed')
-    expect(copyButton?.classList.contains('focus-visible:ring-[3px]')).toBe(true)
-    expect(copyButton?.classList.contains('focus-visible:ring-ring/50')).toBe(true)
+    expect(copyButton?.classList.contains('focus-visible:keyboard-focus')).toBe(true)
     expect(copyButton?.classList.contains('disabled:pointer-events-none')).toBe(true)
     expect(actions.querySelector('[aria-label="Edit message"]')).not.toBeNull()
   })

@@ -5,7 +5,7 @@ import { homedir, tmpdir } from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
 
-import { isSupportedCodexAcpVersion } from '../../shared/codex-runtime'
+import { isSupportedCodexAcpVersion, isSupportedCodexCliVersion } from '../../shared/codex-runtime'
 import { createLogger } from '../logger'
 import { augmentedPathEnv } from './shell-path'
 import { stripCodexCredentialEnv } from './process-tree'
@@ -99,7 +99,7 @@ const detectCodex = async (
       ? ['codex-acp.cmd', 'codex-acp.exe', 'codex-acp.bat', 'codex-acp']
       : ['codex-acp']
   const discoveredCandidates = dirs.flatMap((dir) => names.map((name) => p.join(dir, name)))
-  // MedResearch Agent supplies managedAdapterPath in production. Once present, that path is the only
+  // DRA supplies managedAdapterPath in production. Once present, that path is the only
   // adapter eligible to run; PATH/npm adapters are discovery noise and must never bypass the pinned
   // app extension layer. The generic scan remains available to the standalone detector tests and
   // diagnostics that do not declare an app-owned adapter.
@@ -128,7 +128,7 @@ const detectCodex = async (
         : await detectNativeCodex(deps, signal)
       // The adapter is app-owned, while the native executable may be the bundled binary or a global
       // installation. Pin the resolved executable through CODEX_PATH in either case.
-      if (!nativeCodex) continue
+      if (!nativeCodex || !isSupportedCodexCliVersion(nativeCodex.version)) continue
       result.nativeCodexPath = nativeCodex.path
       result.nativeCodexVersion = nativeCodex.version
     }

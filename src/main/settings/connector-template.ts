@@ -681,7 +681,7 @@ export const parseConnectorTemplate = (
           diagnostics,
           'warning',
           'connector-template.normalized-name',
-          'MCP server name was normalized for MedResearch Agent.',
+          'MCP server name was normalized for DRA.',
           path
         )
       }

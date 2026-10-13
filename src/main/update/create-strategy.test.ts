@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const spawnSync = vi.hoisted(() => vi.fn())
 const quitAndInstall = vi.hoisted(() => vi.fn())
+const setFeedURL = vi.hoisted(() => vi.fn())
 const updaterListeners = vi.hoisted(() => new Map<string, (...args: unknown[]) => void>())
 const loggerMocks = vi.hoisted(() => {
   const log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
@@ -39,6 +40,7 @@ vi.mock('electron-updater', () => ({
     }
   },
   autoUpdater: {
+    setFeedURL,
     on: (event: string, listener: (...args: unknown[]) => void) => {
       updaterListeners.set(event, listener)
     },
@@ -54,9 +56,49 @@ vi.mock('electron-updater', () => ({
 import { createUpdateStrategy } from './create-strategy'
 import { ElectronUpdaterStrategy } from './electron-updater-strategy'
 import { UpdateService } from './service'
+import { DisabledUpdateStrategy } from './disabled-strategy'
+import { APP } from '../../shared/app-config'
+
+vi.mock('../../shared/app-config', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../shared/app-config')>()
+  return { APP: { ...original.APP, update: { ...original.APP.update, enabled: true } } }
+})
 
 describe('createUpdateStrategy', () => {
+  it('configures the supplied DRA server instead of reading a legacy default feed', () => {
+    const deployment = {
+      provider: 'generic',
+      url: 'https://updates.dra.example/stable/',
+      manifestUrl: 'https://updates.dra.example/stable/version.json',
+      publisherName: 'DRA Publisher',
+      channel: 'latest'
+    } as const
+    expect(createUpdateStrategy('win32', { deployment })).toBeInstanceOf(ElectronUpdaterStrategy)
+    expect(setFeedURL).toHaveBeenCalledWith(deployment)
+  })
+  it('blocks every update action without constructing the updater when the build policy is disabled', async () => {
+    const strategy = createUpdateStrategy('win32', { updatesEnabled: false, version: '0.1.29' })
+    expect(strategy).toBeInstanceOf(DisabledUpdateStrategy)
+    expect(strategy.getStatus()).toEqual({ state: 'disabled', current: '0.1.29' })
+    for (const action of ['check', 'download', 'cancel', 'apply'] as const) {
+      expect(await strategy[action]()).toEqual({ state: 'disabled', current: '0.1.29' })
+    }
+    expect(updaterListeners.size).toBe(0)
+    expect(quitAndInstall).not.toHaveBeenCalled()
+  })
+
+  it('defaults to the disabled strategy when the build configuration disables updates', () => {
+    const enabled = APP.update.enabled
+    Object.assign(APP.update, { enabled: false })
+    try {
+      expect(createUpdateStrategy('win32')).toBeInstanceOf(DisabledUpdateStrategy)
+    } finally {
+      Object.assign(APP.update, { enabled })
+    }
+  })
   beforeEach(() => {
+    setFeedURL.mockClear()
+    updaterListeners.clear()
     spawnSync.mockReset()
     quitAndInstall.mockReset()
     updaterListeners.clear()

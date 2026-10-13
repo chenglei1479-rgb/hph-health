@@ -1,0 +1,65 @@
+{
+  "version": "0.1.33-unified.1",
+  "originalSourceManifestFiles": 7965,
+  "originalSourceManifestMatched": true,
+  "originalSourceTreeSha256": "af63b579da47305f71268f8a3b89bb6741084b018c9f5ada6eaf30d03618480a",
+  "excludedGeneratedFiles": [
+    "packages/credential-identity-probe-native/build/binding.sln",
+    "packages/credential-identity-probe-native/build/config.gypi",
+    "packages/credential-identity-probe-native/build/credential_identity_probe.vcxproj",
+    "packages/credential-identity-probe-native/build/credential_identity_probe.vcxproj.filters",
+    "packages/credential-identity-probe-native/build/credential_key_validator.vcxproj",
+    "packages/credential-identity-probe-native/build/credential_key_validator.vcxproj.filters",
+    "packages/process-tree-native/build/binding.sln",
+    "packages/process-tree-native/build/config.gypi",
+    "packages/process-tree-native/build/process_tree_native.vcxproj",
+    "packages/process-tree-native/build/process_tree_native.vcxproj.filters",
+    "packages/safe-file-publisher-native/build/binding.sln",
+    "packages/safe-file-publisher-native/build/config.gypi",
+    "packages/safe-file-publisher-native/build/safe_file_publisher_native.vcxproj",
+    "packages/safe-file-publisher-native/build/safe_file_publisher_native.vcxproj.filters",
+    "resources/bin/win/x64/micromamba-compat.exe",
+    "resources/bin/win/x64/micromamba.exe"
+  ],
+  "privacySanitizedFiles": [
+    "docs/upstream-following.md",
+    "docs/upstream-tracking.json",
+    "resources/citation/american-medical-association.csl",
+    "resources/citation/ieee.csl",
+    "resources/citation/nature.csl",
+    "resources/citation/vancouver.csl",
+    "src/main/literature/pdf-structure/fixtures/numbered-clinic-affiliations.jsonl",
+    "src/main/literature/pdf-structure/fixtures/ordinal-captions-inside-repeated-running-bands.jsonl",
+    "src/main/literature/pdf-structure/fixtures/wrapped-institution-affiliations.jsonl"
+  ],
+  "secretFindingsReviewed": {
+    "local-user-path": 370,
+    "assigned-secret": 163,
+    "provider-key": 15,
+    "private-key": 4,
+    "personal-email": 11
+  },
+  "secretReviewResult": "Provider-looking strings and private-key markers are synthetic security test fixtures or runtime key generation. Assigned strings are test placeholders, environment references or parser false positives. No live credential found. Personal email metadata and local developer paths were sanitized. No patient database or patient input document is included.",
+  "sourceSelection": "Latest complete integrated product candidate. v0.37.1 integration remains prepared-only-pending-review-not-buildable, 112 pending reviews; its intended version 0.1.34-v0371.1 is not an actual completed product version.",
+  "checksThisRun": {
+    "i18nGuard": {
+      "passed": 777,
+      "failed": 0
+    },
+    "fullSuiteRun": false,
+    "buildRun": false,
+    "installed": false
+  },
+  "recordedChecksFrom20261010": {
+    "passed": 10017,
+    "failed": 58,
+    "skipped": 26,
+    "fullSuitePassed": false
+  },
+  "limitations": [
+    "No new complete build or full regression suite in this publication task.",
+    "No real patient data, real BBJ/MR execution, hospital SSO or clean Windows installation acceptance is demonstrated.",
+    "Pattern scanning and manual finding review are bounded checks, not a formal privacy certification.",
+    "Existing public GitHub history is retained; this audit covers the newly published tree, not all historical commits."
+  ]
+}

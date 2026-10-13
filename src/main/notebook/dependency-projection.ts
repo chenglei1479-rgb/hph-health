@@ -1,16 +1,22 @@
+import { isAbsolute, normalize, relative, resolve } from 'node:path'
+
 import type {
   NotebookInvalidatedRun,
   NotebookRunRecord,
-  NotebookRunStaleness
+  NotebookRunStaleness,
+  NotebookWorkingFile
 } from '../../shared/notebook'
 import { notebookExecutionContextSchema } from '../../shared/notebook-execution-context'
 import type {
   AnalyzedNotebookRun,
   NotebookDependencyAlias,
   NotebookDependencyProjection,
+  NotebookFileDependency,
   NotebookDependencyTypeSummary,
-  NotebookRunDependencyFacts
+  NotebookRunDependencyFacts,
+  NotebookSourceFileWriteScope
 } from './dependency-analysis-types'
+import { matchesWriteScope } from './working-file-observer'
 import {
   PYTHON_LIBRARY_EFFECTS,
   pythonUnpackedReturnType,
@@ -93,6 +99,143 @@ const namespaceKey = (run: NotebookRunRecord): string | undefined => {
   }
   return [run.kernelKind, run.environment ?? '', run.kernelEpochId].join('\0')
 }
+
+const portablePath = (value: string): string =>
+  value
+    .replaceAll('\\', '/')
+    .replace(/^\.\//u, '')
+    .replace(/\/{2,}/gu, '/')
+
+const lineagePathCase = (value: string): string =>
+  process.platform === 'win32' ? value.toLowerCase() : value
+
+const lineageWorkingDirectory = (run: NotebookRunRecord): string | undefined =>
+  run.cwdBefore ?? run.frozenShellContext?.cwd
+
+// Historical run records may omit cwdBefore while retaining a complete runtime file-evidence
+// summary. That evidence anchors relative paths to the session's observed roots, so preserve the
+// legacy textual identity for those records. Without the anchor, keep relative paths run-local.
+const hasCompleteRuntimeFileEvidence = (run: NotebookRunRecord): boolean =>
+  run.fileEvidence?.state === 'available' &&
+  run.fileEvidence.fileReads === 'complete' &&
+  run.fileEvidence.relationCount !== 0
+
+const hasCompleteRuntimeWriterEvidence = (run: NotebookRunRecord): boolean =>
+  hasCompleteRuntimeFileEvidence(run) && run.fileEvidence?.writerAttribution === 'complete'
+
+const lineageScopePath = (run: NotebookRunRecord, value: string): string => {
+  const workingDirectory = lineageWorkingDirectory(run)
+  if (workingDirectory === undefined) return lineagePathCase(portablePath(value))
+  const resolved = isAbsolute(value) ? value : resolve(workingDirectory, value)
+  return lineagePathCase(portablePath(relative(workingDirectory, resolved)))
+}
+
+const lineageScope = (
+  run: NotebookRunRecord,
+  scope: NotebookSourceFileWriteScope
+): NotebookSourceFileWriteScope => ({
+  ...scope,
+  path: lineageScopePath(run, scope.path)
+})
+
+const matchesLineageScope = (scope: NotebookSourceFileWriteScope, candidate: string): boolean => {
+  if (scope.kind === 'directory' && scope.path === '') return candidate.length > 0
+  return matchesWriteScope(scope, candidate)
+}
+
+const lineagePathKey = (run: NotebookRunRecord, value: string): string => {
+  const portable = lineagePathCase(portablePath(value))
+  const workingDirectory = lineageWorkingDirectory(run)
+  if (isAbsolute(value)) return `absolute:${lineagePathCase(portablePath(normalize(value)))}`
+  if (workingDirectory !== undefined)
+    return `absolute:${lineagePathCase(portablePath(normalize(resolve(workingDirectory, value))))}`
+  if (hasCompleteRuntimeFileEvidence(run)) return `relative:evidence:${portable}`
+  // Without cwd/session identity, a relative spelling is local to this run. Keep
+  // same-run generation matching, but never alias it across independent runs.
+  return `relative:${run.runId}:${portable}`
+}
+
+// Resolve a path against the run that observed it.  Scope invalidation can
+// compare files from a different cwd than the run declaring the scope, so a
+// relative path must never be interpreted through the current consumer cwd.
+const absoluteLineagePath = (run: NotebookRunRecord, value: string): string | undefined => {
+  const workingDirectory = lineageWorkingDirectory(run)
+  if (!isAbsolute(value) && workingDirectory === undefined) return undefined
+  return lineagePathCase(
+    portablePath(isAbsolute(value) ? normalize(value) : resolve(workingDirectory!, value))
+  )
+}
+
+const matchesAbsoluteLineageScope = (
+  scopeRun: NotebookRunRecord,
+  scope: NotebookSourceFileWriteScope,
+  candidateRun: NotebookRunRecord,
+  candidatePath: string
+): boolean | undefined => {
+  const scopePath = absoluteLineagePath(scopeRun, scope.path)
+  const candidate = absoluteLineagePath(candidateRun, candidatePath)
+  if (scopePath === undefined || candidate === undefined) return undefined
+  return matchesWriteScope({ ...scope, path: scopePath }, candidate)
+}
+
+const isUnanchoredRelativePath = (run: NotebookRunRecord, key: string): boolean =>
+  lineageWorkingDirectory(run) === undefined &&
+  !hasCompleteRuntimeFileEvidence(run) &&
+  key.startsWith(`relative:${run.runId}:`)
+
+const matchesObservedFile = (
+  run: NotebookRunRecord,
+  requestedPath: string,
+  file: NotebookWorkingFile
+): boolean => {
+  if (lineagePathKey(run, requestedPath) === lineagePathKey(run, file.path)) return true
+  return (
+    lineageWorkingDirectory(run) === undefined &&
+    hasCompleteRuntimeFileEvidence(run) &&
+    file.relativePath !== undefined &&
+    lineagePathCase(portablePath(file.relativePath)) ===
+      lineagePathCase(portablePath(requestedPath))
+  )
+}
+
+const observedFileGeneration = (
+  run: NotebookRunRecord,
+  path: string
+): NotebookWorkingFile | undefined =>
+  run.workingFiles.find((file) => {
+    if (!matchesObservedFile(run, path, file)) return false
+    return (
+      file.createdByRunId === run.runId || file.change === 'created' || file.change === 'modified'
+    )
+  })
+
+const observedScopedGenerations = (
+  run: NotebookRunRecord,
+  scopes: readonly NotebookSourceFileWriteScope[]
+): NotebookWorkingFile[] =>
+  run.workingFiles.filter((file) => {
+    const candidatePaths = [
+      lineageScopePath(run, file.path),
+      ...(lineageWorkingDirectory(run) === undefined &&
+      hasCompleteRuntimeFileEvidence(run) &&
+      file.relativePath
+        ? [lineageScopePath(run, file.relativePath)]
+        : [])
+    ]
+    return (
+      scopes.some(
+        (scope) =>
+          matchesAbsoluteLineageScope(run, scope, run, file.path) ??
+          candidatePaths.some(
+            (candidatePath) =>
+              candidatePath !== '..' &&
+              !candidatePath.startsWith('../') &&
+              matchesLineageScope(lineageScope(run, scope), candidatePath)
+          )
+      ) &&
+      (file.createdByRunId === run.runId || file.change === 'created' || file.change === 'modified')
+    )
+  })
 
 const incompleteRunFacts = (
   facts: NotebookRunDependencyFacts
@@ -394,12 +537,16 @@ class NotebookDependencyProjector {
     )
     const unresolvedConstructor = (facts.typeBindings ?? []).some(
       (binding) =>
-        !typeSummaries.has(binding.typeName) && !resolvedCallableResultNames.has(binding.target)
+        binding.typeName !== 'python.object' &&
+        !typeSummaries.has(binding.typeName) &&
+        !resolvedCallableResultNames.has(binding.target)
     )
     const unresolvedConstructorArguments = (facts.typeBindings ?? [])
       .filter(
         (binding) =>
-          !typeSummaries.has(binding.typeName) && !resolvedCallableResultNames.has(binding.target)
+          binding.typeName !== 'python.object' &&
+          !typeSummaries.has(binding.typeName) &&
+          !resolvedCallableResultNames.has(binding.target)
       )
       .flatMap((binding) => binding.argumentNames ?? [])
     const typeAwareMutatedNames: string[] = []
@@ -530,6 +677,110 @@ class NotebookDependencyProjector {
       return (keyword && keyword.staticBoolean !== true) || unpacked
         ? conditional.returnType
         : fallback
+    }
+
+    // Function metadata does not replace its compiled body or bindings. Only
+    // behavior slots and unknown member writes invalidate a plain function summary.
+    const pythonFunctionBehaviorMembers = new Set([
+      '__code__',
+      '__defaults__',
+      '__kwdefaults__',
+      '__globals__',
+      '__builtins__',
+      '__closure__'
+    ])
+    const pythonFunctionMemberMayChangeBehavior = (member: string | undefined): boolean =>
+      member === undefined || member === '*' || pythonFunctionBehaviorMembers.has(member)
+    const pythonFunctionHasBehaviorShadow = (members: ReadonlySet<string> | undefined): boolean =>
+      members ? [...members].some(pythonFunctionMemberMayChangeBehavior) : false
+
+    // A definite pending binding to a summary emitted in this run denotes a
+    // new function object, which cannot inherit the old name's reference shadow.
+    const pythonFunctionHasFreshBinding = (
+      receiver: string,
+      summary: NotebookDependencyTypeSummary
+    ): boolean =>
+      pendingTypeBindings.get(receiver) === summary &&
+      (facts.typeSummaries ?? []).includes(summary) &&
+      !conditionallyDefinedNames.has(receiver)
+
+    // Traverse only current plain function identities inside an
+    // already opaque callback. These names are potential captures, not calls.
+    const currentPythonFunctionSummary = (
+      name: string
+    ): NotebookDependencyTypeSummary | undefined => {
+      if (run.kernelKind !== 'python' || incompleteRun) return undefined
+      const aliasNames = [name]
+      const visitedNames = new Set<string>()
+      for (let cursor = 0; cursor < aliasNames.length; cursor++) {
+        const current = aliasNames[cursor]
+        if (visitedNames.has(current)) return undefined
+        visitedNames.add(current)
+        const definedInThisRun = (facts.definedNames ?? []).includes(current)
+        const hasCurrentBinding =
+          definedInThisRun &&
+          (pendingTypeBindings.has(current) || completeSummaryNames.has(current))
+        if (
+          conditionallyDefinedNames.has(current) ||
+          (uncertainBindings.has(current) && !hasCurrentBinding)
+        )
+          return undefined
+        const summary = callableSummary(current)
+        if (summary) {
+          // Plain functions and real classes share kind 'python-class'; the
+          // reviewed python-function: identity is the required narrower seam.
+          if (!summary.name.startsWith('python-function:')) return undefined
+          const token = referenceTokens.get(current)
+          if (
+            (!pythonFunctionHasFreshBinding(current, summary) &&
+              token &&
+              pythonFunctionHasBehaviorShadow(shadowedMembers.get(token))) ||
+            pythonFunctionHasBehaviorShadow(shadowedTypeMembers.get(summary)) ||
+            (facts.memberWrites ?? []).some(
+              (write) =>
+                receiversMayAlias(write.receiver, current) &&
+                pythonFunctionMemberMayChangeBehavior(write.member)
+            )
+          )
+            return undefined
+          return summary
+        }
+        // Only a definite current direct alias can bridge a missing pending
+        // binding. A possible alias cannot recover an old pre-rebind identity.
+        const aliases = (facts.aliases ?? []).filter(
+          (alias) =>
+            alias.target === current &&
+            alias.kind === 'reference' &&
+            alias.access === undefined &&
+            alias.member === undefined
+        )
+        if (aliases.length !== 1) return undefined
+        aliasNames.push(aliases[0].source)
+      }
+      return undefined
+    }
+    const opaquePythonFunctionCaptures = (
+      rootName: string,
+      rootSummary: NotebookDependencyTypeSummary
+    ): string[] => {
+      const currentRoot = currentPythonFunctionSummary(rootName)
+      if (!currentRoot || currentRoot !== rootSummary) return []
+      const names: string[] = []
+      const worklist = [currentRoot]
+      const visitedSummaries = new Set(worklist)
+      // An explicit worklist bounds traversal by summary identities and avoids
+      // recursive JavaScript call-stack growth for deep helper chains.
+      for (let cursor = 0; cursor < worklist.length; cursor++) {
+        const method = worklist[cursor].methods.find((candidate) => candidate.name === '__call__')
+        for (const name of method?.usedNames ?? []) {
+          names.push(name)
+          const helper = currentPythonFunctionSummary(name)
+          if (!helper || visitedSummaries.has(helper)) continue
+          visitedSummaries.add(helper)
+          worklist.push(helper)
+        }
+      }
+      return names
     }
 
     const ownedPropertyEffect = (
@@ -932,8 +1183,10 @@ class NotebookDependencyProjector {
           libraryEffect?.callbackAllKeywords === true ||
           libraryEffect?.callbackKeywords?.includes(keyword.name)
       )
-      const hasDynamicCallback = callbackArguments.some((keyword) =>
-        (keyword.callableReferences ?? []).some((reference) => {
+      // Visit every contracted callback before aggregating uncertainty: a
+      // dynamic callback must not hide the known captures of later callbacks.
+      const callbackUncertainties = callbackArguments.map((keyword) =>
+        (keyword.callableReferences ?? []).map((reference) => {
           if (
             reference.container &&
             !libraryEffect?.callbackContainerKeywords?.includes(keyword.name)
@@ -946,10 +1199,22 @@ class NotebookDependencyProjector {
           ) {
             return false
           }
-          const summary =
-            pendingTypeBindings.get(reference.root) ??
-            objectTypes.get(reference.root) ??
-            typeSummaries.get(reference.root)
+          // A pending conditional body or an uncertain prior binding does not
+          // identify the callback currently supplied to the library.
+          const definedInThisRun = (facts.definedNames ?? []).includes(reference.root)
+          const hasCurrentBinding =
+            definedInThisRun &&
+            (pendingTypeBindings.has(reference.root) || completeSummaryNames.has(reference.root))
+          if (
+            conditionallyDefinedNames.has(reference.root) ||
+            (uncertainBindings.has(reference.root) && !hasCurrentBinding)
+          )
+            return true
+          const namedTypeSummary =
+            !definedInThisRun || completeSummaryNames.has(reference.root)
+              ? typeSummaries.get(reference.root)
+              : undefined
+          const summary = callableSummary(reference.root) ?? namedTypeSummary
           if (!summary) {
             return reference.member !== undefined || libraryEffect?.callbackAllKeywords !== true
           }
@@ -964,21 +1229,34 @@ class NotebookDependencyProjector {
             ].includes(summary.name)
           )
             return false
-          if (reference.member) {
+          // Plain function objects can change behavior through __code__,
+          // defaults, or an unknown member write, including through aliases.
+          const plainFunction = summary.name.startsWith('python-function:')
+          if (reference.member || plainFunction) {
             const writtenInThisRun = (facts.memberWrites ?? []).some(
               (write) =>
                 receiversMayAlias(write.receiver, reference.root) &&
-                (write.member === undefined || write.member === reference.member)
+                (plainFunction
+                  ? pythonFunctionMemberMayChangeBehavior(write.member) ||
+                    write.member === reference.member
+                  : write.member === undefined || write.member === reference.member)
             )
             if (writtenInThisRun) return true
             const token = referenceTokens.get(reference.root)
-            const shadow = token ? shadowedMembers.get(token) : undefined
+            const shadow =
+              token && !(plainFunction && pythonFunctionHasFreshBinding(reference.root, summary))
+                ? shadowedMembers.get(token)
+                : undefined
             const typeShadow = shadowedTypeMembers.get(summary)
             if (
-              shadow?.has('*') ||
-              shadow?.has(reference.member) ||
-              typeShadow?.has('*') ||
-              typeShadow?.has(reference.member)
+              (plainFunction
+                ? pythonFunctionHasBehaviorShadow(shadow) ||
+                  (reference.member && shadow?.has(reference.member))
+                : shadow?.has('*') || shadow?.has(reference.member!)) ||
+              (plainFunction
+                ? pythonFunctionHasBehaviorShadow(typeShadow) ||
+                  (reference.member && typeShadow?.has(reference.member))
+                : typeShadow?.has('*') || typeShadow?.has(reference.member!))
             ) {
               return true
             }
@@ -986,13 +1264,22 @@ class NotebookDependencyProjector {
           const callback = summary.methods.find(
             (candidate) => candidate.name === (reference.member ?? '__call__')
           )
-          if (callback?.effect !== 'read') return true
-          typeAwareUsedNames.push(...(callback.usedNames ?? []))
+          // An opaque callback can still have known captures. Preserve their
+          // invalidation evidence without certifying the callback's effects.
+          typeAwareUsedNames.push(...(callback?.usedNames ?? []))
+          if (callback?.effect !== 'read') {
+            if (!reference.member) {
+              typeAwareUsedNames.push(...opaquePythonFunctionCaptures(reference.root, summary))
+            }
+            return true
+          }
           typeAwareSafeCallNames.push(...(callback.safeCallNames ?? []))
           return callback.safeCallNames?.some(nameIsShadowed) ?? false
         })
       )
-      if (hasDynamicCallback) typeAwareReasons.push('opaque-call')
+      if (callbackUncertainties.some((references) => references.some(Boolean))) {
+        typeAwareReasons.push('opaque-call')
+      }
       if (libraryEffect?.mutatesReceiverUnlessKeywordFalse) {
         const option = call.keywordArguments?.find(
           (keyword) => keyword.name === libraryEffect.mutatesReceiverUnlessKeywordFalse
@@ -1913,6 +2200,295 @@ class NotebookDependencyProjector {
   }
 }
 
+const projectNotebookFileDependencies = (
+  analyzedRuns: readonly AnalyzedNotebookRun[]
+): {
+  fileDependenciesByRunId: Record<string, NotebookFileDependency[]>
+  unresolvedFileReadRunIds: string[]
+} => {
+  const producers = new Map<string, { runId: string; generationId?: string; checksum?: string }>()
+  const producerPaths = new Map<string, NotebookWorkingFile>()
+  const ambiguousPaths = new Set<string>()
+  const unresolvedFileReadRunIds = new Set<string>()
+  const dependenciesByRunId: Record<string, NotebookFileDependency[]> = {}
+  const runsById = new Map(analyzedRuns.map(({ run }) => [run.runId, run]))
+  const generationLineageKeys = (
+    run: NotebookRunRecord,
+    generation: NotebookWorkingFile
+  ): Set<string> =>
+    new Set([
+      lineagePathKey(run, generation.path),
+      ...(generation.relativePath ? [lineagePathKey(run, generation.relativePath)] : [])
+    ])
+  const aliasesForGeneration = (
+    run: NotebookRunRecord,
+    generation: NotebookWorkingFile
+  ): Set<string> => {
+    const generationKeys = generationLineageKeys(run, generation)
+    return new Set(
+      [...producerPaths].flatMap(([key, producerFile]) =>
+        [...generationLineageKeys(run, producerFile)].some((candidate) =>
+          generationKeys.has(candidate)
+        )
+          ? [key]
+          : []
+      )
+    )
+  }
+  const invalidateGenerationAliases = (
+    run: NotebookRunRecord,
+    generation: NotebookWorkingFile,
+    ambiguous: boolean
+  ): void => {
+    const keys = aliasesForGeneration(run, generation)
+    for (const key of generationLineageKeys(run, generation)) keys.add(key)
+    for (const key of keys) {
+      producers.delete(key)
+      producerPaths.delete(key)
+      if (ambiguous) ambiguousPaths.add(key)
+      else ambiguousPaths.delete(key)
+    }
+  }
+  const registerProducer = (
+    run: NotebookRunRecord,
+    sourcePath: string,
+    generation: NotebookWorkingFile
+  ): void => {
+    // A new generation supersedes every prior alias for the same artifact. Keep
+    // those aliases ambiguous until the exact identities observed in this run
+    // are registered below; scoped aliases for companion writes must not point
+    // at the older producer.
+    invalidateGenerationAliases(run, generation, true)
+    const producer = {
+      runId: run.runId,
+      ...(generation.generationId ? { generationId: generation.generationId } : {}),
+      ...(generation.checksum ? { checksum: generation.checksum } : {})
+    }
+    for (const path of [
+      sourcePath,
+      generation.path,
+      ...(lineageWorkingDirectory(run) === undefined &&
+      hasCompleteRuntimeFileEvidence(run) &&
+      generation.relativePath
+        ? [generation.relativePath]
+        : [])
+    ]) {
+      const key = lineagePathKey(run, path)
+      producers.set(key, producer)
+      producerPaths.set(key, generation)
+      ambiguousPaths.delete(key)
+    }
+  }
+  const markAmbiguous = (run: NotebookRunRecord, generation: NotebookWorkingFile): void => {
+    invalidateGenerationAliases(run, generation, true)
+  }
+  const markPathAmbiguous = (run: NotebookRunRecord, path: string): void => {
+    const key = lineagePathKey(run, path)
+    const aliases = new Set([key])
+    for (const [producerKey, producerFile] of producerPaths) {
+      if (generationLineageKeys(run, producerFile).has(key)) aliases.add(producerKey)
+    }
+    for (const alias of aliases) {
+      producers.delete(alias)
+      producerPaths.delete(alias)
+      ambiguousPaths.add(alias)
+    }
+  }
+  const scopeCandidatePath = (run: NotebookRunRecord, path: string): string => {
+    return lineageScopePath(run, path)
+  }
+  const readMatchesScope = (
+    run: NotebookRunRecord,
+    path: string,
+    scope: NotebookSourceFileWriteScope
+  ): boolean => {
+    const absoluteMatch = matchesAbsoluteLineageScope(run, scope, run, path)
+    if (absoluteMatch !== undefined) return absoluteMatch
+    const workingDirectory = lineageWorkingDirectory(run)
+    const resolvedPath =
+      workingDirectory !== undefined && !isAbsolute(path) ? resolve(workingDirectory, path) : path
+    const candidatePath = scopeCandidatePath(run, resolvedPath)
+    const normalizedScope = lineageScope(run, scope)
+    return (
+      candidatePath !== '..' &&
+      !candidatePath.startsWith('../') &&
+      matchesLineageScope(normalizedScope, candidatePath)
+    )
+  }
+  const markScopeAmbiguous = (
+    run: NotebookRunRecord,
+    scope: NotebookSourceFileWriteScope
+  ): void => {
+    for (const [key, producerFile] of producerPaths) {
+      const producerRunId = producers.get(key)?.runId
+      const producerRun = producerRunId ? runsById.get(producerRunId) : undefined
+      const absoluteMatch = producerRun
+        ? matchesAbsoluteLineageScope(run, scope, producerRun, producerFile.path)
+        : undefined
+      const candidatePaths = [
+        scopeCandidatePath(run, producerFile.path),
+        ...(lineageWorkingDirectory(run) === undefined &&
+        hasCompleteRuntimeFileEvidence(run) &&
+        producerFile.relativePath
+          ? [scopeCandidatePath(run, producerFile.relativePath)]
+          : [])
+      ]
+      const normalizedScope = lineageScope(run, scope)
+      const scopeMatch =
+        absoluteMatch ??
+        candidatePaths.some(
+          (candidatePath) =>
+            candidatePath !== '..' &&
+            !candidatePath.startsWith('../') &&
+            matchesLineageScope(normalizedScope, candidatePath)
+        )
+      if (!scopeMatch) continue
+      producers.delete(key)
+      producerPaths.delete(key)
+      ambiguousPaths.add(key)
+    }
+  }
+  for (const { run, fileAccess } of analyzedRuns) {
+    const runtimeEvidenceComplete = hasCompleteRuntimeFileEvidence(run)
+    const runtimeWriterEvidenceComplete = hasCompleteRuntimeWriterEvidence(run)
+    if (run.status === 'completed' && fileAccess) {
+      const dynamicReadUnresolved = fileAccess.reasonCodes.includes('dynamic-path-unresolved')
+      if (
+        (!runtimeEvidenceComplete || dynamicReadUnresolved) &&
+        fileAccess.readState !== 'complete'
+      )
+        unresolvedFileReadRunIds.add(run.runId)
+      const dependencies: NotebookFileDependency[] = []
+      const writeKeys = new Set(
+        (fileAccess.writes ?? []).map((rawPath) => lineagePathKey(run, rawPath))
+      )
+      for (const rawPath of fileAccess.reads) {
+        const path = portablePath(rawPath)
+        const key = lineagePathKey(run, rawPath)
+        const scopeRead = (fileAccess.writeScopes ?? []).some((scope) =>
+          readMatchesScope(run, rawPath, scope)
+        )
+        // Static extraction does not retain statement order. If a run both reads and
+        // writes the same path, do not attribute the read to an older producer.
+        const explicitBarrier = writeKeys.has(key) || scopeRead || ambiguousPaths.has(key)
+        const lineageBlocked = explicitBarrier || isUnanchoredRelativePath(run, key)
+        if (lineageBlocked) {
+          if (!runtimeEvidenceComplete || explicitBarrier) unresolvedFileReadRunIds.add(run.runId)
+          continue
+        }
+        if (fileAccess.readState !== 'complete') continue
+        const producer = producers.get(key)
+        if (!producer || producer.runId === run.runId) continue
+        dependencies.push({
+          producerRunId: producer.runId,
+          path,
+          ...(producer.generationId ? { generationId: producer.generationId } : {}),
+          ...(producer.checksum ? { checksum: producer.checksum } : {}),
+          confidence: (producer.checksum
+            ? 'verified'
+            : 'advisory') as NotebookFileDependency['confidence']
+        })
+      }
+      if (dependencies.length) dependenciesByRunId[run.runId] = dependencies
+    }
+    if (run.status === 'completed') {
+      const observedChanges = run.workingFiles.filter(
+        (file) =>
+          file.createdByRunId === run.runId ||
+          file.change === 'created' ||
+          file.change === 'modified'
+      )
+      const matchedGenerations = new Set<NotebookWorkingFile>()
+      if (fileAccess?.writeState === 'complete') {
+        for (const rawPath of fileAccess.writes) {
+          const path = portablePath(rawPath)
+          const generation = observedFileGeneration(run, path)
+          if (generation) {
+            registerProducer(run, path, generation)
+            matchedGenerations.add(generation)
+          }
+        }
+        for (const scope of fileAccess.writeScopes ?? []) {
+          // Runtime observation does not establish complete scope coverage. Quarantine
+          // all older companions first, then restore only generations observed now.
+          markScopeAmbiguous(run, scope)
+          const scopedGenerations = observedScopedGenerations(run, [scope])
+          for (const generation of scopedGenerations) {
+            registerProducer(run, scope.path, generation)
+            matchedGenerations.add(generation)
+          }
+        }
+        for (const generation of observedChanges) {
+          if (!matchedGenerations.has(generation)) markAmbiguous(run, generation)
+        }
+        // A complete static write list is only evidence for the paths that were
+        // observed. An unobserved declared path must poison that path, otherwise an
+        // older producer can be reused after an overwrite that was not captured.
+        for (const rawPath of fileAccess.writes) {
+          if (!runtimeWriterEvidenceComplete && !observedFileGeneration(run, rawPath))
+            markPathAmbiguous(run, rawPath)
+        }
+      } else if (runtimeWriterEvidenceComplete) {
+        // A conservative static writer (for example an sf/terra companion
+        // format) may still have a complete runtime receipt. In that case the
+        // observed generations are authoritative for the paths that actually
+        // changed, while any declared but unobserved path remains ambiguous.
+        // This preserves useful output lineage without certifying the writer's
+        // unobserved sidecar set.
+        const matchedGenerations = new Set<NotebookWorkingFile>()
+        for (const rawPath of fileAccess?.writes ?? []) {
+          const generation = observedFileGeneration(run, rawPath)
+          if (generation) {
+            registerProducer(run, rawPath, generation)
+            matchedGenerations.add(generation)
+          } else markPathAmbiguous(run, rawPath)
+        }
+        for (const generation of observedChanges) {
+          if (!matchedGenerations.has(generation)) markAmbiguous(run, generation)
+        }
+        for (const scope of fileAccess?.writeScopes ?? []) {
+          markScopeAmbiguous(run, scope)
+          const scopedGenerations = observedScopedGenerations(run, [scope])
+          for (const generation of scopedGenerations) {
+            registerProducer(run, scope.path, generation)
+            matchedGenerations.add(generation)
+          }
+        }
+      } else {
+        for (const generation of observedChanges) markAmbiguous(run, generation)
+        if (!runtimeWriterEvidenceComplete) {
+          for (const rawPath of fileAccess?.writes ?? []) markPathAmbiguous(run, rawPath)
+        }
+        for (const scope of fileAccess?.writeScopes ?? []) {
+          for (const generation of observedScopedGenerations(run, [scope]))
+            markAmbiguous(run, generation)
+          markScopeAmbiguous(run, scope)
+        }
+      }
+    } else {
+      // Incomplete runs may still have modified files. Keep their evidence as an
+      // ambiguity barrier, but never register their generations as valid producers.
+      for (const generation of run.workingFiles.filter(
+        (file) =>
+          file.createdByRunId === run.runId ||
+          file.change === 'created' ||
+          file.change === 'modified'
+      ))
+        markAmbiguous(run, generation)
+      for (const rawPath of fileAccess?.writes ?? []) markPathAmbiguous(run, rawPath)
+      for (const scope of fileAccess?.writeScopes ?? []) {
+        for (const generation of observedScopedGenerations(run, [scope]))
+          markAmbiguous(run, generation)
+        markScopeAmbiguous(run, scope)
+      }
+    }
+  }
+  return {
+    fileDependenciesByRunId: dependenciesByRunId,
+    unresolvedFileReadRunIds: [...unresolvedFileReadRunIds]
+  }
+}
+
 // Projects immutable run history into current dependency freshness. Cell identity is deliberately
 // absent: every call can use a new cellId while still sharing the same persistent kernel namespace.
 const projectNotebookDependencies = (
@@ -1941,6 +2517,7 @@ const unavailableNotebookDependencyProjection = (
 
 export {
   NotebookDependencyProjector,
+  projectNotebookFileDependencies,
   projectNotebookDependencies,
   unavailableNotebookDependencyProjection
 }

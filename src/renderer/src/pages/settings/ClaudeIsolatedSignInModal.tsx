@@ -1,7 +1,7 @@
 import { InlineNotice } from '@/components/ui/inline-notice'
 import { useFileCredentialNotice } from './use-file-credential-notice'
 import { useEffect, useRef, useState } from 'react'
-import { AlertDialog } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
 import { Check, Copy, Loader2, X } from 'lucide-react'
 import { Trans, useTranslation } from 'react-i18next'
 
@@ -151,7 +151,7 @@ const ClaudeIsolatedSignInModalBody = ({
           <AlertDialog.Description className={dialogDescriptionClassName}>
             {fileCredentialNotice ?? (
               <Trans
-                i18nKey="Use a long-lived OAuth token from <code>claude setup-token</code>. The token is encrypted in MedResearch Agent app storage and never read from or written to <code>~/.claude</code>. See <docsLink>Anthropic's setup-token guide</docsLink> for the full flow."
+                i18nKey="Use a long-lived OAuth token from <code>claude setup-token</code>. The token is encrypted in DRA app storage and never read from or written to <code>~/.claude</code>. See <docsLink>Anthropic's setup-token guide</docsLink> for the full flow."
                 components={{
                   code: <code className="font-mono" />,
                   docsLink: (

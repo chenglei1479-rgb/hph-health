@@ -44,6 +44,9 @@
       "src/renderer/web/api-installer.test.ts"
     ],
     "consumer": [
+      "src/main/storage/wsl-npm-migration.integration.test.ts",
+      "src/main/composition/notebook-environment.test.ts",
+      "src/main/composition/reviewer.test.ts",
       "src/main/acp/runtime-coordinator.test.ts",
       "src/main/archive/coordinator.test.ts",
       "src/main/compute/job-deletion-owner.test.ts",
@@ -216,7 +219,7 @@
       "src/main/web-service/task-api.test.ts",
       "src/main/window-find-ipc.test.ts",
       "src/renderer/src/pages/literature/LiteratureLibraryPage.render.test.tsx",
-      "src/renderer/src/pages/literature/LiteratureMetadataEditor.test.tsx",
+      "src/renderer/src/pages/literature/detail/LiteratureMetadataEditor.test.tsx",
       "src/renderer/src/pages/settings/PermissionsPanel.render.test.tsx",
       "src/renderer/src/pages/workspace/artifact-publication-preview.integration.test.tsx",
       "src/shared/renderer-surface-inventory.test.ts",
@@ -247,7 +250,17 @@
       "src/main/settings/workflows.test.ts",
       "src/main/settings/workflows/connectors-diagnostic.test.ts",
       "src/main/compute/compute-submission-evidence-recovery.integration.test.ts",
-      "src/main/acp/library-auto-policy.test.ts"
+      "src/main/acp/library-auto-policy.test.ts",
+      "src/main/literature/journal-attributes.scale.test.ts",
+      "src/main/literature/journal-attributes.test.ts",
+      "src/main/session-replay/service.test.ts",
+      "src/main/acp/approved-handoff-outcome.integration.test.ts",
+      "src/main/pdf-annotations/sharing.integration.test.ts",
+      "src/main/database/pascalcase-table-names-migration.test.ts",
+      "src/main/database/literature-translation-migration.test.ts",
+      "src/main/literature/pdf-translation/checkpoints.test.ts",
+      "src/main/literature/pdf-translation/usage.test.ts",
+      "src/main/database/workspace-pdf-translation-migration.test.ts"
     ]
   },
   "capabilityOverlays": ["windows_sensitive", "e2e_regressions", "e2e_delegation"],

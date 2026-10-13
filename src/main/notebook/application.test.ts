@@ -34,7 +34,7 @@ describe('Notebook application composition', () => {
     const application = createNotebookApplication({
       configRoot: '/config',
       dataRoot: '/data',
-      projectId: 'MedResearch Agent',
+      projectId: 'DRA',
       repository: {} as never,
       locale: 'en-US',
       appVersion: '1.2.3',
@@ -51,7 +51,7 @@ describe('Notebook application composition', () => {
     expect(runtimeConstruction.options).toMatchObject({
       configRoot: '/config',
       dataRoot: '/data',
-      projectId: 'MedResearch Agent',
+      projectId: 'DRA',
       locale: 'en-US',
       appVersion: '1.2.3'
     })
@@ -62,7 +62,7 @@ describe('Notebook application composition', () => {
     createNotebookApplication({
       configRoot: '/config',
       dataRoot: '/data',
-      projectId: 'MedResearch Agent',
+      projectId: 'DRA',
       repository: {} as never,
       events: { publish }
     })
@@ -83,7 +83,7 @@ describe('Notebook application composition', () => {
     const module = createNotebookApplicationModule({
       configRoot: '/config',
       dataRoot: '/data',
-      projectId: 'MedResearch Agent',
+      projectId: 'DRA',
       events: { publish: vi.fn() },
       disposeTimeoutMs: 25,
       isBackendTeardownOwned: () => false
@@ -98,7 +98,7 @@ describe('Notebook application composition', () => {
     const module = createNotebookApplicationModule({
       configRoot: '/config',
       dataRoot: '/data',
-      projectId: 'MedResearch Agent',
+      projectId: 'DRA',
       events: { publish: vi.fn() },
       disposeTimeoutMs: 25,
       isBackendTeardownOwned: () => true
@@ -157,7 +157,7 @@ describe('Notebook application composition', () => {
   })
 
   it('registers Host Model after local RPC so reverse disposal cancels inference first', () => {
-    const source = readFileSync(resolve(__dirname, '../ipc.ts'), 'utf8')
+    const source = readFileSync(resolve(__dirname, '../composition/notebook-bridge.ts'), 'utf8')
     const localRpcRegistration = source.indexOf('const notebookRpcServer = await modules.add(')
     const hostModelRegistration = source.indexOf("name: 'host-model-service'")
 

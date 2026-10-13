@@ -8,6 +8,7 @@ const { findCaptionCandidates } = await import(
 )
 const {
   associateFigures,
+  deduplicateFigureCaptions,
   associateAdjacentFigure,
   resolveFigureCaption,
   associateGraphicalAbstract
@@ -54,6 +55,67 @@ it('keeps external labels when quantized raster bounds only graze the caption', 
   expect(associateFigures(source, [{ ...caption, rect: [50, 400, 550, 460] }])[0].rect).toEqual([
     60, 80, 540, 480
   ])
+})
+
+it('ignores a tiny footer path that overlaps a publisher URL', () => {
+  const source = {
+    ...page,
+    graphicsBounds: [
+      graphic('image', [0.1, 0.1, 0.9, 0.8]),
+      graphic('path', [0.45, 0.92, 0.49, 0.945])
+    ],
+    lines: [
+      {
+        text: 'Journal www.example.com 123',
+        x: 0,
+        y: 740,
+        width: 600,
+        height: 10,
+        fontSize: 8
+      }
+    ]
+  }
+  const [figure] = associateFigures(source, [
+    { page: 1, lines: ['Figure 1. Results'], rect: [50, 650, 550, 680] }
+  ])
+  expect(figure.rect).toEqual([60, 80, 540, 640])
+  expect(figure.reason).toBeUndefined()
+})
+
+it('stops a lower figure from claiming graphics above an intervening figure caption', () => {
+  const source = {
+    ...page,
+    graphicsBounds: [
+      graphic('image', [0.1, 0.1, 0.9, 0.18]),
+      graphic('image', [0.1, 0.19, 0.9, 0.27]),
+      graphic('image', [0.1, 0.31, 0.9, 0.38]),
+      graphic('image', [0.1, 0.39, 0.9, 0.46]),
+      graphic('image', [0.1, 0.47, 0.9, 0.54])
+    ]
+  }
+  const captions = [
+    { page: 1, lines: ['Figure 1. Upper panel'], rect: [50, 245, 550, 265] },
+    { page: 1, lines: ['Figure 2. Lower panel'], rect: [50, 500, 550, 520] }
+  ]
+  const figures = associateFigures(source, captions)
+  expect(figures).toHaveLength(2)
+  expect(figures[1].rect[1]).toBeGreaterThan(210)
+  expect(figures[1].rect[3]).toBeLessThan(500)
+})
+
+it('drops an unresolved duplicate when an adjacent page resolved the caption', () => {
+  const caption = {
+    page: 12,
+    lines: ['Figure 1. Results'],
+    text: 'Figure 1. Results',
+    rect: [40, 40, 200, 60]
+  }
+  const figures = deduplicateFigureCaptions([
+    { caption, region: [0.1, 0.1, 0.8, 0.8] },
+    { caption, reason: 'no-unambiguous-adjacent-graphics' }
+  ])
+  expect(figures).toHaveLength(1)
+  expect(figures[0].region).toEqual([0.1, 0.1, 0.8, 0.8])
 })
 
 it.each([false, true])(
@@ -387,6 +449,23 @@ it('retains removed margin rules as barriers instead of unioning two distant rul
     ])[0].rect
   ).toEqual([120, 80, 480, 520])
 })
+
+it.each([4 / 256, 5 / 256])(
+  'retains a removed running rule of thickness %s as a barrier',
+  (thickness) => {
+    const rule = graphic('path', [0.05, 0.12, 0.95, 0.12 + thickness])
+    const body = graphic('image', [0.1, 0.2, 0.9, 0.7])
+    const source = {
+      ...page,
+      lines: [{ text: 'Journal running header', x: 40, y: 24, width: 140, height: 8 }],
+      graphicsBounds: [rule, body]
+    }
+    const [clean] = excludeRepeatedMarginContent([source, { ...source, pageNumber: 2 }])
+    expect(clean.graphicsBounds).toEqual([body])
+    expect(clean.marginRuleBounds).toEqual([rule.normalizedRect])
+    expect(excludeRepeatedMarginContent([source])[0].graphicsBounds).toContainEqual(rule)
+  }
+)
 
 it('removes facing-page raster logos and their path wrappers before adjacent caption matching', () => {
   const logo = graphic('image', [0.6, 0.02734375, 0.77, 0.0625], 'same-pixels')

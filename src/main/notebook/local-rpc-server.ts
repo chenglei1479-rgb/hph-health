@@ -302,6 +302,11 @@ type NotebookLocalRpcServerOptions = {
     ): Promise<unknown>
   }
   hostSessions?: {
+    read?(
+      sessionId: unknown,
+      options: unknown,
+      context: { projectId: string; sessionId: string; callerRole: 'main' }
+    ): Promise<unknown>
     list(
       options: unknown,
       context: { projectId: string; sessionId: string; callerRole: 'main' }
@@ -612,6 +617,16 @@ const notebookExecutionInputFingerprint = (
         ? [...new Set(input.artifactVersionInputs)]
         : undefined
   if (artifactVersionInputs === undefined) return undefined
+  const inputVersionIds =
+    method !== 'execute' || input?.inputVersionIds === undefined
+      ? []
+      : Array.isArray(input.inputVersionIds) &&
+          input.inputVersionIds.every(
+            (versionId): versionId is string => typeof versionId === 'string'
+          )
+        ? [...new Set(input.inputVersionIds)]
+        : undefined
+  if (inputVersionIds === undefined) return undefined
 
   return createHash('sha256')
     .update(
@@ -627,7 +642,8 @@ const notebookExecutionInputFingerprint = (
         method === 'execute' && typeof input?.cellId === 'string' ? input.cellId : null,
         input?.background === true,
         kernelSkillIds,
-        artifactVersionInputs
+        artifactVersionInputs,
+        inputVersionIds
       ])
     )
     .digest('hex')
@@ -1851,6 +1867,7 @@ class NotebookLocalRpcServer {
       // A session capability can outlive its turn. Snapshot before reading the body so a
       // slow request cannot acquire a later turn's authority after cleanup has returned.
       const initialSessionBinding = this.sessionRpcCapabilities.get(bearerToken)
+      const initialControlInvocation = initialSessionBinding?.activeControlInvocation
       const initialSessionId = initialSessionBinding
         ? (this.sessionAliases.get(initialSessionBinding.sessionId) ??
           initialSessionBinding.sessionId)
@@ -2062,8 +2079,9 @@ class NotebookLocalRpcServer {
             !sessionBinding.delegatedNotebook &&
             (!sessionBinding.projectId ||
               !sessionBinding.agentFrameId ||
-              !sessionBinding.activeControlInvocation?.toolInvocationId ||
-              !sessionBinding.activeControlInvocation.originatingUserMessageId)
+              sessionBinding.activeControlInvocation !== initialControlInvocation ||
+              !initialControlInvocation?.toolInvocationId ||
+              !initialControlInvocation.originatingUserMessageId)
           ) {
             throw new RpcHttpError(
               403,
@@ -2144,6 +2162,7 @@ class NotebookLocalRpcServer {
                   frame_id: sessionBinding.agentFrameId,
                   caller_role: sessionBinding.delegatedWorkRole,
                   attempt_id: sessionBinding.delegatedWorkAttemptId,
+                  root_execution_id: initialControlInvocation?.rootExecutionId,
                   permissionPrompts: sessionBinding.delegatedNotebook?.permissionPrompts,
                   origin_message_id:
                     sessionBinding.delegatedNotebook?.provenanceContext.promptMessageId ??
@@ -2160,6 +2179,7 @@ class NotebookLocalRpcServer {
                     session_id: sessionBinding.sessionId,
                     frame_id: sessionBinding.agentFrameId,
                     attempt_id: sessionBinding.delegatedWorkAttemptId,
+                    root_execution_id: initialControlInvocation?.rootExecutionId,
                     origin_message_id:
                       sessionBinding.delegatedNotebook?.provenanceContext.promptMessageId ??
                       sessionBinding.activeControlInvocation?.originatingUserMessageId
@@ -2200,6 +2220,16 @@ class NotebookLocalRpcServer {
       // Resolve pre-session aliases before the runtime service looks up persistent state.
       if (method === 'planCall' && lifecycle.closing) disconnect.abort()
       let resolvedParams = { ...this.resolveSessionAlias(params) }
+      delete resolvedParams.rootExecutionId
+      // Background control runs also retain their submitting execution; they must never borrow
+      // a later foreground turn's delegation authority when their queued work starts.
+      if (
+        method === 'executeControl' &&
+        initialTurn &&
+        initialSessionBinding?.delegatedWorkRole !== 'delegate'
+      ) {
+        resolvedParams.rootExecutionId = initialTurn.ownerExecutionId
+      }
       delete resolvedParams.executionInvocationId
       delete resolvedParams.registeredHelperSkillIds
       const authenticatedBinding = authenticatedSessionBinding
@@ -2648,6 +2678,8 @@ class NotebookLocalRpcServer {
       const context = { projectId, sessionId, callerRole: 'main' as const }
       if (params.op === 'list') return this.hostSessions.list(params.options, context)
       if (params.op === 'inspect') return this.hostSessions.inspect(params.session_id, context)
+      if (params.op === 'read' && this.hostSessions.read)
+        return this.hostSessions.read(params.session_id, params.options, context)
       throw new RpcHttpError(400, 'Unknown host Session operation.')
     }
 
@@ -3183,6 +3215,9 @@ class NotebookLocalRpcServer {
       }
       const parentSpecialistId = this.sessionSpecialists.get(sessionId)
       const caller: AuthenticatedDelegateCaller = {
+        ...(typeof params.root_execution_id === 'string'
+          ? { rootExecutionId: params.root_execution_id }
+          : {}),
         permissionPrompts: params.permissionPrompts === 'none' ? 'none' : undefined,
         session: { projectId, sessionId },
         frameId,
@@ -3399,6 +3434,9 @@ class NotebookLocalRpcServer {
         promptMessageId: provenanceContext.promptMessageId,
         ...(method === 'execute' && Array.isArray(params.artifactVersionInputs)
           ? { artifactVersionInputs: params.artifactVersionInputs as string[] }
+          : {}),
+        ...(method === 'execute' && Array.isArray(params.inputVersionIds)
+          ? { inputVersionIds: params.inputVersionIds as string[] }
           : {})
       })
       const leases = this.activeInputRunLeases.get(sessionId) ?? new Set<NotebookInputRunLease>()
@@ -3441,11 +3479,11 @@ class NotebookLocalRpcServer {
 
     if (
       method === 'execute' &&
-      Array.isArray(params.artifactVersionInputs) &&
-      params.artifactVersionInputs.length > 0
+      ((Array.isArray(params.artifactVersionInputs) && params.artifactVersionInputs.length > 0) ||
+        (Array.isArray(params.inputVersionIds) && params.inputVersionIds.length > 0))
     ) {
       throw new Error(
-        'artifactVersionInputs requires an active Artifact provenance context and input registry.'
+        'Version inputs require an active Project provenance context and input registry.'
       )
     }
 

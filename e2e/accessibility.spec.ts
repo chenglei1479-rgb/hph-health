@@ -240,7 +240,7 @@ test('reports accessibility violations in permission and file preview states', a
 
 test('reports accessibility violations across representative state combinations', async ({
   app
-}) => {
+}, testInfo) => {
   await app.completeOnboarding()
   let page = await app.configureFakeAgent()
   await setViewport(page, 1280)
@@ -277,10 +277,7 @@ test('reports accessibility violations across representative state combinations'
   await scanAccessibility(page, 'Artifact provenance')
   await provenance.getByRole('button', { name: 'Close Provenance' }).click()
   await preview.getByRole('button', { name: 'Close preview of provenance-evidence.txt' }).click()
-  await page
-    .getByRole('tablist', { name: 'Open previews' })
-    .getByRole('tab', { name: 'Files' })
-    .press('Delete')
+  await page.getByTestId('preview-tab-strip').getByRole('tab', { name: 'Files' }).press('Delete')
 
   await app.configureFileBrowserFixture()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
@@ -329,6 +326,7 @@ test('reports accessibility violations across representative state combinations'
     .getByRole('alert')
     .filter({ hasText: 'Project archive needs attention' })
   await expect(recoveryAlert).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('recovered-project-archive-warning.png') })
   await scanAccessibility(page, 'Conversation recovery warning')
 })
 
@@ -364,6 +362,11 @@ test('supports the core project journey with keyboard input only', async ({ app 
   await page.keyboard.type('Summarize the deterministic fixture.')
   const send = page.getByRole('button', { name: 'Send message' })
   if (!(await focusWithTab(page, send))) return
+  await page.keyboard.press('Escape')
+  await expect(composer).toBeFocused()
+  await expect(composer).toHaveText('Summarize the deterministic fixture.')
+  expect(await composer.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('none')
+  if (!(await focusWithTab(page, send))) return
   await page.keyboard.press('Enter')
   if (
     !(await expectKeyboardOutcome(page, 'Send a message with Enter', async () => {
@@ -381,6 +384,31 @@ test('supports the core project journey with keyboard input only', async ({ app 
     }))
   )
     return
+
+  const timestamp = page.locator('time').last()
+  if (!(await focusWithTab(page, timestamp))) return
+  await expect(page.getByRole('tooltip')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(composer).toBeFocused()
+  await expect(page.getByRole('tooltip')).toHaveCount(0)
+
+  const sendOptions = page.getByTestId('branch-send-menu-trigger')
+  if (!(await focusWithTab(page, sendOptions))) return
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('menu')).toBeVisible()
+  // The menu item's explanatory tooltip is a child layer; it must not send focus behind the menu.
+  await expect(page.getByRole('tooltip')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('tooltip')).toHaveCount(0)
+  await expect(page.getByRole('menu')).toBeVisible()
+  expect(
+    await page.getByRole('menu').evaluate((element) => element.contains(document.activeElement))
+  ).toBe(true)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+  await expect(sendOptions).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(composer).toBeFocused()
 
   const files = page.getByRole('button', { name: 'Files', exact: true })
   if (!(await focusWithTab(page, files))) return
@@ -491,10 +519,14 @@ for (const theme of ['Light', 'Dark'] as const) {
     for (const width of [1280, 767]) {
       await setViewport(page, width)
       await checkContrast(
-        page.getByText('Discover, share, and collaborate on research that matters', {
+        page.getByText('Attach data or papers, then describe what you want to find out.', {
           exact: true
         }),
         `Empty conversation ${width}px`
+      )
+      await checkContrast(
+        page.getByText('Import previous research', { exact: true }),
+        `Research import ${width}px`
       )
       await checkContrast(
         page

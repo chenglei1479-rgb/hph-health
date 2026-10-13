@@ -533,6 +533,7 @@ describe('PR Gate workflow', () => {
             'windows-e2e',
             'windows-e2e-mainline',
             'windows-process',
+            'windows-notebook-runtime',
             'e2e',
             'source-regressions',
             'macos-smoke'
@@ -1047,7 +1048,7 @@ describe('PR Gate workflow', () => {
     expect(runtimeBundle).toMatchObject({
       id: 'runtime_bundle',
       'continue-on-error': true,
-      run: 'node scripts/verify-runtime-bundle.mjs linux-64 osx-arm64 osx-64 win-64'
+      run: 'node scripts/verify-runtime-bundle.mjs linux-64 linux-aarch64 osx-arm64 osx-64 win-64'
     })
     expect(runtimeBundle?.if).toContain("'runtime_bundle'")
     expect(runtimeBundle?.if).toContain("fromJSON(needs.preflight.outputs.plan).mode == 'full'")
@@ -1083,7 +1084,7 @@ describe('PR Gate workflow', () => {
       name: 'Module tests and coverage',
       needs: ['preflight', 'unit_shard'],
       'runs-on':
-        "${{ (github.event_name == 'pull_request' || github.event_name == 'merge_group' || needs.unit_shard.result != 'skipped' || fromJSON(needs.preflight.outputs.plan).macosProfile == 'smoke') && 'ubuntu-latest' || 'macos-14' }}"
+        "${{ (github.event_name == 'pull_request' || github.event_name == 'merge_group' || needs.unit_shard.result != 'skipped' || fromJSON(needs.preflight.outputs.plan).macosProfile == 'smoke') && 'ubuntu-latest' || 'macos-15' }}"
     })
     expect(unit.if).toContain('always()')
     expect(unit.env?.VITEST_DEFER_COVERAGE_THRESHOLDS).toBeUndefined()
@@ -1186,7 +1187,9 @@ describe('PR Gate workflow', () => {
       const producerId = `${bundle}_setup`
       const producer = workflow.jobs[producerId]
       const consumer = workflow.jobs[bundle]
-      expect(producer.needs).toBe('preflight')
+      expect(producer.needs).toEqual(
+        platform === 'windows' ? ['preflight', 'windows_notebook_runtime'] : 'preflight'
+      )
       if (platform === 'windows') {
         expect(producer.if).toBe(
           "${{ needs.preflight.result == 'success' && contains(fromJSON(needs.preflight.outputs.plan).bundles, 'windows_e2e') }}"
@@ -1230,7 +1233,7 @@ describe('PR Gate workflow', () => {
       expect(node?.with).toEqual({
         'node-version':
           platform === 'macos'
-            ? "${{ needs.macos_e2e_setup.outputs.node_version || '22' }}"
+            ? "${{ needs.macos_e2e_setup.outputs.node_version || '24' }}"
             : `\${{ needs.${producerId}.outputs.node_version }}`,
         ...(platform === 'macos'
           ? {
@@ -1414,7 +1417,8 @@ describe('PR Gate workflow', () => {
       ['policy', 'windows_e2e'],
       ['policy', 'e2e_functional_windows', 'e2e_workspace_windows', 'e2e_browser_windows']
     ],
-    ['windows-process', ['policy', 'windows_core'], ['policy', 'windows_runtime']]
+    ['windows-process', ['policy', 'windows_core'], ['policy', 'windows_runtime']],
+    ['windows-notebook-runtime', ['policy', 'windows_core'], ['policy', 'windows_runtime']]
   ])(
     'executes the focused %s plan through the real preflight script',
     (dryRunMode, bundles, lanes) => {
@@ -1447,6 +1451,17 @@ describe('PR Gate workflow', () => {
     }
   )
 
+  it('runs the native typechecker on Windows without expanding the process dry-run', () => {
+    const steps = workflow.jobs.windows_core.steps ?? []
+    const install = steps.find(({ name }) => name === 'Install dependencies')
+    const typecheck = steps.find(({ name }) => name === 'Typecheck sandbox on Windows')
+
+    expect(typecheck?.run).toBe('npm run typecheck:sandbox')
+    expect(typecheck?.if).toBe("${{ inputs.dry_run != 'windows-process' }}")
+    expect(typecheck?.['continue-on-error']).not.toBe(true)
+    expect(steps.indexOf(install!)).toBeLessThan(steps.indexOf(typecheck!))
+  })
+
   it('rebuilds the Windows sandbox host before the native lifecycle smoke', () => {
     const steps = workflow.jobs.windows_core.steps ?? []
     const rustTest = steps.find(({ name }) => name === 'Test Windows sandbox native source')
@@ -1461,6 +1476,15 @@ describe('PR Gate workflow', () => {
     expect(build?.run).toBe('node packages/notebook-network-sandbox/vendor/windows/build.mjs x64')
     expect(steps.indexOf(rustTest!)).toBeLessThan(steps.indexOf(build!))
     expect(steps.indexOf(build!)).toBeLessThan(steps.indexOf(smoke!))
+    expect(smoke?.run).toContain('-AfterSetup')
+    expect(smoke?.run).toContain("$env:RUN_WINDOWS_NOTEBOOK_RUNTIME = '1'")
+    expect(smoke?.run).toContain('$env:OPEN_SCIENCE_TEST_SANDBOX_INSTALLATION_ID = $installationId')
+    expect(smoke?.run).toContain('$env:OPEN_SCIENCE_TEST_SANDBOX_OWNERSHIP_ROOT = $ownershipRoot')
+    expect(smoke?.run).toContain('src/windows-notebook-runtime.integration.test.ts')
+    expect(smoke?.run).toContain(
+      '--testNamePattern "imports from Node|rejects a .* package config|retains readable .* workspace package|executes .* at the requested workspace"'
+    )
+    expect(smoke?.run).toContain('if ($LASTEXITCODE -ne 0) { throw')
   })
 
   it('carries no dead Windows accessibility lane in the workflow', () => {
@@ -1621,6 +1645,12 @@ describe('PR Gate workflow', () => {
         ({ name }) => name === 'Test real Linux filesystem and network isolation'
       )?.run
     ).toContain('filesystem-enforcement.integration.test.ts')
+    expect(
+      workflow.jobs.linux_runtime.steps?.find(
+        ({ name }) => name === 'Test real Linux filesystem and network isolation'
+      )?.run
+    ).toContain('src/main/notebook/shell-cell-session.integration.test.ts')
+    expect(workflow.jobs.linux_runtime.env?.VITEST_PORTABLE_CI).not.toBe('1')
 
     expect(workflow.jobs.windows_core).toMatchObject({
       'runs-on': 'windows-latest',
@@ -1765,6 +1795,39 @@ describe('PR Gate workflow', () => {
 
     expect(testStep?.run).toContain('npx vitest run cli packages/open-science')
     expect(testStep?.run).toContain('npm run check:cli-package')
+  })
+
+  it('keeps Node 22 CLI compatibility blocking even when Node 24 shards cover the full plan', () => {
+    const steps = workflow.jobs.static.steps ?? []
+    const setup = steps.find(({ name }) => name === 'Setup Node 22 for CLI compatibility')
+    const compatibility = steps.find(({ id }) => id === 'cli_node22')
+    const enforce = steps.find(({ name }) => name === 'Enforce selected static checks')!
+
+    expect(readFileSync(join(process.cwd(), '.nvmrc'), 'utf8').trim()).toBe('24')
+    expect(steps.find(({ name }) => name === 'Setup Node')?.with?.['node-version']).toBe(24)
+    expect(setup?.with?.['node-version']).toBe(22)
+    expect(setup?.if).toBe(compatibility?.if)
+    expect(compatibility?.if).toBe(
+      "${{ contains(fromJSON(needs.preflight.outputs.plan).lanes, 'cli_sdk') }}"
+    )
+    expect(compatibility?.env ?? {}).not.toHaveProperty('RUN_DEDICATED_TESTS')
+    expect(compatibility?.run).toContain('npx vitest run cli packages/open-science')
+    expect(compatibility?.run).toContain('npm run check:cli-package')
+    expect(steps.indexOf(setup!)).toBeLessThan(steps.indexOf(compatibility!))
+    expect(steps.indexOf(compatibility!)).toBeLessThan(steps.indexOf(enforce))
+    expect(enforce.env?.CLI_NODE22_OUTCOME).toBe('${{ steps.cli_node22.outcome }}')
+
+    for (const outcome of ['success', 'failure', 'cancelled']) {
+      const result = spawnSync('bash', ['-c', enforce.run!], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          ...Object.fromEntries(Object.keys(enforce.env ?? {}).map((key) => [key, 'success'])),
+          CLI_NODE22_OUTCOME: outcome
+        }
+      })
+      expect(result.status, result.stderr).toBe(outcome === 'success' ? 0 : 1)
+    }
   })
 
   it('labels the existing cross-process checks as a shadow baseline', () => {

@@ -11,6 +11,7 @@ import { join } from 'node:path'
 import { Readable, Writable } from 'node:stream'
 import { researchPrompt, runResearchAnalysis } from './research-analysis.mjs'
 
+const autoReviewResumeCounts = new Map()
 const VERSION = '1.0.0'
 const WSL_SETUP_DIAGNOSTICS_PROMPT = 'Verify WSL setup diagnostic tools.'
 const WSL_SETUP_UNAVAILABLE_PROMPT = 'Verify WSL setup tools are unavailable.'
@@ -61,6 +62,8 @@ const DELEGATION_ARTIFACT_VERSION_INPUT_PROMPT =
   'Run the production Artifact Version input delegation journey.'
 const DELEGATION_BOUNDED_COLLECT_PROMPT = 'Run the production bounded collect journey.'
 const DELEGATION_BOUNDED_RECOLLECT_PROMPT = 'Collect the running Subagent in Turn B.'
+const DELEGATION_SCROLL_INTENT_PROMPT = 'Run the production Subagent scroll intent journey.'
+const DELEGATED_SCROLL_INTENT_TASK = 'Stream the delegated scroll intent fixture.'
 const DELEGATION_PERMISSION_PROMPT = 'Run the production delegated permission journey.'
 const DELEGATION_USER_QUESTION_PROMPT = 'Run the production delegated user question journey.'
 const DELEGATION_STOP_PROMPT = 'Run the production delegation Stop journey.'
@@ -199,7 +202,7 @@ const parseMcpResponse = (body) => {
   return json ? JSON.parse(json) : {}
 }
 
-const submitReviewerPass = async (mcpServers) => {
+const submitReviewerPass = async (mcpServers, prompt = '') => {
   const server = mcpServers.find(
     (candidate) =>
       candidate.type === 'http' &&
@@ -262,7 +265,58 @@ const submitReviewerPass = async (mcpServers) => {
     }
     return payload.result
   }
-  await callTool('read_turn', {})
+  const turn = await callTool('read_turn', {})
+  const blocks = JSON.parse(turn.content?.[0]?.text ?? '[]')
+  const reproBlock = blocks.find(
+    (block) => block.role === 'agent' && block.content?.startsWith('AUTO_REVIEW_REPRO_')
+  )
+  if (reproBlock) {
+    await callTool('submit_findings', {
+      checks: [
+        {
+          status: 'fail',
+          claim: reproBlock.content,
+          evidence: 'Controlled reviewer finding for Stop / Resume reproduction.',
+          locator: {
+            blockRef: { blockIndex: reproBlock.blockIndex },
+            contentHash: reproBlock.contentHash
+          }
+        }
+      ]
+    })
+    return true
+  }
+  const trackedIds = [...prompt.matchAll(/"sourceFindingId":"([^"]+)"/gu)].map((match) => match[1])
+  if (trackedIds.length > 0) {
+    const unresolvedBlock = blocks.find(
+      (block) => block.content === 'Recovered execution still needs correction.'
+    )
+    await callTool('submit_findings', {
+      checks: [...new Set(trackedIds)].map((sourceFindingId) => ({
+        sourceFindingId,
+        ...(unresolvedBlock
+          ? {
+              locator: {
+                blockRef: { blockIndex: unresolvedBlock.blockIndex },
+                contentHash: unresolvedBlock.contentHash
+              }
+            }
+          : {}),
+        status: blocks.some(
+          (block) => block.content === 'Recovered execution still needs correction.'
+        )
+          ? 'fail'
+          : 'pass',
+        claim: blocks.some(
+          (block) => block.content === 'Recovered execution still needs correction.'
+        )
+          ? 'AUTO_REVIEW_REPRO_REFLAG: remaining issue'
+          : 'The controlled correction completed.',
+        evidence: 'The corrected answer is present in the frozen turn.'
+      }))
+    })
+    return true
+  }
   await callTool('submit_findings', {
     checks: [
       {
@@ -311,6 +365,81 @@ const executeControlCode = async (sessionId, code) =>
       })
     )
   )
+
+// Keep only this deterministic provider task's progress across real process restarts. The calls
+// themselves still use the production app-owned MCP, durable permission, and Notebook paths.
+const permissionHandoffTask = async (context, prompt) => {
+  const sessionId = context.params.sessionId
+  const captureRoot = process.env.OPEN_SCIENCE_E2E_HANDOFF_CAPTURE_ROOT
+  if (!captureRoot) return undefined
+  const progressPath = join(captureRoot, `permission-handoff-${sessionId}.json`)
+  let progress
+  try {
+    progress = JSON.parse(await readFile(progressPath, 'utf8'))
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error
+  }
+  if (!progress && !prompt.includes('Verify consecutive permissions after restart.'))
+    return undefined
+  if (!progress) {
+    progress = { firstCompleted: false, secondCompleted: false }
+    await mkdir(captureRoot, { recursive: true })
+    await writeFile(progressPath, JSON.stringify(progress))
+  }
+  if (prompt.includes('The user explicitly denied this operation.')) {
+    if (!progress.firstCompleted || progress.secondCompleted)
+      throw new Error('The denied handoff did not stop before the second operation.')
+    return 'Permission handoff: second call denied without execution.'
+  }
+  const executeApprovedCode = async (code) => {
+    const toolCall = {
+      toolCallId: `permission-handoff-${randomUUID()}`,
+      title: `${frameworkServerName('open-science-notebook')}_repl_execute`,
+      kind: 'other',
+      rawInput: { code, timeoutMs: 120_000 }
+    }
+    await context.client.notify(acp.methods.client.session.update, {
+      sessionId,
+      update: { sessionUpdate: 'tool_call', ...toolCall, status: 'pending' }
+    })
+    const permission = await context.client.request(acp.methods.client.session.requestPermission, {
+      sessionId,
+      // OpenCode sends the executable arguments on tool_call; its permission request is sparse.
+      // Exercise the production input-restoration path consistently before and after restart.
+      toolCall: { ...toolCall, rawInput: {} },
+      options: [
+        { kind: 'allow_once', name: 'Allow once', optionId: 'allow-once' },
+        { kind: 'reject_once', name: 'Deny', optionId: 'deny-once' }
+      ]
+    })
+    if (permission.outcome.outcome !== 'selected' || permission.outcome.optionId !== 'allow-once')
+      throw new Error('The fixture execution was not explicitly approved.')
+    const value = controlResultValue(await executeControlCode(sessionId, code))
+    await context.client.notify(acp.methods.client.session.update, {
+      sessionId,
+      update: {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: toolCall.toolCallId,
+        status: 'completed'
+      }
+    })
+    return value
+  }
+  if (!progress.firstCompleted) {
+    const first = await executeApprovedCode('return { marker: "permission-handoff-first" }')
+    if (first.marker !== 'permission-handoff-first') throw new Error('First call did not execute.')
+    progress.firstCompleted = true
+    await writeFile(progressPath, JSON.stringify(progress))
+  }
+  if (!progress.secondCompleted) {
+    const second = await executeApprovedCode('return { marker: "permission-handoff-second" }')
+    if (second.marker !== 'permission-handoff-second')
+      throw new Error('Second call did not execute.')
+    progress.secondCompleted = true
+    await writeFile(progressPath, JSON.stringify(progress))
+  }
+  return 'Permission handoff: both calls executed once.'
+}
 
 const controlResultValue = (execution) => {
   if (execution?.status !== 'completed') {
@@ -511,6 +640,97 @@ const verifyNotebookLifecycle = async (sessionId, delayMs = 0) =>
       throw new Error('The Notebook lifecycle did not preserve its session and output.')
     }
     return `Notebook lifecycle verified for ${initial.sessionId}.`
+  })
+
+const verifyWindowsReplLifecycle = async (sessionId) =>
+  withMcpClient(sessionId, 'open-science-notebook', async (client) => {
+    // Hosted runners need 30-80s per AppContainer launch; the MCP SDK's default per-request
+    // timeout (-32001) is far below the certification's per-cell budget.
+    const call = async (name, arguments_ = {}) =>
+      toolResult(
+        name,
+        await client.callTool({ name, arguments: arguments_ }, undefined, { timeout: 240_000 })
+      )
+    const execute = async (code) =>
+      controlResultValue(await call('repl_execute', { code, timeoutMs: 180_000 }))
+    const first = await execute(`
+      globalThis.certificationState = 'first-cell';
+      return { marker: globalThis.certificationState, electron: Boolean(process.versions.electron) };
+    `)
+    if (first.marker !== 'first-cell') throw new Error('First REPL cell did not execute.')
+    if (process.env.OPEN_SCIENCE_WINDOWS_APPCONTAINER_CERT === '1') {
+      if (first.electron) throw new Error('Protected REPL did not use the prepared Node runtime.')
+      const deniedPath = process.env.OPEN_SCIENCE_E2E_APPCONTAINER_DENIED_FILE
+      if (!deniedPath) throw new Error('Missing AppContainer filesystem isolation witness.')
+      const denied = await execute(`
+        try { require('node:fs').readFileSync(${JSON.stringify(deniedPath)}); return { denied: false }; }
+        catch (error) { return { denied: ['EACCES', 'EPERM'].includes(error.code) }; }
+      `)
+      if (!denied.denied) throw new Error('AppContainer allowed reading outside the granted roots.')
+    }
+    const restarted = await call('notebook_restart', { kernel: 'repl' })
+    if (restarted.status !== 'restarted') throw new Error('REPL restart did not confirm cleanup.')
+    const second = await execute(`
+      return { marker: 'second-cell', reset: typeof globalThis.certificationState === 'undefined' };
+    `)
+    if (second.marker !== 'second-cell' || !second.reset)
+      throw new Error('REPL restart did not produce a fresh interpreter.')
+    // Exercise an actual child exit, then verify cleanup does not fence the next Shell run.
+    const exited = await call('repl_execute', { code: 'process.exit(23)', timeoutMs: 180_000 })
+    if (exited.status !== 'failed') throw new Error('The deliberate REPL exit was not reported.')
+    const shell = await call('bash_execute', { command: "Write-Output 'REPL_CLEANUP_SHELL_OK'" })
+    if (shell.exitCode !== 0 || !shell.stdout?.includes('REPL_CLEANUP_SHELL_OK'))
+      throw new Error('Shell remained blocked after REPL exit.')
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const shutdown = await call('notebook_shutdown')
+      if (shutdown.status !== 'shutdown') throw new Error('Repeated Notebook cleanup failed.')
+    }
+    return 'Windows REPL lifecycle verified: first cell, fresh restart, second cell, process exit, Shell recovery, repeated cleanup.'
+  })
+
+const verifyGlobalNpmTools = async (sessionId, mode) =>
+  withMcpClient(sessionId, 'open-science-notebook', async (client) => {
+    const execute = async (command) => {
+      const result = toolResult(
+        'bash_execute',
+        await client.callTool({
+          name: 'bash_execute',
+          arguments: { command }
+        })
+      )
+      if (result.exitCode !== 0)
+        throw new Error(`npm application check failed: ${JSON.stringify(result)}`)
+      return result.stdout ?? ''
+    }
+    const node = (code) =>
+      `node -e "eval(Buffer.from('${Buffer.from(code).toString('base64')}','base64').toString())"`
+    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+    const invoke = process.platform === 'win32' ? 'os-npm-app-fixture.cmd' : 'os-npm-app-fixture'
+    if (mode !== 'restart') {
+      await execute(
+        node(`
+        const fs = require('node:fs');
+        fs.mkdirSync('npm-fixture', { recursive: true });
+        fs.writeFileSync('npm-fixture/package.json', JSON.stringify({ name: 'os-npm-app-fixture', version: '1.0.0', bin: { 'os-npm-app-fixture': 'cli.js' } }));
+        fs.writeFileSync('npm-fixture/cli.js', '#!/usr/bin/env node\\nprocess.stdout.write("npm-application-tool");\\n');
+      `)
+      )
+      await execute(`${npm} pack ./npm-fixture --offline --ignore-scripts`)
+      await execute(
+        `${npm} install ${mode === 'install' ? '-g ' : ''}./os-npm-app-fixture-1.0.0.tgz --offline --ignore-scripts --no-audit --no-fund`
+      )
+      if (mode === 'local') {
+        await execute(
+          node(
+            `if (!require('node:fs').existsSync('node_modules/os-npm-app-fixture/package.json')) throw new Error('Local npm package escaped the project');`
+          )
+        )
+      }
+    }
+    if (!(await execute(invoke)).includes('npm-application-tool')) {
+      throw new Error('The global npm command was not available in this Session.')
+    }
+    return `Application npm ${mode} verified through sandboxed Shell.`
   })
 
 const readMicromambaEvents = async (path) =>
@@ -1127,7 +1347,217 @@ if (process.argv.includes('--version')) {
       )
       const prompt = controlStart >= 0 ? rawPrompt.slice(controlStart) : rawPrompt
       await captureProviderPrompt(context.params.sessionId, prompt)
+      if (prompt.includes('Cold recovery held child.')) {
+        await waitForSessionCancellation(context.params.sessionId)
+        return { stopReason: 'cancelled' }
+      }
+      if (prompt.includes('Run delegated cold recovery regression.')) {
+        const resumed = prompt.includes('Continue the interrupted turn from where it stopped.')
+        const code = resumed
+          ? 'const children = await host.children(); const child = children.find(c => c.name === "Cold recovery child"); if (!child) throw new Error("missing original child"); const receipt = await host.sendFrameMessage(child.frameId, "Continue explicitly after application restart."); return { before: child.status, receipt };'
+          : 'return await host.delegate({ task: "Cold recovery held child.", name: "Cold recovery child" }, { wait: false })'
+        const value = controlResultValue(await executeControlCode(context.params.sessionId, code))
+        await context.client.notify(acp.methods.client.session.update, {
+          sessionId: context.params.sessionId,
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            messageId: `e2e-message-${fixtureInstanceId}${nextMessageId++}`,
+            content: {
+              type: 'text',
+              text: resumed
+                ? 'Cold recovery resumed: ' + JSON.stringify(value)
+                : 'Cold recovery ready for exit.'
+            }
+          }
+        })
+        if (!resumed) {
+          await waitForSessionCancellation(context.params.sessionId)
+          return { stopReason: 'cancelled' }
+        }
+        return { stopReason: 'end_turn' }
+      }
+
+      if (prompt.includes('Delegation resume held child task.')) {
+        await waitForSessionCancellation(context.params.sessionId)
+        return { stopReason: 'cancelled' }
+      }
+      if (
+        prompt.includes('Audit delegation after Stop Resume.') ||
+        prompt.includes('Audit delegation without Stop.') ||
+        prompt.includes('Audit delegation explicit continuation.')
+      ) {
+        const resumed = prompt.includes('Continue the interrupted turn from where it stopped.')
+        const continuation = prompt.includes('Audit delegation explicit continuation.')
+        const shouldDelegate = resumed || prompt.includes('Audit delegation without Stop.')
+        let text = 'Delegation audit ready for Stop.'
+        if (continuation && !resumed) {
+          const created = controlResultValue(
+            await executeControlCode(
+              context.params.sessionId,
+              'return await host.delegate({ task: "Delegation resume held child task.", name: "Interrupted child" }, { wait: false })'
+            )
+          )
+          globalThis.delegationResumeChild = created.children[0]
+        }
+        if (shouldDelegate) {
+          const code = continuation
+            ? `const before = await host.children(); const receipt = await host.sendFrameMessage(${JSON.stringify(globalThis.delegationResumeChild?.frameId)}, "Finish the explicitly continued task."); return { outcome: "continued", before, receipt };`
+            : 'const value = await host.delegate({ task: "Return a short confirmation for the resume audit.", name: "Resume audit child" }, { wait: false }); return { outcome: "admitted", value };'
+          const result = await executeControlCode(
+            context.params.sessionId,
+            `try { ${code} } catch (error) { return { outcome: "rejected", code: error.code, message: error.message }; }`
+          )
+          text = 'Delegation audit result: ' + JSON.stringify(controlResultValue(result))
+        }
+        await context.client.notify(acp.methods.client.session.update, {
+          sessionId: context.params.sessionId,
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            messageId: `e2e-message-${fixtureInstanceId}${nextMessageId++}`,
+            content: { type: 'text', text }
+          }
+        })
+        if (!shouldDelegate) {
+          await waitForSessionCancellation(context.params.sessionId)
+          return { stopReason: 'cancelled' }
+        }
+        return { stopReason: 'end_turn' }
+      }
+
+      const reviewerRoute = sessionRoutes
+        .get(context.params.sessionId)
+        ?.mcpServers?.some((server) => server.name.replaceAll('_', '-') === 'open-science-reviewer')
+      const reproScenario =
+        !reviewerRoute &&
+        (prompt.includes('Run auto review ordinary stop scenario.') ||
+          prompt.includes('Run auto review correction stop scenario.') ||
+          prompt.includes('Run auto review correction complete scenario.') ||
+          prompt.includes('Run auto review correction repeat stop scenario.') ||
+          prompt.includes('Run auto review correction disabled stop scenario.') ||
+          prompt.includes('Run auto review correction reflag stop scenario.') ||
+          prompt.includes('AUTO_REVIEW_REPRO_'))
+      if (reproScenario) {
+        const resumed = prompt.includes('Continue the interrupted turn from where it stopped.')
+        const correction = prompt.includes('[Auditor] A fresh-context reviewer')
+        const resumeCount = resumed
+          ? (autoReviewResumeCounts.get(context.params.sessionId) ?? 0) + 1
+          : 0
+        if (resumed) autoReviewResumeCounts.set(context.params.sessionId, resumeCount)
+        const repeatedStop =
+          resumed && prompt.includes('AUTO_REVIEW_REPRO_REPEAT_STOP') && resumeCount === 1
+        const waitForStop =
+          repeatedStop ||
+          (!resumed &&
+            (prompt.includes('Run auto review ordinary stop scenario.') ||
+              (correction &&
+                /AUTO_REVIEW_REPRO_(?:REPEAT_|DISABLED_|REFLAG_)?STOP/u.test(prompt) &&
+                !(
+                  prompt.includes('AUTO_REVIEW_REPRO_REFLAG_STOP') &&
+                  (autoReviewResumeCounts.get(context.params.sessionId) ?? 0) > 0
+                ))))
+        const text = resumed
+          ? repeatedStop
+            ? 'Recovered correction is running; ready for Stop.'
+            : prompt.includes('AUTO_REVIEW_REPRO_REFLAG_STOP')
+              ? 'Recovered execution still needs correction.'
+              : 'Recovered execution completed successfully.'
+          : correction
+            ? waitForStop
+              ? 'Correction is running; ready for Stop.'
+              : 'Correction completed successfully.'
+            : waitForStop
+              ? 'Ordinary execution is running; ready for Stop.'
+              : prompt.includes('Run auto review correction repeat stop scenario.')
+                ? 'AUTO_REVIEW_REPRO_REPEAT_STOP: this controlled answer needs a correction.'
+                : prompt.includes('Run auto review correction disabled stop scenario.')
+                  ? 'AUTO_REVIEW_REPRO_DISABLED_STOP: this controlled answer needs a correction.'
+                  : prompt.includes('Run auto review correction reflag stop scenario.')
+                    ? 'AUTO_REVIEW_REPRO_REFLAG_STOP: this controlled answer needs a correction.'
+                    : prompt.includes('Run auto review correction stop scenario.')
+                      ? 'AUTO_REVIEW_REPRO_STOP: this controlled answer needs a correction.'
+                      : 'AUTO_REVIEW_REPRO_COMPLETE: this controlled answer needs a correction.'
+        await context.client.notify(acp.methods.client.session.update, {
+          sessionId: context.params.sessionId,
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            messageId: `e2e-message-${fixtureInstanceId}${nextMessageId++}`,
+            content: { type: 'text', text }
+          }
+        })
+        if (waitForStop) {
+          await waitForSessionCancellation(context.params.sessionId)
+          return { stopReason: 'cancelled' }
+        }
+        return { stopReason: 'end_turn' }
+      }
       if (prompt.includes(PROVIDER_RUNTIME_FAILURE_PROMPT)) await rejectThroughProviderBridge()
+      // Outcome journeys escape the ordinary successful-reply catch below. These checkpoints
+      // let the isolated Electron fixture arm an exact write fault before a terminal response.
+      if (prompt.includes('Fail the turn outcome fixture.')) {
+        await context.client.notify(acp.methods.client.session.update, {
+          sessionId: context.params.sessionId,
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            messageId: `e2e-message-${fixtureInstanceId}${nextMessageId++}`,
+            content: { type: 'text', text: 'Turn outcome failure checkpoint.' }
+          }
+        })
+        throw acp.RequestError.internalError({}, 'Synthetic turn outcome failure.')
+      }
+      if (prompt.includes('Hold the turn outcome fixture.')) {
+        const resumed = prompt.includes('Continue the interrupted turn from where it stopped.')
+        await context.client.notify(acp.methods.client.session.update, {
+          sessionId: context.params.sessionId,
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            messageId: `e2e-message-${fixtureInstanceId}${nextMessageId++}`,
+            content: {
+              type: 'text',
+              text: resumed
+                ? 'Turn outcome resumed successfully.'
+                : 'Turn outcome cancellation checkpoint.'
+            }
+          }
+        })
+        if (resumed) return { stopReason: 'end_turn' }
+        await waitForSessionCancellation(context.params.sessionId)
+        return { stopReason: 'cancelled' }
+      }
+      if (prompt.includes('Create the turn outcome retry artifact.')) {
+        const publication = await createProvenanceArtifact(context.params.sessionId)
+        const captureRoot = process.env.OPEN_SCIENCE_E2E_HANDOFF_CAPTURE_ROOT
+        if (!captureRoot) throw new Error('The outcome fixture capture root is unavailable.')
+        const gate = join(captureRoot, 'turn-outcome-artifact-release.json')
+        await context.client.notify(acp.methods.client.session.update, {
+          sessionId: context.params.sessionId,
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            messageId: `e2e-message-${fixtureInstanceId}${nextMessageId++}`,
+            content: { type: 'text', text: `${publication}\nTurn outcome artifact checkpoint.` }
+          }
+        })
+        let gateClosed = false
+        const result = await Promise.race([
+          (async () => {
+            // A finite wait also permits fixture shutdown when a failed test never releases it.
+            for (let attempt = 0; attempt < 1_800 && !gateClosed; attempt++) {
+              try {
+                if (JSON.parse(await readFile(gate, 'utf8')).sessionId === context.params.sessionId)
+                  return 'released'
+              } catch (error) {
+                if (error.code !== 'ENOENT') throw error
+              }
+              await delay(100)
+            }
+            if (!gateClosed) throw new Error('The outcome Artifact gate was not released.')
+            return 'cancelled'
+          })(),
+          waitForSessionCancellation(context.params.sessionId).then(() => 'cancelled')
+        ]).finally(() => {
+          gateClosed = true
+        })
+        return { stopReason: result === 'cancelled' ? 'cancelled' : 'end_turn' }
+      }
       // Use the supported mid-response interruption wrapper: generic provider errors are terminal
       // failures and intentionally do not offer Resume. Let this escape the reply fixture catch.
       if (
@@ -1217,7 +1647,40 @@ if (process.argv.includes('--version')) {
 
       let reply = 'Deterministic reply: Summarize the deterministic fixture.'
       try {
-        if (prompt.includes('Verify interaction follow-up.')) {
+        const handoffReply = await permissionHandoffTask(context, prompt)
+        if (handoffReply) {
+          reply = handoffReply
+        } else if (prompt.includes('WORKSPACE_TRANSLATION_PDF_BASE64:')) {
+          const content = prompt.match(/WORKSPACE_TRANSLATION_PDF_BASE64:([A-Za-z0-9+/=]+)/u)?.[1]
+          if (!content) throw new Error('Missing workspace translation PDF fixture.')
+          const stored = await withMcpClient(
+            context.params.sessionId,
+            'open-science-artifacts',
+            async (client) =>
+              toolResult(
+                'write_artifact_file',
+                await client.callTool({
+                  name: 'write_artifact_file',
+                  arguments: {
+                    filename: 'workspace-paired.pdf',
+                    mimeType: 'application/pdf',
+                    content,
+                    encoding: 'base64'
+                  }
+                })
+              )
+          )
+          if (!stored.artifact?.version_id)
+            throw new Error('Workspace PDF Version was not finalized.')
+          reply = 'Workspace translation PDF created.'
+        } else if (prompt.includes('PAIR_PDF_ACCEPTANCE')) {
+          // Controlled inference only; PDF generation, IPC and reader remain production code.
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+          reply =
+            (prompt.includes('PAIR_PDF_INLINE_LINK') ? 'Methods: ' : '') +
+            '测量受控实验室培养物中的细胞生长。' +
+            (prompt.includes('PAIR_PDF_INLINE_LINK') ? '[1][2]' : '')
+        } else if (prompt.includes('Verify interaction follow-up.')) {
           reply = 'Interaction follow-up completed.'
         } else if (prompt.includes('Request restart verification permission.')) {
           const toolCall = {
@@ -1350,6 +1813,53 @@ if (process.argv.includes('--version')) {
             '  A[begin] --> B[a node with a fairly long label] --> C[another node with an even longer label here] --> D[end]',
             '```'
           ].join('\n')
+        } else if (prompt.includes('Verify application npm global install.')) {
+          reply = await verifyGlobalNpmTools(context.params.sessionId, 'install')
+        } else if (prompt.includes('Verify application npm shared tool and local install.')) {
+          reply = await verifyGlobalNpmTools(context.params.sessionId, 'local')
+        } else if (prompt.includes('Verify application npm tool after restart.')) {
+          reply = await verifyGlobalNpmTools(context.params.sessionId, 'restart')
+        } else if (prompt.includes('Verify WSL background cancellation.')) {
+          await withMcpClient(context.params.sessionId, 'open-science-notebook', async (client) => {
+            // Compute lists persistent kernels, not stateless Shell Runs. Keep a real REPL
+            // alive beside WSL so the inbox consumer can be verified through actual events.
+            toolResult(
+              'repl_execute',
+              await client.callTool({
+                name: 'repl_execute',
+                arguments: { code: "console.log('wsl-event-inbox')" }
+              })
+            )
+            const run = toolResult(
+              'bash_execute',
+              await client.callTool({
+                name: 'bash_execute',
+                arguments: {
+                  command: "printf 'background-completion-e2e\\n'; sleep 60",
+                  background: true
+                }
+              })
+            )
+            if (!run.runId) throw new Error('WSL background admission has no runId')
+          })
+          reply = 'WSL background task submitted for cancellation.'
+        } else if (prompt.includes('Verify real WSL Bash execution.')) {
+          await withMcpClient(context.params.sessionId, 'open-science-notebook', async (client) => {
+            const execution = toolResult(
+              'bash_execute',
+              await client.callTool({
+                name: 'bash_execute',
+                arguments: { command: "printf 'wsl-bash-live\\n'; uname -s; id -u" }
+              })
+            )
+            if (
+              execution.exitCode !== 0 ||
+              !/^wsl-bash-live\r?\nLinux\r?\n[1-9][0-9]*\s*$/u.test(execution.stdout ?? '')
+            ) {
+              throw new Error('The application did not execute Bash as a non-root Linux user.')
+            }
+          })
+          reply = 'Real WSL Bash execution passed: Linux, non-root user, exit code 0.'
         } else if (prompt.includes(WSL_SETUP_UNAVAILABLE_PROMPT)) {
           await withMcpClient(context.params.sessionId, 'open-science-notebook', async (client) => {
             const catalog = await client.listTools()
@@ -1708,7 +2218,10 @@ if (process.argv.includes('--version')) {
           reply =
             '| PMID | Journal |\n| --- | --- |\n| [42668673](https://citation.example/paper) | Bioact Mater |\n| [42537459](https://unadmitted.example/paper) | Biomaterials |'
         } else if (
-          await submitReviewerPass(sessionRoutes.get(context.params.sessionId)?.mcpServers ?? [])
+          await submitReviewerPass(
+            sessionRoutes.get(context.params.sessionId)?.mcpServers ?? [],
+            prompt
+          )
         ) {
           reply = ''
         } else if (prompt.includes(CONTEXT_COMPACTION_PROMPT)) {
@@ -1814,6 +2327,8 @@ if (process.argv.includes('--version')) {
             withMcpClient,
             toolResult
           )
+        } else if (prompt.includes('Verify Windows REPL lifecycle.')) {
+          reply = await verifyWindowsReplLifecycle(context.params.sessionId)
         } else if (prompt.includes(NOTEBOOK_LIFECYCLE_PROMPT)) {
           reply = await verifyNotebookLifecycle(context.params.sessionId)
         } else if (prompt.includes(PERFORMANCE_NOTEBOOK_LIFECYCLE_PROMPT)) {
@@ -1937,6 +2452,17 @@ if (process.argv.includes('--version')) {
             throw new Error(`Bounded terminal recollect failed: ${JSON.stringify(terminal)}`)
           }
           reply = 'Production bounded collect journey completed.'
+        } else if (prompt.includes(DELEGATION_SCROLL_INTENT_PROMPT)) {
+          const releaseFiles = JSON.parse(prompt.split('Release files: ')[1])
+          await runProductionDelegationRequest(
+            context.params.sessionId,
+            {
+              task: `${DELEGATED_SCROLL_INTENT_TASK}\nRelease files: ${JSON.stringify(releaseFiles)}`,
+              name: 'Scroll intent child'
+            },
+            false
+          )
+          reply = 'Production Subagent scroll intent journey started.'
         } else if (prompt.includes(DELEGATION_PERMISSION_PROMPT)) {
           await runProductionDelegation(
             context.params.sessionId,
@@ -2263,6 +2789,48 @@ if (process.argv.includes('--version')) {
         } else if (prompt.includes(DELEGATED_BOUNDED_SLOW_TASK)) {
           await waitForReleaseFile(JSON.parse(prompt.split('Release file: ')[1]), 120_000)
           reply = 'Delayed bounded child completed.'
+        } else if (prompt.includes(DELEGATED_SCROLL_INTENT_TASK)) {
+          const releaseFiles = JSON.parse(prompt.split('Release files: ')[1])
+          const messageId = `e2e-message-${fixtureInstanceId}${nextMessageId++}`
+          const emit = async (text) =>
+            context.client.notify(acp.methods.client.session.update, {
+              sessionId: context.params.sessionId,
+              update: {
+                sessionUpdate: 'agent_message_chunk',
+                messageId,
+                content: { type: 'text', text }
+              }
+            })
+          await waitForReleaseFile(releaseFiles[0], 120_000)
+          if (releaseFiles[4]) {
+            await context.client.notify(acp.methods.client.session.update, {
+              sessionId: context.params.sessionId,
+              update: {
+                sessionUpdate: 'agent_message_chunk',
+                messageId: `${messageId}-plan`,
+                content: { type: 'text', text: 'Historical plan before preview.' }
+              }
+            })
+            for (const status of ['in_progress', 'completed']) {
+              await context.client.notify(acp.methods.client.session.update, {
+                sessionId: context.params.sessionId,
+                update: {
+                  sessionUpdate: 'tool_call',
+                  toolCallId: `${messageId}-read`,
+                  title: 'Read historical evidence',
+                  kind: 'read',
+                  status
+                }
+              })
+            }
+          }
+          await emit('Initial delegated evidence.\n\n'.repeat(60))
+          await waitForReleaseFile(releaseFiles[1], 120_000)
+          await emit('Reading-position update arrived.\n\n'.repeat(20))
+          await waitForReleaseFile(releaseFiles[2], 120_000)
+          await emit('Follow-end update arrived.\n\n'.repeat(20))
+          if (releaseFiles[3]) await waitForReleaseFile(releaseFiles[3], 120_000)
+          reply = ''
         } else if (prompt.includes(DELEGATED_PERMISSION_TASK)) {
           const permission = await context.client.request(
             acp.methods.client.session.requestPermission,

@@ -216,7 +216,7 @@ const installApi = (): void => {
     logs: {
       getStatus: vi.fn().mockResolvedValue({
         configured: true,
-        path: '/Users/x/Library/Logs/MedResearch Agent/main.log',
+        path: '/Users/x/Library/Logs/DRA/main.log',
         existing: true,
         lastWriteSucceeded: true,
         lastFailureCategory: null
@@ -1232,6 +1232,35 @@ describe('SettingsPage layout', () => {
     expect(document.body.querySelector('[aria-label="Back to skills"]')).toBeNull()
   })
 
+  it.each([{ isComposing: true }, { keyCode: 229 }])(
+    'preserves the native composing Escape action through the Settings dialog: %j',
+    async (composition) => {
+      const onClose = vi.fn()
+      await act(async () => root.render(<SettingsPage open onClose={onClose} />))
+      const search = document.querySelector<HTMLInputElement>(
+        '[data-slot="settings-global-search"] input'
+      )!
+      await act(async () => {
+        search.focus()
+        fireEvent.change(search, { target: { value: 'proxy' } })
+      })
+      const event = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+        ...composition
+      })
+      await act(async () => {
+        search.dispatchEvent(event)
+      })
+      expect(event.defaultPrevented).toBe(false)
+      expect(search.value).toBe('proxy')
+      expect(document.activeElement).toBe(search)
+      expect(document.querySelector('[role="listbox"]')).not.toBeNull()
+      expect(onClose).not.toHaveBeenCalled()
+    }
+  )
+
   it('keeps the dialog open when Escape closes the global search results', async () => {
     const onClose = vi.fn()
     await act(async () => root.render(<SettingsPage open onClose={onClose} />))
@@ -1326,23 +1355,23 @@ describe('SettingsPage layout', () => {
     expect(nav?.textContent).not.toContain('Remote access')
     const navItems = navScroll?.querySelectorAll('li') ?? []
     expect(navItems).toHaveLength(17)
-    expect(navItems[0]?.textContent).toContain('Model')
-    expect(navItems[1]?.textContent).toContain('Agent')
-    expect(navItems[2]?.textContent).toContain('Skills')
-    expect(navItems[3]?.textContent).toContain('Specialists')
-    expect(navItems[4]?.textContent).toContain('Memory')
-    expect(navItems[5]?.textContent).toContain('Connectors')
-    expect(navItems[6]?.textContent).toContain('Network')
-    expect(navItems[7]?.textContent?.trim()).toBe('Remote')
-    expect(navItems[8]?.textContent).toContain('Credentials')
-    expect(navItems[9]?.textContent).toContain('Tags')
-    expect(navItems[10]?.textContent).toContain('Permissions')
-    expect(navItems[11]?.textContent).toContain('Runtimes')
-    expect(navItems[12]?.textContent).toContain('Storage')
-    expect(navItems[13]?.textContent).toContain('Compute')
-    expect(navItems[14]?.textContent).toContain('Usage')
-    expect(navItems[15]?.textContent).toContain('Archived')
-    expect(navItems[16]?.textContent).toContain('General')
+    expect(navItems[0]?.textContent).toContain('General')
+    expect(navItems[1]?.textContent).toContain('Model')
+    expect(navItems[2]?.textContent).toContain('Agent')
+    expect(navItems[3]?.textContent).toContain('Skills')
+    expect(navItems[4]?.textContent).toContain('Specialists')
+    expect(navItems[5]?.textContent).toContain('Memory')
+    expect(navItems[6]?.textContent).toContain('Connectors')
+    expect(navItems[7]?.textContent).toContain('Network')
+    expect(navItems[8]?.textContent).toContain('Remote')
+    expect(navItems[9]?.textContent).toContain('Credentials')
+    expect(navItems[10]?.textContent).toContain('Tags')
+    expect(navItems[11]?.textContent).toContain('Permissions')
+    expect(navItems[12]?.textContent).toContain('Runtimes')
+    expect(navItems[13]?.textContent).toContain('Storage')
+    expect(navItems[14]?.textContent).toContain('Compute')
+    expect(navItems[15]?.textContent).toContain('Usage')
+    expect(navItems[16]?.textContent).toContain('Archived')
     expect(navFooter?.textContent).toContain('Feedback')
     const modelNavButton = navButton('Model')
     const agentNavButton = navButton('Agent')
@@ -1806,7 +1835,7 @@ describe('SettingsPage layout', () => {
     const nav = document.body.querySelector<HTMLElement>('nav[aria-label="Settings"]')
     expect(nav?.getAttribute('aria-hidden')).toBe('true')
     expect(document.body.querySelector('[data-slot="settings-surface"]')?.className).toContain(
-      'h-[100dvh]'
+      'h-[calc(100dvh-var(--windows-titlebar-height))]'
     )
 
     await act(async () => {
@@ -1824,6 +1853,17 @@ describe('SettingsPage layout', () => {
     expect(content?.hasAttribute('inert')).toBe(true)
     expect(content?.getAttribute('aria-hidden')).toBe('true')
     expect(nav?.contains(document.activeElement)).toBe(true)
+
+    const search = nav!.querySelector<HTMLInputElement>('[aria-label="Search settings"]')!
+    await act(async () => {
+      search.focus()
+      fireEvent.change(search, { target: { value: 'proxy' } })
+    })
+    expect(nav!.querySelector('[role="listbox"]')).not.toBeNull()
+    await act(async () => fireEvent.keyDown(search, { key: 'Escape' }))
+    expect(nav!.querySelector('[role="listbox"]')).toBeNull()
+    expect(nav?.getAttribute('aria-hidden')).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
 
     await act(async () => {
       document.activeElement?.dispatchEvent(
@@ -2587,7 +2627,7 @@ describe('SettingsPage layout', () => {
     ).api.logs
     logs.getStatus.mockResolvedValueOnce({
       configured: true,
-      path: '/Users/x/Library/Logs/MedResearch Agent/main.log',
+      path: '/Users/x/Library/Logs/DRA/main.log',
       existing: false,
       lastWriteSucceeded: null,
       lastFailureCategory: null
@@ -3894,7 +3934,7 @@ describe('SettingsPage layout', () => {
 
     expect(document.body.querySelector('[aria-label="Back to network"]')).not.toBeNull()
     expect(document.body.textContent).toContain('Notebook network access')
-    expect(document.body.querySelector('[aria-label="Allowed domains"]')).not.toBeNull()
+    expect(document.body.querySelector('[aria-label="Custom public domains"]')).not.toBeNull()
   })
 
   it('hides local-only Notebook network settings from remote Web', async () => {
@@ -3960,7 +4000,7 @@ describe('SettingsPage layout', () => {
 
     expect(navButton('Network')?.getAttribute('aria-current')).toBe('page')
     expect(document.body.querySelector('[aria-label="Back to network"]')).toBeNull()
-    expect(document.body.querySelector('[aria-label="Allowed domains"]')).toBeNull()
+    expect(document.body.querySelector('[aria-label="Custom public domains"]')).toBeNull()
     expect(document.body.querySelector('[aria-label="Notebook network access"]')).toBeNull()
     expect(document.body.querySelector('[aria-label="Network status"]')).not.toBeNull()
   })
@@ -4880,7 +4920,7 @@ describe('SettingsPage layout', () => {
           {
             id: 'official',
             kind: 'official',
-            name: 'MedResearch Agent Marketplace',
+            name: 'DRA Marketplace',
             repositoryUrl: 'https://github.com/aipoch/marketplace',
             ref: 'published',
             trust: 'official',
@@ -4892,7 +4932,7 @@ describe('SettingsPage layout', () => {
         specialists: [
           {
             sourceId: 'official',
-            sourceName: 'MedResearch Agent Marketplace',
+            sourceName: 'DRA Marketplace',
             sourceTrust: 'official',
             id: 'example-specialist',
             displayName: 'Example Specialist',
@@ -4964,7 +5004,7 @@ describe('SettingsPage layout', () => {
           id: 'storage' as const,
           label: 'App storage permission',
           status: 'failed' as const,
-          summary: 'MedResearch Agent cannot write to its private data folder.'
+          summary: 'DRA cannot write to its private data folder.'
         }
       ],
       ready: false,
@@ -4980,7 +5020,7 @@ describe('SettingsPage layout', () => {
           id: 'storage' as const,
           label: 'App storage permission',
           status: 'passed' as const,
-          summary: 'MedResearch Agent can write to its private data folder.'
+          summary: 'DRA can write to its private data folder.'
         },
         {
           id: 'agent' as const,
@@ -5139,7 +5179,8 @@ describe('SettingsPage layout', () => {
     expect(document.body.querySelector('[aria-label="Restore"]')).not.toBeNull()
     expect(document.body.querySelector('[aria-label="Maximize"]')).toBeNull()
     const dialog = document.body.querySelector<HTMLElement>('[data-slot="settings-surface"]')
-    expect(dialog?.className).toContain('inset-4')
+    expect(dialog?.className).toContain('md:top-[calc(var(--windows-titlebar-height)+1rem)]')
+    expect(dialog?.className).toContain('md:bottom-4')
     expect(dialog?.className).not.toContain('h-[80vh]')
     expect(dialog?.className).not.toContain('w-[80vw]')
   })
@@ -5472,12 +5513,12 @@ describe('SettingsPage Codex framework', () => {
 
   it.each([
     [true, '0.144.6', true],
-    [false, '0.144.6', false],
-    [true, '0.153.4', false],
-    [true, '0.154.0', false],
-    [true, undefined, false]
+    [false, '0.144.6', true],
+    [true, '0.157.1', false],
+    [true, '0.158.0', false],
+    [true, undefined, true]
   ])(
-    'offers a tested native update only for an older managed CLI (%s, %s)',
+    'requires a native update for unsupported managed or external CLIs (%s, %s)',
     async (nativeManaged, nativeVersion, expected) => {
       const api = window.api.settings
       const snapshot = {
@@ -5509,7 +5550,7 @@ describe('SettingsPage Codex framework', () => {
       const update = document.body.querySelector<HTMLButtonElement>('[aria-label="Update Codex"]')
       expect(Boolean(update)).toBe(expected)
       if (!nativeManaged)
-        expect(document.body.textContent).toContain('Update your external installation manually')
+        expect(document.body.textContent).toContain('without changing your external installation')
       if (expected) {
         const installCodex = vi
           .fn()
@@ -5530,7 +5571,7 @@ describe('SettingsPage Codex framework', () => {
       codex: {
         resolvedPath: '/data/codex-managed/adapter/dist/index.js',
         version: '1.6.2',
-        nativeVersion: '0.144.6'
+        nativeVersion: '0.157.1'
       },
       providers: [],
       agentFrameworkId: 'claude-code',
@@ -5564,7 +5605,7 @@ describe('SettingsPage Codex framework', () => {
     const codexRadio = document.body.querySelector<HTMLButtonElement>('[aria-label="Use Codex"]')
     expect(codexRadio).not.toBeNull()
     // The native and adapter versions are displayed separately; the repo link points at the ACP adapter.
-    expect(document.body.textContent).toContain('Codex CLI 0.144.6 · ACP 1.6.2')
+    expect(document.body.textContent).toContain('Codex CLI 0.157.1 · ACP 1.6.2')
     expect(document.body.textContent).toContain('agentclientprotocol/codex-acp')
 
     await act(async () => codexRadio?.click())
@@ -6205,4 +6246,728 @@ describe('SettingsPage Codex framework', () => {
     expect(details?.open).toBe(false)
     expect(details?.textContent).toContain('The Codex adapter failed to spawn.')
   })
+})
+
+describe('Skill editor leave protection', () => {
+  const field = (label: string): HTMLInputElement =>
+    document.querySelector(`[aria-label="${label}"]`)!
+  const clickLabel = async (label: string): Promise<void> => {
+    const button = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+      (item) => item.textContent?.trim() === label
+    )!
+    expect(button, label).toBeDefined()
+    await act(async () => button.click())
+  }
+  const confirmation = (): HTMLElement | null =>
+    document.querySelector('[data-testid="skill-discard-confirmation"]')
+  const mountEditor = async (): Promise<{
+    onClose: ReturnType<typeof vi.fn<() => void>>
+    handle: ReturnType<typeof createRef<SettingsPageHandle>>
+  }> => {
+    const onClose = vi.fn<() => void>()
+    const handle = createRef<SettingsPageHandle>()
+    await act(async () => root.render(<SettingsPage ref={handle} open onClose={onClose} />))
+    await act(async () => navButton('Skills')!.click())
+    openRadixMenu(document.querySelector<HTMLElement>('[data-settings-anchor="skills.add"]'))
+    const create = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) =>
+      item.textContent?.includes('Write from scratch')
+    )!
+    clickRadixMenuItem(create)
+    await waitFor(() => expect(field('Skill name')).not.toBeNull())
+    return { onClose, handle }
+  }
+  const edit = async (): Promise<void> => {
+    await act(async () => {
+      fireEvent.change(field('Skill name'), { target: { value: 'draft-skill' } })
+      fireEvent.change(field('Skill body'), { target: { value: 'Research instructions' } })
+    })
+  }
+
+  it.each([
+    'Back',
+    'Forward',
+    'breadcrumb',
+    'panel',
+    'search',
+    'Cancel',
+    'Close settings',
+    'close pane',
+    'external intent',
+    'host navigation'
+  ])('preserves a draft until discard is confirmed through %s', async (route) => {
+    const { onClose, handle } = await mountEditor()
+    if (route === 'Forward') {
+      await act(async () => navButton('General')!.click())
+      await act(async () => field('Back').click())
+    }
+    await edit()
+    const leave = async (): Promise<void> => {
+      await act(async () => {
+        if (route === 'breadcrumb') field('Back to skills').click()
+        else if (route === 'panel') navButton('General')!.click()
+        else if (route === 'search') {
+          const search = field('Search settings')
+          search.focus()
+          fireEvent.change(search, { target: { value: 'language' } })
+        } else if (route === 'close pane') handle.current!.closeActivePane()
+        else if (route === 'host navigation') handle.current!.requestLeave(onClose)
+        else if (route === 'external intent')
+          useSettingsStore.getState().openSettingsToPanel('general')
+        else if (route !== 'Cancel') field(route).click()
+      })
+      if (route === 'Cancel') await clickLabel('Cancel')
+      if (route === 'search')
+        await act(async () => fireEvent.keyDown(field('Search settings'), { key: 'Enter' }))
+    }
+    await leave()
+    expect(confirmation()).not.toBeNull()
+    expect(field('Skill body').value).toBe('Research instructions')
+    expect(onClose).not.toHaveBeenCalled()
+    if (route === 'search') expect(field('Search settings').value).toBe('language')
+    await clickLabel('Keep editing')
+    expect(confirmation()).toBeNull()
+    expect(field('Skill body').value).toBe('Research instructions')
+    await leave()
+    await clickLabel('Discard changes')
+    expect(confirmation()).toBeNull()
+    if (route === 'Close settings' || route === 'host navigation')
+      expect(onClose).toHaveBeenCalledOnce()
+    else expect(field('Skill body')).toBeNull()
+  })
+
+  it('does not prompt after edits are reverted to the original values', async () => {
+    await mountEditor()
+    await edit()
+    await act(async () => {
+      fireEvent.change(field('Skill name'), { target: { value: '' } })
+      fireEvent.change(field('Skill body'), { target: { value: '' } })
+    })
+    await clickLabel('Cancel')
+    expect(confirmation()).toBeNull()
+    expect(field('Skill body')).toBeNull()
+  })
+
+  it.each(['resolve', 'reject'] as const)(
+    'waits for a pending create to %s before allowing leave',
+    async (outcome) => {
+      let resolve!: () => void
+      let reject!: (error: Error) => void
+      const createSkill = vi.fn().mockReturnValue(
+        new Promise<void>((yes, no) => {
+          resolve = yes
+          reject = no
+        })
+      )
+      const previous = useSettingsStore.getState().createSkill
+      useSettingsStore.setState({ createSkill })
+      try {
+        const { onClose } = await mountEditor()
+        await edit()
+        await clickLabel('Create skill')
+        await act(async () => field('Close settings').click())
+        expect(confirmation()?.textContent).toContain('Wait for the current skill operation')
+        expect(
+          [...confirmation()!.querySelectorAll('button')].every((button) => button.disabled)
+        ).toBe(true)
+        expect(field('Skill body').closest('fieldset')?.disabled).toBe(true)
+        expect(onClose).not.toHaveBeenCalled()
+        await act(async () => {
+          if (outcome === 'resolve') resolve()
+          else reject(new Error('Write failed'))
+        })
+        if (outcome === 'resolve') {
+          expect(confirmation()).toBeNull()
+          expect(field('Skill body')).toBeNull()
+          expect(onClose).not.toHaveBeenCalled()
+        } else {
+          await clickLabel('Keep editing')
+          expect(field('Skill body').value).toBe('Research instructions')
+          expect(document.body.textContent).toContain('Write failed')
+        }
+        expect(createSkill).toHaveBeenCalledOnce()
+      } finally {
+        useSettingsStore.setState({ createSkill: previous })
+      }
+    }
+  )
+})
+
+describe('Provider editor leave protection', () => {
+  const field = (label: string): HTMLInputElement =>
+    document.querySelector(`[aria-label="${label}"]`)!
+  const confirmation = (): HTMLElement | null =>
+    document.querySelector('[data-testid="skill-discard-confirmation"]')
+  const footerButton = (label: string): HTMLButtonElement => {
+    const button = [
+      ...document.querySelectorAll<HTMLButtonElement>('[data-slot="provider-form-footer"] button')
+    ].find((item) => item.textContent?.trim() === label)
+    expect(button, `Provider footer ${label}`).toBeDefined()
+    return button!
+  }
+  const clickLabel = async (label: string): Promise<void> => {
+    const button = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+      (item) => item.textContent?.trim() === label
+    )!
+    expect(button, label).toBeDefined()
+    await act(async () => button.click())
+  }
+  const mountEditor = async (
+    create = false
+  ): Promise<{
+    onClose: ReturnType<typeof vi.fn<() => void>>
+    handle: ReturnType<typeof createRef<SettingsPageHandle>>
+  }> => {
+    if (!create) installCustomProviderSnapshot()
+    const onClose = vi.fn<() => void>()
+    const handle = createRef<SettingsPageHandle>()
+    await act(async () => root.render(<SettingsPage ref={handle} open onClose={onClose} />))
+    if (create) await clickLabel('Add provider')
+    else await act(async () => field('Edit').click())
+    expect(field('Provider name')).not.toBeNull()
+    return { onClose, handle }
+  }
+  const edit = (): void => {
+    fireEvent.change(field('Provider name'), { target: { value: 'Research endpoint draft' } })
+  }
+
+  it.each([
+    'Back',
+    'Forward',
+    'breadcrumb',
+    'panel',
+    'search',
+    'Cancel',
+    'Close settings',
+    'Escape',
+    'close pane',
+    'external intent',
+    'host navigation'
+  ])('preserves provider edits until discard is confirmed through %s', async (route) => {
+    const { onClose, handle } = await mountEditor()
+    if (route === 'Forward') {
+      await act(async () => navButton('General')!.click())
+      await act(async () => field('Back').click())
+    }
+    act(edit)
+    const leave = async (): Promise<void> => {
+      await act(async () => {
+        if (route === 'breadcrumb') field('Back to model').click()
+        else if (route === 'panel') navButton('General')!.click()
+        else if (route === 'search') {
+          const search = field('Search settings')
+          search.focus()
+          fireEvent.change(search, { target: { value: 'language' } })
+        } else if (route === 'close pane') handle.current!.closeActivePane()
+        else if (route === 'host navigation') handle.current!.requestLeave(onClose)
+        else if (route === 'external intent')
+          useSettingsStore.getState().openSettingsToPanel('general')
+        else if (route === 'Escape') {
+          field('Provider name').focus()
+          fireEvent.keyDown(field('Provider name'), { key: 'Escape' })
+        } else if (route !== 'Cancel') field(route).click()
+      })
+      if (route === 'Cancel') await clickLabel('Cancel')
+      if (route === 'search')
+        await act(async () => fireEvent.keyDown(field('Search settings'), { key: 'Enter' }))
+    }
+    await leave()
+    expect(confirmation()?.textContent).toContain('Your provider edits have not been saved.')
+    expect(field('Provider name').value).toBe('Research endpoint draft')
+    expect(onClose).not.toHaveBeenCalled()
+    if (route === 'search') expect(field('Search settings').value).toBe('language')
+    await clickLabel('Keep editing')
+    expect(confirmation()).toBeNull()
+    expect(field('Provider name').value).toBe('Research endpoint draft')
+    await leave()
+    await clickLabel('Discard changes')
+    expect(confirmation()).toBeNull()
+    if (['Close settings', 'Escape', 'host navigation'].includes(route))
+      expect(onClose).toHaveBeenCalledOnce()
+    else expect(field('Provider name')).toBeNull()
+  })
+
+  it('protects a new provider draft and restores the requesting control focus', async () => {
+    await mountEditor(true)
+    act(edit)
+    const back = field('Back')
+    await act(async () => {
+      back.focus()
+      back.click()
+    })
+    await clickLabel('Keep editing')
+    await waitFor(() => expect(document.activeElement).toBe(back))
+    expect(field('Provider name').value).toBe('Research endpoint draft')
+    await act(async () => back.click())
+    await clickLabel('Discard changes')
+    await act(async () => field('Forward').click())
+    expect(field('Provider name').value).toBe('Anthropic')
+  })
+
+  it.each([
+    [true, 'Close settings'],
+    [true, 'host navigation'],
+    [false, 'Close settings'],
+    [false, 'host navigation']
+  ] as const)(
+    'discards a provider draft before closing and reopening the mounted Settings owner (create=%s, %s)',
+    async (create, leaveThrough) => {
+      const { onClose, handle } = await mountEditor(create)
+      const initialName = field('Provider name').value
+      const render = (open: boolean): void =>
+        root.render(<SettingsPage ref={handle} open={open} onClose={onClose} />)
+      onClose.mockImplementation(() => render(false))
+      act(() => {
+        edit()
+        fireEvent.change(field('API key'), { target: { value: 'discarded-secret' } })
+      })
+      await act(async () => {
+        if (leaveThrough === 'host navigation') handle.current!.requestLeave(onClose)
+        else field('Close settings').click()
+      })
+      await clickLabel('Discard changes')
+      expect(onClose).toHaveBeenCalledOnce()
+      expect(document.querySelector('[data-slot="settings-dialog"]')).toBeNull()
+
+      let expectedName = initialName
+      if (!create) {
+        const snapshot = await window.api.settings.getSettings()
+        const latest = {
+          ...snapshot.providers[0],
+          name: 'Latest saved gateway',
+          configRevision: 7
+        }
+        expectedName = latest.name
+        ;(window.api.settings.getSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+          ...snapshot,
+          providers: [latest]
+        })
+        act(() => useSettingsStore.setState({ providers: [latest] }))
+      }
+      await act(async () => render(true))
+      expect(field('Provider name').value).toBe(expectedName)
+      expect(field('API key').value).toBe('')
+      expect(document.body.textContent).not.toContain(
+        'Provider configuration changed. Your draft has not been saved.'
+      )
+      await act(async () => field('Close settings').click())
+      expect(confirmation()).toBeNull()
+      expect(onClose).toHaveBeenCalledTimes(2)
+      if (!create) {
+        await act(async () => render(true))
+        const saveValidatedProvider = vi.fn().mockResolvedValue({
+          providerId: 'custom-messages',
+          validation: { ok: true, category: 'ok' }
+        })
+        act(() => useSettingsStore.setState({ saveValidatedProvider }))
+        await clickLabel('Save')
+        expect(saveValidatedProvider).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            id: 'custom-messages',
+            requireExisting: true,
+            expectedConfigRevision: 7,
+            key: undefined
+          })
+        )
+      }
+    }
+  )
+
+  it.each([false, true])(
+    'protects a dirty provider through its actual footer Cancel and restores focus (create=%s)',
+    async (create) => {
+      const { onClose } = await mountEditor(create)
+      act(() => {
+        edit()
+        fireEvent.change(field('API key'), { target: { value: 'unsaved-key' } })
+      })
+      const cancel = footerButton('Cancel')
+      await act(async () => {
+        cancel.focus()
+        cancel.click()
+      })
+      expect(confirmation()?.textContent).toContain('Your provider edits have not been saved.')
+      expect(field('Provider name').value).toBe('Research endpoint draft')
+      await clickLabel('Keep editing')
+      await waitFor(() => expect(document.activeElement).toBe(cancel))
+      expect(field('API key').value).toBe('unsaved-key')
+      await act(async () => cancel.click())
+      await clickLabel('Discard changes')
+      expect(confirmation()).toBeNull()
+      expect(field('Provider name')).toBeNull()
+      expect(onClose).not.toHaveBeenCalled()
+      await act(async () => field('Back').click())
+      expect(field('Provider name').value).toBe(create ? 'Anthropic' : 'Messages gateway')
+      expect(field('API key').value).toBe('')
+    }
+  )
+
+  it.each([
+    [false, 'pristine'],
+    [false, 'reverted'],
+    [true, 'pristine'],
+    [true, 'reverted']
+  ] as const)(
+    'leaves a provider through its actual footer Cancel without a decision (create=%s, %s)',
+    async (create, draft) => {
+      await mountEditor(create)
+      const initial = field('Provider name').value
+      if (draft === 'reverted') {
+        act(edit)
+        act(() => fireEvent.change(field('Provider name'), { target: { value: initial } }))
+      }
+      await act(async () => footerButton('Cancel').click())
+      expect(confirmation()).toBeNull()
+      expect(field('Provider name')).toBeNull()
+    }
+  )
+
+  it.each(['resolve', 'reject', 'invalid'] as const)(
+    'waits for a provider save to settle without implying cancellation (%s)',
+    async (outcome) => {
+      let resolve!: (result: {
+        providerId?: string
+        validation: { ok: boolean; category: 'ok' | 'auth' }
+      }) => void
+      let reject!: (error: Error) => void
+      const saveValidatedProvider = vi.fn().mockReturnValue(
+        new Promise((yes, no) => {
+          resolve = yes
+          reject = no
+        })
+      )
+      const { onClose } = await mountEditor()
+      useSettingsStore.setState({ saveValidatedProvider })
+      act(edit)
+      await clickLabel('Save')
+      const cancel = footerButton('Cancel')
+      expect(cancel.disabled).toBe(true)
+      await act(async () => cancel.click())
+      expect(confirmation()).toBeNull()
+      expect(field('Provider name').value).toBe('Research endpoint draft')
+      await act(async () => field('Close settings').click())
+      expect(confirmation()?.textContent).toContain(
+        'Wait for the provider save to finish before leaving.'
+      )
+      expect(
+        [...confirmation()!.querySelectorAll('button')].every((button) => button.disabled)
+      ).toBe(true)
+      expect(onClose).not.toHaveBeenCalled()
+      await act(async () => {
+        if (outcome === 'reject') reject(new Error('Write failed'))
+        else
+          resolve(
+            outcome === 'resolve'
+              ? { providerId: 'custom-messages', validation: { ok: true, category: 'ok' } }
+              : { validation: { ok: false, category: 'auth' } }
+          )
+      })
+      if (outcome === 'resolve') {
+        expect(confirmation()).toBeNull()
+        expect(field('Provider name')).toBeNull()
+        expect(onClose).not.toHaveBeenCalled()
+      } else {
+        expect(confirmation()).not.toBeNull()
+        await clickLabel('Keep editing')
+        expect(field('Provider name').value).toBe('Research endpoint draft')
+        expect(document.body.textContent).toContain(
+          outcome === 'reject' ? 'Write failed' : 'Authentication failed'
+        )
+      }
+      expect(saveValidatedProvider).toHaveBeenCalledOnce()
+    }
+  )
+
+  it('keeps the original dirty baseline when a background update conflicts', async () => {
+    await mountEditor()
+    act(edit)
+    act(() =>
+      useSettingsStore.setState({
+        providers: [{ ...useSettingsStore.getState().providers[0], configRevision: 1 }]
+      })
+    )
+    await act(async () => field('Back').click())
+    expect(confirmation()).not.toBeNull()
+    await clickLabel('Keep editing')
+    expect(field('Provider name').value).toBe('Research endpoint draft')
+    expect(document.body.textContent).toContain('Provider configuration changed.')
+  })
+})
+
+describe('Settings Compute completion navigation', () => {
+  it.each(['left', 'returned', 'closed', 'closed-during-exit'] as const)(
+    'keeps the selected Settings location after an old host creation succeeds (%s)',
+    async (location) => {
+      const previous = useComputeStore.getState()
+      let resolve!: (host: Awaited<ReturnType<typeof previous.createHost>>) => void
+      const createHost = vi.fn().mockReturnValue(
+        new Promise((done) => {
+          resolve = done
+        })
+      )
+      const probeHost = vi
+        .fn()
+        .mockResolvedValue({ ok: true, probedAt: '', exitCode: 0, errorTail: null })
+      if (location === 'closed-during-exit') {
+        // Keep Radix Presence mounted through a simulated CSS exit animation. The form must revoke
+        // completion authority as soon as Settings closes, rather than after the animation ends.
+        const getComputedStyle = window.getComputedStyle.bind(window)
+        vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudoElement) => {
+          const style = getComputedStyle(element, pseudoElement)
+          if (!element.matches('[data-slot="settings-dialog"]')) return style
+          return new Proxy(style, {
+            get(target, property) {
+              if (property === 'animationName')
+                return element.getAttribute('data-state') === 'closed' ? 'compute-exit' : 'none'
+              const value = Reflect.get(target, property)
+              return typeof value === 'function' ? value.bind(target) : value
+            }
+          })
+        })
+      }
+      window.api.compute.passwordCapability = vi.fn().mockResolvedValue({ available: true })
+      useComputeStore.setState({
+        createHost,
+        probeHost,
+        loadSshAliases: vi.fn().mockResolvedValue(undefined)
+      })
+      const onClose = vi.fn()
+      const render = (open: boolean): void =>
+        root.render(<SettingsPage open={open} onClose={onClose} />)
+      const click = async (label: string): Promise<void> => {
+        const button = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+          (item) => item.textContent?.trim() === label
+        )!
+        expect(button, label).toBeDefined()
+        await act(async () => button.click())
+      }
+      try {
+        await act(async () => render(true))
+        await act(async () => navButton('Compute')!.click())
+        await click('Add SSH host')
+        act(() =>
+          fireEvent.change(document.querySelector('#compute-alias')!, {
+            target: { value: 'cluster' }
+          })
+        )
+        await click('Add')
+        if (location === 'closed' || location === 'closed-during-exit') {
+          await act(async () => render(false))
+          if (location === 'closed-during-exit') {
+            expect(
+              document.querySelector('[data-slot="settings-dialog"]')?.getAttribute('data-state')
+            ).toBe('closed')
+            expect(document.querySelector('#compute-alias')).toBeNull()
+          }
+        } else {
+          await act(async () => navButton('General')!.click())
+          if (location === 'returned') {
+            await act(async () =>
+              document.querySelector<HTMLButtonElement>('[aria-label="Back"]')!.click()
+            )
+            act(() =>
+              fireEvent.change(document.querySelector('#compute-alias')!, {
+                target: { value: 'new-draft' }
+              })
+            )
+          }
+        }
+        await act(async () =>
+          resolve({ providerId: 'ssh:cluster' } as Awaited<ReturnType<typeof previous.createHost>>)
+        )
+        expect(createHost).toHaveBeenCalledOnce()
+        expect(probeHost).toHaveBeenCalledExactlyOnceWith('ssh:cluster')
+        if (location === 'closed' || location === 'closed-during-exit')
+          await act(async () => render(true))
+        if (location === 'left')
+          expect(navButton('General')?.getAttribute('aria-current')).toBe('page')
+        else
+          expect(document.querySelector<HTMLInputElement>('#compute-alias')?.value).toBe(
+            location === 'returned' ? 'new-draft' : ''
+          )
+      } finally {
+        useComputeStore.setState({
+          createHost: previous.createHost,
+          probeHost: previous.probeHost,
+          loadSshAliases: previous.loadSshAliases
+        })
+      }
+    }
+  )
+})
+
+describe('Network editor leave protection', () => {
+  it.each(['keep editing', 'discard before success', 'discard before failure'])(
+    'handles closing Settings during a pending DNS review: %s',
+    async (choice) => {
+      const rule = {
+        hostname: 'lab.internal.example',
+        port: 8443,
+        approvedAddresses: ['10.32.0.7']
+      }
+      let resolve!: (value: { ok: true; destination: typeof rule }) => void
+      let reject!: (reason: Error) => void
+      window.api.settings.reviewNotebookPrivateDestination = vi.fn(
+        () =>
+          new Promise<{ ok: true; destination: typeof rule }>((done, fail) => {
+            resolve = done
+            reject = fail
+          })
+      )
+      const onClose = vi.fn()
+      const save = vi.fn()
+      useSettingsStore.setState({
+        pendingSettingsIntent: {
+          requestId: 44,
+          route: { panel: 'network', view: { kind: 'domains' } }
+        },
+        setNotebookNetwork: save
+      })
+      const click = async (label: string): Promise<void> => {
+        await act(async () => {
+          ;[...document.body.querySelectorAll<HTMLButtonElement>('button')]
+            .find((item) => item.textContent?.trim() === label)!
+            .click()
+        })
+      }
+      await act(async () => root.render(<SettingsPage open onClose={onClose} />))
+      await click('Add service')
+      act(() => {
+        fireEvent.change(document.querySelector('#private-hostname')!, {
+          target: { value: rule.hostname }
+        })
+        fireEvent.change(document.querySelector('#private-port')!, { target: { value: '8443' } })
+      })
+      await click('Review service')
+      await act(async () =>
+        document.querySelector<HTMLButtonElement>('[aria-label="Close settings"]')!.click()
+      )
+      expect(document.body.textContent).toContain('Your network rules have not been saved.')
+      expect(onClose).not.toHaveBeenCalled()
+      const discard = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+        (item) => item.textContent?.trim() === 'Discard changes'
+      )!
+      expect(discard.disabled).toBe(false)
+
+      if (choice === 'keep editing') {
+        await click('Keep editing')
+        expect(document.querySelector<HTMLInputElement>('#private-hostname')!.value).toBe(
+          rule.hostname
+        )
+        expect(document.querySelector<HTMLInputElement>('#private-port')!.value).toBe('8443')
+        expect(document.body.textContent).not.toContain('Your network rules have not been saved.')
+        await act(async () => resolve({ ok: true, destination: rule }))
+        expect(document.body.textContent).toContain('10.32.0.7')
+        expect(document.body.textContent).toContain('Add to trusted services')
+        expect(onClose).not.toHaveBeenCalled()
+      } else {
+        await click('Discard changes')
+        expect(onClose).toHaveBeenCalledOnce()
+        // Apply the controlled open prop as the application does after accepting onClose.
+        await act(async () => root.render(<SettingsPage open={false} onClose={onClose} />))
+        expect(document.querySelector('#private-hostname')).toBeNull()
+        await act(async () => root.render(<SettingsPage open onClose={onClose} />))
+        await click('Add service')
+        act(() =>
+          fireEvent.change(document.querySelector('#private-hostname')!, {
+            target: { value: 'new.internal.example' }
+          })
+        )
+        await act(async () => {
+          if (choice === 'discard before failure') reject(new Error('DNS failed after closing'))
+          else resolve({ ok: true, destination: rule })
+        })
+        expect(document.querySelector<HTMLInputElement>('#private-hostname')!.value).toBe(
+          'new.internal.example'
+        )
+        expect(document.body.textContent).not.toContain('10.32.0.7')
+        expect(document.body.textContent).not.toContain('Add to trusted services')
+        expect(document.body.textContent).not.toContain('Could not review the service. Try again.')
+      }
+      expect(save).not.toHaveBeenCalled()
+      expect(useSettingsStore.getState().notebookNetwork.trustedPrivateDestinations ?? []).toEqual(
+        []
+      )
+    }
+  )
+  it.each(['breadcrumb', 'panel', 'Close settings'])(
+    'keeps the network draft until discard through %s',
+    async (route) => {
+      const onClose = vi.fn()
+      useSettingsStore.setState({
+        pendingSettingsIntent: {
+          requestId: 42,
+          route: { panel: 'network', view: { kind: 'domains' } }
+        }
+      })
+      await act(async () => root.render(<SettingsPage open onClose={onClose} />))
+      const input = document.body.querySelector<HTMLInputElement>('[aria-label="Domain hostname"]')!
+      expect(input).not.toBeNull()
+      act(() => fireEvent.change(input, { target: { value: 'unsaved.example' } }))
+      const leave = async (): Promise<void> => {
+        await act(async () => {
+          if (route === 'panel') navButton('General')!.click()
+          else
+            document.body
+              .querySelector<HTMLButtonElement>(
+                `[aria-label="${route === 'breadcrumb' ? 'Back to network' : route}"]`
+              )!
+              .click()
+        })
+      }
+      await leave()
+      expect(document.body.textContent).toContain('Your network rules have not been saved.')
+      expect(onClose).not.toHaveBeenCalled()
+      const click = async (label: string): Promise<void> => {
+        await act(async () => {
+          ;[...document.body.querySelectorAll<HTMLButtonElement>('button')]
+            .find((item) => item.textContent?.trim() === label)!
+            .click()
+        })
+      }
+      await click('Keep editing')
+      expect(input.value).toBe('unsaved.example')
+      await leave()
+      await click('Discard changes')
+      if (route === 'Close settings') expect(onClose).toHaveBeenCalledOnce()
+      else expect(document.body.querySelector('[aria-label="Domain hostname"]')).toBeNull()
+    }
+  )
+})
+
+it('dismisses a network leave request when the pending save succeeds', async () => {
+  useSettingsStore.setState({
+    pendingSettingsIntent: { requestId: 43, route: { panel: 'network', view: { kind: 'domains' } } }
+  })
+  const onClose = vi.fn()
+  await act(async () => root.render(<SettingsPage open onClose={onClose} />))
+  const saved = useSettingsStore.getState().notebookNetwork
+  let finish!: (value: typeof saved) => void
+  act(() =>
+    useSettingsStore.setState({
+      setNotebookNetwork: vi.fn(
+        () =>
+          new Promise<typeof saved>((resolve) => {
+            finish = resolve
+          })
+      )
+    })
+  )
+  await act(async () =>
+    [...document.body.querySelectorAll<HTMLButtonElement>('button')]
+      .find((b) => b.textContent?.trim() === 'Save changes')!
+      .click()
+  )
+  await act(async () =>
+    document.body.querySelector<HTMLButtonElement>('[aria-label="Close settings"]')!.click()
+  )
+  expect(document.body.textContent).toContain('Your network rules have not been saved.')
+  expect(
+    [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === 'Please wait…'
+    )?.disabled
+  ).toBe(true)
+  await act(async () => finish(saved))
+  expect(document.body.textContent).not.toContain('Your network rules have not been saved.')
+  expect(onClose).not.toHaveBeenCalled()
+  expect(document.body.querySelector('[aria-label="Domain hostname"]')).not.toBeNull()
 })

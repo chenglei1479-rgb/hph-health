@@ -1,7 +1,11 @@
 import { spawnSync } from 'node:child_process'
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve, join } from 'node:path'
+import { readDraUpdateDeployment } from './deployment-config'
+import type { DraUpdateDeployment } from '../../shared/dra-update-deployment'
 
 import { app } from 'electron'
+import { APP } from '../../shared/app-config'
+import { DisabledUpdateStrategy } from './disabled-strategy'
 
 import { createLogger } from '../logger'
 import { createMacInstallationGuard } from '../mac-installation'
@@ -11,6 +15,9 @@ import type { InstallGate, UpdateStrategy } from './strategy'
 import type { NativeTranslator } from '../locale/main-process-messages'
 
 export type CreateStrategyOptions = {
+  // Build policy; injectable only for strategy regression tests.
+  updatesEnabled?: boolean
+  deployment?: DraUpdateDeployment
   // Whether this is a packaged (installed) build. Defaults to app.isPackaged; injectable for tests.
   isPackaged?: boolean
   // Running app version. Defaults to app.getVersion(); injectable for tests.
@@ -58,10 +65,22 @@ export const createUpdateStrategy = (
   platform: NodeJS.Platform = process.platform,
   opts: CreateStrategyOptions = {}
 ): UpdateStrategy => {
+  let deployment = opts.deployment
+  if (opts.updatesEnabled === undefined && !deployment && process.resourcesPath) {
+    try {
+      deployment = readDraUpdateDeployment(join(process.resourcesPath, 'app-update.yml'))
+    } catch {
+      return new DisabledUpdateStrategy(opts.version ?? app?.getVersion?.() ?? '0.0.0')
+    }
+  }
+  if (!(opts.updatesEnabled ?? Boolean(deployment ?? APP.update.enabled))) {
+    return new DisabledUpdateStrategy(opts.version ?? app?.getVersion?.() ?? '0.0.0')
+  }
   const log = createLogger('update')
   const createInPlaceStrategy = (): ElectronUpdaterStrategy =>
     new ElectronUpdaterStrategy({
       installationGuard: createMacInstallationGuard(),
+      ...(deployment ? { deployment, manifestUrl: deployment.manifestUrl } : {}),
       ...(opts.installGate ? { installGate: opts.installGate } : {}),
       ...(opts.releaseInstallHandoff ? { releaseInstallHandoff: opts.releaseInstallHandoff } : {}),
       log
@@ -74,5 +93,9 @@ export const createUpdateStrategy = (
   if (platform === 'darwin' && macCanAutoUpdate(isPackaged, version)) {
     return createInPlaceStrategy()
   }
-  return new UpdateService({ log, translate: opts.translate })
+  return new UpdateService({
+    log,
+    translate: opts.translate,
+    ...(deployment ? { manifestUrl: deployment.manifestUrl } : {})
+  })
 }

@@ -29,6 +29,9 @@ import { respondToSessionPlan } from '../session-plan/respond-to-session-plan'
 import { PlanPreviewSurface, type RestoredPlanResponder } from '../session-plan/SessionPlanSurfaces'
 
 const LibraryPreview = lazy(() => import('./LibraryPreview'))
+const SessionReplayPreview = lazy(() =>
+  import('../SessionReplayPreview').then((module) => ({ default: module.SessionReplayPreview }))
+)
 
 const isNotebookPreviewItem = (item: PreviewToolItem): item is NotebookPreviewItem =>
   item.toolKind === 'notebook' && Boolean(item.notebook)
@@ -251,7 +254,7 @@ const PlanPreviewToolContent = ({
   const runtimePlan = planSession?.runtimeContext?.plan
 
   const respondPlan = async (decision: 'approved' | 'rejected'): Promise<void> => {
-    if (!visiblePlanProjection || !item.projectId) return
+    if (planSession?.packageOrigin || !visiblePlanProjection || !item.projectId) return
     if (planSession?.activeRun) {
       if (restoredPlanResponder?.canRespondToSession?.(item.sessionId) !== true) return
       await respondToSessionPlan(
@@ -274,6 +277,7 @@ const PlanPreviewToolContent = ({
     (restoredPlanResponder?.enabled !== false &&
       restoredPlanResponder?.sessionId === item.sessionId)
   const canRespondToPlan =
+    !planSession?.packageOrigin &&
     visiblePlanProjection !== undefined &&
     planSession?.status === 'waiting-plan-approval' &&
     hasPlanResponsePath
@@ -309,6 +313,25 @@ export const PreviewToolContent = ({
   restoredPlanResponder?: RestoredPlanResponder
 }): React.JSX.Element | null => {
   const activeProjectId = useNavigationStore((state) => state.activeProjectId)
+  const { t } = useTranslation()
+
+  if (item.toolKind === 'replay')
+    return (
+      <Suspense
+        fallback={
+          <div role="status" className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            {t('Loading…')}
+          </div>
+        }
+      >
+        <SessionReplayPreview
+          key={`${item.projectId}:${item.sessionId}`}
+          item={item}
+          isActive={isActive}
+        />
+      </Suspense>
+    )
 
   // Remount the Files tool per project so its transient dialog cannot outlive the project it opened.
   if (item.toolKind === 'files') {
@@ -322,6 +345,7 @@ export const PreviewToolContent = ({
           key={activeProjectId ?? 'no-active-project'}
           projectId={activeProjectId}
           isActive={isActive}
+          scopeRequest={item.libraryScopeRequest}
         />
       </Suspense>
     )

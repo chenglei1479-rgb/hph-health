@@ -16,6 +16,70 @@ const { ProviderRuntimeProjectionOwner } = await import('./provider-runtime-proj
 const { encryptKey } = await import('./crypto')
 
 describe('ProviderRuntimeProjectionOwner', () => {
+  it.each(['claude-code', 'opencode', 'codex', 'codebuddy'] as const)(
+    'offers only the base DeepSeek model and rejects removed selections for %s',
+    (frameworkId) => {
+      const owner = new ProviderRuntimeProjectionOwner()
+      const provider: StoredProvider = {
+        id: 'deepseek',
+        type: 'official',
+        vendorId: 'deepseek',
+        name: 'DeepSeek',
+        fetchedModels: ['deepseek-v4-pro', 'deepseek-v4-pro[1m]']
+      }
+      const before = structuredClone(provider)
+      const framework = getAgentFramework(frameworkId)
+      const catalog = owner.resolveRuntimeModelCatalog(provider, framework)
+      expect(catalog.every(({ effectiveModel }) => !effectiveModel?.includes('[1m]'))).toBe(true)
+      expect(catalog).toContainEqual(
+        expect.objectContaining({
+          effectiveModel: 'deepseek-v4-pro',
+          frameworkCompatible: true,
+          provider: expect.objectContaining({ model: 'deepseek-v4-pro', contextWindow: 1_000_000 })
+        })
+      )
+      expect(() =>
+        owner.resolveRuntimeTarget(
+          provider,
+          { kind: 'configured', requestedModel: 'deepseek-v4-pro[1m]' },
+          framework
+        )
+      ).toThrow(/no longer available/)
+      expect(() =>
+        owner.resolveRuntimeTarget(
+          provider,
+          { kind: 'required', model: 'deepseek-v4-pro[1m]' },
+          framework
+        )
+      ).toThrow(/not available/)
+      expect(provider).toEqual(before)
+    }
+  )
+
+  it.each(['custom', 'claude-shared', 'claude-isolated'] as const)(
+    'preserves manually entered context suffixes for %s providers',
+    (type) => {
+      const owner = new ProviderRuntimeProjectionOwner()
+      const provider: StoredProvider = {
+        id: 'manual',
+        type,
+        name: 'Manual model',
+        model: 'manual-model[1m]'
+      }
+      expect(owner.toProviderView(provider).models).toEqual(['manual-model[1m]'])
+      expect(
+        owner.resolveRuntimeTarget(
+          provider,
+          { kind: 'required', model: 'manual-model[1m]' },
+          getAgentFramework('claude-code')
+        ).provider
+      ).toMatchObject({
+        model: 'manual-model[1m]',
+        contextWindow: type === 'custom' ? 200_000 : 1_000_000
+      })
+    }
+  )
+
   it('projects DeepSeek native Responses traffic to its documented origin', () => {
     const owner = new ProviderRuntimeProjectionOwner()
     const provider: StoredProvider = {
@@ -59,6 +123,54 @@ describe('ProviderRuntimeProjectionOwner', () => {
     })
   })
 
+  it.each(['claude-code', 'opencode', 'codex'] as const)(
+    'projects new gateway models without replacing saved selections for %s',
+    (frameworkId) => {
+      const owner = new ProviderRuntimeProjectionOwner()
+      const framework = getAgentFramework(frameworkId)
+      for (const vendorId of ['openrouter', 'requesty'] as const) {
+        const provider: StoredProvider = {
+          id: vendorId,
+          type: 'official',
+          vendorId,
+          name: vendorId
+        }
+        const before = structuredClone(provider)
+        const model = 'openai/gpt-6.1-sol'
+        expect(owner.toProviderView(provider).models).toContain(model)
+        expect(
+          owner.resolveRuntimeTarget(provider, { kind: 'required', model }, framework)
+        ).toMatchObject({
+          effectiveModel: model,
+          apiEndpoints: ['anthropic', 'openai'],
+          frameworkCompatible: true,
+          reasoningEffortProfile: {
+            supported: true,
+            slots:
+              vendorId === 'openrouter'
+                ? ['low', 'medium', 'high', 'xhigh', 'max']
+                : ['low', 'medium', 'high', 'xhigh', 'xhigh']
+          },
+          provider: { model, contextWindow: 1_050_000, supportsImageInput: true }
+        })
+        expect(
+          owner.resolveRuntimeTarget(
+            provider,
+            {
+              kind: 'configured',
+              requestedModel: 'openai/gpt-5.5'
+            },
+            framework
+          ).effectiveModel
+        ).toBe('openai/gpt-5.5')
+        expect(
+          owner.resolveRuntimeTarget(provider, { kind: 'configured' }, framework).effectiveModel
+        ).toBe(vendorId === 'openrouter' ? 'anthropic/claude-opus-5' : 'anthropic/claude-sonnet-5')
+        expect(provider).toEqual(before)
+      }
+    }
+  )
+
   it('exposes current OpenAI models to API and Codex subscription providers', () => {
     const owner = new ProviderRuntimeProjectionOwner()
 
@@ -82,39 +194,101 @@ describe('ProviderRuntimeProjectionOwner', () => {
     )
   })
 
-  it('resolves Claude Opus 5.5 for API and pinned subscription targets', () => {
-    const owner = new ProviderRuntimeProjectionOwner()
-    const framework = getAgentFramework('claude-code')
-    const providers: StoredProvider[] = [
-      {
-        id: 'anthropic',
-        type: 'official',
-        vendorId: 'anthropic',
-        name: 'Anthropic'
-      },
-      {
-        id: 'builtin-claude-isolated',
-        type: 'claude-isolated',
-        name: 'Claude subscription',
-        model: 'claude-opus-5-5'
+  it.each(['official', 'codex-isolated', 'codex-shared'] as const)(
+    'offers GPT-6.1 Sol only as an explicit selection for %s',
+    (type) => {
+      const owner = new ProviderRuntimeProjectionOwner()
+      const provider: StoredProvider = {
+        id: type,
+        type,
+        ...(type === 'official' ? { vendorId: 'openai' as const } : {}),
+        name: 'OpenAI',
+        apiEndpoints: ['responses']
       }
-    ]
+      const model = 'gpt-6.1-sol'
 
-    for (const provider of providers) {
-      const target = owner.resolveRuntimeTarget(
-        provider,
-        { kind: 'required', model: 'claude-opus-5-5' },
-        framework
+      expect(owner.toProviderView(provider).models).toContain(model)
+      expect(owner.resolveActiveModel(provider)).toBe(
+        type === 'official' ? 'gpt-5.6-sol' : undefined
       )
+      expect(owner.resolveActiveModel(provider, 'gpt-6-sol')).toBe('gpt-6-sol')
 
-      expect(target.effectiveModel).toBe('claude-opus-5-5')
-      expect(target.provider).toMatchObject({
-        model: 'claude-opus-5-5',
-        contextWindow: 1_000_000,
-        supportsImageInput: true
-      })
+      for (const frameworkId of ['codex', 'opencode', 'claude-code'] as const) {
+        const target = owner.resolveRuntimeTarget(
+          provider,
+          { kind: 'required', model },
+          getAgentFramework(frameworkId)
+        )
+        expect(target).toMatchObject({
+          effectiveModel: model,
+          apiEndpoints: ['responses'],
+          frameworkCompatible: frameworkId === 'codex',
+          needsChatResponsesBridge: false,
+          needsNativeResponsesCompatibility: false,
+          reasoningEffortProfile: {
+            supported: true,
+            slots: ['low', 'medium', 'high', 'xhigh', 'max']
+          },
+          provider: { model, supportsImageInput: true }
+        })
+        if (type === 'official') expect(target.provider.contextWindow).toBe(1_050_000)
+      }
     }
-  })
+  )
+
+  it.each(['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'])(
+    'resolves %s for API and pinned subscription targets across frameworks',
+    (model) => {
+      const owner = new ProviderRuntimeProjectionOwner()
+      const providers: StoredProvider[] = [
+        {
+          id: 'anthropic',
+          type: 'official',
+          vendorId: 'anthropic',
+          name: 'Anthropic'
+        },
+        {
+          id: 'builtin-claude-isolated',
+          type: 'claude-isolated',
+          name: 'Claude subscription',
+          model
+        },
+        {
+          id: 'builtin-claude-shared',
+          type: 'claude-shared',
+          name: 'Shared Claude subscription',
+          model
+        }
+      ]
+
+      for (const provider of providers) {
+        const before = structuredClone(provider)
+        for (const frameworkId of ['claude-code', 'opencode', 'codex'] as const) {
+          const target = owner.resolveRuntimeTarget(
+            provider,
+            { kind: 'required', model },
+            getAgentFramework(frameworkId)
+          )
+
+          expect(target).toMatchObject({
+            effectiveModel: model,
+            apiEndpoints: ['anthropic'],
+            frameworkCompatible:
+              frameworkId === 'claude-code' ||
+              (provider.type === 'official' && frameworkId === 'opencode'),
+            needsChatResponsesBridge: false,
+            needsNativeResponsesCompatibility: false,
+            reasoningEffortProfile: {
+              supported: true,
+              slots: ['low', 'medium', 'high', 'xhigh', 'max']
+            },
+            provider: { model, contextWindow: 1_000_000, supportsImageInput: true }
+          })
+        }
+        expect(provider).toEqual(before)
+      }
+    }
+  )
 
   it.each(['claude-code', 'opencode', 'codex'] as const)(
     'resolves an omitted model from the changing provider default for %s',
@@ -273,11 +447,7 @@ describe('ProviderRuntimeProjectionOwner', () => {
         name: 'DeepSeek',
         fetchedModels: ['deepseek-flash', 'deepseek-v4-pro']
       }
-      for (const model of [
-        'deepseek-v4-pro[1m]',
-        'deepseek-v4-flash',
-        'deepseek-v4-flash-vision-exp'
-      ]) {
+      for (const model of ['deepseek-v4-flash', 'deepseek-v4-flash-vision-exp']) {
         expect(owner.toProviderView(provider).models).toContain(model)
         expect(
           owner.resolveRuntimeTarget(
@@ -644,6 +814,30 @@ describe('ProviderRuntimeProjectionOwner', () => {
       frameworkCompatible: true,
       needsChatResponsesBridge: false,
       needsNativeResponsesCompatibility: false
+    })
+  })
+
+  it.each([
+    ['gpt-6.1-sol', 'responses', 'codex'],
+    ['gpt-6-sol', 'responses', 'codex'],
+    ['gpt-6-luna', 'responses', 'codex'],
+    ['claude-opus-5-5', 'anthropic', 'claude-code'],
+    ['claude-sonnet-5-5', 'anthropic', 'claude-code'],
+    ['qwen3.8-max', 'openai', 'codex'],
+    ['deepseek-v4-flash-vision-exp', 'openai', 'codex']
+  ] as const)('routes the new Zen model %s through %s', (model, endpoint, framework) => {
+    const owner = new ProviderRuntimeProjectionOwner()
+    const target = owner.resolveRuntimeTarget(
+      { id: 'zen', type: 'official', vendorId: 'opencode', name: 'Zen' },
+      { kind: 'required', model },
+      getAgentFramework(framework)
+    )
+    expect(target).toMatchObject({
+      effectiveModel: model,
+      apiEndpoints: [endpoint],
+      frameworkCompatible: true,
+      needsChatResponsesBridge: endpoint === 'openai',
+      needsNativeResponsesCompatibility: endpoint === 'responses'
     })
   })
 

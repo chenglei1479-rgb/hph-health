@@ -14,7 +14,15 @@ export type UpdateManifest = {
 }
 
 export type UpdateState =
-  'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'ready' | 'applying' | 'error'
+  | 'disabled'
+  | 'idle'
+  | 'checking'
+  | 'up-to-date'
+  | 'available'
+  | 'downloading'
+  | 'ready'
+  | 'applying'
+  | 'error'
 
 export type UpdateBlocker = 'agent' | 'delegated' | 'notebook' | 'reviewer' | 'settings-install'
 
@@ -94,7 +102,7 @@ export const platformDownloadKey = (platform: NodeJS.Platform, arch: string): st
     if (arch === 'x64') return 'mac-x64'
   }
   if (platform === 'win32' && arch === 'x64') return 'win-x64'
-  if (platform === 'linux' && arch === 'x64') return 'linux-x64-deb'
+  if (platform === 'linux' && (arch === 'x64' || arch === 'arm64')) return `linux-${arch}-deb`
   return null
 }
 
@@ -105,8 +113,8 @@ export const selectDownload = (
 ): PlatformDownload | null => {
   const key = platformDownloadKey(platform, arch)
   if (key && manifest.downloads[key]) return manifest.downloads[key]
-  if (platform === 'linux' && arch === 'x64' && manifest.downloads['linux-x64-appimage']) {
-    return manifest.downloads['linux-x64-appimage']
+  if (platform === 'linux' && key) {
+    return manifest.downloads[`linux-${arch}-appimage`] ?? null
   }
   return null
 }
@@ -127,4 +135,4 @@ export const formatBytes = (bytes: number): string => {
 
 // Actionable installation prerequisite, shared by both update strategies and renderer surfaces.
 export const UPDATE_INSTALLATION_REQUIRED =
-  'MedResearch Agent is running on a read-only disk. Drag it to Applications, quit this copy, and reopen it from Applications before updating.'
+  'DRA is running on a read-only disk. Drag it to Applications, quit this copy, and reopen it from Applications before updating.'

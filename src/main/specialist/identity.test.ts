@@ -38,9 +38,9 @@ describe('buildSpecialistIdentityAppend', () => {
     expect(text).toContain('You are RNA-seq Reviewer. Focus on batch effects and QC.')
   })
 
-  it('states that it specializes the common MedResearch Agent identity', () => {
+  it('states that it specializes the common DRA identity', () => {
     const text = buildSpecialistIdentityAppend(makeProfile())
-    expect(text).toContain('specializes the MedResearch Agent')
+    expect(text).toContain('specializes the DRA')
   })
 
   it('closes the identity boundary and preserves app-owned constraints', () => {

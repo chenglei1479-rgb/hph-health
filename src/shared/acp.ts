@@ -163,6 +163,10 @@ export type AcpHandoffFailure = {
 // both sides at once.
 export const ACP_PROMPT_FAILED_EVENT_TITLE = 'Prompt failed'
 
+// Live, non-terminal notice that Artifact cleanup failed after the turn settled. It never rewrites
+// the Turn Outcome and is not an Artifact publication failure.
+export const ACP_ARTIFACT_CLEANUP_FAILED_EVENT_TITLE = 'Artifact cleanup failed'
+
 // Main owns restored permission authority. These lifecycle events let renderer projections follow
 // durable settlement without making the renderer part of the persistence protocol.
 export const ACP_RESTORED_PERMISSION_REARMED_EVENT_TITLE =
@@ -209,9 +213,9 @@ export type AcpContextUsageBreakdown = {
 // Current agent-context usage projected onto its logical app session. `used` remains the latest Agent
 // model-input total once one exists; before the first Agent report it is the local preflight estimate.
 // During later preflight updates, `agentUsed` preserves that latest authoritative reading while the
-// independent breakdown keeps changing. Output/completion and cache-write tokens are excluded. `size`
-// is omitted until the selected model window is known, then remains bound to that same agent-context
-// generation. Both expire when that context disconnects or is replaced. Monetary cost is deliberately
+// independent breakdown keeps changing. Cache reads and writes are input, counted once; output is
+// excluded. `size` is omitted until the selected model window is known, then remains bound to that
+// same agent-context generation. Both expire when that context disconnects or is replaced. Monetary cost is deliberately
 // excluded.
 export type AcpContextUsage = {
   used: number
@@ -301,7 +305,8 @@ export const sanitizeAcpContextUsage = (value: unknown): AcpContextUsage | undef
   return sanitized
 }
 
-// Provider-reported totals for one completed prompt turn. `cacheTokens` stays as the comparable
+// Provider-reported totals for one completed prompt turn. Input excludes the cache categories;
+// inputTokens + cacheTokens is the full input. `cacheTokens` stays as the comparable
 // provider-neutral total. Read/write details are present as a pair only when the adapter reports both
 // categories separately.
 export type AcpTurnTokenUsage = {
@@ -539,6 +544,23 @@ type AcpRuntimeEventBase = {
   // from the ACP layer itself (our runtime) and stays reportable unless it is one of our own crafted,
   // actionable reminder messages.
   providerError?: boolean
+  // Main-owned terminal classification, independent of provider error wording.
+  interruptionCause?: 'app-restart' | 'connection-lost' | 'terminal-commit-failed'
+  // Live-only release after bounded terminal persistence retries. Never written to Session JSON.
+  terminalCommitFailure?: 'missing-record' | 'storage'
+  terminalCommitError?: string
+  promptExecutionId?: string
+  terminalScope?: {
+    projectId: string
+    executionId: string
+    startedAt: number
+    agentFrameId: string
+    messageBranchId: string
+    runtimeSegmentId: string
+  }
+  errorReportable?: boolean
+  // A post-terminal Artifact failure still belongs to the original prompt.
+  artifactFailure?: true
   // Main has durably committed this event's Message/Artifact projection before publication.
   publicationOwner?: 'main'
   sessionId?: string
@@ -556,6 +578,8 @@ type AcpRuntimeEventBase = {
   // App-owned one-shot identity for exact Notebook activity/Run correlation. Provider payloads
   // cannot supply it; the permission and authenticated RPC owners issue and consume it.
   executionInvocationId?: string
+  // Set only by the main-process permission owner, never by provider metadata.
+  appOwned?: true
   providerToolName?: string
   toolKind?: ToolKind
   toolContent?: ToolCallContent[]
@@ -729,7 +753,7 @@ export type AcpPermissionRequest = {
   }>
 }
 
-// An MedResearch Agent-owned tool grant. `categoryKey` is the broker's opaque matcher key;
+// An DRA-owned tool grant. `categoryKey` is the broker's opaque matcher key;
 // `label`/`kind` are the display projection and `scope` reserves future project/global ownership.
 export type AcpPermissionGrant = {
   categoryKey: string
@@ -764,7 +788,7 @@ export type AcpRuntimeState = {
   // Optional for rolling renderer/main reload compatibility; current runtimes always publish it.
   pendingElicitations?: PendingElicitationRequest[]
   permissionProfiles: Record<string, SessionPermissionProfileState>
-  // MedResearch Agent-owned grants by app conversation, so the UI can show and revoke them.
+  // DRA-owned grants by app conversation, so the UI can show and revoke them.
   permissionGrants: Record<string, AcpPermissionGrant[]>
   // Latest context-window usage for each logical app session's current agent-context generation.
   // Missing means unknown or invalidated; framework switches and reconnects clear the old generation.

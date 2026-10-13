@@ -485,7 +485,7 @@ const hookKeys = [
   'sendPreparationInFlightSessionIds',
   'saveAsSkillInFlightSessionIds',
   'nativeContextCompactionSessionIds',
-  'subscribeToSubagentRuntimeUpdates',
+  'subagentTranscripts',
   'compactContext',
   'ensureSessionReady',
   'saveAsSkill',
@@ -501,6 +501,7 @@ const hookKeys = [
   'resolveSessionRuntimeSelection'
 ] as const
 const sendIntentKeys = [
+  'onPreparationRejected',
   'expectedFrameworkId',
   'sessionId',
   'messageId',
@@ -523,6 +524,7 @@ const sendIntentKeys = [
   'pdfReadingPositionSource',
   'pendingPdfContextAttachmentIds',
   'pendingPdfContextVersions',
+  'discussionFocus',
   'parts',
   'specialistId',
   'enabledComputeHosts',
@@ -567,7 +569,7 @@ const privateOwnerBoundaryViolations = (path: string, source?: string): string[]
 }
 describe('workspace runtime architecture', () => {
   const facadeFile = sourceFileFor(facadePath)
-  it('keeps the established runtime interface plus readiness and the child-update selector', () => {
+  it('keeps the established runtime interface plus readiness and the owned child transcripts', () => {
     const runtimeType = typeLiteralAlias(facadeFile, 'WorkspaceAgentRuntime')
     const owner = variableArrow(facadeFile, 'useOwnedWorkspaceAgentRuntime')
     const consumer = variableArrow(facadeFile, 'useWorkspaceAgentRuntime')
@@ -627,8 +629,7 @@ describe('workspace runtime architecture', () => {
       'processWorkspaceRuntimeEvents',
       'syncWorkspaceElicitationState',
       'syncWorkspacePermissionState',
-      'syncWorkspaceContextUsage',
-      'markRunningSessionsDisconnectedOnDrop'
+      'syncWorkspaceContextUsage'
     ]) {
       expect(
         effects.some((body) => body.includes(responsibility)),
@@ -866,6 +867,7 @@ describe('workspace runtime architecture', () => {
       'src/renderer/src/lib/acp/workspace-runtime-selection-owner.ts',
       'src/renderer/src/lib/acp/workspace-runtime-save-as-skill-owner.ts',
       'src/renderer/src/lib/acp/workspace-subagent-runtime-presentation.ts',
+      'src/renderer/src/lib/acp/workspace-subagent-runtime-presentation.test.ts',
       'src/renderer/src/lib/acp/useWorkspaceAgentRuntime.architecture.test.ts',
       'src/renderer/src/lib/acp/useWorkspaceAgentRuntime.characterization.test.tsx',
       'src/renderer/src/lib/acp/useWorkspaceAgentRuntime.test.ts',
@@ -877,7 +879,14 @@ describe('workspace runtime architecture', () => {
       'src/renderer/src/lib/acp/workspace-runtime-session-memory.test.ts',
       'src/renderer/src/lib/acp/runtime-observer.test.ts',
       'src/renderer/src/lib/acp/runtime-writer-takeover.test.ts',
-      'src/renderer/src/lib/acp/workspace-runtime-interrupted-recovery.test.ts'
+      'src/renderer/src/lib/acp/workspace-runtime-interrupted-recovery.test.ts',
+      'src/renderer/src/lib/acp/workspace-operation-error.ts',
+      'src/renderer/src/lib/acp/workspace-prompt-admission.test.ts',
+      'src/renderer/src/lib/acp/workspace-prompt-preparation.test.ts',
+      'src/renderer/src/lib/acp/workspace-prompt-preparation.ts',
+      'src/renderer/src/lib/acp/workspace-prompt-rollback-failure.test.ts',
+      'src/renderer/src/lib/acp/workspace-runtime-overflow-recovery-failures.test.ts',
+      'src/renderer/src/lib/handled-failure-diagnostics.ts'
     ])
     expect(workspaceRuntime.interfacePaths).toEqual([
       'src/renderer/src/lib/acp/useWorkspaceAgentRuntime.ts',

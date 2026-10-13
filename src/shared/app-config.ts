@@ -6,11 +6,15 @@ const GITHUB_OWNER = 'chenglei1479-rgb'
 const GITHUB_REPO = 'hph-health'
 const GITHUB_REPO_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
 const PRODUCT_RELEASES_URL = `${GITHUB_REPO_URL}/releases`
+const CDN_BASE_URL = 'https://statics.aipoch.com/open-science'
 
 export const APP = {
-  name: 'MedResearch Agent',
+  name: 'DRA',
+  brand: { name: 'DRA', taglineLines: ['AI Research', 'Infrastructure', 'for Medicine'] },
+  tagline: 'AI Research Infrastructure for Medicine',
   githubOwner: GITHUB_OWNER,
   githubRepo: GITHUB_REPO,
+  cdnBaseUrl: CDN_BASE_URL,
   links: {
     website: GITHUB_REPO_URL,
     docs: `${GITHUB_REPO_URL}#readme`,
@@ -25,6 +29,7 @@ export const APP = {
   },
   copyright: '© 2026 AIPOCH. All rights reserved.',
   update: {
+    enabled: true,
     manifestUrl: 'https://statics.aipoch.com/medical-research-agent/app/stable/version.json',
     downloadPage: PRODUCT_RELEASES_URL
   }

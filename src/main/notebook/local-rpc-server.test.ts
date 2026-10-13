@@ -4032,7 +4032,10 @@ describe('notebook local RPC server', () => {
     }
   })
 
-  it('opens workflow Artifact Version inputs from an attachment-free active root turn', async () => {
+  it.each([
+    ['artifactVersionInputs', 'panel-a-v1'],
+    ['inputVersionIds', 'cohort-upload-v1']
+  ] as const)('opens %s from an attachment-free active root turn', async (field, versionId) => {
     const registerTurn = vi.fn()
     const openRun = vi.fn(
       async () =>
@@ -4080,7 +4083,7 @@ describe('notebook local RPC server', () => {
               sessionId: 'session-1',
               workspaceCwd: '/workspace',
               code: 'print("ok")',
-              artifactVersionInputs: ['panel-a-v1']
+              [field]: [versionId]
             }
           })
         },
@@ -4092,7 +4095,7 @@ describe('notebook local RPC server', () => {
         projectId: 'project-1',
         appSessionId: 'session-1',
         promptMessageId: 'message-user-1',
-        artifactVersionInputs: ['panel-a-v1']
+        [field]: [versionId]
       })
       expect(registerTurn).not.toHaveBeenCalled()
     } finally {
@@ -4271,8 +4274,7 @@ describe('notebook local RPC server', () => {
       const cleared = await execute()
       expect(cleared.status).toBe(500)
       await expect(cleared.json()).resolves.toEqual({
-        error:
-          'artifactVersionInputs requires an active Artifact provenance context and input registry.'
+        error: 'Version inputs require an active Project provenance context and input registry.'
       })
     } finally {
       connection.release?.()

@@ -216,12 +216,14 @@ const NotebookRunCell = ({
   run,
   index,
   staleness,
-  causedByRunIndex
+  causedByRunIndex,
+  allowFolderAccess
 }: {
   run: NotebookRunRecord
   index: number
   staleness?: NotebookRunStaleness
   causedByRunIndex?: number
+  allowFolderAccess?: boolean
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const isProblem = isProblemRunStatus(run.status)
@@ -275,7 +277,7 @@ const NotebookRunCell = ({
         language={kind === 'repl' ? 'javascript' : kind}
         highlightLine={errorLine}
       />
-      <NotebookRunOutputs run={run} />
+      <NotebookRunOutputs run={run} allowFolderAccess={allowFolderAccess} />
       <NotebookRunEvidence run={run} />
     </div>
   )
@@ -1103,6 +1105,9 @@ const NotebookPreview = ({ item }: NotebookPreviewProps): React.JSX.Element => {
             <div key={run.runId} data-run-id={run.runId}>
               <NotebookRunCell
                 run={run}
+                allowFolderAccess={Boolean(
+                  session && session.contentLoaded !== false && !session.packageOrigin
+                )}
                 index={index}
                 staleness={staleness}
                 causedByRunIndex={
@@ -1393,7 +1398,7 @@ const NotebookPreview = ({ item }: NotebookPreviewProps): React.JSX.Element => {
                     onSelectLanguage('r')
                   }}
                   className={cn(
-                    'flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors',
+                    'flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors focus-visible:keyboard-focus focus-visible:-outline-offset-2',
                     effectiveActiveKind === 'r'
                       ? 'bg-bg-300 text-text-000'
                       : 'text-text-300 hover:bg-bg-200 hover:text-text-100'
@@ -1411,7 +1416,7 @@ const NotebookPreview = ({ item }: NotebookPreviewProps): React.JSX.Element => {
                     setActiveKind(kind)
                   }}
                   className={cn(
-                    'flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors',
+                    'flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors focus-visible:keyboard-focus focus-visible:-outline-offset-2',
                     effectiveActiveKind === kind
                       ? 'bg-bg-300 text-text-000'
                       : 'text-text-300 hover:bg-bg-200 hover:text-text-100'
@@ -1510,7 +1515,7 @@ const NotebookPreview = ({ item }: NotebookPreviewProps): React.JSX.Element => {
                 data-testid={`env-option-${envName}`}
                 onClick={() => setActiveEnv(envName)}
                 className={cn(
-                  'flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] transition-colors',
+                  'flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] transition-colors focus-visible:keyboard-focus focus-visible:-outline-offset-2',
                   effectiveActiveEnv === envName
                     ? 'bg-bg-200 text-text-100'
                     : 'text-text-300 hover:bg-bg-200 hover:text-text-100'

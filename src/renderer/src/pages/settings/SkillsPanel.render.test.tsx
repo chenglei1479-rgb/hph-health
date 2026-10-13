@@ -353,7 +353,7 @@ describe('SkillsPanel (list view)', () => {
     expect(filters?.querySelector('[aria-label="Filter Skills by agent"]')).not.toBeNull()
     expect(filters?.querySelector('[aria-label="Filter by Tag"]')).not.toBeNull()
     const search = filters?.querySelector<HTMLInputElement>('[aria-label="Search skills"]')
-    expect(search?.parentElement?.className).toContain('min-w-48')
+    expect(search?.parentElement?.className).toContain('basis-full')
     expect(filters?.contains(manage ?? null)).toBe(false)
     expect(filters?.contains(addSkill ?? null)).toBe(false)
     expect(manage).toBeUndefined()
@@ -379,7 +379,7 @@ describe('SkillsPanel (list view)', () => {
     const importedGroup = document.body.querySelector<HTMLElement>(
       '[data-slot="skills-source-group"][data-source="imported"]'
     )
-    expect(importedGroup?.textContent).toContain('Skills you imported into MedResearch Agent.')
+    expect(importedGroup?.textContent).toContain('Skills you imported into DRA.')
     expect(importedGroup?.textContent).toContain('No imported skills yet.')
 
     const importButton = Array.from(
@@ -434,7 +434,7 @@ describe('SkillsPanel (list view)', () => {
 
     expect(document.body.textContent).toContain('Conversation imports')
     expect(document.body.textContent).toContain(
-      'Choose what conversations can import into MedResearch Agent.'
+      'Choose what conversations can import into DRA.'
     )
     expect(document.body.textContent).toContain('Skill packages')
     expect(document.body.textContent).toContain('ask before importing them')
@@ -546,7 +546,7 @@ describe('SkillsPanel (list view)', () => {
     })
 
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
-      'MedResearch Agent could not load Skills.'
+      'DRA could not load Skills.'
     )
     const retry = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
       (button) => button.textContent?.trim() === 'Retry'
@@ -1238,7 +1238,7 @@ describe('SkillsPanel (sub-views)', () => {
     )
 
     const publish = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Publish'
+      (button) => button.textContent?.trim() === 'Create skill'
     )
     act(() => publish?.click())
 
@@ -1293,7 +1293,7 @@ describe('SkillsPanel (sub-views)', () => {
     setValue('Skill body', body)
 
     const publish = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Publish'
+      (button) => button.textContent?.trim() === 'Create skill'
     )
     act(() => publish?.click())
 
@@ -1339,7 +1339,7 @@ describe('SkillsPanel (sub-views)', () => {
     setValue('Skill body', '# Body')
 
     const publish = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Publish'
+      (button) => button.textContent?.trim() === 'Create skill'
     )
     act(() => publish?.click())
 
@@ -1421,7 +1421,7 @@ describe('SkillsPanel (sub-views)', () => {
       })
 
       const publish = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
-        (button) => button.textContent?.trim() === 'Publish'
+        (button) => button.textContent?.trim() === 'Create skill'
       )
       expect(pending).toHaveLength(1)
       expect(input?.disabled).toBe(true)
@@ -1459,7 +1459,7 @@ describe('SkillsPanel (sub-views)', () => {
     setValue('Skill body', '# Body')
 
     const publish = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Publish'
+      (button) => button.textContent?.trim() === 'Create skill'
     )
     await act(async () => {
       publish?.click()
@@ -1567,7 +1567,7 @@ describe('SkillsPanel (sub-views)', () => {
     setValue('Skill body', '# Body')
 
     const publish = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Publish'
+      (button) => button.textContent?.trim() === 'Create skill'
     )
     expect(document.body.textContent).toContain(
       'Use up to 64 lowercase letters, numbers, and single hyphens.'
@@ -1595,7 +1595,7 @@ describe('SkillsPanel (sub-views)', () => {
       document.body.querySelector<HTMLTextAreaElement>('[aria-label="Skill body"]')?.value
     ).toBe(pasted)
     const publish = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Publish'
+      (button) => button.textContent?.trim() === 'Create skill'
     )
     act(() => publish?.click())
 

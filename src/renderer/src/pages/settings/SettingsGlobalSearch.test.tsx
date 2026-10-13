@@ -1,3 +1,4 @@
+import { i18next } from '@/i18n'
 // @vitest-environment jsdom
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -41,14 +42,19 @@ const renderSearch = (onNavigate = vi.fn()): void => {
   act(() => {
     root.render(
       <div role="dialog">
-        <SettingsGlobalSearch panels={PANELS} onNavigate={onNavigate} />
+        <SettingsGlobalSearch
+          panels={PANELS}
+          onNavigate={(panel, onNavigated) => {
+            onNavigate(panel)
+            onNavigated()
+          }}
+        />
       </div>
     )
   })
 }
 
-const input = (): HTMLInputElement =>
-  document.body.querySelector<HTMLInputElement>('[aria-label="Search settings"]')!
+const input = (): HTMLInputElement => container.querySelector<HTMLInputElement>('input')!
 
 const typeQuery = (value: string): void => {
   const field = input()
@@ -84,6 +90,23 @@ const mountPanelRoot = (panel: string, html: string): void => {
 }
 
 describe('SettingsGlobalSearch', () => {
+  it('finds appearance and update information using Chinese labels', async () => {
+    await act(async () => {
+      await i18next.changeLanguage('zh-Hans')
+    })
+    try {
+      renderSearch()
+      for (const query of ['主题', '深色', '更新']) {
+        typeQuery(query)
+        expect(options().length, query).toBeGreaterThan(0)
+      }
+    } finally {
+      await act(async () => {
+        await i18next.changeLanguage('en')
+      })
+    }
+  })
+
   it('matches by label, keywords, and panel name, and reports no matches', () => {
     renderSearch()
 
@@ -126,6 +149,45 @@ describe('SettingsGlobalSearch', () => {
     expect(input().value).toBe('')
     expect(document.body.querySelector('[role="listbox"]')).toBeNull()
   })
+
+  it('scrolls only the list to reveal a keyboard-selected option', () => {
+    renderSearch()
+    typeQuery('network')
+    const list = document.body.querySelector<HTMLElement>('[role="listbox"]')!
+    vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({ top: 100, bottom: 200 } as DOMRect)
+    vi.spyOn(options()[1], 'getBoundingClientRect').mockReturnValue({
+      top: 210,
+      bottom: 240
+    } as DOMRect)
+    pressKey('ArrowDown')
+    expect(list.scrollTop).toBe(40)
+    expect(document.activeElement).toBe(input())
+    expect(scrollIntoViewMock).not.toHaveBeenCalled()
+  })
+
+  it.each([{ isComposing: true }, { keyCode: 229 }])(
+    'leaves composition keystrokes to the input method: %j',
+    (composition) => {
+      const onNavigate = vi.fn()
+      renderSearch(onNavigate)
+      typeQuery('language')
+      for (const key of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape']) {
+        const event = new KeyboardEvent('keydown', {
+          key,
+          bubbles: true,
+          cancelable: true,
+          ...composition
+        })
+        act(() => input().dispatchEvent(event))
+        expect(event.defaultPrevented).toBe(false)
+      }
+      expect(onNavigate).not.toHaveBeenCalled()
+      expect(input().value).toBe('language')
+      expect(input().getAttribute('aria-expanded')).toBe('true')
+      pressKey('Enter')
+      expect(onNavigate).toHaveBeenCalledWith('general')
+    }
+  )
 
   it('keeps focus on the input: options are not tabbable', () => {
     renderSearch()

@@ -1,3 +1,17 @@
+import type {
+  ListPdfAnnotationsRequest,
+  PdfAnnotationListResult
+} from '../../shared/pdf-annotations'
+import {
+  capturePackagePdfNotes,
+  filterPackagePdfNotes,
+  namespacePackagePdfNotes,
+  readPackagePdfSource,
+  retainInheritedPdfNotes,
+  type PackagePdfNotes
+} from './pdf-notes'
+import type { PackageFileSelection } from '../../shared/session-package'
+import { replayAnnotationTarget, splitReplayReferenceText } from '../../shared/replay-reference'
 import {
   DEFAULT_PERMISSION_PROFILE,
   type PermissionProfileId
@@ -89,6 +103,7 @@ import {
   findSensitivePackageText,
   isPrivatePackageValue,
   PackageSensitiveContentError,
+  PackageTextScanner,
   type PackageSensitiveContentSource
 } from './sensitive-content'
 import { SessionRepository, loadSessionMutationAuthority } from '../session-persistence/repository'
@@ -143,7 +158,7 @@ const importJournalSchema = sessionPackageRequestSchema
 type ImportJournal = z.infer<typeof importJournalSchema>
 
 const PACKAGE_README =
-  '# MedResearch Agent Session package\n\nMedResearch Agent can inspect and import this archive as read-only research history. Import does not execute code or restore account credentials. Checksums verify bytes, not scientific claims or the identity of the sender.\n'
+  '# DRA Session package\n\nDRA can inspect and import this archive as read-only research history. Import does not execute code or restore account credentials. Checksums verify bytes, not scientific claims or the identity of the sender.\n'
 
 type PackageOptions = {
   storageRoot: string
@@ -156,12 +171,14 @@ type PackageOptions = {
 }
 
 type PackageExportOptions = {
+  // Per-attempt policy; the desktop owner requires explicit acknowledgement of a failed export.
+  allowSensitiveContent?: boolean
   selectFiles?: (
     files: PackageSelectableFile[],
     signal: AbortSignal,
     summary: PackageSelectionSummary,
     title: string
-  ) => Promise<readonly string[]>
+  ) => Promise<readonly string[] | PackageFileSelection>
   signal?: AbortSignal
   onProgress?: (progress: PackageProgress) => void
 }
@@ -171,12 +188,51 @@ type PackageSnapshotOptions = PackageExportOptions & {
   consumeSnapshot?: (directory: string) => Promise<void>
 }
 
+// Session links refer to local snapshots, so portable history retains their readable labels only.
+const portableMessage = <T extends PersistedChatSession['messages'][number]>(message: T): T => {
+  const clean = (text: string): string =>
+    splitReplayReferenceText(text)
+      .map((part) =>
+        part.kind === 'text' ? part.text : `${part.label} (local Session link omitted)`
+      )
+      .join('')
+  const annotations = message.annotations?.filter(
+    (annotation) => !replayAnnotationTarget(annotation)
+  )
+  const quotes =
+    message.annotations
+      ?.filter((annotation) => replayAnnotationTarget(annotation))
+      .map((annotation) => (annotation.kind === 'text' ? annotation.quote : ''))
+      .filter(Boolean) ?? []
+  return {
+    ...message,
+    content: [clean(message.content), ...quotes].filter(Boolean).join('\n\n'),
+    annotations,
+    parts: message.parts
+      ? [
+          ...message.parts.map((part) =>
+            part.type === 'text' ? { ...part, text: clean(part.text) } : part
+          ),
+          ...(quotes.length ? [{ type: 'text' as const, text: `\n\n${quotes.join('\n\n')}` }] : [])
+        ]
+      : undefined
+  }
+}
+
 // Strip only known private or auxiliary runtime metadata. Delivered Side Chat relays already live
 // in the main conversation graph and remain exportable; the auxiliary transcripts and queue do not.
 // A similarly named key inside research evidence must still be inspected and rejected when
 // sensitive, never silently removed from the evidence.
 const withoutPrivateAuthority = (session: PersistedChatSession): PersistedChatSession => ({
   ...session,
+  messages: session.messages.map(portableMessage),
+  conversationGraph: session.conversationGraph
+    ? {
+        ...session.conversationGraph,
+        messages: session.conversationGraph.messages.map(portableMessage)
+      }
+    : undefined,
+  promptPreparation: undefined,
   providerSessionId: undefined,
   providerContinuityToken: undefined,
   runtimeContext: session.runtimeContext
@@ -185,7 +241,9 @@ const withoutPrivateAuthority = (session: PersistedChatSession): PersistedChatSe
         permission: undefined,
         sideChat: undefined,
         sideChats: undefined,
-        sideChatRelays: undefined
+        sideChatRelays: undefined,
+        // Local reading links are not part of a portable Session package.
+        sessionContext: undefined
       }
     : undefined
 })
@@ -199,14 +257,16 @@ const requiresPrivateAuthorityRemoval = (envelope: unknown): boolean => {
   const session = hasEnvelopeField ? envelope.session : envelope
   if (!isRecord(session)) return false
   if (
+    Object.hasOwn(session, 'promptPreparation') ||
     Object.hasOwn(session, 'providerSessionId') ||
     Object.hasOwn(session, 'providerContinuityToken')
   )
     return true
+  if (JSON.stringify(session).includes('session-replay:')) return true
   const runtimeContext = session.runtimeContext
   return (
     isRecord(runtimeContext) &&
-    ['permission', 'sideChat', 'sideChats', 'sideChatRelays'].some((key) =>
+    ['permission', 'sideChat', 'sideChats', 'sideChatRelays', 'sessionContext'].some((key) =>
       Object.hasOwn(runtimeContext, key)
     )
   )
@@ -310,30 +370,7 @@ const assertShareableFile = async (
   // by its BOM. PDF is a container even when all its bytes happen to be valid UTF-8.
   // Binary/archived content is not certified free of private information.
   let decoder: TextDecoder | undefined
-  let tail = ''
-  let offset = 0
-  let sensitiveError: PackageSensitiveContentError | undefined
-  const inspect = (decoded: string, complete: boolean): void => {
-    const text = tail + decoded
-    if (!sensitiveError) {
-      const match = findSensitivePackageText(text, complete)
-      if (match)
-        sensitiveError = new PackageSensitiveContentError(
-          `${location} @${offset - tail.length + match.offset}`,
-          match.rule,
-          buildSensitiveContentEvidence(
-            text,
-            match,
-            `${location} @${offset - tail.length + match.offset}`,
-            sourceStorageKey,
-            offset - tail.length
-          ),
-          source
-        )
-    }
-    offset += decoded.length
-    tail = text.slice(-8192)
-  }
+  const scanner = new PackageTextScanner()
   for await (const chunk of createReadStream(path, { highWaterMark: 64 * 1024, signal })) {
     await paceFileIo(chunk.length, signal)
     signal?.throwIfAborted()
@@ -355,7 +392,7 @@ const assertShareableFile = async (
     }
     if (decoded.includes('\0')) return
     // Do not reject a text-like prefix before the remainder has been classified.
-    inspect(decoded, false)
+    scanner.write(decoded)
   }
   signal?.throwIfAborted()
   let final = ''
@@ -364,8 +401,18 @@ const assertShareableFile = async (
   } catch {
     return
   }
-  inspect(final, true)
-  if (sensitiveError) throw sensitiveError
+  scanner.write(final)
+  const finding = scanner.finish()
+  if (finding) {
+    const { text, match, offset } = finding
+    const at = `${location} @${offset + match.offset}`
+    throw new PackageSensitiveContentError(
+      at,
+      match.rule,
+      buildSensitiveContentEvidence(text, match, at, sourceStorageKey, offset),
+      source
+    )
+  }
 }
 
 export class SessionPackageService {
@@ -445,18 +492,23 @@ export class SessionPackageService {
     files: PackageSelectableFile[],
     summary: PackageSelectionSummary,
     title: string
-  ): Promise<readonly string[]> {
+  ): Promise<PackageFileSelection> {
     if (files.length > 10000 || summary.retainedFiles.length > 10000)
       throw new Error('Session package exceeds the file count limit.')
-    const excluded = options.selectFiles
+    const selected = options.selectFiles
       ? await this.waitForUser(() => options.selectFiles!(files, this.signal, summary, title))
       : []
+    const selection: PackageFileSelection =
+      'excludedStorageKeys' in selected
+        ? selected
+        : { excludedStorageKeys: selected, includePdfNotes: false }
+    const excluded = selection.excludedStorageKeys
     const keys = new Set(excluded)
     if (files.some((file) => file.requiredForEvidence && keys.has(file.storageKey)))
       throw new Error(
         'An excluded file also exists in retained research evidence. Include that file to export this Session.'
       )
-    return excluded
+    return selection
   }
 
   async close(): Promise<void> {
@@ -477,7 +529,7 @@ export class SessionPackageService {
       safe.sessionId
     )
     if (loaded.status !== 'found') throw new Error('Session not found or unreadable.')
-    assertSettledHistory(loaded.session)
+    if (!loaded.session.packageOrigin) assertSettledHistory(loaded.session)
     if (this.options.isSessionActive?.(safe.projectId, safe.sessionId))
       throw new Error('The Session is still active.')
   }
@@ -503,9 +555,12 @@ export class SessionPackageService {
       request.sessionId
     )
     if (loaded.status !== 'found') throw new Error('Session not found or unreadable.')
-    const session = loaded.session
-    assertSettledHistory(session)
+    if (!loaded.session.packageOrigin) assertSettledHistory(loaded.session)
+    // Remove local selectors before collecting annotation file dependencies as well.
+    const session = withoutPrivateAuthority(loaded.session)
     if (session.packageOrigin) {
+      if (this.options.isSessionActive?.(request.projectId, request.sessionId))
+        throw new Error('The Session is still active.')
       // Forward the retained source package, never relabel locally derived hashes as original.
       const origin = await this.readOrigin(request)
       const source = join(
@@ -519,7 +574,8 @@ export class SessionPackageService {
       const manifest = await validatePackageDirectory(source, this.signal)
       if (manifest.source.projectId !== origin.sourceManifest.source.projectId)
         throw new Error('Session package source identity mismatch.')
-      if (!options.consumeSnapshot) await assertShareable(manifest, this.signal, 'manifest.json')
+      if (!options.consumeSnapshot && !options.allowSensitiveContent)
+        await assertShareable(manifest, this.signal, 'manifest.json')
       const sourceSessionEnvelope = await readPackageJson(join(source, 'session.json'))
       const sourceSession = await readSession(source)
       const forwardedSession = withoutPrivateAuthority(
@@ -532,7 +588,7 @@ export class SessionPackageService {
             ) as PersistedChatSession)
           : sourceSession
       )
-      if (!options.consumeSnapshot)
+      if (!options.consumeSnapshot && !options.allowSensitiveContent)
         await assertShareable(forwardedSession, this.signal, 'session.json')
       // Inspect the raw envelope so malformed legacy Side Chat data dropped by the Session
       // sanitizer cannot bypass the rewrite and be copied into the forwarded package.
@@ -541,7 +597,8 @@ export class SessionPackageService {
           ? JSON.stringify({ version: 2, session: forwardedSession })
           : undefined
       const records = parseNativeRecords(await readPackageJson(join(source, 'records.json')))
-      if (!options.consumeSnapshot) await assertShareable(records, this.signal, 'records.json')
+      if (!options.consumeSnapshot && !options.allowSensitiveContent)
+        await assertShareable(records, this.signal, 'records.json')
       const alreadyExcluded = validateExcludedFiles(records, manifest.excludedFiles)
       const notebooks = await Promise.all(
         manifest.inventory
@@ -558,31 +615,34 @@ export class SessionPackageService {
       const optionalKeys = new Set(
         [...selectable, ...inheritedExclusions].map((file) => file.storageKey)
       )
-      const excluded = new Set(
-        await this.chooseFiles(
-          options,
-          markRequiredPackageFiles(
-            records,
-            selectable,
-            manifest.inventory.filter(
-              (entry) => !entry.storageKey || !optionalKeys.has(entry.storageKey)
-            )
-          ),
-          {
-            metadataBytes: manifest.inventory
-              .filter((entry) => !entry.storageKey)
-              .reduce((sum, entry) => sum + entry.sizeBytes, 0),
-            retainedFiles: manifest.inventory
-              .filter((entry) => entry.storageKey && !optionalKeys.has(entry.storageKey))
-              .map((entry) => ({
-                storageKey: entry.storageKey!,
-                filename: entry.storageKey!,
-                sizeBytes: entry.sizeBytes
-              }))
-          },
-          session.title
-        )
+      const selection = await this.chooseFiles(
+        options,
+        markRequiredPackageFiles(
+          records,
+          selectable,
+          manifest.inventory.filter(
+            (entry) => !entry.storageKey || !optionalKeys.has(entry.storageKey)
+          )
+        ),
+        {
+          pdfNotesAvailable: !!records.pdfNotes?.length,
+          metadataBytes: manifest.inventory
+            .filter((entry) => !entry.storageKey)
+            .reduce((sum, entry) => sum + entry.sizeBytes, 0),
+          retainedFiles: manifest.inventory
+            .filter((entry) => entry.storageKey && !optionalKeys.has(entry.storageKey))
+            .map((entry) => ({
+              storageKey: entry.storageKey!,
+              filename: entry.storageKey!,
+              sizeBytes: entry.sizeBytes
+            }))
+        },
+        session.title
       )
+      const excluded = new Set(selection.excludedStorageKeys)
+      if (!selection.includePdfNotes && !options.consumeSnapshot) delete records.pdfNotes
+      filterPackagePdfNotes(records, new Set([...excluded, ...alreadyExcluded]))
+      const forwardedRecordsJson = JSON.stringify(records)
       const additional = selectable
         .filter((file) => excluded.has(file.storageKey))
         .map(({ storageKey, filename, sizeBytes }) => ({ storageKey, filename, sizeBytes }))
@@ -603,13 +663,19 @@ export class SessionPackageService {
               (!entry.storageKey || !excluded.has(entry.storageKey))
           )
           .map((entry) =>
-            entry.path === 'session.json' && forwardedSessionJson
+            entry.path === 'records.json'
               ? {
                   ...entry,
-                  sizeBytes: Buffer.byteLength(forwardedSessionJson),
-                  checksum: sha256(forwardedSessionJson)
+                  sizeBytes: Buffer.byteLength(forwardedRecordsJson),
+                  checksum: sha256(forwardedRecordsJson)
                 }
-              : entry
+              : entry.path === 'session.json' && forwardedSessionJson
+                ? {
+                    ...entry,
+                    sizeBytes: Buffer.byteLength(forwardedSessionJson),
+                    checksum: sha256(forwardedSessionJson)
+                  }
+                : entry
           ),
         excludedFiles: [...manifest.excludedFiles, ...additional]
       }
@@ -624,18 +690,25 @@ export class SessionPackageService {
       )
       return withPackageCleanup(
         async () => {
-          await assertPackageCapacity(
-            staging,
-            forwarded.inventory.reduce((sum, entry) => sum + entry.sizeBytes, 0)
-          )
+          const uniqueForwardedBytes = [
+            ...new Map(forwarded.inventory.map((entry) => [entry.path, entry.sizeBytes])).values()
+          ].reduce((sum, size) => sum + size, 0)
+          await assertPackageCapacity(staging, uniqueForwardedBytes)
           await mkdir(join(staging, 'objects'))
+          const copiedPaths = new Set<string>()
           for (const entry of forwarded.inventory) {
             this.signal.throwIfAborted()
+            if (copiedPaths.has(entry.path)) continue
+            copiedPaths.add(entry.path)
+            if (entry.path === 'records.json') {
+              await writeFile(join(staging, entry.path), forwardedRecordsJson)
+              continue
+            }
             if (entry.path === 'session.json' && forwardedSessionJson) {
               await writeFile(join(staging, entry.path), forwardedSessionJson)
               continue
             }
-            if (!options.consumeSnapshot)
+            if (!options.consumeSnapshot && !options.allowSensitiveContent)
               await assertShareableFile(
                 join(source, entry.path),
                 this.signal,
@@ -728,6 +801,13 @@ export class SessionPackageService {
         retainedOrigin.literature,
         retainedOrigin.identities
       ) as NonNullable<PackageRecords['literature']>
+    const inheritedPdfNotes = namespacePackagePdfNotes(
+      mapPackageReferences(
+        retainedOrigin?.pdfNotes ?? [],
+        retainedOrigin?.identities ?? {}
+      ) as PackagePdfNotes,
+      request.sessionId
+    )
     const literatureSources = await capturePackageLiterature(
       client,
       session,
@@ -785,26 +865,40 @@ export class SessionPackageService {
       })
     }
     const sessionJson = JSON.stringify({ version: 2, session: sharedSession })
-    const recordsJson = JSON.stringify(records)
-    const metadataBytes =
+    let recordsJson = JSON.stringify(records)
+    let metadataBytes =
       Buffer.byteLength(sessionJson) +
       Buffer.byteLength(recordsJson) +
       Buffer.byteLength(PACKAGE_README)
+    const selection = await this.chooseFiles(
+      options,
+      markRequiredPackageFiles(records, selectable, [
+        ...retainedFiles,
+        ...[sessionJson, recordsJson, PACKAGE_README].map((content) => ({
+          sizeBytes: Buffer.byteLength(content),
+          checksum: sha256(content)
+        }))
+      ]),
+      {
+        retainedFiles,
+        metadataBytes,
+        pdfNotesAvailable: selectable.some((file) => /\.pdf$/i.test(file.filename))
+      },
+      session.title
+    )
     const excludedKeys = new Set([
-      ...(await this.chooseFiles(
-        options,
-        markRequiredPackageFiles(records, selectable, [
-          ...retainedFiles,
-          ...[sessionJson, recordsJson, PACKAGE_README].map((content) => ({
-            sizeBytes: Buffer.byteLength(content),
-            checksum: sha256(content)
-          }))
-        ]),
-        { retainedFiles, metadataBytes },
-        session.title
-      )),
+      ...selection.excludedStorageKeys,
       ...inheritedExclusions.map((file) => file.storageKey)
     ])
+    if (selection.includePdfNotes) {
+      records.pdfNotes = await capturePackagePdfNotes(client, records, excludedKeys)
+      retainInheritedPdfNotes(records, inheritedPdfNotes, excludedKeys)
+      recordsJson = JSON.stringify(records)
+      metadataBytes =
+        Buffer.byteLength(sessionJson) +
+        Buffer.byteLength(recordsJson) +
+        Buffer.byteLength(PACKAGE_README)
+    }
     const excludedFiles = [
       ...new Map(
         [...selectable, ...inheritedExclusions].map((file) => [file.storageKey, file])
@@ -815,7 +909,8 @@ export class SessionPackageService {
     if (excludedKeys.size !== excludedFiles.length)
       throw new Error('Invalid package content selection.')
     validateExcludedFiles(records, excludedFiles)
-    if (!options.consumeSnapshot) await assertShareable(sharedSession, this.signal, 'session.json')
+    if (!options.consumeSnapshot && !options.allowSensitiveContent)
+      await assertShareable(sharedSession, this.signal, 'session.json')
     const directory = await mkdtemp(
       join(
         options.consumeSnapshot ? this.options.storageRoot : tmpdir(),
@@ -824,8 +919,9 @@ export class SessionPackageService {
     )
     return withPackageCleanup(
       async () => {
-        if (!options.consumeSnapshot) await assertShareable(records, this.signal, 'records.json')
-        let totalBytes = metadataBytes
+        if (!options.consumeSnapshot && !options.allowSensitiveContent)
+          await assertShareable(records, this.signal, 'records.json')
+        const totalBytes = metadataBytes
         const storageKeys = [
           ...new Set([
             ...nativeStorageKeys(records),
@@ -835,6 +931,10 @@ export class SessionPackageService {
           ])
         ].filter((key) => !excludedKeys.has(key))
         const sizes = new Map<string, number>()
+        // Hash before copying so equal bytes can share one object without a temporary second copy.
+        const contentIntegrity = new Map<string, { sizeBytes: number; checksum: string }>()
+        const contentOwners = new Map<string, string>()
+        let physicalContentBytes = 0
         for (const key of storageKeys) {
           await assertPackageSourcePath(this.options.storageRoot, sourceKey(key))
           const original = resolveStorageKey(this.options.storageRoot, sourceKey(key))
@@ -854,11 +954,20 @@ export class SessionPackageService {
             }
           }
           sizes.set(key, metadata.size)
+          const integrity = await digestFileWithinBudget(original, metadata.size, this.signal)
+          if (integrity.sizeBytes !== metadata.size)
+            throw new Error('The Session changed during export. Try again.')
+          contentIntegrity.set(key, integrity)
+          const contentIdentity = `${integrity.sizeBytes}:${integrity.checksum}`
+          if (!contentOwners.has(contentIdentity)) {
+            contentOwners.set(contentIdentity, key)
+            physicalContentBytes += integrity.sizeBytes
+          }
         }
         const selectedBytes = [...sizes.values()].reduce((sum, size) => sum + size, 0)
-        if (selectedBytes + totalBytes > PACKAGE_MAX_BYTES)
+        if (physicalContentBytes + totalBytes > PACKAGE_MAX_BYTES)
           throw new Error('Session package exceeds the export limit.')
-        await assertPackageCapacity(directory, selectedBytes + metadataBytes)
+        await assertPackageCapacity(directory, physicalContentBytes + metadataBytes)
         await writeFile(join(directory, 'session.json'), sessionJson)
         await writeFile(join(directory, 'records.json'), recordsJson)
         await writeFile(join(directory, 'README.md'), PACKAGE_README)
@@ -870,6 +979,11 @@ export class SessionPackageService {
         await mkdir(join(directory, 'objects'))
         let completedBytes = 0
         let completedFiles = 0
+        let deduplicated = false
+        const copiedContent = new Map<
+          string,
+          { objectPath: string; integrity: { sizeBytes: number; checksum: string } }
+        >()
         for (const storageKey of sizes.keys()) {
           assertPortablePackageStorageKey(storageKey)
           await assertPackageSourcePath(this.options.storageRoot, sourceKey(storageKey))
@@ -877,35 +991,60 @@ export class SessionPackageService {
           const metadata = await lstat(original)
           if (!metadata.isFile() || metadata.size > PACKAGE_MAX_FILE_BYTES)
             throw new Error('Invalid or oversized package source file.')
-          totalBytes += metadata.size
-          if (totalBytes > PACKAGE_MAX_BYTES || inventory.length >= 10000)
+          if (inventory.length >= 10000)
             throw new Error('Session package exceeds the export limit.')
+          const measured = contentIntegrity.get(storageKey)
+          if (!measured || measured.sizeBytes !== metadata.size)
+            throw new Error('The Session changed during export. Try again.')
+          const contentIdentity = `${measured.sizeBytes}:${measured.checksum}`
+          const existing = copiedContent.get(contentIdentity)
           const objectPath = `objects/${sha256(storageKey)}`
           const currentFile =
             selectable.find((file) => file.storageKey === storageKey)?.filename ?? storageKey
-          const copied = await copyFileWithinBudget(
-            original,
-            join(directory, objectPath),
-            metadata.size,
-            this.signal,
-            (bytes) =>
-              options.onProgress?.({
-                phase: 'copying',
-                completedBytes: completedBytes + bytes,
-                totalBytes: selectedBytes,
-                completedFiles,
-                totalFiles: sizes.size,
-                currentFile
-              })
-          )
-          completedBytes += copied.sizeBytes
-          completedFiles += 1
-          if (copied.sizeBytes !== metadata.size)
-            throw new Error('The Session changed during export. Try again.')
-          assertNoExcludedContentCopies(records, excludedFiles, [copied])
-          if (!options.consumeSnapshot)
-            await assertShareableFile(
+          let copied: { sizeBytes: number; checksum: string }
+          let objectPathForEntry = objectPath
+          if (existing) {
+            const current = await digestFileWithinBudget(original, metadata.size, this.signal)
+            if (current.checksum !== measured.checksum || current.sizeBytes !== metadata.size)
+              throw new Error('The Session changed during export. Try again.')
+            copied = existing.integrity
+            objectPathForEntry = existing.objectPath
+            deduplicated = true
+            completedBytes += copied.sizeBytes
+            options.onProgress?.({
+              phase: 'copying',
+              completedBytes,
+              totalBytes: selectedBytes,
+              completedFiles: completedFiles + 1,
+              totalFiles: sizes.size,
+              currentFile
+            })
+          } else {
+            copied = await copyFileWithinBudget(
+              original,
               join(directory, objectPath),
+              metadata.size,
+              this.signal,
+              (bytes) =>
+                options.onProgress?.({
+                  phase: 'copying',
+                  completedBytes: completedBytes + bytes,
+                  totalBytes: selectedBytes,
+                  completedFiles,
+                  totalFiles: sizes.size,
+                  currentFile
+                })
+            )
+            if (copied.sizeBytes !== metadata.size || copied.checksum !== measured.checksum)
+              throw new Error('The Session changed during export. Try again.')
+            copiedContent.set(contentIdentity, { objectPath, integrity: copied })
+            completedBytes += copied.sizeBytes
+          }
+          completedFiles += 1
+          assertNoExcludedContentCopies(records, excludedFiles, [copied])
+          if (!existing && !options.consumeSnapshot && !options.allowSensitiveContent)
+            await assertShareableFile(
+              join(directory, objectPathForEntry),
               this.signal,
               storageKey,
               sourceKey(storageKey),
@@ -917,15 +1056,19 @@ export class SessionPackageService {
               }
             )
           inventory.push({
-            path: objectPath,
+            path: objectPathForEntry,
             kind: notebookKeys.includes(storageKey) ? 'notebook' : 'file',
             ...copied,
             storageKey
           })
         }
+        const requiredFeatures = [
+          ...(records.literature ? (['literature'] as const) : []),
+          ...(deduplicated ? (['content-dedupe'] as const) : [])
+        ]
         const manifest: SessionPackageManifest = {
           format: 'open-science-session',
-          ...(records.literature ? { requiredFeatures: ['literature' as const] } : {}),
+          ...(requiredFeatures.length ? { requiredFeatures } : {}),
           schemaVersion: 1,
           createdAt: Date.now(),
           source: { ...request, projectName: project.name, title: session.title },
@@ -1011,6 +1154,14 @@ export class SessionPackageService {
           request,
           this.signal
         )
+        if (selection.includePdfNotes) {
+          currentRecords.pdfNotes = await capturePackagePdfNotes(
+            client,
+            currentRecords,
+            excludedKeys
+          )
+          retainInheritedPdfNotes(currentRecords, inheritedPdfNotes, excludedKeys)
+        }
         if (
           current.status !== 'found' ||
           !isDeepStrictEqual(
@@ -1239,6 +1390,8 @@ export class SessionPackageService {
           ? {
               ...mappedSession.runtimeContext,
               sideChatRelays: undefined,
+              // Local reading links are not part of a portable Session package.
+              sessionContext: undefined,
               plan: mappedSession.runtimeContext.plan
                 ? { ...mappedSession.runtimeContext.plan, delivery: undefined }
                 : undefined
@@ -1595,12 +1748,63 @@ export class SessionPackageService {
     }
   }
 
+  async readPdfNotes(request: ListPdfAnnotationsRequest): Promise<PdfAnnotationListResult> {
+    if (!request.projectId || !request.sessionId)
+      throw new Error('Package note scope is unavailable.')
+    const origin = await this.readOrigin({
+      projectId: request.projectId,
+      sessionId: request.sessionId
+    })
+    const snapshots = namespacePackagePdfNotes(
+      mapPackageReferences(origin.pdfNotes ?? [], origin.identities) as PackagePdfNotes,
+      request.sessionId
+    )
+    const selected = snapshots.filter(
+      (snapshot) => !request.versionId || snapshot.versionId === request.versionId
+    )
+    const tags = new Map(selected.flatMap((snapshot) => snapshot.tags).map((tag) => [tag.id, tag]))
+    const annotations = [
+      ...new Map(
+        selected.flatMap((snapshot) => snapshot.annotations).map((note) => [note.id, note])
+      ).values()
+    ]
+      .filter(
+        (note) =>
+          note.projectId === request.projectId &&
+          (!request.sourceFileId || note.target.source.sourceFileId === request.sourceFileId) &&
+          (!request.id || note.id === request.id)
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
+    const after = annotations.filter(
+      (note) =>
+        !request.cursor ||
+        note.createdAt > request.cursor.createdAt ||
+        (note.createdAt === request.cursor.createdAt && note.id > request.cursor.id)
+    )
+    const items = after.slice(0, request.limit ?? 50)
+    const last = after.length > items.length ? items.at(-1) : undefined
+    const source =
+      request.versionId && selected.length
+        ? await readPackagePdfSource(await this.options.getClient(), request)
+        : undefined
+    return {
+      items,
+      total: annotations.length,
+      readonlyIds: items.map((note) => note.id),
+      snapshotTags: [...tags.values()],
+      ...(source ? { source } : {}),
+      ...(source && selected[0]?.nativeImport ? { nativeImport: selected[0].nativeImport } : {}),
+      ...(last ? { nextCursor: { createdAt: last.createdAt, id: last.id } } : {})
+    }
+  }
+
   async readOrigin(request: SessionPackageRequest): Promise<{
     sourceManifest: SessionPackageManifest
     identities: Record<string, string>
     files: SessionPackageReceipt['files']
     history?: PackageHistory
     literature?: import('./literature').PackageLiterature
+    pdfNotes?: PackagePdfNotes
     originSessionIds: string[]
   }> {
     const safe = sessionPackageRequestSchema.parse(request)
@@ -1641,6 +1845,7 @@ export class SessionPackageService {
       files: receipt.files,
       history: records.history,
       literature: records.literature,
+      pdfNotes: records.pdfNotes,
       originSessionIds: records.tables.FileOriginSession.map(
         (row) => receipt.identities[String(row.sessionId)]
       )

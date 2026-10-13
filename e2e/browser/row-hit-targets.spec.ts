@@ -33,12 +33,21 @@ for (const dark of [false, true]) {
     const metadata = (await row.getByText('1 session', { exact: true }).boundingBox())!
     await page.mouse.click(metadata.x + metadata.width / 2, metadata.y + metadata.height / 2)
     await expect(page.getByTestId('actions')).toHaveText('project,project,project,project,project')
-    await page.getByRole('button', { name: 'Open actions for P1' }).click()
+    const actions = page.getByRole('button', { name: 'Open actions for P1' })
+    const target = (await actions.boundingBox())!
+    expect(target.width).toBeGreaterThanOrEqual(28)
+    expect(target.height).toBeGreaterThanOrEqual(28)
+    await actions.click()
     await expect(page.getByRole('menu')).toBeVisible()
     await page.keyboard.press('Escape')
+    await expect(page.getByRole('menu')).toBeHidden()
+    await expect(actions).toBeFocused()
     await expect(page.getByTestId('actions')).toHaveText('project,project,project,project,project')
     await project.focus()
+    await expect(project).toBeFocused()
     await page.keyboard.press('Enter')
+    await expect(page.getByTestId('actions')).toHaveText(Array(6).fill('project').join(','))
+    await expect(project).toBeFocused()
     await page.keyboard.press('Space')
     await expect(page.getByTestId('actions')).toHaveText(Array(7).fill('project').join(','))
     // The decorative card inset is outside any row and must remain inert.
@@ -54,7 +63,25 @@ test('sidebar edges open the session while the dropdown and context menu remain 
   await page.goto('/row-hit-targets.html?surface=sidebar')
   const row = page.locator('[data-session-id="session-1"]')
   await clickEdges(page, row, 'session')
-  await page.getByRole('button', { name: 'Open actions for Analysis session' }).click()
+  const actions = page.getByRole('button', { name: 'Open actions for Analysis session' })
+  const target = (await actions.boundingBox())!
+  expect(target.width).toBeGreaterThanOrEqual(28)
+  expect(target.height).toBeGreaterThanOrEqual(28)
+  for (const [x, y] of [
+    [target.x + target.width / 2, target.y + 1],
+    [target.x + target.width / 2, target.y + target.height - 1],
+    [target.x + 1, target.y + target.height / 2],
+    [target.x + target.width - 1, target.y + target.height / 2]
+  ]) {
+    await page.mouse.click(x, y)
+    await expect(page.getByRole('menu')).toBeVisible()
+    await expect(page.getByTestId('actions')).toHaveText('session,session,session,session')
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('menu')).toBeHidden()
+    await expect(actions).toBeFocused()
+  }
+  await actions.click()
+  await expect(page.getByTestId('session-preview-content')).toBeHidden()
   await page.getByRole('menuitem', { name: /Pin/ }).click()
   await expect(page.getByTestId('actions')).toHaveText('session,session,session,session,pin')
   await row.click({ button: 'right', position: { x: 3, y: 2 } })
@@ -67,6 +94,44 @@ test('sidebar edges open the session while the dropdown and context menu remain 
   await expect(page.getByTestId('actions')).toHaveText(
     'session,session,session,session,pin,session,session'
   )
+})
+
+test('dirty Home project drafts survive each dismissal until discard is confirmed', async ({
+  page
+}) => {
+  await page.goto('/row-hit-targets.html?surface=home')
+  const trigger = page.getByRole('button', { name: 'New project', exact: true })
+  await trigger.click()
+  const name = page.getByRole('textbox', { name: 'Name', exact: true })
+  const context = page.getByRole('textbox', { name: 'Agent Context', exact: true })
+  await name.fill('Research project draft')
+  await context.fill('Preserve these unsaved research instructions.')
+  for (const exit of ['Escape', 'Close', 'Cancel']) {
+    await context.focus()
+    if (exit === 'Escape') await page.keyboard.press('Escape')
+    else await page.getByRole('dialog').getByRole('button', { name: exit, exact: true }).click()
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await page.getByRole('button', { name: 'Keep editing', exact: true }).click()
+    await expect(page.getByRole('alertdialog')).toBeHidden()
+    await expect(name).toHaveValue('Research project draft')
+    await expect(context).toHaveValue('Preserve these unsaved research instructions.')
+    if (exit === 'Escape') await expect(context).toBeFocused()
+    else
+      await expect(
+        page.getByRole('dialog').getByRole('button', { name: exit, exact: true })
+      ).toBeFocused()
+  }
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Discard changes', exact: true }).click()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(trigger).toBeFocused()
+  await trigger.click()
+  await expect(name).toHaveValue('')
+  await expect(context).toHaveValue('')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(page.getByRole('alertdialog')).toBeHidden()
+  await expect(trigger).toBeFocused()
 })
 
 test('folder padding expands and collapses; removing access does not toggle the folder', async ({
@@ -199,5 +264,31 @@ test('project edges remain usable on a narrow touch viewport with enlarged text'
   await page.getByRole('button', { name: 'Open actions for P1' }).tap()
   await expect(page.getByRole('menu')).toBeVisible()
   await expect(page.getByTestId('actions')).toHaveText('project,project,project,project')
+  await context.close()
+})
+
+test('the mobile session menu keeps its visible 28px touch target and 14px icon', async ({
+  browser,
+  baseURL
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    hasTouch: true,
+    viewport: { width: 390, height: 850 }
+  })
+  const page = await context.newPage()
+  await page.goto('/row-hit-targets.html?surface=sidebar&mobile')
+  const actions = page.getByRole('button', { name: 'Open actions for Analysis session' })
+  await expect(actions).toHaveCSS('opacity', '1')
+  const target = (await actions.boundingBox())!
+  expect(target.width).toBe(28)
+  expect(target.height).toBe(28)
+  const icon = (await actions.locator('svg').boundingBox())!
+  expect(icon.width).toBe(14)
+  expect(icon.height).toBe(14)
+  await actions.tap()
+  await expect(page.getByRole('menu')).toBeVisible()
+  await page.getByRole('menuitem', { name: /Pin/ }).tap()
+  await expect(page.getByTestId('actions')).toHaveText('pin')
   await context.close()
 })

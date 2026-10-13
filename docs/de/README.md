@@ -1,3 +1,10 @@
+<!-- DRA candidate overview; upstream documentation retained below for provenance. -->
+# DRA v0.1.33-unified.1 — Entwicklungskandidat
+
+AI Research Infrastructure for Medicine
+
+Diese angepasste DRA-Version basiert auf AIPOCH Open-Science v0.35.1. Sie ist kein offizielles AIPOCH-Release. Die Japan-Anbindung und die Cloud-Konfiguration wurden vorbereitet; reale Anmeldung, Cloud-Zugriff und Installation müssen gesondert überprüft werden. Die nachstehende Dokumentation stammt aus dem Upstream-Projekt; dessen Downloads und Benchmarks sind keine Verifikation dieses DRA-Kandidaten.
+
 <h1 align="center">AIPOCH Open-Science</h1>
 
 <p align="center">
@@ -49,7 +56,9 @@ AIPOCH Open-Science ist eine KI-Forschungsumgebung für Wissenschaftler und Fors
 
 AIPOCH Open-Science unterstützt rechen- und datenintensive Forschung in zahlreichen Disziplinen, darunter maschinelles Lernen, Statistik, Biowissenschaften, Chemie, Materialwissenschaften, Physik und Umweltwissenschaften. Die Umgebung begleitet den Forschungsprozess von der Literaturrecherche und Hypothesenbildung über Codeausführung, Datenanalyse, Simulation und Visualisierung bis zur Erstellung nachvollziehbarer Forschungsergebnisse.
 
-> 💡 **[AIPOCH Open-Science v0.33.3 veröffentlicht](https://github.com/aipoch/open-science/releases/latest)** _(zuletzt aktualisiert September 2026)_. AIPOCH Open-Science v0.33.3 erweitert die Dokumentvorschau um seitenweises Office-Lesen mit Suche sowie seitenweise PowerPoint-Prüfung, fügt dem Gen-Konnektor Enrichr-Werkzeuge zur Genmengen-Anreicherung hinzu und bringt eine kompakte Library-Vorschau in den Workspace. Die Windows-Signierung umfasst jetzt jede gebündelte ausführbare Datei, Literature erhält eine Aktion zum Verwerfen von Bewertungen, und Sitzungspakete können mit adaptiver Geschwindigkeit übertragen werden. Details finden Sie in den [neuesten Release Notes](https://github.com/aipoch/open-science/releases/latest).
+Abgeschlossene Forschungssitzungen können außerdem als portable `.science`-Pakete zur Prüfung, Übergabe und Archivierung exportiert werden, einschließlich ausgewählter Gesprächsverzweigungen, Dateiversionen, Notebook-Aufzeichnungen und Verifikationsevidenz.
+
+> 💡 **[AIPOCH Open-Science v0.36.0 veröffentlicht](https://github.com/aipoch/open-science/releases/latest)** _(zuletzt aktualisiert Oktober 2026)_. AIPOCH Open-Science v0.36.0 fügt eine Notebook-Ausführung mit Risikoprüfung pro Lauf, eine wiederaufsetzbare gemeinsame PDF-Übersetzung mit Lese Modi für Original, Übersetzung und Gegenüberstellung, einen PDC-Konnektor für Krebsproteomik-Studien, populationspezifische Kopplungsungleichgewicht-Abfragen im Genomes-Konnektor sowie Unterstützung für Claude Haiku 5.5 hinzu. Fehlerbehebungen bewahren native Layouts wissenschaftlicher PDFs, bereinigen offizielle Modellkataloge, stellen die Suche in leeren Unterhaltungen wieder her und härten Datei-Erwähnungen, Marketplace-Browsing im Remote Web und Komponisten-Chips ab. Details finden Sie in den [neuesten Release Notes](https://github.com/aipoch/open-science/releases/latest).
 
 <p align="center">
  <img width="1920" height="1140" alt="AIPOCH Open-Science Hero-Banner: Science, Open to All — eine quelloffene, modellunabhängige und selbst gehostete Forschungsumgebung für wissenschaftliche KI" src="../images/readme/open-science-banner.png" />
@@ -59,6 +68,7 @@ AIPOCH Open-Science unterstützt rechen- und datenintensive Forschung in zahlrei
 
 - [Schnellstart](#-schnellstart)
 - [Produkttour](#produkttour)
+- [AIPOCH Open-Science `.science`-Forschungspakete](#aipoch-open-science-science-forschungspakete)
 - [Benchmark-Ergebnisse](#benchmark-ergebnisse)
 - [Kernkompetenzen](#kernkompetenzen)
 - [Modellanbieter](#modellanbieter)
@@ -155,6 +165,18 @@ Jedes erzeugte Artefakt wird als unveränderliche Version mit Prüfsumme gespeic
   <img src="../images/readme/product-tour-provenance.jpg" alt="Vorschau eines Open-Science-Forschungsartefakts mit Provenance-Zugang zur Rückverfolgung eines erzeugten Ergebnisses" width="900">
 </p>
 
+## AIPOCH Open-Science `.science`-Forschungspakete
+
+Exportieren Sie eine abgeschlossene Forschungssitzung als portables `.science`-Paket zur Prüfung, Übergabe und Archivierung. Wählen Sie die Gesprächsverzweigungen, Dateiversionen, Notebook-Aufzeichnungen und Verifikationsevidenz aus, die enthalten sein sollen, und importieren Sie das Paket anschließend in ein anderes Projekt oder auf einen anderen Rechner.
+
+**Exportieren → übertragen → prüfen**
+
+1. Exportieren Sie eine abgeschlossene Sitzung und wählen Sie die einzuschließenden Inhalte aus.
+2. Übertragen Sie die `.science`-Datei an eine mitwirkende Person oder auf einen anderen Rechner.
+3. Importieren Sie sie in ein Projekt und prüfen Sie den schreibgeschützten Verlauf, die enthaltenen Dateien, Notebook-Aufzeichnungen und Verifikationsevidenz.
+
+Importierte Pakete sind schreibgeschützt. Sie führen keinen Code aus und stellen keine Anmeldedaten wieder her. Setzen Sie Folgearbeiten in einer neuen Sitzung fort. Für die erneute Ausführung eines Ergebnisses sind weiterhin ein vollständiges Rezept, die erforderlichen Eingaben und eine verfügbare Laufzeit nötig.
+
 ## Benchmark-Ergebnisse
 
 ### 🏆 Platz 1 bei BiomniBench-DA Public 50
@@ -225,7 +247,7 @@ AIPOCH Open-Science ist eine Electron-Anwendung auf Basis von React, TypeScript,
 
 Voraussetzungen für die Quellentwicklung:
 
-- Node.js 22 (siehe [`.nvmrc`](../../.nvmrc)) mit npm
+- Node.js 24 (siehe [`.nvmrc`](../../.nvmrc)) mit npm
 - Git
 - Notebook-Ausführung ist optional und verwendet App-verwaltete Python/R-Umgebungen oder einen von Ihnen eingerichteten kompatiblen Interpreter.
 
@@ -322,7 +344,7 @@ Entfernen Sie vor dem Erstellen eines öffentlichen Issues API-Schlüssel, Token
 
 > ⭐ **Repository mit einem Stern markieren:** Wenn Ihnen das Projekt hilft, freuen wir uns über einen Stern auf GitHub. Damit unterstützen Sie die weitere Entwicklung.
 
-Gelieferte, teilweise umgesetzte und geplante Funktionen finden Sie in der [Capability Map](../../ROADMAP.md#capability-map).
+Gelieferte, teilweise umgesetzte und geplante Funktionen finden Sie in der [Capability Map](../ROADMAP.md#capability-map).
 
 ## Lizenz
 

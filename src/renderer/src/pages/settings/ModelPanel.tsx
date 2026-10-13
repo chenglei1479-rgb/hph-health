@@ -1,7 +1,8 @@
 import { ClassificationPanel, type ClassificationView } from './ClassificationPanel'
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
-import { AlertDialog, Tabs } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
+import { Tabs } from 'radix-ui'
 import { Brain, Cpu, Download, ShieldCheck, Table2, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -331,11 +332,13 @@ export const ModelPanel = ({
           {local && indicator}
         </Tabs.Trigger>
       </Tabs.List>
-      <Tabs.Content value="agent">{children}</Tabs.Content>
-      <Tabs.Content value="classification">
+      <Tabs.Content value="agent" tabIndex={-1}>
+        {children}
+      </Tabs.Content>
+      <Tabs.Content value="classification" tabIndex={-1}>
         {navigate && <ClassificationPanel view={{ kind: 'classification' }} navigate={navigate} />}
       </Tabs.Content>
-      <Tabs.Content value="local">
+      <Tabs.Content value="local" tabIndex={-1}>
         <LocalModelsPanel />
       </Tabs.Content>
     </Tabs.Root>

@@ -90,6 +90,29 @@ describe('renderSkillDoc', () => {
     expect(md).toContain('A CRAM may require its matching reference')
   })
 
+  it('documents the GEO matrix acquisition and preflight workflow', () => {
+    const md = renderSkillDoc('omics-archives')
+    expect(md).toContain('### geo_get_matrix_files')
+    expect(md).toContain('### geo_preflight_matrix')
+    expect(md).toContain('NCBI-generated RNA-seq count files')
+    expect(md).toContain('A preview cannot establish total dimensions')
+    expect(md).toContain('never by position')
+    expect(md).toContain('Only plain TSV supports unique exact title matching')
+    expect(md).toContain('Series Matrix requires exactly one !Sample_geo_accession header')
+    expect(md).toContain('valid GSM accessions matching the sample column count and order')
+    expect(md).toContain('and never falls back to title matching')
+    expect(md).toContain('For plain TSV previews, pass the table header plus complete preview rows')
+    expect(md).toContain(
+      'For Series Matrix previews, also preserve the preceding metadata, including !Sample_geo_accession and any !Sample_platform_id header, and !series_matrix_table_begin'
+    )
+    expect(md).toContain('do not submit only the table or fabricate !series_matrix_table_end')
+    expect(md).toContain('not an analysis-readiness guarantee')
+    expect(md).toContain('manual download by the user')
+    expect(md).toContain('completeness is caller-declared')
+    expect(md).toContain('If both sources are unavailable, the call throws')
+    expect(md).toContain('multiple platforms alone are advisory warnings')
+  })
+
   it('exposes the PRIDE paged file contract in the generated connector skill', () => {
     const md = renderSkillDoc('omics-archives')
     expect(md).toContain('### pride_get_project_files')
@@ -285,5 +308,38 @@ describe('renderSkillDoc', () => {
     expect(md).toContain('Upstream ERROR is normalized to FAILED')
     expect(md).toContain('HTTP 400/500 job failures are read without automatic retries')
     expect(md).toContain('errors are preserved in messages as "[code] message"')
+  })
+})
+
+describe('MaveDB generated skill contracts', () => {
+  it('documents all six public tools and their scope', () => {
+    const doc = renderSkillDoc('variants')
+    for (const id of [
+      'search_score_sets',
+      'get_score_set',
+      'download_scores',
+      'get_mapped_variants',
+      'get_experiment',
+      'get_experiment_score_sets'
+    ]) {
+      expect(doc).toContain(`### mavedb_${id}`)
+    }
+    expect(doc).toContain('a page is not the full dataset')
+    expect(doc).toContain('does not submit variants or perform liftover')
+    expect(doc).toContain('No API key or contact email is required')
+  })
+
+  it('documents unknown totals, upstream absence and manual-download boundaries', () => {
+    const doc = renderSkillDoc('variants')
+    expect(doc).toContain('total: number|null')
+    expect(doc).toContain('An empty page at offset>0 returns total=null (unknown)')
+    expect(doc).toContain('HTTP 404 can mean no mapping records exist')
+    expect(doc).toContain('HTTP 404 can mean no associated score sets are available')
+    expect(doc).toContain('not a complete version history')
+    for (const id of ['get_score_set', 'download_scores', 'get_mapped_variants']) {
+      const section = doc.split(`### mavedb_${id}\n`)[1]?.split('\n### ')[0]
+      expect(section).toContain('manual download by the user')
+      expect(section).toContain('do not fetch these URLs with raw HTTP to bypass host.mcp')
+    }
   })
 })

@@ -8,6 +8,28 @@ import { CredentialIdentityError } from './selection'
 
 const PROTECTED_PREFIX = 'open-science:protected:v1:'
 const MAX_DOCUMENT_BYTES = 64 * 1024 * 1024
+const SAFE_FILESYSTEM_CODES = new Set([
+  'EACCES',
+  'EBUSY',
+  'EISDIR',
+  'ELOOP',
+  'EMFILE',
+  'ENFILE',
+  'ENOENT',
+  'ENOTDIR',
+  'EPERM'
+])
+
+const inventoryErrorCode = (error: unknown): string => {
+  if (error instanceof SyntaxError) return 'invalid-document'
+  if (!error || typeof error !== 'object' || !('code' in error)) return 'unreadable-data'
+  const code = error.code
+  if (typeof code !== 'string') return 'unreadable-data'
+  if (SAFE_FILESYSTEM_CODES.has(code) || code.startsWith('SQLITE_') || code.startsWith('ERR_SQLITE_')) {
+    return code.toLowerCase()
+  }
+  return 'unreadable-data'
+}
 
 // Read the original documents directly: the normal durable store may promote crash-recovery temps
 // or sanitize fields. Neither action is allowed before the selected key proves it can read them.
@@ -95,6 +117,7 @@ export const readCredentialCiphertexts = (options: {
       }
     }
   }
+  let phase = 'configuration-documents'
   try {
     if (existsSync(options.configRoot)) {
       const entries = readdirSync(options.configRoot)
@@ -117,6 +140,7 @@ export const readCredentialCiphertexts = (options: {
         }
       }
     }
+    phase = 'project-database'
     database(join(options.configRoot, 'open-science.db'), (db) => {
       const tables = new Set(
         db
@@ -154,6 +178,7 @@ export const readCredentialCiphertexts = (options: {
     })
     // Electron stores persistent partitions alongside its default profile. Opening either in
     // Chromium before this check can discard cookies which the newly selected key cannot decrypt.
+    phase = 'profile-partitions'
     const profiles = [options.profilePath]
     const partitions = join(options.profilePath, 'Partitions')
     if (existsSync(partitions)) {
@@ -162,6 +187,7 @@ export const readCredentialCiphertexts = (options: {
         if (entry.isDirectory()) profiles.push(join(partitions, entry.name))
       }
     }
+    phase = 'profile-cookie-databases'
     for (const profile of profiles) {
       for (const relative of ['Cookies', 'Network/Cookies']) {
         database(join(profile, relative), (db) => {
@@ -178,7 +204,11 @@ export const readCredentialCiphertexts = (options: {
     return values
   } catch (error) {
     if (error instanceof Error && error.name === 'SettingsDocumentReadError') throw error
-    throw new CredentialIdentityError('ciphertext-inventory-unavailable')
+    throw new CredentialIdentityError(
+      'ciphertext-inventory-unavailable',
+      undefined,
+      `inventory-${phase}-${inventoryErrorCode(error)}`
+    )
   }
 }
 

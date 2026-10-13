@@ -19,12 +19,15 @@
     "src/renderer/src/assets/provider-icons/minimax.svg",
     "src/renderer/src/assets/provider-icons/openai.svg",
     "src/renderer/src/assets/provider-icons/openrouter.svg",
+    "src/renderer/src/assets/provider-icons/requesty.svg",
     "src/renderer/src/assets/provider-icons/sensenova.svg",
     "src/renderer/src/assets/provider-icons/stepfun.svg",
     "src/renderer/src/assets/provider-icons/typesafe.svg",
     "src/renderer/src/assets/provider-icons/volcengine.svg",
     "src/renderer/src/assets/provider-icons/xiaomimimo.svg",
     "src/renderer/src/assets/provider-icons/zhipu.svg",
+    "src/renderer/src/assets/provider-icons/LobeHub-icons-LICENSE",
+    "src/renderer/src/assets/provider-icons.packaging.test.ts",
     "src/renderer/src/assets/wavy-lines.svg"
   ],
   "interfacePaths": ["src/renderer/src/assets/agent-markdown.css"],
@@ -32,7 +35,8 @@
   "testFiles": {
     "owner": [
       "src/renderer/src/assets/diff-colors.test.ts",
-      "src/renderer/src/assets/pdf-text-layer.test.ts"
+      "src/renderer/src/assets/pdf-text-layer.test.ts",
+      "src/renderer/src/assets/provider-icons.packaging.test.ts"
     ],
     "contract": [],
     "consumer": []

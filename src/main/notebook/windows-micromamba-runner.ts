@@ -2,7 +2,7 @@ import { homedir } from 'node:os'
 import { resolveBootstrapConfigRoot, resolveConfigRootOverride } from '../../shared/config-root'
 import { execFile } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { createReadStream, existsSync, statSync } from 'node:fs'
+import { createReadStream, statSync } from 'node:fs'
 import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join, win32 } from 'node:path'
 import { promisify } from 'node:util'
@@ -337,7 +337,7 @@ export const createProductionMicromambaRunner = (
     (isolated
       ? join(isolated, 'tools', 'micromamba')
       : localAppData
-        ? join(localAppData, 'MedResearch Agent', 'tools', 'micromamba')
+        ? join(localAppData, 'Deep Research Agent', 'tools', 'micromamba')
         : undefined)
   if (!toolsDir) {
     if (locations.length === 0) return undefined

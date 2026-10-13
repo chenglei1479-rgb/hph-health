@@ -186,6 +186,190 @@ const recipeRun = (
 })
 
 describe('artifact provenance graph', () => {
+  it('retains advisory cross-language file dependencies from notebook projection', () => {
+    const graph = sealArtifactProvenanceGraph({
+      target: target(),
+      notebookActivities: [
+        notebookActivity('run-1', 1, []),
+        notebookActivity('run-2', 2, [
+          {
+            relation: 'created',
+            relativePath: 'result.csv',
+            pathPortability: 'relative',
+            authority: 'advisory',
+            generation: generation('g-target', 'result.csv', checksum('b'))
+          }
+        ])
+      ],
+      computeActivities: [],
+      notebookDependencies: {
+        stalenessByRunId: {
+          'run-1': { state: 'clear' },
+          'run-2': { state: 'clear' }
+        },
+        invalidatedByRunId: {},
+        dependenciesByRunId: { 'run-1': [], 'run-2': [] },
+        fileDependenciesByRunId: {
+          'run-2': [
+            {
+              producerRunId: 'run-1',
+              path: 'outputs/intermediate.csv',
+              checksum: checksum('a'),
+              confidence: 'verified'
+            }
+          ]
+        }
+      }
+    })
+    expect(graph.edges).toContainEqual({
+      kind: 'depends-on',
+      activityId: 'run-2',
+      dependencyActivityId: 'run-1',
+      authority: 'advisory',
+      evidenceSource: 'dependency-analysis'
+    })
+  })
+
+  it('marks a missing file producer as truncated provenance history', () => {
+    const graph = sealArtifactProvenanceGraph({
+      target: target(),
+      notebookActivities: [
+        notebookActivity('run-2', 2, [
+          {
+            relation: 'created',
+            relativePath: 'result.csv',
+            pathPortability: 'relative',
+            authority: 'advisory',
+            generation: generation('g-target', 'result.csv', checksum('b'))
+          }
+        ])
+      ],
+      computeActivities: [],
+      notebookDependencies: {
+        stalenessByRunId: { 'run-2': { state: 'clear' } },
+        invalidatedByRunId: {},
+        dependenciesByRunId: { 'run-2': [] },
+        fileDependenciesByRunId: {
+          'run-2': [
+            {
+              producerRunId: 'run-missing',
+              path: 'outputs/intermediate.csv',
+              checksum: checksum('a'),
+              confidence: 'verified'
+            }
+          ]
+        }
+      }
+    })
+    expect(graph.completeness).toBe('incomplete')
+    expect(graph.reasonCodes).toContain('history-truncated')
+    expect(graph.edges).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'depends-on',
+        activityId: 'run-2',
+        dependencyActivityId: 'run-missing'
+      })
+    )
+  })
+
+  it('preserves unresolved file reads through analysis restart and target closure', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'unresolved-file-lineage-'))
+    const scripts = [
+      'from pathlib import Path\nPath("intermediate.csv").write_text("old")',
+      'from pathlib import Path\nPath("intermediate.csv").write_text("new")',
+      'from pathlib import Path\nvalue = Path("intermediate.csv").read_text()\nPath("result.csv").write_text(value)'
+    ]
+    const activities = scripts.map((script, index) =>
+      notebookActivity(
+        `run-${index}`,
+        index,
+        index === 2
+          ? [
+              {
+                relation: 'created',
+                relativePath: 'result.csv',
+                pathPortability: 'relative',
+                authority: 'advisory',
+                generation: generation('g-target', 'result.csv', checksum('b'))
+              }
+            ]
+          : [],
+        {
+          script,
+          cwdBefore: root,
+          cwdAfter: root,
+          kernelEpochId: `epoch-${index}`,
+          workingFiles:
+            index === 0
+              ? [
+                  {
+                    path: join(root, 'intermediate.csv'),
+                    relativePath: 'intermediate.csv',
+                    kind: 'other',
+                    createdByRunId: 'run-0',
+                    change: 'created',
+                    checksum: checksum('a')
+                  }
+                ]
+              : []
+        }
+      )
+    )
+    try {
+      const options = {
+        storageRoot: root,
+        repository: { readSessionRuns: async () => activities.map(({ run }) => run) }
+      }
+      const request = { projectId: 'p', sessionId: 's', throughRunId: 'run-2' }
+      const projection = await new NotebookDependencyAnalyzer(options).project(request)
+      expect(projection.stalenessByRunId['run-2']).toEqual({ state: 'clear' })
+      expect(projection.unresolvedFileReadRunIds).toEqual(['run-2'])
+      expect(projection.fileDependenciesByRunId?.['run-2']).toBeUndefined()
+      const reloaded = await new NotebookDependencyAnalyzer(options).project(request)
+      expect(reloaded.unresolvedFileReadRunIds).toEqual(['run-2'])
+      const graph = sealArtifactProvenanceGraph({
+        target: target(),
+        notebookActivities: activities,
+        computeActivities: [],
+        notebookDependencies: reloaded
+      })
+      expect(graph.completeness).toBe('incomplete')
+      expect(graph.reasonCodes).toContain('history-truncated')
+      expect(graph.edges).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'depends-on',
+          activityId: 'run-2',
+          dependencyActivityId: 'run-0'
+        })
+      )
+      const unrelated = sealArtifactProvenanceGraph({
+        target: { ...target(), producerRunId: 'run-3' },
+        notebookActivities: [
+          ...activities,
+          notebookActivity('run-3', 3, [
+            {
+              relation: 'created',
+              relativePath: 'result.csv',
+              pathPortability: 'relative',
+              authority: 'advisory',
+              generation: generation('g-target', 'result.csv', checksum('b'))
+            }
+          ])
+        ],
+        computeActivities: [],
+        notebookDependencies: {
+          ...reloaded,
+          stalenessByRunId: { ...reloaded.stalenessByRunId, 'run-3': { state: 'clear' } },
+          dependenciesByRunId: { ...reloaded.dependenciesByRunId, 'run-3': [] }
+        }
+      })
+      expect(unrelated.completeness).toBe('complete')
+      expect(unrelated.reasonCodes).not.toContain('history-truncated')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   it.each(['proportional_venn_5sets.png', 'proportional_venn_5sets_hires.png'])(
     'reconstructs %s without discarded font probes and failed theme setup',
     async (filename) => {
@@ -511,7 +695,7 @@ describe('artifact provenance graph', () => {
       await rm(root, { recursive: true, force: true })
     }
   })
-  it('reconstructs the contrast plot through four memory-dependent R cells', async () => {
+  it('retains contrast plot source without certifying unproven memory-dependent R cells', async () => {
     const cells = JSON.parse(
       await readFile(join(__dirname, '../notebook/reported-contrasts-volcano.fixture.json'), 'utf8')
     ) as Array<{ index: number; script: string }>
@@ -569,7 +753,8 @@ describe('artifact provenance graph', () => {
           computeActivities: [],
           notebookDependencies: dependencies
         })
-        expect(graph.completeness, JSON.stringify(graph.reasonCodes)).toBe('complete')
+        expect(graph.completeness, JSON.stringify(graph.reasonCodes)).toBe('incomplete')
+        expect(graph.reasonCodes).toContain('kernel-dependencies-unavailable')
         const recipe = sealArtifactReproducibilityRecipe({
           provenanceGraph: graph,
           inputFiles: [],
@@ -577,14 +762,21 @@ describe('artifact provenance graph', () => {
             recipeRun(a.run.runId, a.runIndex, { script: a.run.script, kernelKind: 'r' })
           )
         })
-        expect(recipe.steps.map((s) => s.activityId)).toEqual(['run-3', 'run-4', 'run-5', 'run-6'])
-        expect(resolveArtifactReproducibilityExecutionPlan(recipe, 'original-inputs')).toBeDefined()
+        expect(recipe.steps.map((s) => s.activityId)).toEqual(['run-6'])
+        expect(recipe.steps[0]).toMatchObject({
+          sourceChecksum: sha256(cells.find((cell) => cell.index === 6)!.script)
+        })
+        expect(recipe.capture.state).toBe('blocked')
+        expect(recipe.capture.reasonCodes).toContain('target-graph-incomplete')
+        expect(
+          resolveArtifactReproducibilityExecutionPlan(recipe, 'original-inputs')
+        ).toBeUndefined()
       }
     } finally {
       await rm(root, { recursive: true, force: true })
     }
   })
-  it('keeps a rejected R plot out of the final standalone recipe', async () => {
+  it('keeps a rejected R plot out of an incomplete standalone recipe', async () => {
     const cells = JSON.parse(
       await readFile(join(__dirname, '../notebook/reported-layered-volcano.fixture.json'), 'utf8')
     ) as Array<{ index: number; script: string; language: string; status: string }>
@@ -642,7 +834,8 @@ describe('artifact provenance graph', () => {
         computeActivities: [],
         notebookDependencies: dependencies
       })
-      expect(graph.completeness, JSON.stringify(graph.reasonCodes)).toBe('complete')
+      expect(graph.completeness, JSON.stringify(graph.reasonCodes)).toBe('incomplete')
+      expect(graph.reasonCodes).toContain('kernel-dependencies-unavailable')
       const recipe = sealArtifactReproducibilityRecipe({
         provenanceGraph: graph,
         inputFiles: [],
@@ -656,7 +849,12 @@ describe('artifact provenance graph', () => {
         )
       })
       expect(recipe.steps.map((s) => s.activityId)).toEqual(['run-11'])
-      expect(resolveArtifactReproducibilityExecutionPlan(recipe, 'original-inputs')).toBeDefined()
+      expect(recipe.steps[0]).toMatchObject({
+        sourceChecksum: sha256(cells.find((cell) => cell.index === 11)!.script)
+      })
+      expect(recipe.capture.state).toBe('blocked')
+      expect(recipe.capture.reasonCodes).toContain('target-graph-incomplete')
+      expect(resolveArtifactReproducibilityExecutionPlan(recipe, 'original-inputs')).toBeUndefined()
     } finally {
       await rm(root, { recursive: true, force: true })
     }
@@ -850,7 +1048,7 @@ describe('artifact provenance graph', () => {
     }
   )
 
-  it('rebuilds an RDS plot from both inputs without replaying failed or replaced images', async () => {
+  it('retains the RDS input bridge without certifying a complete plot replay', async () => {
     const cells = JSON.parse(
       await readFile(
         join(__dirname, '../notebook/reported-rds-envelope-volcano.fixture.json'),
@@ -928,7 +1126,8 @@ describe('artifact provenance graph', () => {
         computeActivities: [],
         notebookDependencies: dependencies
       })
-      expect(graph.completeness, JSON.stringify(graph.reasonCodes)).toBe('complete')
+      expect(graph.completeness, JSON.stringify(graph.reasonCodes)).toBe('incomplete')
+      expect(graph.reasonCodes).toContain('kernel-dependencies-unavailable')
       expect(
         graph.activities.filter((a) => a.kind === 'notebook-run').map((a) => a.activityId)
       ).toEqual(['run-4', 'run-8'])
@@ -945,7 +1144,23 @@ describe('artifact provenance graph', () => {
         )
       })
       expect(recipe.steps.map((s) => s.activityId)).toEqual(['run-4', 'run-8'])
-      expect(resolveArtifactReproducibilityExecutionPlan(recipe, 'original-inputs')).toBeDefined()
+      expect(
+        recipe.steps.flatMap((step) => (step.kind === 'notebook-run' ? [step.sourceChecksum] : []))
+      ).toEqual([4, 8].map((index) => sha256(cells.find((cell) => cell.index === index)!.script)))
+      expect(
+        graph.entities.flatMap((entity) =>
+          entity.kind === 'file-generation' ? [entity.relativePath] : []
+        )
+      ).toEqual(
+        expect.arrayContaining([
+          'data/inputs/expression-matrix-444444444444.csv',
+          'data/inputs/differential-results-333333333333.xlsx',
+          'data/merged_diff_expr.rds'
+        ])
+      )
+      expect(recipe.capture.state).toBe('blocked')
+      expect(recipe.capture.reasonCodes).toContain('target-graph-incomplete')
+      expect(resolveArtifactReproducibilityExecutionPlan(recipe, 'original-inputs')).toBeUndefined()
     } finally {
       await rm(storageRoot, { recursive: true, force: true })
     }

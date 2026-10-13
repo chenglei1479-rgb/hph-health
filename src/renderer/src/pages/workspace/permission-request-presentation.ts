@@ -349,7 +349,7 @@ const humanizeMcpName = (name: string | undefined): string | undefined => {
         .filter(Boolean)
         .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
         .join(' ')
-        .replace(/^Open ?Science\b/iu, 'MedResearch Agent')
+        .replace(/^Open ?Science\b/iu, 'DRA')
     )
     .filter(Boolean)
 
@@ -372,6 +372,23 @@ const isNetworkTool = (request: AcpPermissionRequest): boolean => {
 }
 
 const describePermissionRequest = (request: AcpPermissionRequest): PermissionPresentation => {
+  const appInput = request.appOwned ? getRequestInput(request) : undefined
+  if (appInput?.notebookCodeRisk) {
+    return {
+      actionTitle: 'Review potentially destructive code',
+      categoryLabel: 'Notebook',
+      description: 'Approval applies only to this run.',
+      hideToolIdentity: true
+    }
+  }
+  if (appInput?.notebookRuntimeSelection) {
+    return {
+      actionTitle: 'Confirm Notebook kernel and environment',
+      categoryLabel: 'Notebook',
+      description: 'This selects an environment. It does not approve future destructive code.',
+      hideToolIdentity: true
+    }
+  }
   const networkApproval = getNotebookNetworkApproval(request)
   if (networkApproval) {
     return {

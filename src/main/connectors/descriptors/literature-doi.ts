@@ -5,6 +5,7 @@ import type { ToolDescriptor } from '../types'
 // https://www.crossref.org/documentation/retrieve-metadata/rest-api/
 // https://support.datacite.org/docs/api-queries
 const CROSSREF = 'https://api.crossref.org/works/'
+const CROSSREF_WORKS = 'https://api.crossref.org/works'
 const DATACITE = 'https://api.datacite.org/dois'
 const DOI_INPUT = {
   type: 'object',
@@ -40,6 +41,16 @@ const crossrefWork = z.object({
   relation: object.optional()
 })
 const crossrefResponse = z.object({ status: z.literal('ok'), message: crossrefWork })
+const crossrefSearchResponse = z
+  .object({
+    message: z
+      .object({
+        'total-results': z.number().int().nonnegative(),
+        items: z.array(z.record(z.string(), z.unknown()))
+      })
+      .passthrough()
+  })
+  .passthrough()
 const dataciteRecord = z.object({
   id: z.string().min(1),
   type: z.literal('dois'),
@@ -86,6 +97,65 @@ const DATACITE_RETURNS =
   '{ doi, titles:[{title,...}], creators:[{name?,...}], publisher:string|object|null, publication_year:number|null, resource_type:{resourceTypeGeneral?,...}, url:string|null, rights:[...], related_identifiers:[{relatedIdentifier?,relatedIdentifierType?,relationType?,...}], version:string|null }'
 
 export const DOI_LITERATURE_TOOLS: ToolDescriptor[] = [
+  {
+    id: 'crossref_search_works',
+    connector: 'literature',
+    description:
+      'Search Crossref-deposited scholarly work metadata by topic or bibliographic text. Returns the API-reported total and one bounded page of DOI, title, authors, publication dates, journal, type and landing URL. Crossref coverage depends on member deposits; zero results do not establish that no research exists. No API key is required.',
+    input: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', minLength: 1, maxLength: 1000 },
+        rows: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        offset: { type: 'integer', minimum: 0, maximum: 5000, default: 0 }
+      },
+      required: ['query'],
+      additionalProperties: false
+    },
+    returns:
+      '{ query, total_results, returned_count, offset, has_more, items:[{doi,title,authors,published_print,published_online,container_title,type,url}], source_url }. Metadata fields are returned only when deposited by Crossref; source_url records the exact query used.',
+    example:
+      'const result = await host.mcp("literature", "crossref_search_works", {"query": "lung cancer immune checkpoint inhibitor outcomes", "rows": 20})',
+    run: async (ctx, args) => {
+      const query = String(args.query).trim()
+      if (!query) throw new Error('A Crossref search query is required')
+      const rows = Number(args.rows ?? 20)
+      const offset = Number(args.offset ?? 0)
+      if (!Number.isInteger(rows) || rows < 1 || rows > 100)
+        throw new Error('rows must be an integer from 1 to 100')
+      if (!Number.isInteger(offset) || offset < 0 || offset > 5000)
+        throw new Error('offset must be an integer from 0 to 5000')
+      const url = new URL(CROSSREF_WORKS)
+      url.searchParams.set('query', query)
+      url.searchParams.set('rows', String(rows))
+      url.searchParams.set('offset', String(offset))
+      url.searchParams.set(
+        'select',
+        'DOI,title,author,published-print,published-online,container-title,type,URL'
+      )
+      const { message } = crossrefSearchResponse.parse(await ctx.fetchJson(url.toString()))
+      const items = message.items.map((item) => ({
+        doi: typeof item.DOI === 'string' ? item.DOI : null,
+        title: Array.isArray(item.title) ? item.title : [],
+        authors: Array.isArray(item.author) ? item.author : [],
+        published_print: item['published-print'] ?? null,
+        published_online: item['published-online'] ?? null,
+        container_title: Array.isArray(item['container-title']) ? item['container-title'] : [],
+        type: typeof item.type === 'string' ? item.type : null,
+        url: typeof item.URL === 'string' ? item.URL : null
+      }))
+      const total = message['total-results']
+      return {
+        query,
+        total_results: total,
+        returned_count: items.length,
+        offset,
+        has_more: offset + items.length < total,
+        items,
+        source_url: url.toString()
+      }
+    }
+  },
   {
     id: 'crossref_get_work',
     connector: 'literature',

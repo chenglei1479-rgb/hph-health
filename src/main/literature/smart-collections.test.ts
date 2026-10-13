@@ -6,10 +6,10 @@ import {
   ClassificationEvaluationError
 } from '../../shared/classification'
 import { literatureItemInputSchema } from '../../shared/literature'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { copyFile, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest'
 import { createProjectDbClient } from '../projects/prisma-client'
 import { migrateApplicationDatabase } from '../database/migration-service'
 import { LiteratureSmartCollections } from './smart-collections'
@@ -27,10 +27,25 @@ let configured = true
 let classificationChanged: (() => void) | undefined
 const unsubscribeClassification = vi.fn()
 const serviceId = '55555555-5555-4555-8555-555555555555'
+let schemaRoot: string
+beforeAll(async () => {
+  schemaRoot = await mkdtemp(join(tmpdir(), 'smart-collection-schema-'))
+  const schemaClient = createProjectDbClient(schemaRoot)
+  try {
+    await migrateApplicationDatabase(schemaClient)
+  } finally {
+    // Disconnect checkpoints SQLite before any case copies the current schema.
+    await schemaClient.$disconnect()
+  }
+})
+afterAll(async () => {
+  if (schemaRoot) await rm(schemaRoot, { recursive: true, force: true })
+})
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'smart-collection-'))
+  // Migration history belongs to the database suite; each case still owns a fresh real database.
+  await copyFile(join(schemaRoot, 'open-science.db'), join(root, 'open-science.db'))
   db = createProjectDbClient(root)
-  await migrateApplicationDatabase(db)
   configured = true
   classificationChanged = undefined
   unsubscribeClassification.mockClear()
@@ -114,10 +129,10 @@ const create = async (): Promise<string> =>
       scope: { kind: 'library' }
     })
   ).id
-const refresh = async (id: string): Promise<void> => {
+const refresh = async (id: string, timeout = 15000): Promise<void> => {
   await owner.execute({ kind: 'smart-collection', collectionId: id, action: 'refresh', offset: 0 })
   await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'), {
-    timeout: 5000
+    timeout
   })
 }
 
@@ -131,7 +146,8 @@ it('reads bounded run outcomes, preserves historical verdicts and distinguishes 
     }))
   })
   const collectionId = await create()
-  await refresh(collectionId)
+  // Thirty classifications commit real SQLite results and usage records on Windows.
+  await refresh(collectionId, 30000)
   const runId = (await owner.view(collectionId)).run!.id
   await db.literatureSmartRunItem.updateMany({
     where: { runId },
@@ -197,7 +213,7 @@ it('reads bounded run outcomes, preserves historical verdicts and distinguishes 
     catalog.transact({ ...command, collectionId: 'different-collection' })
   ).rejects.toThrow()
   await expect(catalog.transact({ ...command, runId: 'missing-run' })).rejects.toThrow()
-})
+}, 45000)
 
 it('exposes only committed outcomes while other candidates are still being evaluated', async () => {
   await db.literatureItem.createMany({
@@ -502,11 +518,15 @@ it('resumes a manual refresh with recorded manual usage', async () => {
     }
   })
   expect((await owner.view(id)).run).toMatchObject({ manualResumeAllowed: true })
-  classify.mockResolvedValue({
-    verdict: 'match',
-    model: 'jev-1.13.0',
-    confidence: 1,
-    probabilities: { match: 1, 'no-match': 0, uncertain: 0 }
+  classify.mockImplementation(async () => {
+    // A valid resumed classification can outlast waitFor's default one-second budget.
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+    return {
+      verdict: 'match',
+      model: 'jev-1.13.0',
+      confidence: 1,
+      probabilities: { match: 1, 'no-match': 0, uncertain: 0 }
+    }
   })
 
   await owner.execute({
@@ -517,7 +537,9 @@ it('resumes a manual refresh with recorded manual usage', async () => {
     offset: 0
   })
 
-  await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'))
+  await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'), {
+    timeout: 15000
+  })
   expect((await owner.view(id)).run?.id).toBe(runId)
   expect(await owner.view(id)).toMatchObject({
     automaticPauseReason: 'interrupted',
@@ -1455,7 +1477,10 @@ it('debounces automatic changes, skips unchanged results and preserves explicit 
     })
   })
   await vi.waitFor(() => expect(classify).toHaveBeenCalledTimes(2), { timeout: 5000 })
-  await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'))
+  // Classification is observed before its database writes and run finalization finish.
+  await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'), {
+    timeout: 15000
+  })
   await owner.execute({
     kind: 'smart-collection',
     action: 'override',
@@ -1602,8 +1627,7 @@ it.each(['override', 'reset-overrides'] as const)(
         inclusion: 'Original studies',
         exclusion: ''
       }),
-      scope: { kind: 'library' },
-      autoUpdate: true
+      scope: { kind: 'library' }
     })
     await owner.execute({
       kind: 'smart-collection',
@@ -1612,6 +1636,20 @@ it.each(['override', 'reset-overrides'] as const)(
       itemId: 'paper',
       decision: 'exclude',
       offset: 0
+    })
+    // Establish the manual decision before opting in. Collection creation schedules work
+    // before its summary read finishes, which can overlap slow Windows fixture setup.
+    await catalog.transact({
+      kind: 'update-collection',
+      collectionId: id,
+      expectedRevision: 1,
+      name: 'Automatic review',
+      description: formatSmartRule({
+        description: '',
+        inclusion: 'Original studies',
+        exclusion: ''
+      }),
+      smartAutoUpdate: true
     })
     await new Promise((resolve) => setTimeout(resolve, 1000))
     expect(classify).not.toHaveBeenCalled()
@@ -1622,7 +1660,7 @@ it.each(['override', 'reset-overrides'] as const)(
       ...(action === 'override' ? { itemId: 'paper', decision: 'automatic' as const } : {}),
       offset: 0
     })
-    await vi.waitFor(async () => expect((await owner.view(id)).matches).toBe(1), { timeout: 5000 })
+    await vi.waitFor(async () => expect((await owner.view(id)).matches).toBe(1), { timeout: 15000 })
     expect(classify).toHaveBeenCalledOnce()
     expect(await owner.members(id)).toEqual(['paper'])
   }
@@ -1766,7 +1804,9 @@ it('publishes each committed result without waiting for slow peers, including th
     clock.mockRestore()
     for (const release of releases) release()
   }
-  await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'))
+  await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'), {
+    timeout: 15000
+  })
 })
 
 it('refills idle inference slots while a slow request is still running', async () => {
@@ -1955,7 +1995,11 @@ it('drains started calls and retries saving their usage after a progress write f
       action: 'refresh',
       offset: 0
     })
-    await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('failed'))
+    // Draining started calls and retrying the usage write require real database
+    // work; CI coverage can exceed waitFor's one-second default.
+    await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('failed'), {
+      timeout: 5000
+    })
     expect(classify.mock.calls.length).toBeLessThan(9)
     const run = (await owner.view(id)).run!
     expect(run.inputTokens).toBe(classify.mock.calls.length * 5)
@@ -3378,9 +3422,10 @@ it('drains paid requests and retains a durable pause when both result and failur
     action: 'resume-automatic',
     offset: 0
   })
-  await vi.waitFor(async () => expect((await owner.view(id)).matches).toBe(8), { timeout: 5000 })
+  // Resume drains every real SQLite commit, including the final assessment and pause clear.
+  await vi.waitFor(async () => expect((await owner.view(id)).matches).toBe(8), { timeout: 15000 })
   expect((await owner.view(id)).automaticPauseReason).toBeUndefined()
-})
+}, 30000)
 
 it('drains an active classifier before deleting its collection', async () => {
   const id = await create()
@@ -3422,7 +3467,9 @@ it('reconciles automatic collections on startup and model configuration without 
   configured = true
   classificationChanged?.()
   await vi.waitFor(() => expect(classify).toHaveBeenCalledTimes(1), { timeout: 5000 })
-  await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'))
+  await vi.waitFor(async () => expect((await owner.view(id)).run?.state).toBe('completed'), {
+    timeout: 5000
+  })
   expect((await owner.view(paused)).automaticPauseReason).toBe('daily-limit')
   classificationChanged?.()
   await new Promise((resolve) => setTimeout(resolve, 850))

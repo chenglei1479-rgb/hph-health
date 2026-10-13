@@ -22,6 +22,7 @@ import { SessionRepository } from '../session-persistence/repository'
 import { SessionPackageService } from './service'
 import { PackageLiteratureReader } from './literature-reader'
 import { ManagedFileVersionService } from '../managed-file-versions/service'
+import { ManagedPreviewResources } from '../managed-preview-resources'
 import { literatureItemInputSchema } from '../../shared/literature'
 import { sessionLiteratureReferences } from './literature'
 import type { PersistedChatSession } from '../../shared/session-persistence'
@@ -252,9 +253,9 @@ it.each([false, true])(
     const reforked = await target.service.fork(forked)
     expect(reforked.sessionId).not.toBe(forked.sessionId)
   },
-  // This case migrates source/target databases and validates two imports plus two forks.
-  // Match the bounded Windows budget used by the adjacent package round-trip suites.
-  process.platform === 'win32' ? 120_000 : 30_000
+  // Two imports plus two forks repeatedly migrate real validation databases; Ubuntu coverage
+  // exceeded 30 seconds. Match the bounded budgets of the adjacent package round-trip suites.
+  process.platform === 'win32' ? 120_000 : 60_000
 )
 
 it('keeps metadata-only Literature references', () => {
@@ -383,6 +384,25 @@ it('round-trips two versions of one Literature attachment across stored branches
       expect(await readFile(lease.path)).toEqual(pdf)
     } finally {
       await lease.close()
+    }
+    const resources = new ManagedPreviewResources({
+      resolvePath: async () => {
+        throw new Error('Package preview must use its trusted lease')
+      },
+      openLiterature: () => reader.openContent(versions[index].id)
+    })
+    const resource = await resources.acquire(17, { source: 'literature', path: versions[index].id })
+    try {
+      expect(resource.sourceChecksum).toBe(sha256(pdf))
+      expect(resource.size).toBe(pdf.length)
+      const bytes = await resources.readRange(17, {
+        resourceId: resource.id,
+        begin: 0,
+        end: pdf.length
+      })
+      expect(Buffer.from(bytes.data)).toEqual(pdf)
+    } finally {
+      await resources.release(17, { resourceId: resource.id })
     }
   }
 })

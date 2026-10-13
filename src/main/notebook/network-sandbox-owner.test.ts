@@ -1,5 +1,7 @@
 import { existsSync } from 'node:fs'
 import { execFile, spawn } from 'node:child_process'
+import { once } from 'node:events'
+import { resolveWindowsPowerShellExecutable } from '../windows-powershell'
 import { promisify } from 'node:util'
 import { mkdir, mkdtemp, open, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -73,6 +75,7 @@ vi.mock('@aipoch/notebook-network-sandbox', () => ({
 }))
 
 import { NotebookNetworkSandboxOwner, commandLine } from './network-sandbox-owner'
+import { WindowsNotebookRuntimeManager } from './windows-runtime-manager'
 import { NotebookKernelExecutor } from './kernel-executor'
 import { DEFAULT_R_ENV, envPrefix, legacyDefaultEnvPrefix, rScriptBin } from './runtime-paths'
 import {
@@ -191,6 +194,85 @@ afterEach(async () => {
 })
 
 describe('NotebookNetworkSandboxOwner', () => {
+  it
+    .runIf(process.platform === 'win32')
+    .each(['directory', 'receipt', 'persistent-directory'] as const)(
+    'keeps cleanup truthful when a Windows reader locks the command %s',
+    async (resource) => {
+      const fixture = await mkdtemp(join(tmpdir(), 'os-command-cleanup-lock-'))
+      fixtureDirectories.push(fixture)
+      const { logger, records } = createCapturingLogger()
+      const owner = new NotebookNetworkSandboxOwner({
+        resourceRoot: '/resources',
+        temporaryRoot: join(fixture, 'commands'),
+        getSettings: async () => DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+        persistAlwaysAllow: vi.fn(),
+        requestDecision: vi.fn(),
+        platform: 'win32',
+        logger
+      })
+      const wrapped = await owner.wrap({
+        executable: process.execPath,
+        args: ['-e', ''],
+        env: {},
+        cwd: fixture,
+        commandText: '',
+        sessionId: 'session',
+        projectId: 'project',
+        runtime: 'bash',
+        filesystem: {
+          readOnlyRoots: [],
+          readWriteRoots: [fixture],
+          deniedReadRoots: [],
+          deniedWriteRoots: []
+        }
+      })
+      const root = backend.wrap.mock.calls.at(-1)![0].env.TMPDIR as string
+      const path = resource === 'receipt' ? `${root}.receipt` : join(root, 'temporary-file')
+      if (resource !== 'receipt') await writeFile(path, 'temporary content')
+      const holder = spawn(
+        resolveWindowsPowerShellExecutable(),
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          '$file = [IO.File]::Open($env:TEST_LOCK_PATH, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite); try { [Console]::WriteLine("locked"); [Console]::In.ReadLine() | Out-Null } finally { $file.Dispose() }'
+        ],
+        { env: { ...process.env, TEST_LOCK_PATH: path }, windowsHide: true }
+      )
+      const closed = once(holder, 'close')
+      let release: ReturnType<typeof setTimeout> | undefined
+      try {
+        const [output] = await once(holder.stdout, 'data')
+        expect(output.toString()).toContain('locked')
+        const transient = resource !== 'persistent-directory'
+        if (transient) release = setTimeout(() => holder.stdin.end('\n'), 750)
+        await expect(wrapped.cleanup('exit', { processesTerminated: true })).resolves.toEqual({
+          processesTerminated: true,
+          networkClosed: true,
+          temporaryResourcesRemoved: transient
+        })
+        expect(existsSync(root)).toBe(!transient)
+        expect(existsSync(`${root}.receipt`)).toBe(!transient)
+        expect(backend.cleanup).toHaveBeenCalledOnce()
+        if (!transient) {
+          expect(records).toContainEqual({
+            message: 'sandbox cleanup completed',
+            data: expect.objectContaining({
+              result: 'incomplete',
+              temporaryCleanupErrorCode: expect.stringMatching(/^(EBUSY|EPERM|ENOTEMPTY)$/)
+            })
+          })
+        }
+      } finally {
+        clearTimeout(release)
+        holder.stdin.end('\n')
+        await closed
+        await owner.dispose()
+      }
+    },
+    15_000
+  )
   it('keeps inherited PATH access optional only on native Windows while preserving explicit roots', async () => {
     const pathRoot = await mkdtemp(join(tmpdir(), 'open-science-path-root-'))
     fixtureDirectories.push(pathRoot)
@@ -721,6 +803,29 @@ describe('NotebookNetworkSandboxOwner', () => {
     const nextExecution = wrapped.beginExecution?.()
     await expect(backend.request?.({ host: 'data.example.org', port: 443 })).resolves.toBe(false)
     nextExecution?.()
+    // A live interpreter must charge a grant to the actual cell, not its original launch command.
+    const changedCell = wrapped.beginExecution?.({ commandText: 'next cell' })
+    await expect(backend.request?.({ host: 'data.example.org', port: 443 })).resolves.toBe(false)
+    changedCell?.()
+    await expect(
+      owner.requestNetworkAccess({
+        sessionId: 'session-1',
+        projectId: 'project-1',
+        hostname: 'data.example.org',
+        reason: 'Retry the next cell.',
+        runtime: 'python',
+        command: 'next cell'
+      })
+    ).resolves.toMatchObject({ status: 'allowedOnce' })
+    const unrelatedCell = wrapped.beginExecution?.()
+    await expect(backend.request?.({ host: 'data.example.org', port: 443 })).resolves.toBe(false)
+    unrelatedCell?.()
+    const retryCell = wrapped.beginExecution?.({ commandText: 'next cell' })
+    await expect(backend.request?.({ host: 'data.example.org', port: 443 })).resolves.toBe(true)
+    retryCell?.()
+    const afterRetry = wrapped.beginExecution?.({ commandText: 'next cell' })
+    await expect(backend.request?.({ host: 'data.example.org', port: 443 })).resolves.toBe(false)
+    afterRetry?.()
     await wrapped.cleanup('exit', { processesTerminated: true })
 
     const nextCommand = await owner.wrap({
@@ -931,6 +1036,75 @@ describe('NotebookNetworkSandboxOwner', () => {
     expect(serialized).toContain('"outcome":"cancelled"')
     expect(serialized).not.toContain('C:\\\\private\\\\notebook-sandbox')
     await owner.dispose()
+  })
+
+  it('keeps standard execution offline and rejects stale capabilities in either switch direction', async () => {
+    const prepare = vi
+      .spyOn(WindowsNotebookRuntimeManager.prototype, 'prepare')
+      .mockRejectedValue(new Error('Prepare protected mode in Settings'))
+    const owner = new NotebookNetworkSandboxOwner({
+      resourceRoot: '/resources',
+      windowsRuntimeRoot: join(tmpdir(), 'fixture-runtime'),
+      getSettings: async () => DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+      persistAlwaysAllow: vi.fn(),
+      requestDecision: vi.fn(),
+      platform: 'win32'
+    })
+    try {
+      backend.isWindowsProtectionConfigured.mockResolvedValue(false)
+      const legacy = Object.freeze({ kind: 'powershell' as const, version: '5.1' as const })
+      await expect(
+        owner.resolveWindowsRuntime({ runtime: 'bash', binding: legacy })
+      ).resolves.toBeNull()
+      await expect(owner.resolveWindowsRuntime({ runtime: 'repl' })).resolves.toBeNull()
+      expect(prepare).not.toHaveBeenCalled()
+      await expect(
+        owner.resolveWindowsRuntime({
+          runtime: 'bash',
+          binding: { kind: 'powershell', version: '7.6' }
+        })
+      ).rejects.toThrow('Shell capability refresh')
+      expect(prepare).not.toHaveBeenCalled()
+      backend.isWindowsProtectionConfigured.mockResolvedValue(true)
+      await expect(
+        owner.resolveWindowsRuntime({ runtime: 'bash', binding: legacy })
+      ).rejects.toThrow('Shell capability refresh')
+      expect(legacy.version).toBe('5.1')
+      await expect(owner.windowsProtectionReady()).rejects.toThrow('Prepare protected mode')
+    } finally {
+      prepare.mockRestore()
+      await owner.dispose()
+    }
+  })
+
+  it('downloads only after explicit setup and reports failed preparation without a standard-mode fallback', async () => {
+    const prepare = vi
+      .spyOn(WindowsNotebookRuntimeManager.prototype, 'prepare')
+      .mockRejectedValue(new Error('download failed'))
+    const owner = new NotebookNetworkSandboxOwner({
+      resourceRoot: '/resources',
+      windowsRuntimeRoot: join(tmpdir(), 'fixture-runtime'),
+      getSettings: async () => DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+      persistAlwaysAllow: vi.fn(),
+      requestDecision: vi.fn(),
+      platform: 'win32'
+    })
+    try {
+      await expect(owner.installWindows()).rejects.toThrow('download failed')
+      expect(prepare).toHaveBeenCalledWith(true, expect.any(AbortSignal))
+      await expect(owner.status()).resolves.toMatchObject({
+        kind: 'error',
+        reason: 'runtimeFailure'
+      })
+      expect(backend.removeWindows).not.toHaveBeenCalled()
+      backend.installWindows.mockResolvedValueOnce({ cancelled: true })
+      prepare.mockClear()
+      await expect(owner.installWindows()).resolves.toEqual({ cancelled: true })
+      expect(prepare).not.toHaveBeenCalled()
+    } finally {
+      prepare.mockRestore()
+      await owner.dispose()
+    }
   })
 
   it('fails closed instead of giving an ambiguous approval to the wrong runtime', async () => {
@@ -1680,6 +1854,16 @@ describe('NotebookNetworkSandboxOwner', () => {
     expect(diagnosticText).toContain('"phase":"sandbox-cleanup"')
     expect(diagnosticText).toContain('"result":"incomplete"')
     expect(diagnosticText).toContain('"incompleteStageCount":3')
+    for (const phase of ['sandbox-prepare', 'sandbox-cleanup']) {
+      const measured = records as Array<{ data?: { phase?: string; durationMs?: number } }>
+      const durations = measured.filter(({ data }) => data?.phase === phase)
+      expect(durations).toHaveLength(2)
+      for (const { data } of durations) {
+        expect(data?.durationMs).toEqual(expect.any(Number))
+        expect(Number.isFinite(data?.durationMs)).toBe(true)
+        expect(data!.durationMs).toBeGreaterThanOrEqual(0)
+      }
+    }
     expect(diagnosticText).not.toContain('python script.py')
     expect(diagnosticText).not.toContain('C:\\\\workspace')
     expect(diagnosticText).not.toContain('researcher')
@@ -2130,6 +2314,7 @@ it('checks sandbox spawn admission before launching the R process', async () => 
     expect(existsSync(marker)).toBe(false)
     expect(cleanup).toHaveBeenCalledWith('spawn-failed', {
       processesTerminated: true,
+      processState: 'never-started',
       confirmTermination: expect.any(Function)
     })
   } finally {
@@ -2953,7 +3138,7 @@ describe('R startup authorization admission', () => {
     const owner = createOwner('win32', false)
     backend.getWindowsRuntimeAccess.mockResolvedValue({ authorized: false, registered: false })
     try {
-      await expect(owner.ensureRuntimeAccess(request)).rejects.toThrow('local MedResearch Agent desktop')
+      await expect(owner.ensureRuntimeAccess(request)).rejects.toThrow('local DRA desktop')
       expect(backend.setWindowsRuntimeAccess).not.toHaveBeenCalled()
     } finally {
       await owner.dispose()
@@ -3476,7 +3661,9 @@ describe('macOS retained cleanup admission', () => {
         const otherRoot = runtimeWrap.mock.calls[0][0].env.TMPDIR!
         await writeFile(join(otherRoot, 'sentinel'), 'other session')
         runtimeWrap.mockRejectedValueOnce(new Error('transient preparation failure'))
-        await expect(owner.wrap(invocation)).rejects.toThrow('SHELL_CLEANUP_INCOMPLETE')
+        const preparationError = await owner.wrap(invocation).catch((error) => error)
+        expect(preparationError.message).toContain('SHELL_CLEANUP_INCOMPLETE')
+        expect(preparationError.retryCleanup).toBeTypeOf('function')
         const failedCommand = runtimeWrap.mock.calls[1][0]
         const failedRoot = failedCommand.env.TMPDIR!
         await expect(owner.wrap(invocation)).rejects.toThrow()
@@ -3485,6 +3672,8 @@ describe('macOS retained cleanup admission', () => {
         expect(existsSync(failedRoot)).toBe(true)
         expect(existsSync(failedRoot + '.receipt')).toBe(true)
         recovered = true
+        expect(await preparationError.retryCleanup()).toBe(true)
+        expect(runtimeWrap).toHaveBeenCalledTimes(2)
         const next = await owner.wrap(invocation)
         expect(runtimeWrap).toHaveBeenCalledTimes(3)
         expect(cleanup.mock.calls.map(([id]) => id)).toEqual([
@@ -3790,4 +3979,92 @@ describe('macOS retained cleanup admission', () => {
       await expect(owner.dispose()).rejects.toThrow('SHELL_CLEANUP_INCOMPLETE')
     }
   )
+})
+
+it.each([false, true])(
+  'cancels component preparation with cleanup failure = %s',
+  async (cleanupFailure) => {
+    let started!: () => void
+    const start = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    let finishCleanup!: () => void
+    const cleanup = new Promise<void>((resolve) => {
+      finishCleanup = resolve
+    })
+    const prepare = vi
+      .spyOn(WindowsNotebookRuntimeManager.prototype, 'prepare')
+      .mockImplementation(async (_download, signal) => {
+        started()
+        await new Promise<void>((resolve) =>
+          signal!.addEventListener('abort', () => resolve(), { once: true })
+        )
+        await cleanup
+        if (cleanupFailure) throw new Error('cleanup not confirmed')
+        signal!.throwIfAborted()
+        throw new Error('expected cancellation')
+      })
+    const owner = new NotebookNetworkSandboxOwner({
+      resourceRoot: '/resources',
+      windowsRuntimeRoot: join(tmpdir(), 'cancel-runtime'),
+      getSettings: async () => DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+      persistAlwaysAllow: vi.fn(),
+      requestDecision: vi.fn(),
+      platform: 'win32'
+    })
+    try {
+      expect(owner.cancelWindowsSetup()).toBe(false)
+      const installation = owner.installWindows()
+      const result = installation.then(
+        (value) => value,
+        (error: Error) => error
+      )
+      await start
+      expect(owner.cancelWindowsSetup()).toBe(true)
+      expect(owner.cancelWindowsSetup()).toBe(false)
+      await expect(owner.installWindows()).rejects.toThrow('already running')
+      await expect(owner.removeWindows()).rejects.toThrow('finish cancelling')
+      await expect(owner.status()).resolves.toMatchObject({
+        kind: 'checking',
+        windowsRuntimeSetup: { canCancel: false }
+      })
+      finishCleanup()
+      if (cleanupFailure) expect(await result).toMatchObject({ message: 'cleanup not confirmed' })
+      else expect(await result).toEqual({ cancelled: true })
+      expect(backend.removeWindows).not.toHaveBeenCalled()
+    } finally {
+      prepare.mockRestore()
+      await owner.dispose()
+    }
+  }
+)
+
+it('explains that existing public policy is not private-service admission', async () => {
+  const requestDecision = vi.fn()
+  const persistAlwaysAllow = vi.fn()
+  const owner = new NotebookNetworkSandboxOwner({
+    resourceRoot: '/resources',
+    getSettings: async () => ({
+      ...DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+      allowedDomains: ['lab.internal.example']
+    }),
+    persistAlwaysAllow,
+    requestDecision,
+    platform: 'linux'
+  })
+  await expect(
+    owner.requestNetworkAccess({
+      sessionId: 'session-1',
+      projectId: 'project-1',
+      hostname: 'lab.internal.example',
+      reason: 'Access the research service.'
+    })
+  ).resolves.toMatchObject({
+    status: 'alreadyAllowed',
+    message: expect.stringContaining(
+      'For private-network access, review the service and port in Settings'
+    )
+  })
+  expect(requestDecision).not.toHaveBeenCalled()
+  expect(persistAlwaysAllow).not.toHaveBeenCalled()
 })

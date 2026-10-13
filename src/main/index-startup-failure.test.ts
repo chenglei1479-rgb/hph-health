@@ -40,9 +40,9 @@ vi.mock('node:child_process', async (original) => ({
 }))
 
 it.each([
-  ['MedResearch Agent.app', true],
-  ['MedResearch Agent.app', true],
-  ['MedResearch Agent.app', false],
+  ['DRA.app', true],
+  ['DRA.app', true],
+  ['DRA.app', false],
   ['OpenScience.app', false]
 ] as const)(
   'starts from %s with old/new coexistence=%s without changing system entries',
@@ -52,15 +52,15 @@ it.each([
     const bundle = `/virtual/Applications/${name}`
     fixture.bundles.add(bundle)
     if (coexist) {
-      fixture.bundles.add('/virtual/Applications/MedResearch Agent.app')
-      fixture.bundles.add('/virtual/Applications/MedResearch Agent.app')
+      fixture.bundles.add('/virtual/Applications/DRA.app')
+      fixture.bundles.add('/virtual/Applications/DRA.app')
     }
     const before = [...fixture.bundles]
     vi.stubGlobal(
       'process',
       Object.defineProperties(Object.create(process), {
         platform: { value: 'darwin' },
-        execPath: { value: `${bundle}/Contents/MacOS/MedResearch Agent` },
+        execPath: { value: `${bundle}/Contents/MacOS/DRA` },
         // Simulate ordinary packaged startup, without invoking any real native integration.
         env: {
           value: {
@@ -75,7 +75,7 @@ it.each([
     await import('./index')
     await Promise.race([fixture.ready, fixture.exited])
     expect.soft(fixture.configureDesktop).toHaveBeenCalledOnce()
-    expect.soft(fixture.electron.app.setName).toHaveBeenLastCalledWith('MedResearch Agent')
+    expect.soft(fixture.electron.app.setName).toHaveBeenLastCalledWith('DRA')
     expect.soft(fixture.electron.dialog.showErrorBox).not.toHaveBeenCalled()
     expect.soft(fixture.electron.app.relaunch).not.toHaveBeenCalled()
     expect.soft(fixture.electron.app.exit).not.toHaveBeenCalled()
@@ -105,7 +105,7 @@ const fixture = vi.hoisted(() => {
       void args
       return {
         backend: 'mac-keychain',
-        appName: 'MedResearch Agent',
+        appName: 'DRA',
         exists: true
       }
     }),
@@ -270,6 +270,7 @@ vi.mock('./window-shortcuts', () => ({
   installWindowShortcuts: vi.fn()
 }))
 vi.mock('./window-ipc', () => ({ registerWindowZoomIpcHandler: vi.fn() }))
+vi.mock('./windows-titlebar', () => ({ registerWindowsTitleBarIpc: vi.fn() }))
 vi.mock('./network-ipc', () => ({ registerNetworkIpcHandlers: vi.fn() }))
 vi.mock('./database/database-startup-logging', () => ({
   createDatabaseStartupLogging: () => ({ migrationOptions: vi.fn(), reportBlocked: vi.fn() })
@@ -294,6 +295,9 @@ vi.mock('./ipc', () => ({
   registerIpcHandlers: async () => ({
     dispose: fixture.disposeRuntime,
     openSessionPackageFile: fixture.openSessionPackageFile,
+    applicationEvents: { subscribe: () => () => undefined },
+    listTrayNavigationSessions: async () => [],
+    detectActiveSessions: () => [],
     notificationInbox: {
       configureDesktop: fixture.configureDesktop,
       syncViewState: fixture.syncViewState,
@@ -316,6 +320,7 @@ vi.mock('./storage/migration-state', () => ({
 vi.mock('./tray', () => ({
   createAppTray: vi.fn(),
   refreshAppTrayLocale: vi.fn(),
+  refreshAppTrayNavigation: vi.fn(),
   setTrayIconVariant: vi.fn()
 }))
 vi.mock('./app-lifecycle', () => ({
@@ -377,9 +382,11 @@ vi.mock('./notifications/notification-inbox-controller', () => ({
 }))
 
 const monitorListeners = process.listeners('uncaughtExceptionMonitor')
+let stderrWrite: ReturnType<typeof vi.spyOn>
 beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
+  stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   fixture.bundles.clear()
   fixture.renameBundle.mockReset().mockImplementation((from, to) => {
     fixture.bundles.delete(String(from))
@@ -416,6 +423,7 @@ beforeEach(() => {
   fixture.disposeRuntime.mockReset().mockResolvedValue()
 })
 afterEach(() => {
+  stderrWrite.mockRestore()
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
   for (const listener of process.listeners('uncaughtExceptionMonitor')) {
@@ -697,14 +705,14 @@ it('reports each IPC cleanup failure and still attempts registry disposal on lif
   expect(errors).toHaveLength(2)
 })
 
-it.each(['MedResearch Agent.app', 'MedResearch Agent.app'])(
+it.each(['DRA.app', 'DRA.app'])(
   'a losing second instance launched from %s shares the profile and never initializes writers',
   async (name) => {
     const { mkdtemp, mkdir, rm } = await import('node:fs/promises')
     const { tmpdir } = await import('node:os')
     const { join } = await import('node:path')
     const root = await mkdtemp(join(tmpdir(), 'profile-lock-'))
-    const legacy = join(root, 'MedResearch Agent')
+    const legacy = join(root, 'DRA')
     await mkdir(legacy)
     const actual = await vi.importActual<typeof import('./storage/electron-profile')>(
       './storage/electron-profile'
@@ -721,7 +729,7 @@ it.each(['MedResearch Agent.app', 'MedResearch Agent.app'])(
       vi.stubGlobal(
         'process',
         Object.defineProperty(Object.create(process), 'execPath', {
-          value: `/virtual/Applications/${name}/Contents/MacOS/MedResearch Agent`
+          value: `/virtual/Applications/${name}/Contents/MacOS/DRA`
         })
       )
       fixture.electron.app.requestSingleInstanceLock.mockReturnValue(false)
@@ -808,7 +816,7 @@ it.each([
       await import('./index')
       await fixture.exited
       expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-        'MedResearch Agent',
+        'DRA',
         expect.stringContaining(path)
       )
       expect(fixture.electron.dialog.showErrorBox.mock.calls[0][1]).toMatch(/restore|recover/i)
@@ -881,7 +889,7 @@ it('stops synchronously on a failed credential preflight before Electron ready o
     expect(readiness).not.toHaveBeenCalled()
     expect(fixture.prepareLocations).not.toHaveBeenCalled()
     expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-      'MedResearch Agent',
+      'DRA',
       expect.stringContaining('windows-profile-key-unavailable')
     )
   } finally {
@@ -896,6 +904,10 @@ it.each([
   'locked',
   'decrypt failure',
   'backend unavailable',
+  'KWallet existing',
+  'KWallet missing key',
+  'KWallet locked',
+  'KWallet changed backend',
   'second instance'
 ])('runs the real Linux credential bootstrap at the startup boundary: %s', async (scenario) => {
   const { mkdtemp, mkdir, writeFile, readFile, rm } = await import('node:fs/promises')
@@ -916,7 +928,24 @@ it.each([
       'process',
       Object.defineProperty(Object.create(process), 'platform', { value: 'linux' })
     )
-    vi.stubEnv('XDG_CURRENT_DESKTOP', 'GNOME')
+    const kwallet = scenario.startsWith('KWallet')
+    vi.stubEnv('XDG_CURRENT_DESKTOP', kwallet ? 'KDE' : 'GNOME')
+    vi.stubEnv('KDE_SESSION_VERSION', kwallet ? '6' : undefined)
+    if (kwallet)
+      fixture.nativeProbe.mockImplementation((_command, args) => {
+        const command = args as string[]
+        const value = command.includes('networkWallet')
+          ? { type: 's', data: ['kdewallet'] }
+          : {
+              type: 'b',
+              data: [
+                command.includes('keyDoesNotExist')
+                  ? scenario === 'KWallet missing key'
+                  : !(command.includes('isOpen') && scenario === 'KWallet locked')
+              ]
+            }
+        return { status: 0, signal: null, stdout: JSON.stringify(value) }
+      })
     const metadata = await import('./credential-identity/linux-secret-service')
     vi.spyOn(metadata, 'probeLinuxCredentialIdentity').mockReturnValue({
       status:
@@ -929,19 +958,29 @@ it.each([
     const real = await vi.importActual<typeof import('./credential-identity/bootstrap')>(
       './credential-identity/bootstrap'
     )
-    fixture.selectCredentialIdentity.mockImplementationOnce((options) =>
-      real.selectStartupCredentialIdentity(
-        options as Parameters<typeof real.selectStartupCredentialIdentity>[0]
+    fixture.selectCredentialIdentity
+      .mockReset()
+      .mockImplementationOnce((options) =>
+        real.selectStartupCredentialIdentity(
+          options as Parameters<typeof real.selectStartupCredentialIdentity>[0]
+        )
       )
-    )
-    fixture.prepareCredentialValidation.mockImplementationOnce((identity) =>
-      real.prepareCredentialValidation(
-        identity as Parameters<typeof real.prepareCredentialValidation>[0],
-        paths
+    fixture.prepareCredentialValidation
+      .mockReset()
+      .mockImplementationOnce((identity) =>
+        real.prepareCredentialValidation(
+          identity as Parameters<typeof real.prepareCredentialValidation>[0],
+          paths
+        )
       )
-    )
     const cipher = {
-      getSelectedStorageBackend: vi.fn(() => 'gnome_libsecret'),
+      getSelectedStorageBackend: vi.fn(() =>
+        scenario === 'KWallet changed backend'
+          ? 'gnome_libsecret'
+          : kwallet
+            ? 'kwallet6'
+            : 'gnome_libsecret'
+      ),
       isEncryptionAvailable: vi.fn(() => scenario !== 'backend unavailable'),
       encryptString: vi.fn(),
       decryptString: vi.fn(() => {
@@ -961,21 +1000,29 @@ it.each([
       expect(cipher.isEncryptionAvailable).not.toHaveBeenCalled()
     } else {
       await Promise.race([fixture.ready, fixture.exited])
-      if (['fresh', 'existing'].includes(scenario)) {
+      if (['fresh', 'existing', 'KWallet existing'].includes(scenario)) {
         expect(fixture.configureDesktop).toHaveBeenCalledOnce()
-        expect(fixture.electron.app.setName).toHaveBeenNthCalledWith(1, 'MedResearch Agent')
-        expect(fixture.electron.app.setName).toHaveBeenLastCalledWith('MedResearch Agent')
+        expect(fixture.electron.app.setName).toHaveBeenNthCalledWith(1, 'DRA')
+        expect(fixture.electron.app.setName).toHaveBeenLastCalledWith('DRA')
         expect(fixture.electron.dialog.showErrorBox).not.toHaveBeenCalled()
-        if (scenario === 'existing')
+        if (scenario === 'existing' || scenario === 'KWallet existing')
           expect(cipher.decryptString).toHaveBeenCalledWith(Buffer.from('v11original'))
       } else {
         expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-          'MedResearch Agent',
+          'DRA',
           expect.stringContaining('CREDENTIAL_IDENTITY')
         )
         expect(fixture.prepareLocations).not.toHaveBeenCalled()
         expect(fixture.configureDesktop).not.toHaveBeenCalled()
-        if (['missing key', 'locked'].includes(scenario)) {
+        if (
+          [
+            'missing key',
+            'locked',
+            'KWallet missing key',
+            'KWallet locked',
+            'KWallet changed backend'
+          ].includes(scenario)
+        ) {
           expect(cipher.isEncryptionAvailable).not.toHaveBeenCalled()
         }
       }
@@ -984,6 +1031,9 @@ it.each([
     if (scenario !== 'fresh') expect(await readFile(settingsPath, 'utf8')).toBe(settings)
   } finally {
     Reflect.deleteProperty(fixture.electron, 'safeStorage')
+    fixture.nativeProbe.mockReset().mockImplementation(() => {
+      throw new Error('Unexpected native process in startup fixture')
+    })
     await rm(root, { recursive: true, force: true })
   }
 })
@@ -1012,22 +1062,17 @@ it('reports headless credential recovery on stderr without a blocking dialog', a
   fixture.selectCredentialIdentity.mockReset().mockImplementationOnce(() => {
     throw new CredentialIdentityError('probe-access-blocked')
   })
-  const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-  try {
-    await import('./index')
-    await fixture.exited
-    expect(fixture.electron.dialog.showErrorBox).not.toHaveBeenCalled()
-    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('CREDENTIAL_IDENTITY'))
-    expect(fixture.electron.app.exit).toHaveBeenCalledWith(1)
-  } finally {
-    stderr.mockRestore()
-  }
+  await import('./index')
+  await fixture.exited
+  expect(fixture.electron.dialog.showErrorBox).not.toHaveBeenCalled()
+  expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('CREDENTIAL_IDENTITY'))
+  expect(fixture.electron.app.exit).toHaveBeenCalledWith(1)
 })
 
 it('redacts secrets in detailed startup errors and identifies their phase', async () => {
   fixture.selectCredentialIdentity.mockReset().mockReturnValue({
     backend: 'mac-keychain',
-    appName: 'MedResearch Agent',
+    appName: 'DRA',
     exists: true
   })
   fixture.prepareCredentialValidation.mockReset().mockImplementationOnce(() => {
@@ -1090,7 +1135,7 @@ it.each([
       )
     fixture.nativeProbe.mockReset().mockImplementation((_executable, args) => {
       const identity = (args as string[])[0]
-      const absent = legacy && identity === 'MedResearch Agent (DEV)'
+      const absent = legacy && identity === 'DRA (DEV)'
       return {
         status: 0,
         signal: null,
@@ -1121,12 +1166,12 @@ it.each([
     )
     expect(summary?.[1]).toMatchObject({
       outcome: 'selected',
-      appName: 'MedResearch Agent (DEV)',
+      appName: 'DRA (DEV)',
       exists: false,
       reason: 'no-identity-confirmed',
       probes: [
-        { appName: 'MedResearch Agent (DEV)', status: legacy ? 'not-found' : 'access-blocked' },
-        { appName: 'MedResearch Agent (DEV)', status: 'access-blocked' }
+        { appName: 'DRA (DEV)', status: legacy ? 'not-found' : 'access-blocked' },
+        { appName: 'DRA (DEV)', status: 'access-blocked' }
       ]
     })
     const line = formatLine(
@@ -1178,7 +1223,7 @@ it.each(['access-blocked', 'error', 'unsupported'] as const)(
       )
     fixture.nativeProbe.mockReset().mockImplementation((_executable, args) => {
       const identity = (args as string[])[0]
-      const absent = legacy && identity === 'MedResearch Agent (DEV)'
+      const absent = legacy && identity === 'DRA (DEV)'
       return {
         status: 0,
         signal: null,
@@ -1209,12 +1254,12 @@ it.each(['access-blocked', 'error', 'unsupported'] as const)(
     )
     expect(summary?.[1]).toMatchObject({
       outcome: 'selected',
-      appName: 'MedResearch Agent (DEV)',
+      appName: 'DRA (DEV)',
       exists: false,
       reason: 'no-identity-confirmed',
       probes: [
-        { appName: 'MedResearch Agent (DEV)', status },
-        { appName: 'MedResearch Agent (DEV)', status }
+        { appName: 'DRA (DEV)', status },
+        { appName: 'DRA (DEV)', status }
       ]
     })
     const line = formatLine(
@@ -1240,7 +1285,7 @@ it('logs later credential recovery with concrete diagnostics after normal startu
   const recover = fixture.validateCredentials.mock.calls[0][1] as (error: Error) => void
   recover(
     new CredentialIdentityError('access-access-blocked', {
-      appName: 'MedResearch Agent',
+      appName: 'DRA',
       status: 'access-blocked',
       reason: 'keychain-locked',
       osStatus: 0
@@ -1255,7 +1300,7 @@ it('logs later credential recovery with concrete diagnostics after normal startu
   expect(JSON.parse(line).data).toMatchObject({
     recoveryReason: 'access-access-blocked',
     identityProbe: {
-      appName: 'MedResearch Agent',
+      appName: 'DRA',
       status: 'access-blocked',
       reason: 'keychain-locked',
       osStatus: 0

@@ -95,6 +95,9 @@
       "src/shared/renderer-contract-catalog.test.ts"
     ],
     "consumer": [
+      "src/main/composition/notebook-environment.test.ts",
+      "src/main/composition/reviewer.test.ts",
+      "src/main/literature/command-owner.test.ts",
       "src/main/acp/application-commands.test.ts",
       "src/main/acp/artifact-code-reconstruction-runner.test.ts",
       "src/main/acp/codex-completion-handoff.integration.test.ts",
@@ -293,7 +296,9 @@
       "src/renderer/src/components/LegacyDataMoveDialog.storage.test.tsx",
       "src/renderer/src/pages/workspace/workspace-message-queue-controller.test.ts",
       "src/main/compute/cancellation-runtime.integration.test.ts",
-      "src/main/notebook/runtime-service.macos-isolation.integration.test.ts"
+      "src/main/notebook/runtime-service.macos-isolation.integration.test.ts",
+      "src/main/acp/approved-handoff-outcome.integration.test.ts",
+      "src/main/acp/approved-handoff-outcome.test.ts"
     ]
   },
   "capabilityOverlays": ["e2e_regressions", "e2e_delegation", "windows_sensitive"],

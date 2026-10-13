@@ -8,6 +8,12 @@
       "updatedAt": "2026-07-14T00:00:00.000Z"
     },
     {
+      "id": "biomedical-discovery",
+      "name": "Biomedical Discovery",
+      "source": "featured",
+      "updatedAt": "2026-10-01T00:00:00.000Z"
+    },
+    {
       "id": "boltz",
       "name": "Boltz",
       "source": "featured",
@@ -158,6 +164,24 @@
       "activationPolicy": "always-on",
       "exposure": "internal",
       "updatedAt": "2026-08-09T00:00:00.000Z"
+    },
+    {
+      "id": "clinical-data-audit",
+      "name": "Clinical Data Audit",
+      "source": "featured",
+      "updatedAt": "2026-09-30T00:00:00.000Z"
+    },
+    {
+      "id": "research-deliverables",
+      "name": "Research Deliverables",
+      "source": "featured",
+      "updatedAt": "2026-10-01T00:00:00.000Z"
+    },
+    {
+      "id": "dra-research-project",
+      "name": "DRA Research Project",
+      "source": "featured",
+      "updatedAt": "2026-10-04T00:00:00.000Z"
     }
   ]
 }

@@ -1,5 +1,7 @@
 {
   "ownerPaths": [
+    "src/main/connectors/descriptors/variants-mavedb.ts",
+    "src/main/connectors/descriptors/variants-mavedb.test.ts",
     "src/main/connectors/descriptors/variants-clinvar.test.ts",
     "src/main/connectors/descriptors/variants-clinvar.ts",
     "src/main/connectors/descriptors/variants-dbsnp.test.ts",
@@ -13,6 +15,7 @@
   "consumerModules": [],
   "testFiles": {
     "owner": [
+      "src/main/connectors/descriptors/variants-mavedb.test.ts",
       "src/main/connectors/descriptors/variants-clinvar.test.ts",
       "src/main/connectors/descriptors/variants-dbsnp.test.ts",
       "src/main/connectors/descriptors/variants-gnomad.test.ts",
@@ -24,6 +27,8 @@
       "src/shared/renderer-contract-catalog.test.ts"
     ],
     "consumer": [
+      "src/main/composition/notebook-environment.test.ts",
+      "src/main/composition/reviewer.test.ts",
       "src/main/acp/application-commands.test.ts",
       "src/main/acp/artifact-code-reconstruction-runner.test.ts",
       "src/main/acp/codex-completion-handoff.integration.test.ts",
@@ -193,7 +198,10 @@
       "src/main/credential-identity/macos.test.ts",
       "src/main/credential-identity/probe-logging.test.ts",
       "src/main/notebook/runtime-service.rpc-retirement.test.ts",
-      "src/main/notebook/runtime-service.macos-isolation.integration.test.ts"
+      "src/main/notebook/runtime-service.macos-isolation.integration.test.ts",
+      "src/main/session-persistence/ipc.test.ts",
+      "src/main/acp/approved-handoff-outcome.integration.test.ts",
+      "src/main/acp/approved-handoff-outcome.test.ts"
     ]
   },
   "capabilityOverlays": [],

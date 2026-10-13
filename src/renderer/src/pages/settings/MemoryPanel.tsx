@@ -1,6 +1,6 @@
 import { useRetainedDialogValue } from '@/components/ui/use-retained-dialog-value'
 import { ErrorNotice } from '@/components/error-notice'
-import { AlertDialog } from 'radix-ui'
+import * as AlertDialog from '@/components/ui/alert-dialog'
 import {
   ArrowUpRight,
   Bell,
@@ -401,6 +401,11 @@ const EntryRow = ({
   const updateEntry = useMemoryStore((state) => state.updateEntry)
   const [editing, setEditing] = useState<MemoryEntryView>()
   const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const timeout = window.setTimeout(() => setCopied(false), 1_200)
+    return () => window.clearTimeout(timeout)
+  }, [copied])
   const entryCategoryName =
     entry.categoryId === ABOUT_YOU_MEMORY_CATEGORY_ID ? t('About you') : entry.categoryName
   const categoryLabel = viewKind === 'project' ? entryCategoryName : null
@@ -413,7 +418,6 @@ const EntryRow = ({
       if (!navigator.clipboard) return
       await navigator.clipboard.writeText(entry.content)
       setCopied(true)
-      window.setTimeout(() => setCopied(false), 1_200)
     } catch {
       setCopied(false)
     }
@@ -777,6 +781,13 @@ const MemoryList = ({
                     ) : null}
                   </div>
                 </div>
+                {selectedProject ? (
+                  <div className="border-b border-border bg-muted/20 px-4 py-2 text-xs leading-5 text-muted-foreground">
+                    {t(
+                      'Store researcher-confirmed hypotheses, endpoints, eligibility criteria, analysis decisions and reasons, and manuscript revision notes here. With Memory on, the Agent can recall them in later sessions. Add a dated note when a decision changes; never store patient identifiers or raw data.'
+                    )}
+                  </div>
+                ) : null}
                 {adding ? (
                   <NoteEditor
                     placeholder={t('Add a note…')}

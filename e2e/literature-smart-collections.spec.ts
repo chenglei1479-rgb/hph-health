@@ -40,7 +40,7 @@ test('creates a smart collection without a model and preserves the setup path', 
   await expect(page.getByRole('heading', { name: 'Clinical trials', exact: true })).toBeVisible()
   const panel = page.getByRole('region', { name: 'Smart collection', exact: true })
   await expect(panel.getByRole('button', { name: 'Update collection' })).toHaveCount(0)
-  await expect(page.getByText('No references found', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('No references yet', { exact: true })).toHaveCount(0)
   await expect(
     panel.getByText('Choose a classification model to start organizing papers.')
   ).toBeVisible()
@@ -78,7 +78,7 @@ test('selects the first classification model for both features after saving a pr
     const port = (service.address() as { port: number }).port
     const page = await app.completeOnboarding()
     await page.evaluate(() => window.api.locale.setPreference({ preference: 'en' }))
-    await page.getByRole('button', { name: 'Model settings' }).click()
+    await page.getByRole('button', { name: 'Settings' }).click()
     const settings = page.getByRole('dialog', { name: 'Settings' })
     await settings.getByRole('tab', { name: 'Classification models' }).click()
     await settings.getByText('Add service').click()
@@ -209,6 +209,8 @@ test('reviews classified papers in the library table using a local fixture servi
     const address = service.address() as { port: number }
     const page = await app.completeOnboarding()
     await page.evaluate(() => window.api.locale.setPreference({ preference: 'en' }))
+    // Keep the decision rail scrollable on developer screens as well as Mac CI.
+    await page.setViewportSize({ width: 1100, height: 720 })
     const papers = [
       'Randomized trial of rehabilitation after stroke',
       'Blood pressure treatment in adults: a randomized trial',
@@ -269,7 +271,7 @@ test('reviews classified papers in the library table using a local fixture servi
     await page.getByRole('button', { name: 'Library', exact: true }).click()
     await page.getByRole('button', { name: 'Manual collection', exact: true }).click()
     const ordinaryTop = (await page
-      .getByRole('heading', { name: 'No references found' })
+      .getByRole('heading', { name: 'No references yet' })
       .locator('..')
       .boundingBox())!.y
     await page.screenshot({ path: testInfo.outputPath('ordinary-collection-empty.png') })
@@ -343,19 +345,23 @@ test('reviews classified papers in the library table using a local fixture servi
     await expect(page.getByRole('tab', { name: 'Excluded 1', exact: true })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Not evaluated 0', exact: true })).toBeVisible()
     const includedTab = page.getByRole('tab', { name: 'Included 2', exact: true })
-    const decisionTabs = page.getByRole('tablist', { name: 'Filter decisions' }).getByRole('tab')
+    const decisionTablist = page.getByRole('tablist', { name: 'Filter decisions' })
+    const decisionTabs = decisionTablist.getByRole('tab')
     const tabGeometry = (): Promise<{ x: number; y: number; width: number; height: number }[]> =>
-      decisionTabs.evaluateAll((tabs) =>
-        tabs.map((tab) => {
+      decisionTablist.evaluate((list) =>
+        Array.from(list.querySelectorAll('[role="tab"]'), (tab) => {
           const { x, y, width, height } = tab.getBoundingClientRect()
-          return { x, y, width, height }
+          // Revealing a clipped tab scrolls the rail without changing its layout.
+          return { x: x + list.scrollLeft, y, width, height }
         })
       )
     const initialGeometry = await tabGeometry()
     for (let index = 0; index < 4; index++) {
       await decisionTabs.nth(index).click()
+      await expect(decisionTabs.nth(index)).toHaveAttribute('aria-selected', 'true')
       expect(await tabGeometry()).toEqual(initialGeometry)
     }
+    expect(await decisionTablist.evaluate((list) => list.scrollLeft)).toBeGreaterThan(0)
     await includedTab.click()
     await includedTab.focus()
     await page.keyboard.press('ArrowRight')
@@ -369,7 +375,10 @@ test('reviews classified papers in the library table using a local fixture servi
       .getByRole('tablist', { name: 'Filter decisions' })
       .boundingBox()
     const sortBounds = await page.getByRole('combobox', { name: 'Sort references' }).boundingBox()
-    expect(Math.abs(decisionBounds!.y - sortBounds!.y)).toBeLessThan(10)
+    // The flex row centers controls of different heights, including the rail's native scrollbar.
+    const decisionCenterY = decisionBounds!.y + decisionBounds!.height / 2
+    const sortCenterY = sortBounds!.y + sortBounds!.height / 2
+    expect(Math.abs(decisionCenterY - sortCenterY)).toBeLessThan(2)
     const searchBounds = await page
       .getByRole('textbox', { name: 'Search references' })
       .boundingBox()

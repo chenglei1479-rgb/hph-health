@@ -11,6 +11,7 @@ import { FileTaskRunJournal, type TaskRunJournal } from '../tasks/task-run-journ
 import type { TaskAgentPort, TaskComputePreferencePort } from '../tasks/task-runner'
 import { resolveConfigRoot } from '../storage-root'
 import { loadOrCreateWebToken } from './auth'
+import { isAccountAccessAllowed } from '../account/runtime'
 import { startWebHttpServer, type ExternalWebAccess, type RunningWebServer } from './http-server'
 import { projectTaskRuntimeEvents } from './application-event-projections'
 import { HeadlessTaskApi } from './task-api'
@@ -184,6 +185,7 @@ const createWebServiceController = (
     const token = await loadWebToken(configRoot)
     const info = appInfo()
     const server = await startServer({
+      accountAccess: isAccountAccessAllowed,
       host: '127.0.0.1',
       port,
       token,
@@ -240,7 +242,7 @@ const createWebServiceController = (
     void tasks.initialize().catch((error) => log.error('Task journal restoration failed', error))
 
     const url = authUrl(token, server.port)
-    log.info(`MedResearch Agent Web: http://127.0.0.1:${server.port}/`, {
+    log.info(`DRA Web: http://127.0.0.1:${server.port}/`, {
       host: '127.0.0.1',
       port: server.port,
       attached

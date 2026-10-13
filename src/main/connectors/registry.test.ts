@@ -7,8 +7,269 @@ import {
   ALL_CONNECTOR_IDS
 } from './registry'
 import { CONNECTOR_CATALOG } from './catalog'
+import { ParserEngine } from './engine'
+import { CELLXGENE_DISCOVER_TOOLS } from './descriptors/cellxgene-discover'
+import { renderSkillDoc } from './skill-doc'
+import { WORKBENCH_OMICS_TOOLS } from './descriptors/omics-workbench'
+import { VARIANTS_MAVEDB_TOOLS } from './descriptors/variants-mavedb'
 
 describe('registry + catalog', () => {
+  it.each(['search_tcrs', 'search_bcrs'])(
+    'documents the %s group filters and export completeness boundary',
+    (method) => {
+      const descriptor = getDescriptor('iedb', method)!
+      expect(descriptor.description).toContain(
+        'embedded export records are not individually filtered'
+      )
+      expect(descriptor.description).toContain('do not contain host or qualitative outcome fields')
+      expect(descriptor.description).toContain('assay__iedb_ids')
+      for (const assayMethod of [
+        'search_tcell_assays',
+        'search_bcell_assays',
+        'search_mhc_assays'
+      ]) {
+        expect(descriptor.description).toContain(assayMethod)
+      }
+      expect(descriptor.returns).toContain(
+        'describe receptor groups only, not embedded export rows'
+      )
+      expect(descriptor.returns).toContain(
+        'has_more=false does not establish a complete evidence export'
+      )
+      const doc = renderSkillDoc('iedb')
+      expect(doc).toContain(descriptor.description)
+      expect(doc).toContain(descriptor.returns!)
+    }
+  )
+
+  it.each(['search_tcrs', 'search_bcrs'])(
+    'validates %s receptor identifiers and CDR3',
+    (method) => {
+      const descriptor = getDescriptor('iedb', method)!
+      expect(() =>
+        validateToolArguments(descriptor, {
+          sequence: 'SIINFEKL',
+          chain1_cdr3: 'CASSLAPGATNEKLFF',
+          chain2_cdr3: 'CAVRDSGGYQKVTF',
+          receptor_group_id: 27233,
+          epitope_id: 25750,
+          reference_id: 1023094
+        })
+      ).not.toThrow()
+      for (const args of [
+        { chain1_cdr3: '' },
+        { chain1_cdr3: 'CASS\n' },
+        { chain2_cdr3: 'CAS S' },
+        { chain2_cdr3: 'A'.repeat(1001) },
+        { receptor_group_id: 0 },
+        { receptor_group_id: '27233' },
+        { receptor_group_id: 1.5 },
+        { sequence: 'SIINFEKL\n' },
+        { assay_id: 123 },
+        { receptor_sequence: 'CASSLAPGATNEKLFF' }
+      ])
+        expect(() => validateToolArguments(descriptor, args)).toThrow(/invalid_arguments/)
+      expect(() =>
+        validateToolArguments(getDescriptor('iedb', 'search_epitopes')!, {
+          chain1_cdr3: 'CASSLAPGATNEKLFF'
+        })
+      ).toThrow(/invalid_arguments/)
+    }
+  )
+
+  it('registers PDC discovery with version and data-use guidance', () => {
+    expect(getConnectorTools('pdc').map((tool) => tool.id)).toEqual([
+      'pdc_search_studies',
+      'pdc_get_study',
+      'pdc_list_biospecimens',
+      'pdc_list_files'
+    ])
+    const meta = CONNECTOR_CATALOG.find((item) => item.id === 'pdc')!
+    expect(meta.requiresNcbi).toBe(false)
+    expect(meta.termsUrl).toBe('https://pdc.cancer.gov/pdc/data-use-guidelines')
+    expect(meta.aliases).toContain('Proteomic Data Commons')
+    const doc = renderSkillDoc('pdc')
+    for (const phrase of [
+      'pdc_search_studies',
+      'pdc_get_study',
+      'pdc_list_biospecimens',
+      'pdc_list_files',
+      'latest version',
+      'local',
+      'Protein Assembly',
+      'data use'
+    ])
+      expect(doc).toContain(phrase)
+    expect(() =>
+      validateToolArguments(getDescriptor('pdc', 'pdc_list_files')!, {
+        pdc_study_id: 'PDC000127',
+        limit: 10
+      })
+    ).not.toThrow()
+    expect(() => validateToolArguments(getDescriptor('pdc', 'pdc_get_study')!, {})).toThrow(
+      /invalid_arguments/
+    )
+  })
+
+  it('registers bounded IEDB evidence searches and documents UniProt/PDB handoffs', () => {
+    expect(getConnectorTools('iedb').map((tool) => tool.id)).toEqual([
+      'search_epitopes',
+      'search_antigens',
+      'search_tcell_assays',
+      'search_bcell_assays',
+      'search_mhc_assays',
+      'search_tcrs',
+      'search_bcrs',
+      'search_references'
+    ])
+    const epitope = getDescriptor('iedb', 'search_epitopes')!
+    expect(() =>
+      validateToolArguments(epitope, {
+        sequence: 'SIINFEKL',
+        host_taxonomy_id: 9606,
+        uniprot_accession: 'P01012'
+      })
+    ).not.toThrow()
+    for (const args of [
+      { limit: 0 },
+      { limit: 101 },
+      { limit: 1.5 },
+      { offset: -1 },
+      { offset: 1000001 },
+      { host_taxonomy_id: '9606' },
+      { epitope_id: '1VAC' },
+      { sequence: 'SIINFEKL\n' },
+      { antigen_iri: 'UNIPROT:P01012', uniprot_accession: 'P01012' },
+      { uniprot_accession: 'P01012\n' },
+      { antigen_iri: 'UNIPROT:P01012&limit=999' },
+      { mhc_class: 'III' },
+      { pdb_id: '../x' },
+      { url: 'https://example.org/' },
+      { pubmed_id: '1234' }
+    ])
+      expect(() => validateToolArguments(epitope, { sequence: 'SIINFEKL', ...args })).toThrow(
+        /invalid_arguments/
+      )
+    expect(() =>
+      validateToolArguments(getDescriptor('iedb', 'search_mhc_assays')!, {
+        assay_id: 1406346,
+        qualitative_measure: 'Negative'
+      })
+    ).not.toThrow()
+    expect(() =>
+      validateToolArguments(getDescriptor('iedb', 'search_references')!, { pubmed_id: '22504645' })
+    ).not.toThrow()
+    const doc = renderSkillDoc('iedb')
+    for (const phrase of [
+      'get_uniprot_entries',
+      'pdb_get_structures',
+      'next_offset',
+      'not predictions',
+      'different experiments',
+      'curated antigen',
+      'assay__units',
+      'elution_id',
+      'tcr_export',
+      'bcr_export',
+      'linear_sequences',
+      'chain1_cdr3'
+    ]) {
+      expect(doc).toContain(phrase)
+    }
+  })
+
+  it.each([
+    ['search_epitopes', { sequence: 'SIINFEKL' }],
+    ['search_antigens', { antigen_name: 'ovalbumin' }],
+    ['search_tcell_assays', { assay_id: 1957578 }],
+    ['search_bcell_assays', { assay_id: 1854962 }],
+    ['search_mhc_assays', { assay_id: 1406346 }],
+    ['search_tcrs', { chain1_cdr3: 'CASSLAPGATNEKLFF' }],
+    ['search_bcrs', { receptor_group_id: 27233 }],
+    ['search_references', { pubmed_id: '22504645' }]
+  ] as const)(
+    'requires a biological or evidence filter in the %s input schema',
+    (method, filter) => {
+      const descriptor = getDescriptor('iedb', method)!
+      for (const args of [{}, { limit: 20 }, { offset: 0 }, { limit: 20, offset: 0 }]) {
+        expect(() => validateToolArguments(descriptor, args)).toThrow(/invalid_arguments/)
+      }
+      expect(() =>
+        validateToolArguments(descriptor, { ...filter, limit: 20, offset: 0 })
+      ).not.toThrow()
+      expect(() => validateToolArguments(descriptor, { host_taxonomy_id: 9606 })).not.toThrow()
+    }
+  )
+
+  it.each([
+    'search_epitopes',
+    'search_antigens',
+    'search_tcell_assays',
+    'search_bcell_assays',
+    'search_mhc_assays',
+    'search_tcrs',
+    'search_bcrs',
+    'search_references'
+  ])('validates mutually exclusive antigen filters in the %s input schema', (method) => {
+    const descriptor = getDescriptor('iedb', method)!
+    expect(() => validateToolArguments(descriptor, { antigen_iri: 'UNIPROT:P01012' })).not.toThrow()
+    expect(() => validateToolArguments(descriptor, { uniprot_accession: 'P01012' })).not.toThrow()
+    expect(() =>
+      validateToolArguments(descriptor, {
+        antigen_iri: 'UNIPROT:P01012',
+        uniprot_accession: 'P01012'
+      })
+    ).toThrow(/invalid_arguments/)
+  })
+
+  it('exposes PDB sequence search through the registry and generated skill with strict cutoffs', () => {
+    const tool = getDescriptor('structures', 'pdb_search_sequence')!
+    expect(tool).toBeDefined()
+    const sequence = 'MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQV'
+    expect(() =>
+      validateToolArguments(tool, { sequence, identity_cutoff: 0.9, min_query_coverage: 0.8 })
+    ).not.toThrow()
+    for (const args of [
+      {},
+      { sequence, identity_cutoff: 90 },
+      { sequence, min_query_coverage: -1 },
+      { sequence, evalue_cutoff: 0 },
+      { sequence, max_rows: 26 },
+      { sequence, max_candidates: 1001 },
+      { sequence, include_computed_models: true }
+    ])
+      expect(() => validateToolArguments(tool, args)).toThrow(/invalid_arguments/)
+    const doc = renderSkillDoc('structures')
+    expect(doc).toContain('### pdb_search_sequence')
+    expect(doc).toContain('min_query_coverage')
+    expect(doc).toContain('BEFORE coverage filtering')
+    expect(doc).toContain('auth_asym_ids')
+  })
+
+  it('registers bounded Monarch evidence queries separately from OLS and Alliance', () => {
+    expect(getConnectorTools('monarch').map((tool) => tool.id)).toEqual([
+      'monarch_get_disease_phenotypes',
+      'monarch_get_gene_phenotypes'
+    ])
+    const tool = getDescriptor('monarch', 'monarch_get_disease_phenotypes')!
+    expect(() => validateToolArguments(tool, { disease_id: 'MONDO:0007947' })).not.toThrow()
+    for (const args of [
+      { disease_id: 'Marfan' },
+      { disease_id: 'MONDO:0007947\n' },
+      { disease_id: 'MONDO:0007947', limit: 101 },
+      { disease_id: 'MONDO:0007947', offset: -1 },
+      { disease_id: 'MONDO:0007947', direct: 'false' },
+      { disease_id: 'MONDO:0007947', query: '*' }
+    ])
+      expect(() => validateToolArguments(tool, args)).toThrow(/invalid_arguments/)
+    const doc = renderSkillDoc('monarch')
+    expect(doc).toContain('monarch_get_disease_phenotypes')
+    expect(doc).toContain('monarch_get_gene_phenotypes')
+    expect(doc).toContain('knowledge_level')
+    expect(doc).toContain('OLS')
+    expect(doc).toContain('Alliance')
+  })
+
   it('registers HMMER search, status and results with the Pfam hmmscan constraint', () => {
     expect(getConnectorTools('hmmer').map((tool) => tool.id)).toEqual([
       'search',
@@ -65,7 +326,11 @@ describe('registry + catalog', () => {
   })
 
   it('registers InterProScan separately and validates its bounded input contract', () => {
-    expect(getConnectorTools('interproscan').map((tool) => tool.id)).toEqual(['status', 'results'])
+    expect(getConnectorTools('interproscan').map((tool) => tool.id)).toEqual([
+      'submit',
+      'status',
+      'results'
+    ])
     expect(getDescriptor('protein-annotation', 'submit')).toBeUndefined()
     for (const method of ['status', 'results']) {
       expect(() =>
@@ -74,6 +339,17 @@ describe('registry + catalog', () => {
         })
       ).toThrow(/invalid_arguments/)
     }
+    expect(() =>
+      validateToolArguments(getDescriptor('interproscan', 'submit')!, {
+        sequence: 'MKT',
+        title: 'example'
+      })
+    ).not.toThrow()
+    expect(() =>
+      validateToolArguments(getDescriptor('interproscan', 'submit')!, {
+        sequence: ''
+      })
+    ).toThrow(/invalid_arguments/)
   })
   it('resolves a tool by connector+method', () => {
     expect(getDescriptor('chemistry', 'pubchem_get_compounds')?.id).toBe('pubchem_get_compounds')
@@ -99,6 +375,80 @@ describe('registry + catalog', () => {
     expect(() => validateToolArguments(descriptor, { cids: '2244' })).toThrow(
       /invalid tool arguments.*cids.*array/i
     )
+  })
+  it('validates Ensembl LD inputs and publishes the same contracts in the generated skill', () => {
+    const population = '1000GENOMES:phase_3:KHV'
+    const pairArgs = {
+      variant_id1: 'rs6792369',
+      variant_id2: 'rs1042779',
+      population_name: population
+    }
+    const proxyArgs = { variant_id: 'rs1042779', population_name: population }
+    const pairwise = getDescriptor('genomes', 'ensembl_ld_pairwise')!
+    const proxies = getDescriptor('genomes', 'ensembl_ld_proxies')!
+    expect(() => validateToolArguments(pairwise, pairArgs)).not.toThrow()
+    expect(() => validateToolArguments(proxies, proxyArgs)).not.toThrow()
+    for (const [descriptor, args] of [
+      [pairwise, pairArgs],
+      [proxies, proxyArgs]
+    ] as const) {
+      for (const invalid of [
+        { ...args, population_name: undefined },
+        { ...args, population_name: '' },
+        { ...args, population_name: '  ' },
+        { ...args, population_name: null },
+        { ...args, population_name: 1 },
+        { ...args, species: '' },
+        { ...args, species: '  ' },
+        { ...args, species: null },
+        { ...args, assembly: 'GRCh37' }
+      ]) {
+        expect(() => validateToolArguments(descriptor, invalid)).toThrow(/invalid_arguments/)
+      }
+      const doc = renderSkillDoc('genomes')
+      expect(doc).toContain(`### ${descriptor.id}`)
+      expect(doc).toContain(descriptor.description)
+      expect(doc).toContain(descriptor.returns!)
+      expect(descriptor.description).toContain('High LD does not establish causality')
+      expect(descriptor.description).toContain('caller must supply the full population name')
+      expect(descriptor.description).not.toContain('/info/variation/populations')
+    }
+    for (const field of ['variant_id1', 'variant_id2'] as const) {
+      for (const value of [undefined, '', '  ', 123]) {
+        expect(() => validateToolArguments(pairwise, { ...pairArgs, [field]: value })).toThrow(
+          /invalid_arguments/
+        )
+      }
+    }
+    for (const invalid of [
+      { variant_id: undefined },
+      { variant_id: '' },
+      { variant_id: '  ' },
+      { min_r2: -0.1 },
+      { min_r2: 1.1 },
+      { min_r2: '0.8' },
+      { min_d_prime: -0.1 },
+      { min_d_prime: 1.1 },
+      { min_d_prime: null },
+      { window_size: 0 },
+      { window_size: 501 },
+      { window_size: 1.5 },
+      { max_records: 0 },
+      { max_records: 1001 },
+      { max_records: 1.5 }
+    ]) {
+      expect(() => validateToolArguments(proxies, { ...proxyArgs, ...invalid })).toThrow(
+        /invalid_arguments/
+      )
+    }
+    for (const bounds of [
+      { min_r2: 0, min_d_prime: 0, window_size: 1, max_records: 1 },
+      { min_r2: 1, min_d_prime: 1, window_size: 500, max_records: 1000 }
+    ]) {
+      expect(() => validateToolArguments(proxies, { ...proxyArgs, ...bounds })).not.toThrow()
+    }
+    expect(proxies.description).toContain('total width')
+    expect(proxies.description).toContain('does not limit upstream computation or download size')
   })
   it.each(['ncbi_get_assembly_info', 'ncbi_get_sequence_aliases'])(
     'requires a versioned assembly accession for genomes/%s',
@@ -168,6 +518,83 @@ describe('registry + catalog', () => {
         ids: Array.from({ length: 100_000 }, (_, i) => `id${i}`)
       })
     ).not.toThrow()
+  })
+})
+
+describe('Metabolomics Workbench registration and input contracts', () => {
+  it('registers all tools in Omics Archives and includes discovery guidance and examples', () => {
+    const catalog = CONNECTOR_CATALOG.find((entry) => entry.id === 'omics-archives')!
+    expect(catalog.sources).toContain('Metabolomics Workbench')
+    const doc = renderSkillDoc(catalog.id)
+    for (const descriptor of WORKBENCH_OMICS_TOOLS) {
+      expect(getDescriptor('omics-archives', descriptor.id)).toBe(descriptor)
+      expect(doc).toContain(descriptor.id)
+      expect(doc).toContain(descriptor.example!)
+    }
+  })
+
+  it('accepts supported compound fields, study search fields and study sections', () => {
+    for (const field of [
+      'regno',
+      'formula',
+      'inchi_key',
+      'lm_id',
+      'pubchem_cid',
+      'hmdb_id',
+      'kegg_id',
+      'chebi_id',
+      'metacyc_id'
+    ]) {
+      expect(() =>
+        validateToolArguments(getDescriptor('omics-archives', 'workbench_search_compounds')!, {
+          field,
+          query: '5793'
+        })
+      ).not.toThrow()
+    }
+    for (const field of [undefined, 'study_title', 'institute']) {
+      expect(() =>
+        validateToolArguments(getDescriptor('omics-archives', 'workbench_search_studies')!, {
+          ...(field === undefined ? {} : { field }),
+          query: 'Fatb'
+        })
+      ).not.toThrow()
+    }
+    for (const section of [undefined, 'summary', 'factors', 'analysis', 'metabolites']) {
+      expect(() =>
+        validateToolArguments(getDescriptor('omics-archives', 'workbench_get_study')!, {
+          ...(section === undefined ? {} : { section }),
+          study_id: 'ST000001'
+        })
+      ).not.toThrow()
+    }
+  })
+
+  it.each([
+    ['workbench_search_compounds', { field: 'name', query: 'glucose' }],
+    ['workbench_search_compounds', { field: 'abbrev', query: 'PC(34:1)' }],
+    ['workbench_search_compounds', { field: 'regno', query: 11 }],
+    ['workbench_search_studies', {}],
+    ['workbench_search_studies', { query: '' }],
+    ['workbench_search_studies', { query: 'x'.repeat(201) }],
+    ['workbench_search_studies', { query: 'Fatb', field: 'species' }],
+    ['workbench_search_studies', { query: 'Fatb', limit: 0 }],
+    ['workbench_search_studies', { query: 'Fatb', limit: 1001 }],
+    ['workbench_search_studies', { query: 'Fatb', limit: 1.5 }],
+    ['workbench_search_studies', { query: 'Fatb', limit: '10' }],
+    ['workbench_search_studies', { query: 'Fatb', offset: 1 }],
+    ['workbench_get_study', { study_id: 'ST' }],
+    ['workbench_get_study', { study_id: 'ST000001/../ST000002' }],
+    ['workbench_get_study', { study_id: 'ST000001', section: 'data' }],
+    ['workbench_get_study', { study_id: 'ST000001', download: true }],
+    ['workbench_search_studies', { field: 'last_name', query: 'Kind' }]
+  ])('rejects invalid %s arguments at the registry boundary: %j', (id, args) => {
+    expect(() =>
+      validateToolArguments(
+        getDescriptor('omics-archives', id as string)!,
+        args as Record<string, unknown>
+      )
+    ).toThrow(/invalid_arguments/)
   })
 })
 
@@ -364,5 +791,147 @@ describe('UniProt discovery input contract', () => {
     const minimal = { gene: 'TP53' }
     validateToolArguments(search, minimal)
     expect(minimal).toEqual({ gene: 'TP53' })
+  })
+})
+
+describe('MaveDB registration and input contracts', () => {
+  const SCORE_SET = 'urn:mavedb:00000003-a-1'
+  const EXPERIMENT = 'urn:mavedb:00000003-a'
+  const tool = (id: string): (typeof VARIANTS_MAVEDB_TOOLS)[number] =>
+    getDescriptor('variants', `mavedb_${id}`)!
+
+  it('registers all six public tools and discovery aliases', () => {
+    expect(VARIANTS_MAVEDB_TOOLS).toHaveLength(6)
+    for (const descriptor of VARIANTS_MAVEDB_TOOLS) {
+      expect(getDescriptor('variants', descriptor.id)).toBe(descriptor)
+      expect(descriptor.requiredCredential).toBeUndefined()
+    }
+    expect(CONNECTOR_CATALOG.find((c) => c.id === 'variants')?.aliases).toContain('MaveDB')
+  })
+
+  it.each(['urn:mavedb:00000662-0-1', 'urn:mavedb:00000003-aa-12'])(
+    'accepts published meta-analysis and multi-letter URNs: %s',
+    (id) => {
+      expect(() => validateToolArguments(tool('get_score_set'), { urn: id })).not.toThrow()
+      expect(() =>
+        validateToolArguments(tool('get_experiment'), { urn: id.slice(0, id.lastIndexOf('-')) })
+      ).not.toThrow()
+    }
+  )
+
+  it.each([
+    ['get_score_set', { urn: EXPERIMENT }],
+    ['get_experiment', { urn: SCORE_SET }],
+    ['get_score_set', { urn: `${SCORE_SET}/../../users/me` }],
+    ['get_score_set', { urn: `${SCORE_SET}?secret=1` }],
+    ['get_score_set', { urn: `tmp:446191af-c1f8-4891-9f67-de152e9d328b` }],
+    ['search_score_sets', { text: ' ' }],
+    ['search_score_sets', { text: 'x'.repeat(1001) }],
+    ['search_score_sets', { text: 'BRCA1', limit: 101 }],
+    ['search_score_sets', { text: 'BRCA1', offset: -1 }],
+    ['search_score_sets', { text: 'BRCA1', offset: 0.5 }],
+    ['download_scores', { urn: SCORE_SET, limit: '2' }],
+    ['download_scores', { urn: SCORE_SET, limit: 10001 }],
+    ['download_scores', { urn: SCORE_SET, start: -1 }]
+  ])('rejects invalid MaveDB %s arguments in the registered schema', (id, args) => {
+    expect(() => validateToolArguments(tool(id), args)).toThrow(/invalid_arguments/)
+  })
+
+  it('rejects unsupported input fields in the registered schema', () => {
+    expect(() =>
+      validateToolArguments(tool('get_mapped_variants'), { urn: SCORE_SET, offset: 1 })
+    ).toThrow(/invalid_arguments/)
+    expect(() =>
+      validateToolArguments(tool('search_score_sets'), { text: 'BRCA1', published: false })
+    ).toThrow(/invalid_arguments/)
+  })
+})
+
+describe('CELLxGENE Discover registration and input contracts', () => {
+  const C = '9a71db9e-687f-41f0-b88e-544eb1314ef6'
+  const D = '0bbf93aa-2d3a-420f-95a1-26fe384024cb'
+  const DV = '8e0fcb64-735c-4fcb-a74b-12a3518683d1'
+
+  it('registers nine tools separately from CellGuide and documents the acquisition workflow', () => {
+    expect(getConnectorTools('cellxgene-discover')).toEqual(CELLXGENE_DISCOVER_TOOLS)
+    expect(CELLXGENE_DISCOVER_TOOLS).toHaveLength(9)
+    expect(getConnectorTools('cellguide')).toHaveLength(5)
+    expect(CONNECTOR_CATALOG.find((c) => c.id === 'cellxgene-discover')).toMatchObject({
+      requiresNcbi: false
+    })
+    const doc = renderSkillDoc('cellxgene-discover')
+    for (const t of CELLXGENE_DISCOVER_TOOLS) {
+      expect(doc).toContain(t.id)
+      expect(t.returns).toBeTruthy()
+      const args = JSON.parse(t.example!.slice(t.example!.lastIndexOf(', {') + 2, -1))
+      expect(() => validateToolArguments(t, args)).not.toThrow()
+    }
+    expect(doc).toContain('client-side')
+    expect(doc).toContain('Census')
+    expect(doc).toContain('dataset_version_id')
+    expect(doc).toContain('can return historical datasets')
+  })
+
+  it.each([{ dataset_version_id: DV }, { collection_id: C, dataset_id: D }])(
+    'accepts either file inventory identity: %j',
+    (args) => {
+      expect(() =>
+        validateToolArguments(getDescriptor('cellxgene-discover', 'list_dataset_files')!, args)
+      ).not.toThrow()
+    }
+  )
+
+  it.each([
+    ['list_collections', { page: 0 }],
+    ['list_collections', { page_size: 101 }],
+    ['list_datasets', { page_size: 1.5 }],
+    ['list_datasets', { query: '  ' }],
+    ['list_datasets', { schema_version: '7&visibility=PRIVATE' }],
+    ['list_datasets', { visibility: 'PRIVATE' }],
+    ['get_collection', { collection_id: '../private' }],
+    ['get_dataset', { dataset_id: D }],
+    ['get_dataset_version', { dataset_version_id: `${DV}?other=1` }],
+    ['list_dataset_files', { collection_id: C }],
+    ['list_dataset_files', { dataset_id: D, dataset_version_id: DV }],
+    ['list_dataset_files', { dataset_version_id: null }],
+    ['list_dataset_files', { dataset_version_id: DV, extra: true }],
+    ['list_dataset_files', {}],
+    ['list_dataset_files', { dataset_id: D }],
+    ['list_dataset_files', { collection_id: C, dataset_version_id: DV }],
+    ['list_dataset_files', { collection_id: C, dataset_id: D, dataset_version_id: DV }]
+  ])(
+    'rejects invalid or ambiguous %s arguments before making a request: %j',
+    async (method, args) => {
+      const fetchImpl = vi.fn()
+      const engine = new ParserEngine({ fetchImpl })
+      const tool = getDescriptor('cellxgene-discover', method)!
+      await expect(
+        Promise.resolve().then(() => {
+          validateToolArguments(tool, args)
+          return engine.call(tool, args, {})
+        })
+      ).rejects.toThrow('invalid_arguments')
+      expect(fetchImpl).not.toHaveBeenCalled()
+    }
+  )
+})
+
+describe('Cellosaurus registration', () => {
+  it('exposes identity and quality tools with valid generated examples', () => {
+    const tools = getConnectorTools('cellosaurus')
+    expect(tools.map((tool) => tool.id)).toEqual(['search_cell_lines', 'get_cell_line'])
+    expect(CONNECTOR_CATALOG.find((entry) => entry.id === 'cellosaurus')).toMatchObject({
+      sources: ['Cellosaurus'],
+      requiresNcbi: false
+    })
+    const doc = renderSkillDoc('cellosaurus')
+    expect(doc).toContain('name: mcp-cellosaurus')
+    expect(doc).toContain('No recorded problem')
+    expect(doc).toContain('next_offset')
+    for (const tool of tools) {
+      expect(doc).toContain(`### ${tool.id}`)
+      const args = JSON.parse(tool.example!.slice(tool.example!.lastIndexOf(', {') + 2, -1))
+      expect(() => validateToolArguments(tool, args)).not.toThrow()
+    }
   })
 })

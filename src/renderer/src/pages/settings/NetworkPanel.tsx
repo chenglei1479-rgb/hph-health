@@ -16,7 +16,10 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { ExternalTextLink } from '@/components/ExternalTextLink'
 import { isMirrorConfigured, mirrorStatusText, MIRROR_HELP_URL } from './mirror-view'
 import { NetworkProxyForm } from './NetworkProxyForm'
-import { NotebookNetworkDomainsForm } from './NotebookNetworkDomainsForm'
+import {
+  NotebookNetworkDomainsForm,
+  type NetworkEditorLeaveState
+} from './NotebookNetworkDomainsForm'
 import { SettingsSection } from './SettingsLayout'
 
 const fieldLabelClassName = 'text-xs font-medium text-muted-foreground'
@@ -26,6 +29,7 @@ const fieldLabelClassName = 'text-xs font-medium text-muted-foreground'
 type NetworkView = { kind: 'list' | 'mirror' | 'proxy' | 'domains' }
 type NetworkPanelProps = {
   view: NetworkView
+  onNetworkLeaveStateChange?: (state: NetworkEditorLeaveState | null) => void
   onNavigate: (view: NetworkView) => void
   notebookNetworkAvailable?: boolean
 }
@@ -52,6 +56,7 @@ const CONNECTION_TYPE_LABELS: Partial<Record<NetworkConnectionType, string>> = {
 const NetworkPanel = ({
   view,
   onNavigate,
+  onNetworkLeaveStateChange,
   notebookNetworkAvailable = true
 }: NetworkPanelProps): React.JSX.Element => {
   const { t } = useTranslation()
@@ -190,7 +195,7 @@ const NetworkPanel = ({
         .filter((part) => part !== null)
         .join(' · ') || undefined
 
-  const networkLabel = t('Internet connection')
+  const networkLabel = t('Package registry connectivity')
 
   // The Network status row is an EnvironmentCheckItem so it renders with the exact same row
   // component as the onboarding environment step's network check. A live link with unreachable
@@ -241,7 +246,8 @@ const NetworkPanel = ({
         : Network
 
   if (view.kind === 'proxy') return <NetworkProxyForm onDone={() => onNavigate({ kind: 'list' })} />
-  if (view.kind === 'domains' && notebookNetworkAvailable) return <NotebookNetworkDomainsForm />
+  if (view.kind === 'domains' && notebookNetworkAvailable)
+    return <NotebookNetworkDomainsForm onLeaveStateChange={onNetworkLeaveStateChange} />
 
   return (
     <div className="space-y-6 p-5">
@@ -252,33 +258,23 @@ const NetworkPanel = ({
           aria-label={t('Network status')}
         >
           <div className="rounded-xl border border-border px-4">
-            <ul aria-live="polite">
-              {isChecking ? (
-                <PendingCheckRow
-                  id={NETWORK_CHECK_ID}
-                  label={networkLabel}
-                  pendingText={t('Checking…')}
-                />
-              ) : (
-                <EnvironmentCheckRow check={networkCheck} icon={networkIcon} />
-              )}
-            </ul>
-
-            <div className="pb-4">
-              {!isOnline || connectivity === 'unreachable' || connectivity === 'probe-failed' ? (
-                <div className="mb-4 rounded-lg bg-bg-10 px-4 py-4 ring-1 ring-border-200">
-                  <ol className="list-decimal space-y-1 pl-5 text-xs leading-relaxed text-muted-foreground">
-                    {!isOnline ? <li>{t('Check your cable or Wi-Fi connection.')}</li> : null}
-                    <li>{t('Check proxy, VPN, or firewall settings.')}</li>
-                    <li>{t('Check the package mirror configuration below.')}</li>
-                  </ol>
-                </div>
-              ) : null}
+            <div className="flex flex-wrap items-center gap-3 py-4">
+              <ul className="min-w-0 flex-1 basis-64 [&>li]:py-0" aria-live="polite">
+                {isChecking ? (
+                  <PendingCheckRow
+                    id={NETWORK_CHECK_ID}
+                    label={networkLabel}
+                    pendingText={t('Checking…')}
+                  />
+                ) : (
+                  <EnvironmentCheckRow check={networkCheck} icon={networkIcon} />
+                )}
+              </ul>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="mt-3"
+                className="ml-auto shrink-0"
                 onClick={handleRetry}
                 disabled={isChecking}
               >
@@ -286,6 +282,15 @@ const NetworkPanel = ({
                 {isChecking ? t('Checking…') : t('Check again')}
               </Button>
             </div>
+            {!isOnline || connectivity === 'unreachable' || connectivity === 'probe-failed' ? (
+              <div className="mb-4 rounded-lg bg-bg-10 px-4 py-4 ring-1 ring-border-200">
+                <ol className="list-decimal space-y-1 pl-5 text-xs leading-relaxed text-muted-foreground">
+                  {!isOnline ? <li>{t('Check your cable or Wi-Fi connection.')}</li> : null}
+                  <li>{t('Check proxy, VPN, or firewall settings.')}</li>
+                  <li>{t('Check the package mirror configuration below.')}</li>
+                </ol>
+              </div>
+            ) : null}
           </div>
         </SettingsSection>
       ) : null}
@@ -294,7 +299,7 @@ const NetworkPanel = ({
         <SettingsSection
           title={t('Notebook network access')}
           description={t(
-            'Control which internet domains Notebook Python, R, REPL, and Bash can reach.'
+            'Manage public domains and trusted private services for protected Notebook and Shell execution.'
           )}
           aria-label={t('Notebook network access')}
           data-settings-anchor="network.domains"
@@ -302,12 +307,18 @@ const NetworkPanel = ({
           <div className="rounded-xl border border-border p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm text-foreground">{t('MedResearch Agent domains')}</p>
+                <p className="text-sm text-foreground">
+                  {t('Public domains and private services')}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {t('{{count}} custom domains allowed', {
                     count: notebookNetwork.allowedDomains.length,
                     defaultValue_one: '{{count}} custom domain allowed'
                   })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('Trusted private services')} ·{' '}
+                  {notebookNetwork.trustedPrivateDestinations?.length ?? 0}
                 </p>
               </div>
               <Button
@@ -315,7 +326,7 @@ const NetworkPanel = ({
                 variant="outline"
                 onClick={() => onNavigate({ kind: 'domains' })}
               >
-                {t('Configure domains')}
+                {t('Manage access')}
               </Button>
             </div>
           </div>
@@ -326,7 +337,7 @@ const NetworkPanel = ({
         <SettingsSection
           title={t('Proxy')}
           description={t(
-            'How MedResearch Agent, ACP agents, notebook runtimes, and installers reach the internet.'
+            'How DRA, ACP agents, notebook runtimes, and installers reach the internet.'
           )}
           aria-label={t('Proxy')}
           data-settings-anchor="network.proxy"

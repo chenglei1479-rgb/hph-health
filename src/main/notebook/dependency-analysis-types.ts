@@ -101,10 +101,15 @@ type NotebookPythonHelperModule = {
 
 type NotebookSourceFileAccessContext = {
   // Live analysis only; these fields are deliberately omitted from the sidecar.
+  // The runtime working directory is known from the run envelope. It lets the
+  // source analyzer represent Path.cwd() as the notebook execution root while
+  // keeping the lineage paths relative and portable.
+  workingDirectory?: string
   managedEnvironment?: Readonly<Record<string, string>>
   managedEnvironmentSafe?: boolean
   replContainerNames?: string[]
   replNamespaceUncertain?: boolean
+  replPersistentBindings?: true
   staticStrings: Array<{ name: string; value: string }>
   staticCollections: Array<{
     name: string
@@ -146,7 +151,14 @@ type NotebookSourceFileAccessContext = {
 export type NotebookSerializedValue = {
   path: string
   format: 'rds' | 'qs' | 'python-pickle' | 'joblib' | 'npy'
-  valueType: 'r-value' | 'pandas.DataFrame' | 'pandas.Series' | 'numpy.ndarray'
+  valueType:
+    | 'r-value'
+    | 'pandas.DataFrame'
+    | 'pandas.Series'
+    | 'numpy.ndarray'
+    | 'sklearn.preprocessing.StandardScaler'
+    | 'sklearn.decomposition.PCA'
+    | 'sklearn.linear_model.LinearRegression'
 }
 
 type NotebookRunDependencyFacts =
@@ -217,12 +229,24 @@ type NotebookRunDependencyFacts =
 type AnalyzedNotebookRun = {
   run: NotebookRunRecord
   facts: NotebookRunDependencyFacts
+  fileAccess?: NotebookSourceFileAccessAnalysis
+}
+
+type NotebookFileDependency = {
+  producerRunId: string
+  path: string
+  generationId?: string
+  checksum?: string
+  confidence: 'verified' | 'advisory'
 }
 
 type NotebookDependencyProjection = {
   stalenessByRunId: Record<string, NotebookRunStaleness>
   invalidatedByRunId: Record<string, NotebookInvalidatedRun[]>
   dependenciesByRunId?: Record<string, string[]>
+  fileDependenciesByRunId?: Record<string, NotebookFileDependency[]>
+  // Recomputed from run history; not stored in per-kernel sidecar snapshots.
+  unresolvedFileReadRunIds?: string[]
 }
 
 type NotebookDependencyInterpreter = { command: string; args?: string[]; condaPrefix?: string }
@@ -238,6 +262,7 @@ type NotebookDependencyAnalysisSidecar = {
     {
       checksum: string
       facts: NotebookRunDependencyFacts
+      fileAccess?: NotebookSourceFileAccessAnalysis
       fileContext?: NotebookSourceFileAccessContext
     }
   >
@@ -312,6 +337,7 @@ export type {
   NotebookDependencyInterpreter,
   NotebookDependencyMemberWrite,
   NotebookDependencyProjection,
+  NotebookFileDependency,
   NotebookDependencyReceiverCall,
   NotebookDependencyTypeBinding,
   NotebookDependencyTypeSummary,
