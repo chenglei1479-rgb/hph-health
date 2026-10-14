@@ -236,10 +236,9 @@ class AcpContextCompactionWorkflow {
             let failureText: string | undefined
             let controlText = ''
             let compaction: AcpProviderTurnResult['compaction']
+            const command = await releaseModelText(strategy.command, sessionId)
             const promptFailure = new Promise<never>((_, reject) => {
-              session
-                .prompt([{ type: 'text', text: releaseModelText(strategy.command, sessionId) }])
-                .catch(reject)
+              session.prompt([{ type: 'text', text: command }]).catch(reject)
             })
             for (;;) {
               const message = await Promise.race([session.nextUpdate(), promptFailure])

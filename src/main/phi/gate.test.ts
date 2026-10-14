@@ -60,7 +60,7 @@ describe('PHI hard gate', () => {
     }
   })
 
-  it('redacts patient text that would otherwise be sent', () => {
+  it('redacts patient text that would otherwise be sent', async () => {
     installPhiGate({
       release: (text) => ({
         text: text.replaceAll('山田 太郎', '[患者1]'),
@@ -69,7 +69,7 @@ describe('PHI hard gate', () => {
       }),
       restore: (text) => text.replaceAll('[患者1]', '山田 太郎')
     })
-    expect(releaseModelText('患者：山田 太郎', 'cwd')).toBe('患者：[患者1]')
+    await expect(releaseModelText('患者：山田 太郎', 'cwd')).resolves.toBe('患者：[患者1]')
     installPhiGate({
       release: (text) => ({ text, replacements: [], warnings: [] }),
       restore: (text) => text

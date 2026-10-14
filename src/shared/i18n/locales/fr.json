@@ -49,6 +49,10 @@
     "Confirm Notebook kernel and environment": "Confirmer le noyau et l’environnement du Notebook"
   },
   "native": {
+    "Review de-identified text": "Vérifier le texte dé-identifié",
+    "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "Le texte surligné a été remplacé avant l'envoi. Sélectionnez toute autre information sur le patient et marquez-la. Confirmez l'envoi. Fermer cette fenêtre n'envoie rien.",
+    "Confirm send": "Confirmer l'envoi",
+    "Mark selection": "Marquer la sélection",
     "Linux OS credentials require the original selected Secret Service or KWallet backend and /usr/bin/busctl. Unlock the original default keyring or wallet and restart. Do not change the password-store backend or profile to bypass this check.": "Les identifiants système Linux nécessitent le backend Secret Service ou KWallet sélectionné à l’origine et /usr/bin/busctl. Déverrouillez le trousseau ou le portefeuille par défaut d’origine et redémarrez. Ne changez pas le backend password-store ni le profil pour contourner cette vérification.",
     "Credential storage needs recovery": "Le stockage des identifiants doit être restauré",
     "Silent credential identity checks are not supported by this system credential backend. Startup has stopped to preserve existing encrypted data.": "Ce système de stockage des identifiants ne prend pas en charge la vérification silencieuse de leur identité. Le démarrage a été interrompu pour préserver les données chiffrées existantes.",

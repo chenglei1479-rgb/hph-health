@@ -593,6 +593,9 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
         startupSettings.localePreference
       )
       const translate = localeOwner.t.bind(localeOwner)
+      const { createElectronPhiConfirmer } = await import('./phi/confirm-window')
+      const { installPhiConfirmer } = await import('./phi/gate')
+      installPhiConfirmer(createElectronPhiConfirmer(translate))
       const disposeLocalePreferenceIpc = registerLocalePreferenceIpc(localeOwner)
 
       // Set app user model id for windows

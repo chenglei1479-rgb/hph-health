@@ -19,7 +19,7 @@ export interface PhiAccessEvent {
 
 interface VaultEntry {
   hmac: string
-  category: PhiCategory
+  category: PhiCategory | 'MANUAL'
   label: string
   placeholder: string
   original: string
@@ -40,6 +40,7 @@ interface VaultDocument {
 
 export interface PhiStore {
   placeholder(category: PhiCategory, original: string, label: string): string
+  manual(original: string): string
   dateOffset(patientPseudonym: string): number
   rememberShift(shifted: string, original: string): void
   restore(text: string): string
@@ -76,6 +77,21 @@ class ProjectStore implements PhiStore {
     const placeholder = placeholderFor(label, next)
     this.record.entries.push({ hmac, category, label, placeholder, original })
     this.persist('assign', { [category]: 1 })
+    return placeholder
+  }
+
+  manual(original: string): string {
+    const normalized = normalizeIdentifier(original)
+    const hmac = createHmac('sha256', Buffer.from(this.record.key, 'base64'))
+      .update(`MANUAL\0${normalized}`)
+      .digest('hex')
+    const existing = this.record.entries.find((entry) => entry.hmac === hmac)
+    if (existing) return existing.placeholder
+    const next = (this.record.counters['追記'] ?? 0) + 1
+    this.record.counters['追記'] = next
+    const placeholder = placeholderFor('追記', next)
+    this.record.entries.push({ hmac, category: 'MANUAL', label: '追記', placeholder, original })
+    this.persist('manual', { MANUAL: 1 })
     return placeholder
   }
 

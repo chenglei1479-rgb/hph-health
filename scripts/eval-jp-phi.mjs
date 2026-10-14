@@ -21,11 +21,17 @@ const result = spawnSync(
 
 try {
   const report = JSON.parse(readFileSync(reportPath, 'utf8'))
-  const line = (label, row) =>
-    `${label}\ttp ${row.tp}\tfp ${row.fp}\tfn ${row.fn}\tP ${row.precision}\tR ${row.recall}\tF1 ${row.f1}\tn ${row.n}`
-  process.stdout.write(`\nPHI dev set EVAL_DATE=${process.env.EVAL_DATE ?? '2026-10-13'} ok=${report.ok}\n`)
-  process.stdout.write(`${line('patient overlap', report.patient.overlap.PATIENT)}\n`)
-  process.stdout.write(`${line('patient exact  ', report.patient.exact.PATIENT)}\n`)
+  const patientOverlap = report.patient.overlap.PATIENT
+  const patientExact = report.patient.exact.PATIENT
+  process.stdout.write(
+    `\nPHI dev set EVAL_DATE=${process.env.EVAL_DATE ?? '2026-10-13'} ok=${report.ok}\n`
+  )
+  process.stdout.write(
+    `patient overlap\ttp ${patientOverlap.tp}\tfp ${patientOverlap.fp}\tfn ${patientOverlap.fn}\tP ${patientOverlap.precision}\tR ${patientOverlap.recall}\tF1 ${patientOverlap.f1}\tn ${patientOverlap.n}\n`
+  )
+  process.stdout.write(
+    `patient exact  \ttp ${patientExact.tp}\tfp ${patientExact.fp}\tfn ${patientExact.fn}\tP ${patientExact.precision}\tR ${patientExact.recall}\tF1 ${patientExact.f1}\tn ${patientExact.n}\n`
+  )
   for (const category of Object.keys(report.patient.overlap)) {
     if (category === 'PATIENT') continue
     const overlap = report.patient.overlap[category]
@@ -34,11 +40,22 @@ try {
       `${category}\toverlap R ${overlap.recall} P ${overlap.precision} fn ${overlap.fn}\texact R ${exact.recall} P ${exact.precision} fn ${exact.fn}\tn ${overlap.n}\n`
     )
   }
+  const staffRows = [
+    ['staff strict overlap', report.physicianOverlap],
+    ['staff strict exact  ', report.physicianExact],
+    ['staff name overlap  ', report.physicianNameOverlap],
+    ['staff name exact    ', report.physicianNameExact]
+  ]
+  for (const [label, row] of staffRows) {
+    process.stdout.write(
+      `${label}\tP ${row.precision}\tR ${row.recall}\tF1 ${row.f1}\tfn ${row.fn}\tn ${row.n}\n`
+    )
+  }
   process.stdout.write(
     `hard recall ${JSON.stringify(report.hardRecall)} age>=90 ${report.ageRecall} replaced ${report.age90Replaced}\n`
   )
   process.stdout.write(
-    `decoy ${report.decoyRate} (n ${report.decoyN}) drug+disease ${report.drugDiseaseRate} (n ${report.drugN})\n`
+    `decoy ${report.decoyRate} (n ${report.decoyN}) drug+disease ${report.drugDiseaseRate} (n ${report.drugN}) hits ${JSON.stringify(report.decoyHits)}\n`
   )
   process.stdout.write(
     `calendar shifted ${report.calendarShiftRecall} text changed ${report.calendarTextChanged} n ${report.calendarN}; document kept ${report.documentKept} n ${report.documentN}\n`

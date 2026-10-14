@@ -259,7 +259,7 @@ class AcpProviderPromptExecutor {
 
       let promptRequest: Promise<unknown>
       try {
-        const content = releasePromptContent(input.content, input.cwd)
+        const content = await releasePromptContent(input.content, input.cwd)
         promptRequest = input.session.prompt(content)
         input.onDispatched?.()
       } catch (error) {

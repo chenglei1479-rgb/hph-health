@@ -1,4 +1,14 @@
-import { deidentify, type PhiResult } from './deidentify'
+import {
+  applyManualSpans,
+  previewFromResult,
+  highlightTokens,
+  type PhiConfirmDecision,
+  type PhiConfirmer,
+  type PhiHighlight,
+  type PhiPreview,
+  type PhiSpanMark
+} from './confirm'
+import { deidentify, type PhiReplacement, type PhiResult } from './deidentify'
 import { createMemoryPhiVault, type PhiStore } from './store'
 
 export class PhiGateError extends Error {
@@ -11,6 +21,7 @@ export class PhiGateError extends Error {
 interface PhiGate {
   release(text: string, projectId: string): PhiResult
   restore(text: string, projectId: string): string
+  manual?(original: string, projectId: string): string
 }
 
 const memory = createMemoryPhiVault()
@@ -30,15 +41,25 @@ const memoryGate: PhiGate = {
   },
   restore(text, projectId) {
     return memoryStore(projectId).restore(text)
+  },
+  manual(original, projectId) {
+    return memoryStore(projectId).manual(original)
   }
 }
 
 let gate: PhiGate = memoryGate
+let confirmer: PhiConfirmer | null = null
 let activeProjectId = 'default'
 const warnings = new Map<string, string[]>()
 
 export function installPhiGate(next: PhiGate): void {
   gate = next
+}
+
+// Production installs a window confirmer. Unit tests leave this unset and therefore do not prompt.
+// Once installed, a dismissed or failed review blocks the send.
+export function installPhiConfirmer(next: PhiConfirmer | null): void {
+  confirmer = next
 }
 
 export function notePhiProject(projectId: string): void {
@@ -64,7 +85,8 @@ export function createVaultBackedGate(vault: { store(projectId: string): PhiStor
   }
   return {
     release: (text, projectId) => deidentify(text, open(projectId)),
-    restore: (text, projectId) => open(projectId).restore(text)
+    restore: (text, projectId) => open(projectId).restore(text),
+    manual: (original, projectId) => open(projectId).manual(original)
   }
 }
 
@@ -75,20 +97,57 @@ export function createClosedGate(message: string): PhiGate {
     },
     restore() {
       throw new PhiGateError(message)
+    },
+    manual() {
+      throw new PhiGateError(message)
     }
   }
 }
 
-export function releaseModelText(text: string, projectId: string): string {
+function failClosed(error: unknown): never {
+  throw new PhiGateError(
+    error instanceof Error ? error.message : 'PHI gate failed closed. The request was not sent.'
+  )
+}
+
+function releasedPreview(text: string, projectId: string): PhiPreview {
+  const result = gate.release(text, projectId)
+  if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
+  if (result.replacements.length === 0) return { text: result.text, highlights: [] }
+  return previewFromResult(text, result.replacements)
+}
+
+async function review(preview: PhiPreview, projectId: string): Promise<string> {
+  if (!confirmer) return preview.text
+  let decision: PhiConfirmDecision
+  try {
+    decision = await confirmer(preview)
+  } catch (error) {
+    failClosed(error)
+  }
+  if (!decision?.confirmed) {
+    throw new PhiGateError('PHI review was dismissed. The request was not sent.')
+  }
+  const extras = decision.extraSpans ?? []
+  if (extras.length === 0) return preview.text
+  try {
+    return applyManualSpans(preview.text, extras, (original) => {
+      if (!gate.manual) {
+        throw new Error('PHI review cannot store a manual redaction. The request was not sent.')
+      }
+      return gate.manual(original, projectId)
+    })
+  } catch (error) {
+    failClosed(error)
+  }
+}
+
+export async function releaseModelText(text: string, projectId: string): Promise<string> {
   try {
     notePhiProject(projectId)
-    const result = gate.release(text, projectId)
-    if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
-    return result.text
+    return await review(releasedPreview(text, projectId), projectId)
   } catch (error) {
-    throw new PhiGateError(
-      error instanceof Error ? error.message : 'PHI gate failed closed. The request was not sent.'
-    )
+    failClosed(error)
   }
 }
 
@@ -134,42 +193,152 @@ function walk(value: unknown, projectId: string): unknown {
 
 type PromptBlock = { readonly type?: string; readonly text?: string; readonly content?: unknown }
 
-export function releasePromptContent<T>(content: T, projectId: string): T {
-  if (typeof content === 'string') return releaseModelText(content, projectId) as T
-  if (!Array.isArray(content)) return content
-  return content.map((block) => releaseBlock(block, projectId)) as T
+interface PreparedBlock {
+  block: unknown
+  text: string | null
+  previewStart: number
+  highlights: PhiHighlight[]
 }
 
-function releaseBlock(block: unknown, projectId: string): unknown {
-  if (!block || typeof block !== 'object') return block
+export async function releasePromptContent<T>(content: T, projectId: string): Promise<T> {
+  try {
+    notePhiProject(projectId)
+    if (typeof content === 'string') return (await releaseModelText(content, projectId)) as T
+    if (!Array.isArray(content)) {
+      throw new PhiGateError('PHI gate cannot scan this prompt. The request was not sent.')
+    }
+    const prepared: PreparedBlock[] = []
+    const segments: string[] = []
+    let cursor = 0
+    for (const block of content) {
+      const text = blockText(block)
+      if (text == null) {
+        prepared.push({ block, text: null, previewStart: 0, highlights: [] })
+        continue
+      }
+      const preview = releasedPreview(text, projectId)
+      if (segments.length > 0) cursor += 1
+      prepared.push({
+        block: preview.text === text ? block : { ...(block as PromptBlock), text: preview.text },
+        text: preview.text,
+        previewStart: cursor,
+        highlights: preview.highlights
+      })
+      segments.push(preview.text)
+      cursor += preview.text.length
+    }
+    const preview: PhiPreview = {
+      text: segments.join('\n'),
+      highlights: prepared.flatMap((item) =>
+        item.text == null
+          ? []
+          : item.highlights.map((highlight) => ({
+              ...highlight,
+              start: highlight.start + item.previewStart,
+              end: highlight.end + item.previewStart
+            }))
+      )
+    }
+    const decision = await decisionFor(preview)
+    if (!decision.confirmed) {
+      throw new PhiGateError('PHI review was dismissed. The request was not sent.')
+    }
+    const extras = new Map<number, PhiSpanMark[]>()
+    for (const span of decision.extraSpans ?? []) {
+      const index = prepared.findIndex(
+        (item) =>
+          item.text != null &&
+          span.start >= item.previewStart &&
+          span.end <= item.previewStart + item.text.length
+      )
+      if (index < 0) {
+        throw new PhiGateError('A marked span crossed a block boundary. The request was not sent.')
+      }
+      const owner = prepared[index]
+      const local = {
+        start: span.start - owner.previewStart,
+        end: span.end - owner.previewStart
+      }
+      const list = extras.get(index) ?? []
+      list.push(local)
+      extras.set(index, list)
+    }
+    return prepared.map((item, index) => {
+      const marks = extras.get(index)
+      if (!marks || item.text == null) return item.block
+      const text = redact(item.text, marks, projectId)
+      return { ...(item.block as PromptBlock), text }
+    }) as T
+  } catch (error) {
+    failClosed(error)
+  }
+}
+
+async function decisionFor(preview: PhiPreview): Promise<PhiConfirmDecision> {
+  if (!confirmer) return { confirmed: true }
+  try {
+    const decision = await confirmer(preview)
+    return decision?.confirmed === true ? decision : { confirmed: false }
+  } catch (error) {
+    failClosed(error)
+  }
+}
+
+function redact(text: string, spans: readonly PhiSpanMark[], projectId: string): string {
+  return applyManualSpans(text, spans, (original) => {
+    if (!gate.manual) {
+      throw new Error('PHI review cannot store a manual redaction. The request was not sent.')
+    }
+    return gate.manual(original, projectId)
+  })
+}
+
+function blockText(block: unknown): string | null {
+  if (!block || typeof block !== 'object') return null
   const record = block as PromptBlock
-  if (typeof record.text !== 'string') return block
-  const text = releaseModelText(record.text, projectId)
-  return text === record.text ? block : { ...record, text }
+  return typeof record.text === 'string' ? record.text : null
 }
 
-export function guardProviderBody(body: BodyInit | null | undefined): BodyInit | null | undefined {
+export async function guardProviderBody(
+  body: BodyInit | null | undefined
+): Promise<BodyInit | null | undefined> {
   if (body == null) return body
   if (typeof body !== 'string') {
     throw new PhiGateError('PHI gate cannot scan this request body. The request was not sent.')
   }
   const projectId = currentPhiProject()
+  notePhiProject(projectId)
+  let parsed: unknown
   try {
-    const parsed: unknown = JSON.parse(body)
-    const walked = walkRelease(parsed, projectId)
-    return JSON.stringify(walked)
-  } catch (error) {
-    if (error instanceof PhiGateError) throw error
+    parsed = JSON.parse(body)
+  } catch {
     return releaseModelText(body, projectId)
+  }
+  try {
+    const tokens: PhiReplacement[] = []
+    const walked = walkRelease(parsed, projectId, tokens)
+    const text = JSON.stringify(walked)
+    const reviewed = await review({ text, highlights: highlightTokens(text, tokens) }, projectId)
+    JSON.parse(reviewed)
+    return reviewed
+  } catch (error) {
+    failClosed(error)
   }
 }
 
-function walkRelease(value: unknown, projectId: string): unknown {
-  if (typeof value === 'string') return releaseModelText(value, projectId)
-  if (Array.isArray(value)) return value.map((item) => walkRelease(item, projectId))
+function walkRelease(value: unknown, projectId: string, tokens: PhiReplacement[]): unknown {
+  if (typeof value === 'string') {
+    const result = gate.release(value, projectId)
+    if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
+    tokens.push(...result.replacements)
+    return result.text
+  }
+  if (Array.isArray(value)) return value.map((item) => walkRelease(item, projectId, tokens))
   if (value && typeof value === 'object') {
     const next: Record<string, unknown> = {}
-    for (const [key, child] of Object.entries(value)) next[key] = walkRelease(child, projectId)
+    for (const [key, child] of Object.entries(value)) {
+      next[key] = walkRelease(child, projectId, tokens)
+    }
     return next
   }
   return value

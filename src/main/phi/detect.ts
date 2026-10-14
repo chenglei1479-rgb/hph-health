@@ -269,14 +269,29 @@ export function detectPhi(original: string): PhiSpan[] {
   take('(?<![\\d])0\\d{1,3}-\\d{2,4}-\\d{3,4}(?!\\d)', 'PHONE')
   take('(?<![\\d])0\\d{9,10}(?!\\d)', 'PHONE')
 
-  // Address. Label stays outside.
-  take('(?:住所|Address)\\s*[:：]\\s*([^\\n]+)', 'ADDRESS', 1)
-  take('〒\\s*\\d{3}-?\\d{4}[^\\n]{0,40}', 'ADDRESS')
+  // Address. A prefecture must be followed by a city and a street (丁目, 番地, 番+号,
+  // or a hyphenated house number). A bare 番 or 号 is not enough: it also occurs in
+  // chart numbers and drug names. The field label stays outside the span, and the
+  // value stops before a phone or email on the same line.
+  const prefecture =
+    '北海道|青森県|岩手県|宮城県|秋田県|山形県|福島県|茨城県|栃木県|群馬県|埼玉県|千葉県|東京都|神奈川県|新潟県|富山県|石川県|福井県|山梨県|長野県|岐阜県|静岡県|愛知県|三重県|滋賀県|京都府|大阪府|兵庫県|奈良県|和歌山県|鳥取県|島根県|岡山県|広島県|山口県|徳島県|香川県|愛媛県|高知県|福岡県|佐賀県|長崎県|熊本県|大分県|宮崎県|鹿児島県|沖縄県'
+  const locality = '(?:[\\u4e00-\\u9fff]{1,12}[市区町村郡]){1,4}'
+  const street =
+    '(?:[0-9一二三四五六七八九十百]+丁目(?:[0-9]+番(?:[0-9]+号)?)?(?:[0-9]+(?:-[0-9]+){1,2})?|[0-9]+番地(?:の[0-9]+)?|[0-9]+番[0-9]+号|[0-9]+(?:-[0-9]+){1,2})'
+  const structured = `(?:${prefecture})${locality}(?:[\\u4e00-\\u9fffA-Za-z0-9]{0,16})?${street}`
   take(
-    '(?:北海道|青森県|岩手県|宮城県|秋田県|山形県|福島県|茨城県|栃木県|群馬県|埼玉県|千葉県|東京都|神奈川県|新潟県|富山県|石川県|福井県|山梨県|長野県|岐阜県|静岡県|愛知県|三重県|滋賀県|京都府|大阪府|兵庫県|奈良県|和歌山県|鳥取県|島根県|岡山県|広島県|山口県|徳島県|香川県|愛媛県|高知県|福岡県|佐賀県|長崎県|熊本県|大分県|宮崎県|鹿児島県|沖縄県)[^\\n]{0,48}?(?:番地の?\\d*|丁目|番町|番|号|\\d+-\\d+(?:-\\d+)*)',
+    `(?:住所|Address)\\s*[:：]\\s*([^\\n]+?)(?=\\s*(?:Tel|TEL|電話|E-?mail|メール)\\b|\\n|$)`,
+    'ADDRESS',
+    1
+  )
+  take(`〒\\s*\\d{3}-?\\d{4}\\s*${structured}`, 'ADDRESS')
+  take(structured, 'ADDRESS')
+  take(
+    '(?<![\\u30a1-\\u30faー])[\\u30a1-\\u30faー]{2,10}(?:ケン|フ|ト|ドウ)\\s+[\\u30a1-\\u30faー]{2,12}(?:シ|ク|グン|マチ|チョウ)',
     'ADDRESS'
   )
-  take('[\\u30a1-\\u30fa]{2,}(?:ケン|フ|ト|ドウ)\\s*[\\u30a1-\\u30fa]{2,}シ', 'ADDRESS')
+  take('病室番号\\s*[:：]?\\s*(\\d+(?:号室)?)', 'FACILITY', 1)
+  take('病室\\s*[:：]?\\s*(\\d+号室)', 'FACILITY', 1)
 
   detectAgesAndDates(spans, map, norm)
   detectFacilities(spans, map, norm)
@@ -491,7 +506,7 @@ export function parsePhiDate(text: string): ParsedDate | null {
 
 function detectFacilities(spans: PhiSpan[], map: NormMap, norm: string): void {
   const org = '[\\u4e00-\\u9fff\\u3040-\\u30ffA-Za-zー々]'
-  const pattern = `(?:医療法人${org}{1,8}\\s*)?(?:${org}+\\s*){1,3}(?:総合病院|病院|クリニック|薬局|訪問看護ステーション|特別養護老人ホーム|健診センター|病理診断センター|センター|倫理審査委員会)|\\d+階[東西南北]?病棟|南\\d+病棟(?:\\s*\\d+号室)?|\\d+号室|ICU\\s*\\d+番ベッド|HCU|(?:循環器|脳神経|消化器|呼吸器|心臓血管)?(?:内科|外科)外来?|(?:循環器内科|脳神経内科|消化器外科|呼吸器内科|内科外来)`
+  const pattern = `(?:医療法人${org}{1,8}\\s*)?(?:${org}+\\s*){1,3}(?:総合病院|病院|クリニック|薬局|訪問看護ステーション|特別養護老人ホーム|健診センター|病理診断センター|センター|倫理審査委員会)|\\d+階[東西南北]?病棟|南\\d+病棟|\\d+号室|ICU\\s*\\d+番ベッド|HCU|(?:循環器|脳神経|消化器|呼吸器|心臓血管)?(?:内科|外科)外来?|(?:循環器内科|脳神経内科|消化器外科|呼吸器内科|内科外来)`
   const regex = withIndices(pattern)
   let match: IndexedMatch | null
   while ((match = regex.exec(norm) as IndexedMatch | null)) {

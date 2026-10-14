@@ -12,6 +12,6 @@ export const fetchProviderRequest = async (
   if (!isSecureProviderUrl(url)) throw new Error(PROVIDER_TRANSPORT_ERROR)
   // Provider requests carry credentials; never follow redirects to another selected or unselected URL.
   const guarded: RequestInit = { ...init, redirect: 'manual' }
-  if (init?.body != null) guarded.body = guardProviderBody(init.body)
+  if (init?.body != null) guarded.body = await guardProviderBody(init.body)
   return fetchImpl(input, guarded)
 }

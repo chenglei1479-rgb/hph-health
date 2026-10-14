@@ -38,6 +38,19 @@ const PATIENT = [
   'MY_NUMBER'
 ] as const
 
+const LEADING_ROLE =
+  /^(?:紹介元[:：]\s*)?(?:[\u4e00-\u9fffA-Za-z]{0,16}(?:クリニック|病院|医院)\s*)?(?:担当医|主治医|執刀医|助手|麻酔科医|指導医|研修医|看護師|薬剤師|検査技師|臨床検査技師|記載者|院長|研究責任者|署名|PI|Dr\.|医師|CRC)\s*[:：]?\s*/
+
+function withoutRoleLabel(span: GoldSpan): GoldSpan {
+  const match = LEADING_ROLE.exec(span.text)
+  if (!match || match[0].length === 0 || match[0].length >= span.text.length) return span
+  return withoutRoleLabel({
+    ...span,
+    start: span.start + match[0].length,
+    text: span.text.slice(match[0].length)
+  })
+}
+
 function round(value: number): number {
   return Math.round(value * 1000) / 1000
 }
@@ -263,10 +276,29 @@ export function scoreFixture(directory: string): Record<string, unknown> {
     age90Replaced: age90 === 0 ? 1 : round(age90Replaced / age90),
     decoyRate: round(decoyRate),
     decoyN: decoys.length,
+    decoyHits: decoyHit.slice(0, 8).map((span) => ({
+      category: span.category,
+      text: span.text,
+      record: span.record
+    })),
     drugDiseaseRate: round(drugRate),
     drugN: drug.length,
     physicianOverlap: report.overlap.PHYSICIAN_NAME,
     physicianExact: report.exact.PHYSICIAN_NAME,
+    physicianNameOverlap: prf(
+      gold
+        .filter((span) => span.is_phi && span.category === 'PHYSICIAN_NAME')
+        .map(withoutRoleLabel),
+      predictions.filter((span) => span.category === 'PHYSICIAN_NAME'),
+      'overlap'
+    ),
+    physicianNameExact: prf(
+      gold
+        .filter((span) => span.is_phi && span.category === 'PHYSICIAN_NAME')
+        .map(withoutRoleLabel),
+      predictions.filter((span) => span.category === 'PHYSICIAN_NAME'),
+      'exact'
+    ),
     calendarShiftRecall: calendar === 0 ? 1 : round(calendarShifted / calendar),
     calendarTextChanged: calendar === 0 ? 1 : round(calendarTextChanged / calendar),
     calendarN: calendar,

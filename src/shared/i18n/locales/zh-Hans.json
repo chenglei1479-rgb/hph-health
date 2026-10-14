@@ -49,6 +49,10 @@
     "Confirm Notebook kernel and environment": "确认 Notebook 内核和环境"
   },
   "native": {
+    "Review de-identified text": "审阅去标识文本",
+    "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "高亮文本已在发送前替换。请选择其他患者信息并标记。确认后才会发送。关闭此窗口不会发送任何内容。",
+    "Confirm send": "确认发送",
+    "Mark selection": "标记所选内容",
     "Linux OS credentials require the original selected Secret Service or KWallet backend and /usr/bin/busctl. Unlock the original default keyring or wallet and restart. Do not change the password-store backend or profile to bypass this check.": "Linux 系统凭据需要原来选定的 Secret Service 或 KWallet 后端以及 /usr/bin/busctl。请解锁原有的默认密钥环或钱包后重启。不要更改 password-store 后端或配置目录来绕过此检查。",
     "Credential storage needs recovery": "凭据存储需要恢复",
     "Silent credential identity checks are not supported by this system credential backend. Startup has stopped to preserve existing encrypted data.": "此系统凭据后端不支持静默身份检查。为保留现有加密数据，启动已停止。",

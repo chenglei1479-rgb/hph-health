@@ -384,7 +384,7 @@ export const runReviewAssessment = async (
           cwd: built.cwd
         })
         const promptRequest = reviewerSession!.prompt([
-          { type: 'text', text: releaseModelText(prompt, projectId) }
+          { type: 'text', text: await releaseModelText(prompt, projectId) }
         ])
         void Promise.resolve(promptRequest).catch(() => undefined)
         const stopReason = await driveReviewerToStop(
