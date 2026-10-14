@@ -1,0 +1,12 @@
+DRA
+Copyright 2026 DRA
+
+This software is based on AIPOCH Open-Science.
+
+Upstream portions of this work remain Copyright 2026 AIPOCH and are licensed
+under the Apache License, Version 2.0. The full license text is in LICENSE.
+Third-party components retain their own license notices.
+
+Marketplace, CDN, and package-registry endpoints that still use the upstream
+AIPOCH host names are unchanged integration points, not a claim of DRA
+ownership of those services.

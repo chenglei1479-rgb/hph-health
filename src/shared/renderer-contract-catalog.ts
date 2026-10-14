@@ -16,6 +16,7 @@ import * as files from './renderer-contracts/files'
 import * as literature from './renderer-contracts/literature'
 import * as memory from './renderer-contracts/memory'
 import * as notebook from './renderer-contracts/notebook'
+import * as schemaNotebook from './renderer-contracts/schema-notebook'
 import * as sessionReplay from './renderer-contracts/session-replay'
 import * as notifications from './renderer-contracts/notifications'
 import * as previews from './renderer-contracts/previews'
@@ -49,11 +50,13 @@ export const RENDERER_API_CONTRACT = composeRendererApiContract(
   system.lifecycleClaimRuntimeWriterContracts,
   files.localFsGetRootsContracts,
   system.logsGetStatusContracts,
+  system.machineApprovalGetStatusContracts,
   literature.contracts,
   files.managedFileVersionsCancelDiffContracts,
   memory.contracts,
   system.networkCheckConnectivityContracts,
   notebook.contracts,
+  schemaNotebook.contracts,
   notifications.contracts,
   previews.officePreviewAttachFrameContracts,
   permissions.contracts,
@@ -182,6 +185,7 @@ const RENDERER_CAPABILITY_ORDER = Object.freeze([
   'managed-file-versions',
   'network',
   'notebook',
+  'schema-notebook',
   'notebook-environment',
   'notifications',
   'office-preview',
@@ -206,6 +210,7 @@ const RENDERER_CAPABILITY_ORDER = Object.freeze([
   'update',
   'local-models',
   'pdf-structure',
+  'machine-approval',
   'uploads',
   'window'
 ] as const)

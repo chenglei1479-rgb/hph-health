@@ -6,6 +6,25 @@ import { load } from 'js-yaml'
 import { expect, it } from 'vitest'
 import { APP } from '../src/shared/app-config'
 
+it('skips publisher verification for an unsigned prerelease package', async () => {
+  const exports: { default?: (context: { artifactPaths: string[] }) => Promise<string[]> } = {}
+  const calls: unknown[][] = []
+  runInNewContext(readFileSync('build/verify-windows-release.cjs', 'utf8'), {
+    exports,
+    __dirname: path.resolve('build'),
+    process: { env: { DRA_PRERELEASE: '1' } },
+    require: () => ({
+      execFileSync: (...args: unknown[]) => calls.push(args)
+    })
+  })
+  await expect(
+    exports.default!({
+      artifactPaths: ['dist/deep-research-agent-0.1.33-beta.1-win-x64-setup.exe']
+    })
+  ).resolves.toEqual([])
+  expect(calls).toEqual([])
+})
+
 it('verifies real artifact paths using the electron-builder BuildResult hook contract', async () => {
   const calls: unknown[][] = []
   const exports: { default?: (context: { artifactPaths: string[] }) => Promise<string[]> } = {}

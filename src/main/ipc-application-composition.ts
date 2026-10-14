@@ -43,6 +43,9 @@ import { composeUploadStorage } from './composition/upload-storage'
 import { registerVariableDefinitionIpc } from './variable-definition/ipc'
 
 import { app } from 'electron'
+import { join } from 'node:path'
+
+import { registerSchemaNotebookIpc } from './notebook/schema-only/ipc'
 
 import { type ApplicationCommandComposition } from './application-command-composition'
 import { createApplicationEventModule, type ApplicationEventSource } from './application-events'
@@ -642,6 +645,12 @@ export const createApplicationModules = async (
       managedFileVersionHandlers: projectLifecycle.managedFileVersionHandlers,
       localFsService: managedFiles.localFsService,
       previewStateRepository: sessionPackages.previewStateRepository
+    }),
+    createElectronSurfaceAdapter('schema-notebook', () => {
+      registerSchemaNotebookIpc({
+        directory: join(app.getPath('userData'), 'schema-notebook'),
+        approvalLogPath: join(app.getPath('userData'), 'phi-vault', 'machine-approval.jsonl')
+      })
     })
   )
   surfaceAdapters.push(

@@ -234,6 +234,7 @@ const runtimeContractCapabilities = new Set([
   'compute',
   'notebook',
   'notebook-environment',
+  'schema-notebook',
   'runtime'
 ])
 
@@ -416,6 +417,8 @@ describe('preload bridge — public surface inventory', () => {
       'logs.getStatus',
       'logs.openFile',
       'logs.revealInFolder',
+      'machineApproval.getStatus',
+      'machineApproval.setStatus',
       'managedFileVersions.cancelDiff',
       'managedFileVersions.diffText',
       'managedFileVersions.inspect',
@@ -568,6 +571,11 @@ describe('preload bridge — public surface inventory', () => {
       'saveManagedFile',
       'saveProjectArtifacts',
       'saveSessionArtifacts',
+      'schemaNotebook.execute',
+      'schemaNotebook.importTable',
+      'schemaNotebook.modelContext',
+      'schemaNotebook.optInCategorical',
+      'schemaNotebook.patientDataTags',
       'sessionReplay.get',
       'sessionReplay.getSelectionSnapshot',
       'sessionReplay.list',
@@ -985,6 +993,7 @@ describe('preload bridge — core renderer contract catalog', () => {
       'update',
       'local-models',
       'pdf-structure',
+      'machine-approval',
       'uploads',
       'window'
     ])

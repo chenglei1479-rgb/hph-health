@@ -43,6 +43,7 @@ import type {
   NotificationTestResult
 } from '../../../../shared/notifications'
 import { AppVersionSection } from './AppVersionSection'
+import { MachineApprovalSection } from './MachineApprovalSection'
 import { AppIconSection } from './AppIconSection'
 import { SettingsRow, SettingsSection, SettingsToggle } from './SettingsLayout'
 
@@ -642,6 +643,8 @@ const GeneralPanel = (): React.JSX.Element => {
           />
         </p>
       </SettingsSection>
+
+      <MachineApprovalSection />
 
       <SettingsSection
         title={t('Enjoying {{appName}}?', { appName: APP.name })}

@@ -2,6 +2,7 @@
   "common": {
     "The conversation changed. Close and reopen export to review it.": "Диалог изменён. Закройте и снова откройте окно экспорта, чтобы проверить его.",
     "Approval needed": "Требуется разрешение",
+    "Approval number": "Номер утверждения",
     "Cancel": "Отмена",
     "Stay": "Остаться в приложении",
     "Retry saving": "Повторить сохранение",
@@ -49,6 +50,15 @@
     "Confirm Notebook kernel and environment": "Подтвердить ядро и окружение Notebook"
   },
   "native": {
+    "Review de-identified text": "Проверьте обезличенный текст",
+    "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "Выделенный текст заменён перед отправкой. Отметьте другие сведения о пациенте. Подтвердите отправку. Если закрыть окно, ничего не будет отправлено.",
+    "Confirm send": "Подтвердить отправку",
+    "Mark selection": "Отметить выделенное",
+    "Is this machine approved by the hospital?": "Больница утвердила этот компьютер?",
+    "This machine is not approved until you enter the hospital approval number and confirm. Closing this window leaves it not approved.": "Этот компьютер не утверждён, пока вы не введёте номер утверждения больницы и не подтвердите. Если закрыть окно, он останется не утверждённым.",
+    "This machine is approved": "Этот компьютер утверждён",
+    "Not approved": "Не утверждён",
+    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "Этот компьютер не утверждён больницей. Запрос не отправлен. Измените эти фрагменты и повторите попытку: {{spans}}",
     "Linux OS credentials require the original selected Secret Service or KWallet backend and /usr/bin/busctl. Unlock the original default keyring or wallet and restart. Do not change the password-store backend or profile to bypass this check.": "Для системных учётных данных Linux необходимы исходно выбранный бэкенд Secret Service или KWallet и /usr/bin/busctl. Разблокируйте исходную связку ключей или кошелёк по умолчанию и перезапустите приложение. Не меняйте бэкенд password-store или профиль для обхода этой проверки.",
     "Credential storage needs recovery": "Необходимо восстановить хранилище учётных данных",
     "Silent credential identity checks are not supported by this system credential backend. Startup has stopped to preserve existing encrypted data.": "Этот механизм хранения системных учётных данных не поддерживает проверку идентификатора без взаимодействия с пользователем. Запуск остановлен для сохранения существующих зашифрованных данных.",
@@ -138,6 +148,16 @@
     "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "Для этого пакета сессии требуется более новая версия DRA. Обновите DRA и повторите импорт."
   },
   "renderer": {
+    "Hospital approval": "Утверждение больницы",
+    "Patient information can be de-identified and sent only after this machine is approved by the hospital. A change is appended to the local audit log.": "Сведения о пациенте можно обезличить и отправить только после того, как больница утвердит этот компьютер. Изменение добавляется в локальный журнал аудита.",
+    "This machine is not approved.": "Этот компьютер не утверждён.",
+    "Approved under {{number}}.": "Утверждён, номер {{number}}.",
+    "Approve this machine": "Утвердить этот компьютер",
+    "Revoke approval": "Отозвать утверждение",
+    "Enter the hospital approval number.": "Введите номер утверждения больницы.",
+    "Could not read hospital approval.": "Не удалось прочитать утверждение больницы.",
+    "Could not update hospital approval.": "Не удалось обновить утверждение больницы.",
+    "Recorded {{at}}.": "Записано {{at}}.",
     "List GWAS summary statistics files, YAML metadata, reference genomes and standard column definitions by GCST accession.": "Получить список файлов сводной статистики GWAS, метаданные YAML, референсные геномы и стандартные определения столбцов по идентификатору GCST.",
     "PDF analysis options": "Параметры анализа PDF",
     "Retrieve GEO series metadata, samples and supplementary-file links.": "Получить метаданные серии GEO, образцы и ссылки на дополнительные файлы.",

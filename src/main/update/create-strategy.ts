@@ -29,7 +29,7 @@ export type CreateStrategyOptions = {
   translate?: NativeTranslator
 }
 
-const OFFICIAL_MAC_BUNDLE_ID = 'com.aipoch.medresearch-agent'
+const OFFICIAL_MAC_BUNDLE_ID = 'com.dra-hph.desktop'
 const OFFICIAL_MAC_TEAM_ID = '87G9WFU9H3'
 
 // Read the installed bundle's signing metadata without performing a trust evaluation. The latter can

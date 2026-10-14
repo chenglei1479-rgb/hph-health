@@ -4,6 +4,10 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  confirmPrereleaseModelCallNotice,
+  resetPrereleaseModelCallNoticeForTests
+} from '@/lib/prerelease-model-call-notice'
+import {
   projectSessionActionability,
   type ChatSession,
   useSessionStore
@@ -226,10 +230,27 @@ const mounted: Hook[] = []
 
 afterEach(() => {
   for (const hook of mounted.splice(0)) hook.unmount()
+  resetPrereleaseModelCallNoticeForTests()
+  vi.unstubAllEnvs()
   vi.restoreAllMocks()
 })
 
 describe('workspace conversation controller', () => {
+  it('holds the first model call on a beta build until the data notice is confirmed', async () => {
+    vi.stubEnv('DRA_PRERELEASE', '1')
+    const input = options()
+    const hook = renderController(input)
+    mounted.push(hook)
+
+    await act(async () => hook.result.current.actions.submit.draft({ forcedSkillIds: [] }))
+    expect(input.runtime.sendMessage).not.toHaveBeenCalled()
+
+    await act(async () => confirmPrereleaseModelCallNotice())
+    expect(input.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: 'session-a', text: 'hello' })
+    )
+  })
+
   it.each([
     ['claude-code', 'claude-code', 'claude-code:anthropic'],
     ['opencode', 'opencode', 'opencode:provider-1'],

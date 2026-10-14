@@ -236,8 +236,16 @@ const REMOTE_LOCAL_ONLY_CHANNELS: GroupedInventory = {
     'reveal'
   ],
   logs: ['get-status', 'open-file', 'reveal-in-folder'],
+  'machine-approval': ['get-status', 'set-status'],
   'notebook-env': ['cancel', 'provision', 'repair'],
   notebook: ['export-ipynb', 'export-ipynb-all'],
+  'schema-notebook': [
+    'execute',
+    'import-table',
+    'model-context',
+    'opt-in-categorical',
+    'patient-data-tags'
+  ],
   'remote-access': ['probe'],
   runtime: [
     'pick-interpreter',

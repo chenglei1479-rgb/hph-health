@@ -1,0 +1,53 @@
+{
+ "entities": {
+  "ADDRESS": 17,
+  "DATE": 96,
+  "EMAIL": 14,
+  "FACILITY": 15,
+  "INSURED_ID": 70,
+  "INSURER_NO": 70,
+  "KARTE_NO": 70,
+  "MY_NUMBER": 70,
+  "PERSON_NAME": 70,
+  "PHONE": 14,
+  "PHYSICIAN_NAME": 21
+ },
+ "entities_total": 527,
+ "entity_age_ge_90": {
+  "False": 8,
+  "True": 71
+ },
+ "records": 77,
+ "phi_spans": {
+  "ADDRESS": 3,
+  "DATE": 181,
+  "EMAIL": 2,
+  "FACILITY": 89,
+  "INSURED_ID": 72,
+  "INSURER_NO": 72,
+  "KARTE_NO": 76,
+  "MY_NUMBER": 71,
+  "PERSON_NAME": 105,
+  "PHONE": 5,
+  "PHYSICIAN_NAME": 83
+ },
+ "phi_total": 759,
+ "distractors": {
+  "CODE": 71,
+  "DISEASE": 148,
+  "DOSE": 149,
+  "DRUG": 152,
+  "DURATION": 1,
+  "GENE": 5,
+  "LAB": 156,
+  "SCALE": 6,
+  "STAGE": 1,
+  "STUDYID": 4,
+  "YEAR": 1
+ },
+ "distractor_total": 694,
+ "span_age_ge_90": {
+  "True": 73,
+  "False": 23
+ }
+}
