@@ -62,6 +62,24 @@ jobs:
         run: npm run typecheck
       - name: Verify Home logo and three-line DRA brand
         run: npx vitest run src/renderer/src/pages/home/HomePage.render.test.tsx -t 'keeps the logo and three-line DRA signature in the home header'
+      - name: Adapt upstream storage test fixtures to DRA identities
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          const file = 'src/main/storage/brand-location.test.ts'
+          let source = fs.readFileSync(file, 'utf8')
+          source = source.replaceAll('MedResearch Agent', 'MedResearch-Agent')
+            .replaceAll('OpenScience-dev', 'MedResearchAgent-DEV')
+            .replaceAll('OpenScience', 'MedResearchAgent')
+            .replaceAll('.open-science', '.medresearch-agent')
+            .replace('keeps a populated lowercase development root created by 0.31', 'keeps a populated former DRA development root')
+          fs.writeFileSync(file, source)
+          const rootFile = 'src/main/storage-root.test.ts'
+          source = fs.readFileSync(rootFile, 'utf8')
+            .replaceAll("'/mnt/data/open-science'", "'/mnt/data/medresearch-agent'")
+            .replace("p('data', 'open-science')", "p('data', 'medresearch-agent')")
+          fs.writeFileSync(rootFile, source)
+          NODE
       - name: Verify translations and native storage upgrades
         run: >-
           npx vitest run src/renderer/src/i18n/resources.test.ts
