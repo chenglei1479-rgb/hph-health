@@ -180,6 +180,8 @@ describe('schema-only notebook', () => {
     })
     expect(executed.local.stderr).toContain('n=2')
     expect(executed.local.stdout).toContain('A,4')
+    expect(executed.local.stdout).not.toContain('<10')
+    expect(executed.local.stderr).not.toContain('<10')
     expect(executed.forModel.error).toContain('n=<10')
     expect(executed.forModel.stdout).toContain('A,<10')
     expect(executed.forModel.head).toContain('A,<10')
@@ -270,7 +272,11 @@ describe('schema-only notebook', () => {
       '連絡先'
     ])
     expect(
-      imported.identifierWarnings.every((warning) => warning.message.includes('モデルに渡しません'))
+      imported.identifierWarnings.every(
+        (warning) =>
+          warning.message ===
+          'この列は AI には送信されません。院外にデータを渡す前に、この列を削除してください。'
+      )
     ).toBe(true)
     await expect(
       service.optInCategorical({

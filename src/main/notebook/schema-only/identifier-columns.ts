@@ -13,42 +13,39 @@ const DIRECT_CATEGORIES = new Set([
   'INSURED_ID'
 ])
 
-const HEADER_RULES: Array<{ category: string; label: string; pattern: RegExp }> = [
+const HEADER_RULES: Array<{ category: string; pattern: RegExp }> = [
   {
     category: 'PERSON_NAME',
-    label: '氏名',
     pattern:
       /(患者氏名|患者名|氏名|姓名|フリガナ|カナ氏名|^名前$|patient\s*name|full\s*name|^name$)/i
   },
   {
     category: 'KARTE_NO',
-    label: 'カルテ番号',
     pattern:
       /(カルテ番号|カルテ\s*no|カルテid|患者番号|患者\s*id|チャート番号|chart\s*number|^id$)/i
   },
   {
     category: 'DATE',
-    label: '生年月日',
     pattern: /(生年月日|誕生日|生年月|date\s*of\s*birth|birth\s*date|birthdate|^dob$)/i
   },
-  { category: 'ADDRESS', label: '住所', pattern: /(住所|番地|^address$)/i },
-  { category: 'PHONE', label: '電話', pattern: /(電話|携帯|^phone$|^tel$)/i },
-  { category: 'MY_NUMBER', label: 'マイナンバー', pattern: /(マイナンバー|個人番号|my\s*number)/i },
-  { category: 'INSURER_NO', label: '保険者番号', pattern: /保険者番号/ },
+  { category: 'ADDRESS', pattern: /(住所|番地|^address$)/i },
+  { category: 'PHONE', pattern: /(電話|携帯|^phone$|^tel$)/i },
+  { category: 'MY_NUMBER', pattern: /(マイナンバー|個人番号|my\s*number)/i },
+  { category: 'INSURER_NO', pattern: /保険者番号/ },
   {
     category: 'INSURED_ID',
-    label: '被保険者番号',
     pattern: /(被保険者番号|被保険者証|記号番号|保険証番号|保険番号)/
   },
-  { category: 'EMAIL', label: 'メール', pattern: /(メールアドレス|^e-?mail$)/i }
+  { category: 'EMAIL', pattern: /(メールアドレス|^e-?mail$)/i }
 ]
 
 const normalize = (value: string): string => value.normalize('NFKC').trim()
 
-const headerHit = (header: string): { category: string; label: string } | undefined => {
+const headerHit = (header: string): { category: string } | undefined => {
   const name = normalize(header)
   if (name === '研究用ID' || name === '研究ID') return undefined
-  return HEADER_RULES.find((rule) => rule.pattern.test(name))
+  const rule = HEADER_RULES.find((item) => item.pattern.test(name))
+  return rule ? { category: rule.category } : undefined
 }
 
 const dominatingSpan = (value: string): { category: string } | undefined => {
@@ -56,8 +53,10 @@ const dominatingSpan = (value: string): { category: string } | undefined => {
   return spans.find((span) => span.text.length >= Math.ceil(value.length * 0.8))
 }
 
-const messageFor = (column: string, label: string): string =>
-  `「${column}」は直接識別子（${label}）です。列名とサンプルはモデルに渡しません。`
+export const DIRECT_IDENTIFIER_COLUMN_WARNING =
+  'この列は AI には送信されません。院外にデータを渡す前に、この列を削除してください。'
+
+const messageFor = (): string => DIRECT_IDENTIFIER_COLUMN_WARNING
 
 /**
  * Runs the PHI detector over each header and each cell. A column is withheld
@@ -81,8 +80,7 @@ export const findDirectIdentifierColumns = (
       .find((span) => span !== undefined)
     const category = labeled?.category ?? headerSpan?.category ?? valueSpan?.category
     if (!category) return
-    const label = labeled?.label ?? category
-    warnings.push({ column, category, message: messageFor(column, label) })
+    warnings.push({ column, category, message: messageFor() })
   })
   return warnings
 }

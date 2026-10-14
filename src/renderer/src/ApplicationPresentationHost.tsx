@@ -25,6 +25,7 @@ import { useApplicationStartup } from '@/hooks/useApplicationStartup'
 import { WorkspaceAgentRuntimeProvider } from '@/lib/acp/useWorkspaceAgentRuntime'
 import { WorkspaceComputeRecoveryBridge } from '@/lib/compute/WorkspaceComputeRecoveryBridge'
 import { HomePage } from '@/pages/home/HomePage'
+import { VariableDefinitionEntry } from '@/pages/variable-definition/VariableDefinitionEntry'
 import type { SettingsPageHandle } from '@/pages/settings/SettingsPage'
 import { EnvStatusBanner } from '@/pages/workspace/EnvStatusBanner'
 import {
@@ -446,6 +447,7 @@ const ApplicationPresentationContent = ({
           onDismiss={startup.storageRecovery.dismissLegacyMove}
         />
       ) : null}
+      <VariableDefinitionEntry />
     </>
   )
 }

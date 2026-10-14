@@ -102,7 +102,7 @@ it('writes the release body in Japanese and Chinese', () => {
   expect(notes).toContain('初回起動時にダウンロードしません')
   expect(notes).toContain('lifelines')
   expect(notes).toContain(
-    '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。'
+    '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
   )
   expect(notes).toContain('https://platform.openai.com/api-keys')
   expect(notes).toContain('Create new secret key')

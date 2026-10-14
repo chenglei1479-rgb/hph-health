@@ -6,7 +6,7 @@
 
 Notebook 用の Python（pandas、numpy、scipy、statsmodels、matplotlib、openpyxl、lifelines）はインストーラーに入っています。初回起動時にダウンロードしません。
 
-架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。
+架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。
 
 ### OpenAI の API キーを作る
 
