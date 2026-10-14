@@ -49,6 +49,7 @@ import {
 import { projectPresentedSessionActionability } from './session-wait-reason'
 import { HighlightedText } from './composer/HighlightedText'
 import { fuzzyScore } from './composer/fuzzy-match'
+import { SchemaNotebookEntry } from '../schema-notebook/SchemaNotebookEntry'
 import {
   SessionHoverPreview,
   SessionHoverPreviewProvider,
@@ -1098,6 +1099,7 @@ const WorkspaceSidebarView = (props: WorkspaceSidebarViewProps): React.JSX.Eleme
               </button>
             ) : null}
           </div>
+          {importProjectId ? <SchemaNotebookEntry projectId={importProjectId} /> : null}
         </div>
 
         <nav aria-label={t('Sessions')} className="flex min-h-0 flex-1 flex-col">

@@ -108,6 +108,9 @@ dist-win-artifact/
 # Per-platform micromamba is staged by CI at build time (electron-builder extraResources), never committed.
 resources/bin/
 
+# Schema-notebook CPython prefixes are staged by the unsigned beta workflow, never committed.
+resources/schema-notebook-python/*/
+
 # Offline default-env bundle (locks + ~350MB pkgs cache) is produced by `npm run stage-default-envs`
 # before packaging and published to the CDN; staged at build time, never committed.
 resources/default-envs/

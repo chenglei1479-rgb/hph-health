@@ -29,4 +29,16 @@ it('builds the internal beta without a signing identity and keeps stable signing
   expect(stable.win.forceCodeSigning).toBe(true)
   expect(stable.dmg.sign).toBe(true)
   expect(stable.afterAllArtifactBuild).toBe('build/verify-windows-release.cjs')
+
+  const beta = prerelease as {
+    extraResources?: Array<{ from: string; to: string }>
+    files?: string[]
+  }
+  expect(beta.files).toContain('!resources/schema-notebook-python{,/**/*}')
+  expect(beta.extraResources).toContainEqual({
+    from: 'resources/schema-notebook-python',
+    to: 'schema-notebook-python'
+  })
+  const stableRaw = readFileSync('electron-builder.yml', 'utf8')
+  expect(stableRaw).not.toContain('schema-notebook-python')
 })

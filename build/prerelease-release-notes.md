@@ -4,6 +4,8 @@
 
 同梱されている架空のデモデータ（240 症例の再入院データセット）だけを使ってください。実際の患者データは決して使わないでください。
 
+Notebook 用の Python（pandas、numpy、scipy、statsmodels、matplotlib、openpyxl、lifelines）はインストーラーに入っています。初回起動時にダウンロードしません。
+
 架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。
 
 ### OpenAI の API キーを作る
@@ -21,6 +23,8 @@ Windows SmartScreen で止められた場合は、「詳細情報」>「実行�
 这是未签名的内部测试版本。请只安装在个人电脑上，不要安装在医院电脑上。
 
 请只使用随附的虚构演示数据（240 例再入院数据集），切勿使用真实患者数据。
+
+Notebook 用的 Python（pandas、numpy、scipy、statsmodels、matplotlib、openpyxl、lifelines）已包含在安装包中，首次启动不会下载。
 
 仅使用虚构数据。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。
 

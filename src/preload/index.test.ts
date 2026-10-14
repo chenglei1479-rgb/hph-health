@@ -233,6 +233,7 @@ const runtimeContractCapabilities = new Set([
   'compute',
   'notebook',
   'notebook-environment',
+  'schema-notebook',
   'runtime'
 ])
 
@@ -569,6 +570,11 @@ describe('preload bridge — public surface inventory', () => {
       'saveManagedFile',
       'saveProjectArtifacts',
       'saveSessionArtifacts',
+      'schemaNotebook.execute',
+      'schemaNotebook.importTable',
+      'schemaNotebook.modelContext',
+      'schemaNotebook.optInCategorical',
+      'schemaNotebook.patientDataTags',
       'sessionReplay.get',
       'sessionReplay.getSelectionSnapshot',
       'sessionReplay.list',

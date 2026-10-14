@@ -16,4 +16,17 @@ delete config.win.signtoolOptions
 config.afterAllArtifactBuild = undefined
 config.publish = null
 
+// Offline schema-notebook Python. The unsigned beta workflow stages one
+// arch under resources/schema-notebook-python before this config is loaded.
+// Keep it out of app.asar; a binary cannot be spawned from inside the archive.
+// Signed pilot builds keep electron-builder.yml and do not pick this up.
+config.files = [...(config.files ?? []), '!resources/schema-notebook-python{,/**/*}']
+config.extraResources = [
+  ...(config.extraResources ?? []),
+  {
+    from: 'resources/schema-notebook-python',
+    to: 'schema-notebook-python'
+  }
+]
+
 module.exports = config
