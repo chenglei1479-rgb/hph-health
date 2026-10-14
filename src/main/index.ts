@@ -513,7 +513,8 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
       await app.whenReady()
       app.setName(app.isPackaged ? APP_NAME : `${APP_NAME} (DEV)`)
       const { installProductionPhiGate } = await import('./phi/production-gate')
-      installProductionPhiGate(join(app.getPath('userData'), 'phi-vault'))
+      const phiDirectory = join(app.getPath('userData'), 'phi-vault')
+      installProductionPhiGate(phiDirectory)
       // Electron created its default menu before ready using the selected credential identity.
       // Rebuild standard roles after the display brand is known.
       const { Menu } = createRequire(import.meta.url)('electron') as typeof import('electron')
@@ -594,8 +595,12 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
       )
       const translate = localeOwner.t.bind(localeOwner)
       const { createElectronPhiConfirmer } = await import('./phi/confirm-window')
-      const { installPhiConfirmer } = await import('./phi/gate')
+      const { installMachineApprovalTranslator, installPhiConfirmer } = await import('./phi/gate')
+      const { ensureMachineApprovalDeclaration } = await import('./phi/approval-window')
+      const { machineApprovalLogPath } = await import('./phi/production-gate')
       installPhiConfirmer(createElectronPhiConfirmer(translate))
+      installMachineApprovalTranslator(translate)
+      await ensureMachineApprovalDeclaration(machineApprovalLogPath(phiDirectory), translate)
       const disposeLocalePreferenceIpc = registerLocalePreferenceIpc(localeOwner)
 
       // Set app user model id for windows

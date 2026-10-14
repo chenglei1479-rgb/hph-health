@@ -3,10 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { AcpProviderPromptExecutor } from '../acp/provider-prompt-executor'
 import type { ProviderPromptExecutionInput } from '../acp/provider-prompt-executor'
 import { fetchProviderRequest } from '../settings/provider-fetch'
-import { createClosedGate, installPhiGate, releaseModelText } from './gate'
+import { createClosedGate, installMachineApproval, installPhiGate, releaseModelText } from './gate'
 
 describe('PHI hard gate', () => {
   it('fails closed before a provider session prompt', async () => {
+    installMachineApproval(() => true)
     installPhiGate(createClosedGate('blocked'))
     const prompt = vi.fn(async () => ({ stopReason: 'end_turn' }))
     const executor = new AcpProviderPromptExecutor({
@@ -34,6 +35,7 @@ describe('PHI hard gate', () => {
       await expect(executor.execute(input)).rejects.toThrow(/blocked|PHI/)
       expect(prompt).not.toHaveBeenCalled()
     } finally {
+      installMachineApproval(null)
       installPhiGate({
         release: (text) => ({ text, replacements: [], warnings: [] }),
         restore: (text) => text
@@ -42,6 +44,7 @@ describe('PHI hard gate', () => {
   })
 
   it('fails closed before a provider HTTP request', async () => {
+    installMachineApproval(() => true)
     installPhiGate(createClosedGate('blocked'))
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
     try {
@@ -53,6 +56,7 @@ describe('PHI hard gate', () => {
       ).rejects.toThrow(/blocked|PHI/)
       expect(fetchImpl).not.toHaveBeenCalled()
     } finally {
+      installMachineApproval(null)
       installPhiGate({
         release: (text) => ({ text, replacements: [], warnings: [] }),
         restore: (text) => text
@@ -61,6 +65,7 @@ describe('PHI hard gate', () => {
   })
 
   it('redacts patient text that would otherwise be sent', async () => {
+    installMachineApproval(() => true)
     installPhiGate({
       release: (text) => ({
         text: text.replaceAll('山田 太郎', '[患者1]'),
@@ -70,6 +75,7 @@ describe('PHI hard gate', () => {
       restore: (text) => text.replaceAll('[患者1]', '山田 太郎')
     })
     await expect(releaseModelText('患者：山田 太郎', 'cwd')).resolves.toBe('患者：[患者1]')
+    installMachineApproval(null)
     installPhiGate({
       release: (text) => ({ text, replacements: [], warnings: [] }),
       restore: (text) => text

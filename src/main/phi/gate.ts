@@ -1,3 +1,5 @@
+import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
+import { formatUnapprovedBlock } from './approval'
 import {
   applyManualSpans,
   previewFromResult,
@@ -9,14 +11,38 @@ import {
   type PhiSpanMark
 } from './confirm'
 import { deidentify, type PhiReplacement, type PhiResult } from './deidentify'
+import { detectPhi, type PhiCategory, type PhiSpan } from './detect'
 import { createMemoryPhiVault, type PhiStore } from './store'
 
+export interface PhiBlockedSpan {
+  start: number
+  end: number
+  category: PhiCategory
+  text: string
+}
+
 export class PhiGateError extends Error {
-  constructor(message: string) {
+  readonly spans: readonly PhiBlockedSpan[]
+
+  constructor(message: string, spans: readonly PhiBlockedSpan[] = []) {
     super(message)
     this.name = 'PhiGateError'
+    this.spans = spans
   }
 }
+
+const PATIENT_PHI = new Set<PhiCategory>([
+  'PERSON_NAME',
+  'DATE',
+  'ADDRESS',
+  'PHONE',
+  'EMAIL',
+  'FACILITY',
+  'KARTE_NO',
+  'INSURER_NO',
+  'INSURED_ID',
+  'MY_NUMBER'
+])
 
 interface PhiGate {
   release(text: string, projectId: string): PhiResult
@@ -49,6 +75,8 @@ const memoryGate: PhiGate = {
 
 let gate: PhiGate = memoryGate
 let confirmer: PhiConfirmer | null = null
+let machineApproved: () => boolean = () => false
+let blockTranslator: NativeTranslator = englishNativeTranslator
 let activeProjectId = 'default'
 const warnings = new Map<string, string[]>()
 
@@ -60,6 +88,15 @@ export function installPhiGate(next: PhiGate): void {
 // Once installed, a dismissed or failed review blocks the send.
 export function installPhiConfirmer(next: PhiConfirmer | null): void {
   confirmer = next
+}
+
+// Production reads the append-only machine declaration. No declaration means not approved.
+export function installMachineApproval(next: (() => boolean) | null): void {
+  machineApproved = next ?? (() => false)
+}
+
+export function installMachineApprovalTranslator(next: NativeTranslator): void {
+  blockTranslator = next
 }
 
 export function notePhiProject(projectId: string): void {
@@ -105,9 +142,66 @@ export function createClosedGate(message: string): PhiGate {
 }
 
 function failClosed(error: unknown): never {
+  if (error instanceof PhiGateError) throw error
   throw new PhiGateError(
     error instanceof Error ? error.message : 'PHI gate failed closed. The request was not sent.'
   )
+}
+
+function contained(inner: PhiSpan, outer: PhiSpan): boolean {
+  return (
+    inner !== outer &&
+    inner.start >= outer.start &&
+    inner.end <= outer.end &&
+    (inner.start > outer.start || inner.end < outer.end)
+  )
+}
+
+function patientSpans(text: string): PhiBlockedSpan[] {
+  const detected = detectPhi(text).filter((span) => PATIENT_PHI.has(span.category))
+  return detected
+    .filter((span) => !detected.some((other) => contained(span, other)))
+    .map((span) => ({
+      start: span.start,
+      end: span.end,
+      category: span.category,
+      text: span.text
+    }))
+}
+
+function assertMachineMaySend(texts: readonly string[]): void {
+  let approved = false
+  try {
+    approved = machineApproved()
+  } catch {
+    approved = false
+  }
+  if (approved) return
+  const grouped = texts.map((text) => patientSpans(text))
+  const spans = grouped.flat()
+  if (spans.length === 0) return
+  const lines = grouped.flatMap((found, index) =>
+    found.map((span) => {
+      const where = texts.length > 1 ? `#${index + 1} ` : ''
+      return `${where}${span.category} [${span.start}, ${span.end}]: ${span.text}`
+    })
+  )
+  const translate = blockTranslator
+  throw new PhiGateError(formatUnapprovedBlock(lines, translate), spans)
+}
+
+function collectStrings(value: unknown, out: string[]): void {
+  if (typeof value === 'string') {
+    out.push(value)
+    return
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectStrings(item, out)
+    return
+  }
+  if (value && typeof value === 'object') {
+    for (const child of Object.values(value)) collectStrings(child, out)
+  }
 }
 
 function releasedPreview(text: string, projectId: string): PhiPreview {
@@ -145,6 +239,7 @@ async function review(preview: PhiPreview, projectId: string): Promise<string> {
 export async function releaseModelText(text: string, projectId: string): Promise<string> {
   try {
     notePhiProject(projectId)
+    assertMachineMaySend([text])
     return await review(releasedPreview(text, projectId), projectId)
   } catch (error) {
     failClosed(error)
@@ -207,6 +302,9 @@ export async function releasePromptContent<T>(content: T, projectId: string): Pr
     if (!Array.isArray(content)) {
       throw new PhiGateError('PHI gate cannot scan this prompt. The request was not sent.')
     }
+    assertMachineMaySend(
+      content.map((block) => blockText(block)).filter((text): text is string => text != null)
+    )
     const prepared: PreparedBlock[] = []
     const segments: string[] = []
     let cursor = 0
@@ -315,6 +413,9 @@ export async function guardProviderBody(
     return releaseModelText(body, projectId)
   }
   try {
+    const texts: string[] = []
+    collectStrings(parsed, texts)
+    assertMachineMaySend(texts)
     const tokens: PhiReplacement[] = []
     const walked = walkRelease(parsed, projectId, tokens)
     const text = JSON.stringify(walked)

@@ -14,6 +14,7 @@ import {
 } from './confirm'
 import {
   createVaultBackedGate,
+  installMachineApproval,
   installPhiConfirmer,
   installPhiGate,
   releaseModelText
@@ -73,6 +74,7 @@ describe('PHI pre-send confirmation', () => {
   })
 
   it('fails closed when the review is dismissed and does not call the model', async () => {
+    installMachineApproval(() => true)
     installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
     installPhiConfirmer(async () => ({ confirmed: false }))
     const prompt = vi.fn(async () => ({ stopReason: 'end_turn' }))
@@ -110,6 +112,7 @@ describe('PHI pre-send confirmation', () => {
       expect(fetchImpl).not.toHaveBeenCalled()
     } finally {
       installPhiConfirmer(null)
+      installMachineApproval(null)
       installPhiGate({
         release: (text) => ({ text, replacements: [], warnings: [] }),
         restore: (text) => text
@@ -119,6 +122,7 @@ describe('PHI pre-send confirmation', () => {
 
   it('sends only after confirmation and redacts a span the user marked', async () => {
     const vault = createMemoryPhiVault()
+    installMachineApproval(() => true)
     installPhiGate(createVaultBackedGate(vault))
     installPhiConfirmer(async (preview) => {
       expect(preview.text).not.toContain('山田')
@@ -157,6 +161,7 @@ describe('PHI pre-send confirmation', () => {
       expect(vault.store('/tmp/phi-mark').restore(sent[0].text)).toContain('山田')
     } finally {
       installPhiConfirmer(null)
+      installMachineApproval(null)
       installPhiGate({
         release: (text) => ({ text, replacements: [], warnings: [] }),
         restore: (text) => text
@@ -168,15 +173,19 @@ describe('PHI pre-send confirmation', () => {
     const source = readFileSync(join(__dirname, '../index.ts'), 'utf8')
     const translateAt = source.indexOf('const translate = localeOwner.t.bind(localeOwner)')
     const confirmAt = source.indexOf('installPhiConfirmer(createElectronPhiConfirmer(translate))')
+    const approvalAt = source.indexOf('ensureMachineApprovalDeclaration(')
     expect(translateAt).toBeGreaterThan(-1)
     expect(confirmAt).toBeGreaterThan(translateAt)
+    expect(approvalAt).toBeGreaterThan(translateAt)
   })
 
   it('still redacts when no confirmer is installed', async () => {
     installPhiConfirmer(null)
+    installMachineApproval(() => true)
     installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
     const text = await releaseModelText('患者：山田 太郎', 'no-ui')
     expect(text).not.toContain('山田')
+    installMachineApproval(null)
     installPhiGate({
       release: (value) => ({ text: value, replacements: [], warnings: [] }),
       restore: (value) => value
