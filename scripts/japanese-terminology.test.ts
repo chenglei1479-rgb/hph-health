@@ -8,9 +8,16 @@ const FORBIDDEN_JAPANESE_TERMS = [
   '匿名統計',
   '診断支援',
   '診断補助',
-  '治療方針',
+  '治療方針の提案',
   '治療判断',
   '臨床判断支援'
+]
+
+/** Phrases that present the product as a clinical tool. Bare diagnosis is allowed. */
+const FORBIDDEN_CLINICAL_ENGLISH = [
+  'diagnostic support',
+  'clinical decision support',
+  'treatment recommendation'
 ]
 
 /**
@@ -38,31 +45,16 @@ const LEGAL_EXPLANATORY_ALLOWLIST = [
 const uiStringFiles = (candidates: readonly string[]): string[] =>
   candidates.filter((file) => !(LEGAL_EXPLANATORY_ALLOWLIST as readonly string[]).includes(file))
 
-/**
- * `diagnostic` and `diagnostics` name log export. Every other `diagnos*` form,
- * including diagnosis and diagnosing, is medical-device wording. So is
- * `diagnostic support` or `diagnostic aid`.
- */
-const englishDeviceHits = (text: string): string[] => {
-  const hits: string[] = []
-  let diagnos = false
-  for (const match of text.matchAll(/diagnos\w*/gi)) {
-    const word = match[0].toLowerCase()
-    if (word === 'diagnostic' || word === 'diagnostics') continue
-    diagnos = true
-    break
-  }
-  if (/\bdiagnostics?\s+(support|aid)\b/i.test(text)) diagnos = true
-  if (diagnos) hits.push('diagnos')
-  if (/treatment decision/i.test(text)) hits.push('treatment decision')
-  return hits
+const clinicalEnglishHits = (text: string): string[] => {
+  const lower = text.toLowerCase()
+  return FORBIDDEN_CLINICAL_ENGLISH.filter((phrase) => lower.includes(phrase))
 }
 
 const hitsIn = (file: string, text: string): string[] => [
   ...FORBIDDEN_JAPANESE_TERMS.filter((term) => text.includes(term)).map(
     (term) => `${file}: ${term}`
   ),
-  ...englishDeviceHits(text).map((term) => `${file}: ${term}`)
+  ...clinicalEnglishHits(text).map((term) => `${file}: ${term}`)
 ]
 
 const hitsInFiles = (files: readonly string[], read: (file: string) => string): string[] =>
@@ -91,12 +83,12 @@ describe('Japanese terminology', () => {
     expect(hits).toEqual([])
   })
 
-  it('flags medical-device wording in UI strings and skips the same allowlist', () => {
+  it('flags clinical-tool phrases in UI strings and skips the same allowlist', () => {
     const texts: Record<string, string> = {
       'src/shared/i18n/locales/ja.json':
-        '診断支援と診断補助。治療方針、治療判断、臨床判断支援。A diagnosis and a treatment decision.',
+        '診断支援と診断補助。治療方針の提案、治療判断、臨床判断支援。diagnostic support, clinical decision support, and treatment recommendation.',
       'docs/privacy/usage-notice.ja.md':
-        'これは匿名加工情報ではありません。診断支援という語と diagnosis と treatment decision を説明に使います。',
+        'これは匿名加工情報ではありません。診断支援と diagnostic support を説明に使います。',
       'docs/privacy/faq.ja.md': '臨床判断支援ではありません。研究支援です。',
       'resources/account-consent.json': '治療判断という法律上の説明'
     }
@@ -104,18 +96,30 @@ describe('Japanese terminology', () => {
     expect(hits).toEqual([
       'src/shared/i18n/locales/ja.json: 診断支援',
       'src/shared/i18n/locales/ja.json: 診断補助',
-      'src/shared/i18n/locales/ja.json: 治療方針',
+      'src/shared/i18n/locales/ja.json: 治療方針の提案',
       'src/shared/i18n/locales/ja.json: 治療判断',
       'src/shared/i18n/locales/ja.json: 臨床判断支援',
-      'src/shared/i18n/locales/ja.json: diagnos',
-      'src/shared/i18n/locales/ja.json: treatment decision'
+      'src/shared/i18n/locales/ja.json: diagnostic support',
+      'src/shared/i18n/locales/ja.json: clinical decision support',
+      'src/shared/i18n/locales/ja.json: treatment recommendation'
     ])
   })
 
-  it('allows the log-export name diagnostic and still flags diagnostic support', () => {
-    expect(englishDeviceHits('Diagnostics and a diagnostic snapshot')).toEqual([])
-    expect(englishDeviceHits('This product is diagnostic support')).toEqual(['diagnos'])
-    expect(englishDeviceHits('The product is 研究支援')).toEqual([])
+  it('allows 診断名, 診断精度研究, and English diagnosis', () => {
+    const allowed = [
+      '診断名',
+      '診断精度研究',
+      '診断',
+      '治療方針',
+      'Record the diagnosis and the diagnostic snapshot.',
+      'A treatment decision stays in the research note.'
+    ]
+    for (const text of allowed) {
+      expect(hitsIn('src/shared/i18n/locales/ja.json', text)).toEqual([])
+    }
+    expect(hitsIn('src/shared/i18n/locales/ja.json', '治療方針の提案')).toEqual([
+      'src/shared/i18n/locales/ja.json: 治療方針の提案'
+    ])
   })
 
   it('lists privacy notice, FAQ, and consent files on the allowlist', () => {
