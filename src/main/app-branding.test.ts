@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 const projectRoot = resolve(__dirname, '../..')
 const displayName = 'DRA'
-const appId = 'com.aipoch.medresearch-agent'
+const appId = 'com.dra.desktop'
 
 describe('app display branding', () => {
   it('uses the DRA display name in shell and workspace surfaces', () => {

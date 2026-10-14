@@ -53,7 +53,7 @@ import type {
 import type { InterfaceScaleShortcut } from '../shared/interface-scale'
 
 const APP_NAME = 'DRA'
-const APP_USER_MODEL_ID = 'com.aipoch.medresearch-agent'
+const APP_USER_MODEL_ID = 'com.dra.desktop'
 const STARTUP_IMPORTS_TIMING = 'open-science:startup-imports'
 const shouldRunArtifactMcpServer = process.argv.includes(ARTIFACT_MCP_SERVER_ARG)
 const shouldRunNotebookMcpServer = process.argv.includes(NOTEBOOK_MCP_SERVER_ARG)
