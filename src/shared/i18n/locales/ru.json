@@ -7781,6 +7781,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "Показано {{shown}} из {{total}} результатов. Проверьте полный код ниже.",
     "Current environment": "Текущая среда",
     "Selected environment": "Выбранная среда",
-    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются."
+    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются.",
+    "Usage statistics": "Статистика использования",
+    "Anonymous usage statistics": "Анонимная статистика использования",
+    "Send anonymous usage statistics": "Отправлять анонимную статистику использования",
+    "This is the exact payload. It contains an install id, the app version, a coarse operating system, and event names with counts.": "Это точное содержимое отправки. В него входят идентификатор установки, версия приложения, укрупнённая операционная система, а также имена событий и их число.",
+    "Prompts, file names, paths, and model output are never included.": "Тексты запросов, имена файлов, пути и вывод модели никогда не включаются.",
+    "Sending is disabled while the endpoint is a placeholder.": "Отправка отключена, пока адрес остаётся заполнителем.",
+    "Anonymous usage statistics are on.": "Анонимная статистика использования включена.",
+    "Usage statistics are off.": "Статистика использования выключена.",
+    "Reset install id": "Сбросить идентификатор установки",
+    "Japanese privacy notice (placeholder until legal review)": "Японское уведомление о конфиденциальности (заполнитель до юридической проверки)"
   }
 }

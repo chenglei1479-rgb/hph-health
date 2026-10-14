@@ -7474,6 +7474,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{shown}} von {{total}} Befunden werden angezeigt. Prüfen Sie den vollständigen Code unten.",
     "Current environment": "Aktuelle Umgebung",
     "Selected environment": "Ausgewählte Umgebung",
-    "Switching environments clears the current kernel's variables.": "Beim Wechsel der Umgebung werden die Variablen des aktuellen Kernels gelöscht."
+    "Switching environments clears the current kernel's variables.": "Beim Wechsel der Umgebung werden die Variablen des aktuellen Kernels gelöscht.",
+    "Usage statistics": "Nutzungsstatistik",
+    "Anonymous usage statistics": "Anonyme Nutzungsstatistik",
+    "Send anonymous usage statistics": "Anonyme Nutzungsstatistik senden",
+    "This is the exact payload. It contains an install id, the app version, a coarse operating system, and event names with counts.": "Dies ist die genaue Nutzlast. Sie enthält eine Installations-ID, die App-Version, ein grobes Betriebssystem und Ereignisnamen mit Anzahl.",
+    "Prompts, file names, paths, and model output are never included.": "Eingabetexte, Dateinamen, Pfade und Modellausgaben sind nie enthalten.",
+    "Sending is disabled while the endpoint is a placeholder.": "Der Versand ist deaktiviert, solange der Endpunkt ein Platzhalter ist.",
+    "Anonymous usage statistics are on.": "Anonyme Nutzungsstatistik ist aktiviert.",
+    "Usage statistics are off.": "Nutzungsstatistik ist deaktiviert.",
+    "Reset install id": "Installations-ID zurücksetzen",
+    "Japanese privacy notice (placeholder until legal review)": "Japanischer Datenschutzhinweis (Platzhalter bis zur rechtlichen Prüfung)"
   }
 }

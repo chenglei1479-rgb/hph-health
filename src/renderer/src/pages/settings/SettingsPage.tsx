@@ -16,6 +16,7 @@ import {
   Brain,
   BrainCircuit,
   ChartNoAxesCombined,
+  ShieldCheck,
   Cloud,
   Globe,
   KeyRound,
@@ -120,6 +121,9 @@ import type { SettingsWriteErrorCode } from '../../../../shared/settings'
 
 const AgentPanel = lazy(async () => ({ default: (await import('./AgentPanel')).AgentPanel }))
 const GeneralPanel = lazy(async () => ({ default: (await import('./GeneralPanel')).GeneralPanel }))
+const UsageStatisticsPanel = lazy(async () => ({
+  default: (await import('./UsageStatisticsPanel')).UsageStatisticsPanel
+}))
 const NetworkPanel = lazy(async () => ({ default: (await import('./NetworkPanel')).NetworkPanel }))
 const StoragePanel = lazy(async () => {
   const module = await loadSettingsPanel(
@@ -359,7 +363,8 @@ const SETTINGS_GROUPS: ReadonlyArray<SettingsGroup> = [
       { id: 'storage', labelKey: 'Storage', Icon: Cloud },
       { id: 'compute', labelKey: 'Compute', Icon: Zap },
       { id: 'usage', labelKey: 'Usage', Icon: ChartNoAxesCombined },
-      { id: 'archived', labelKey: 'Archived', Icon: Archive }
+      { id: 'archived', labelKey: 'Archived', Icon: Archive },
+      { id: 'usage-statistics', labelKey: 'Usage statistics', Icon: ShieldCheck }
     ]
   }
 ]
@@ -2103,6 +2108,8 @@ const SettingsPage = forwardRef<SettingsPageHandle, SettingsPageProps>(function 
                       )
                     ) : activePanel === 'usage' ? (
                       <TokenUsagePanel sessions={sessions} projects={projects} />
+                    ) : activePanel === 'usage-statistics' ? (
+                      <UsageStatisticsPanel />
                     ) : activePanel === 'general' ? (
                       <GeneralPanel />
                     ) : activePanel === 'remote-control' ? (

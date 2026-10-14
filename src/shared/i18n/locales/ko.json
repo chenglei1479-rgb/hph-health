@@ -7312,6 +7312,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{total}}개 중 {{shown}}개를 표시합니다. 아래 전체 코드를 검토하세요.",
     "Current environment": "현재 환경",
     "Selected environment": "선택한 환경",
-    "Switching environments clears the current kernel's variables.": "환경을 전환하면 현재 커널의 변수가 지워집니다."
+    "Switching environments clears the current kernel's variables.": "환경을 전환하면 현재 커널의 변수가 지워집니다.",
+    "Usage statistics": "사용 통계",
+    "Anonymous usage statistics": "익명 사용 통계",
+    "Send anonymous usage statistics": "익명 사용 통계 보내기",
+    "This is the exact payload. It contains an install id, the app version, a coarse operating system, and event names with counts.": "전송되는 내용의 전부입니다. 설치 ID, 앱 버전, 대략적인 운영체제, 이벤트 이름과 횟수만 포함됩니다.",
+    "Prompts, file names, paths, and model output are never included.": "프롬프트, 파일 이름, 경로, 모델 출력은 포함되지 않습니다.",
+    "Sending is disabled while the endpoint is a placeholder.": "엔드포인트가 자리 표시자인 동안에는 전송하지 않습니다.",
+    "Anonymous usage statistics are on.": "익명 사용 통계가 켜져 있습니다.",
+    "Usage statistics are off.": "사용 통계가 꺼져 있습니다.",
+    "Reset install id": "설치 ID 재설정",
+    "Japanese privacy notice (placeholder until legal review)": "일본어 개인정보 고지 (법률 검토 전 자리 표시자)"
   }
 }

@@ -20,6 +20,7 @@ export type SettingsPanelId =
   | 'permissions'
   | 'credentials'
   | 'archived'
+  | 'usage-statistics'
   | 'usage'
   | 'general'
   | 'storage'

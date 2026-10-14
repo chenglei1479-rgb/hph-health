@@ -7314,6 +7314,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "目前顯示 {{total}} 項發現中的 {{shown}} 項。請審查下方完整程式碼。",
     "Current environment": "目前環境",
     "Selected environment": "所選環境",
-    "Switching environments clears the current kernel's variables.": "切換環境會清除目前核心中的變數。"
+    "Switching environments clears the current kernel's variables.": "切換環境會清除目前核心中的變數。",
+    "Usage statistics": "使用情況統計",
+    "Anonymous usage statistics": "匿名使用情況統計",
+    "Send anonymous usage statistics": "傳送匿名使用情況統計",
+    "This is the exact payload. It contains an install id, the app version, a coarse operating system, and event names with counts.": "這是將傳送的完整內容。其中包含安裝標識、應用版本、粗略的作業系統，以及事件名稱和次數。",
+    "Prompts, file names, paths, and model output are never included.": "絕不會包含提示文字、檔名、路徑和模型輸出。",
+    "Sending is disabled while the endpoint is a placeholder.": "端點仍是占位符時，傳送處於關閉狀態。",
+    "Anonymous usage statistics are on.": "匿名使用情況統計已開啟。",
+    "Usage statistics are off.": "使用情況統計已關閉。",
+    "Reset install id": "重設安裝標識",
+    "Japanese privacy notice (placeholder until legal review)": "日語隱私聲明（法律審核前的占位檔案）"
   }
 }
