@@ -2,6 +2,7 @@ import { AppBrand } from '@/components/AppBrand'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AccountLoginMethod, AccountState } from '../../../shared/account'
+import { isDraPrerelease } from '../../../shared/prerelease'
 import { Button } from './ui/button'
 import * as Dialog from './ui/dialog'
 import {
@@ -44,7 +45,7 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
   }, [api])
 
   useEffect(() => {
-    if (!api) return
+    if (isDraPrerelease() || !api) return
     let live = true
     let timer: ReturnType<typeof setTimeout>
     const poll = async (): Promise<void> => {
@@ -92,8 +93,9 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
     }
   }
 
+  // A beta build never shows the login gate and never asks the main process for an account.
   // Browser access belongs to the paired desktop session; the account API is native-only.
-  if (!api) return <>{children}</>
+  if (isDraPrerelease() || !api) return <>{children}</>
   if (!state || failed)
     return (
       <main className="flex min-h-svh items-center justify-center bg-background p-6">

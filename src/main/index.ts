@@ -1,6 +1,7 @@
 import { PackageFileOpenRelay, packagePathsFromArgv } from './session-package/file-open'
 import { configureCredentialStore, getCredentialStore } from './settings/credential-store-mode'
 import { configureAccountProfile } from './account/profile-bootstrap'
+import { installMainPrereleaseLockdown } from './prerelease/lockdown'
 import {
   selectStartupCredentialIdentity,
   prepareCredentialValidation
@@ -279,6 +280,7 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
   // metadata probe must finish before the first await, profile initialization, or secret access.
   bootstrapPhase = 'credential-store-mode'
   configureAccountProfile(process.argv, app.getPath('appData'))
+  installMainPrereleaseLockdown()
   const webMode = parseWebModeOptions(process.argv)
   configureCredentialStore(process.argv, process.platform, webMode.headless)
   bootstrapPhase = 'credential-identity'

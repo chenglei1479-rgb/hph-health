@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { isDraPrerelease } from '../../shared/prerelease'
 import { readAccountConfig, type AccountConfig } from './config'
 
 // Public deployment configuration only. Passwords and OAuth client secrets never belong here.
@@ -6,6 +7,7 @@ export const readDeployedAccountConfig = (
   files: string[],
   env: NodeJS.ProcessEnv = process.env
 ): AccountConfig | undefined => {
+  if (isDraPrerelease(env)) return undefined
   if (env.DRA_AUTH_MODE || env.DRA_AUTH_ISSUER || env.DRA_AUTH_CLIENT_ID)
     return readAccountConfig(env)
   for (const file of files) {

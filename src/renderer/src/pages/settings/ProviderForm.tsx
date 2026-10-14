@@ -8,6 +8,7 @@ import { Trans, useTranslation } from 'react-i18next'
 
 import { ExternalTextLink } from '@/components/ExternalTextLink'
 import { FieldHelp } from '@/components/FieldHelp'
+import { PrereleaseDataDestinationNotice } from '@/components/PrereleaseDataDestinationNotice'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
@@ -24,6 +25,7 @@ import {
   getOfficialVendorModelIds,
   resolveVendorApiKeyUrl
 } from '../../../../shared/provider-registry'
+import { isDraPrerelease } from '../../../../shared/prerelease'
 import {
   CUSTOM_REASONING_EFFORT_PRESETS,
   CUSTOM_REASONING_EFFORT_TRANSPORTS,
@@ -359,7 +361,14 @@ const ProviderForm = ({
           aria-label={t('API key')}
           aria-required={keyRequired || undefined}
           aria-invalid={Boolean(needsKey || errors.key) || undefined}
-          aria-describedby={needsKey || errors.key ? 'provider-key-error' : undefined}
+          aria-describedby={
+            [
+              needsKey || errors.key ? 'provider-key-error' : undefined,
+              isDraPrerelease() ? 'prerelease-provider-key-notice' : undefined
+            ]
+              .filter((id) => id !== undefined)
+              .join(' ') || undefined
+          }
           type={keyVisible ? 'text' : 'password'}
           value={value.key}
           disabled={disabled}
@@ -396,6 +405,10 @@ const ProviderForm = ({
           )}
         </button>
       </div>
+      <PrereleaseDataDestinationNotice
+        id="prerelease-provider-key-notice"
+        testId="prerelease-provider-key-notice"
+      />
       {needsKey ? (
         <p id="provider-key-error" className={fieldErrorClassName} role="alert">
           {t('The stored key could not be decrypted. Enter it again to continue.')}

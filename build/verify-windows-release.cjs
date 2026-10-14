@@ -4,6 +4,8 @@ const path = require('node:path')
 
 // A release is successful only after Windows validates the actual distributed artifacts.
 exports.default = async function verifyWindowsRelease(context) {
+  // Unsigned internal betas have no publisher identity to verify. Stable releases still require one.
+  if (process.env.DRA_PRERELEASE === '1') return []
   const installers = context.artifactPaths.filter((file) => /-win-.*-setup\.exe$/i.test(file))
   if (installers.length === 0) return []
   if (!process.env.DRA_SIGNING_PUBLISHER) throw new Error('DRA_SIGNING_PUBLISHER is required.')
