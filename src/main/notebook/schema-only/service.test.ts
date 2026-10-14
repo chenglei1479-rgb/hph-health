@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import type { PythonCommand } from '../python-command'
 import { createPatientDataTagStore } from './patient-data-tag'
+import { redactPatientPhi } from './patient-phi'
 import { gateNotebookOutputs, installNotebookModelTextReleaser } from './release-model-text'
 import { suppressSmallAggregateText } from './small-cell'
 import { createSchemaNotebookService, type SchemaNotebookService } from './service'
@@ -107,6 +108,13 @@ describe('schema-only notebook', () => {
     expect(log).toContain('"column":"sex"')
     expect(log).toContain('"actor":"researcher"')
     expect(log).toContain('study-1')
+  })
+
+  it('marks released patient text as pseudonymized', () => {
+    const released = redactPatientPhi('患者氏名：山田太郎')
+    expect(released).toBe('患者氏名：[仮名化済み]')
+    expect(released).not.toContain('匿名化')
+    expect(released).not.toContain('山田太郎')
   })
 
   it('suppresses aggregate cells with n<10 and gates every model-bound channel', async () => {

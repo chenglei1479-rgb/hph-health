@@ -66,5 +66,14 @@ describe('SchemaNotebookEntry', () => {
     )
     expect(container.textContent).toContain('印を外すことはできません')
     expect(container.querySelector('button[data-remove-patient-data]')).toBeNull()
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === '患者表を分析'
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(container.textContent).toContain('マスキングチェック')
+    expect(container.textContent).toContain('仮名化済み')
+    expect(container.textContent).not.toContain('匿名化')
   })
 })

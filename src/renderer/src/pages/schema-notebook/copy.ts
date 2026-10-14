@@ -21,6 +21,9 @@ export type SchemaNotebookCopy = {
   run: string
   localResult: string
   modelView: string
+  maskingCheck: string
+  maskingCheckNote: string
+  pseudonymized: string
   blocked: string
   tagged: string
   language: string
@@ -47,6 +50,10 @@ const ja: SchemaNotebookCopy = {
   run: '手元で実行',
   localResult: '手元の結果',
   modelView: 'モデルに渡す内容',
+  maskingCheck: 'マスキングチェック',
+  maskingCheckNote:
+    'モデルに返す文字列はマスキングチェックを通します。置き換えた箇所は仮名化済みです。',
+  pseudonymized: '仮名化済み',
   blocked: 'この端末は病院の承認を受けていないため、個人情報を含むファイルは取り込めません。',
   tagged: 'このプロジェクトは患者データを含むため、印を外すことはできません。',
   language: '言語',

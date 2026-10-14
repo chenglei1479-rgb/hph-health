@@ -177,6 +177,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
             <div>
               <h2 className="font-medium">{copy.title}</h2>
               <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.intro}</p>
+              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.maskingCheckNote}</p>
             </div>
             <button type="button" onClick={() => setOpen(false)}>
               {copy.close}
@@ -268,7 +269,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
               {result ? (
                 <div className="grid gap-2">
                   <pre aria-label={copy.localResult}>{result.local.stdout}</pre>
-                  <pre aria-label={copy.modelView}>{JSON.stringify(result.forModel)}</pre>
+                  <p>{copy.maskingCheck}</p>
+                  <pre aria-label={copy.maskingCheck}>{JSON.stringify(result.forModel)}</pre>
+                  <p>{copy.pseudonymized}</p>
                 </div>
               ) : null}
             </div>
