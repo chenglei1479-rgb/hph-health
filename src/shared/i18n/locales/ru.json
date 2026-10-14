@@ -7761,6 +7761,8 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "Показано {{shown}} из {{total}} результатов. Проверьте полный код ниже.",
     "Current environment": "Текущая среда",
     "Selected environment": "Выбранная среда",
-    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются."
+    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются.",
+    "The update signature does not match the pinned publisher. The installer was not started.": "Подпись обновления не совпадает с закреплённым издателем. Установщик не был запущен.",
+    "The update feed could not be verified.": "Не удалось проверить канал обновления."
   }
 }

@@ -7454,6 +7454,8 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{shown}} von {{total}} Befunden werden angezeigt. Prüfen Sie den vollständigen Code unten.",
     "Current environment": "Aktuelle Umgebung",
     "Selected environment": "Ausgewählte Umgebung",
-    "Switching environments clears the current kernel's variables.": "Beim Wechsel der Umgebung werden die Variablen des aktuellen Kernels gelöscht."
+    "Switching environments clears the current kernel's variables.": "Beim Wechsel der Umgebung werden die Variablen des aktuellen Kernels gelöscht.",
+    "The update signature does not match the pinned publisher. The installer was not started.": "Die Update-Signatur stimmt nicht mit dem festgelegten Herausgeber überein. Das Installationsprogramm wurde nicht gestartet.",
+    "The update feed could not be verified.": "Der Update-Feed konnte nicht überprüft werden."
   }
 }

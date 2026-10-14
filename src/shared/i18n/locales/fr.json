@@ -7622,6 +7622,8 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{shown}} résultats sur {{total}} sont affichés. Vérifiez le code complet ci-dessous.",
     "Current environment": "Environnement actuel",
     "Selected environment": "Environnement sélectionné",
-    "Switching environments clears the current kernel's variables.": "Changer d’environnement efface les variables du noyau actuel."
+    "Switching environments clears the current kernel's variables.": "Changer d’environnement efface les variables du noyau actuel.",
+    "The update signature does not match the pinned publisher. The installer was not started.": "La signature de la mise à jour ne correspond pas à l'éditeur épinglé. Le programme d'installation n'a pas été lancé.",
+    "The update feed could not be verified.": "Le flux de mise à jour n'a pas pu être vérifié."
   }
 }

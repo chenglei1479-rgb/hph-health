@@ -6,6 +6,14 @@ import { autoUpdater, CancellationToken, AppImageUpdater, DebUpdater } from 'ele
 import { APP } from '../../shared/app-config'
 import { isCurrentInFlight } from '../../shared/in-flight-promise'
 import {
+  channelAllowsUpdate,
+  isStagedRolloutEligible,
+  UPDATE_FEED_UNREADABLE,
+  UPDATE_SIGNATURE_REJECTED,
+  type LatestYmlFeed,
+  type UpdateChannel
+} from '../../shared/signed-update-channel'
+import {
   isNewer,
   UPDATE_INSTALLATION_REQUIRED,
   type UpdateApplyOptions,
@@ -58,6 +66,12 @@ export interface MinimalAutoUpdater {
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void
 }
 
+export type SignedRollout = {
+  installId: string | undefined
+  requestedChannel: UpdateChannel
+  readFeed: () => Promise<LatestYmlFeed>
+}
+
 export type ElectronUpdaterDeps = {
   deployment?: DraUpdateDeployment
   installationGuard?: (interactive: boolean, knownReadOnly?: boolean) => boolean
@@ -81,6 +95,13 @@ export type ElectronUpdaterDeps = {
   log?: Logger
   // Marks the app lifecycle handoff immediately before quitAndInstall. Injectable for tests.
   markUpdateShutdown?: () => () => void
+  // Confirms the downloaded artifact before quitAndInstall. Absent in tests that are not exercising
+  // the signed channel. A rejection leaves the app running.
+  verifySignature?: (
+    artifactPath: string | undefined
+  ) => Promise<{ ok: true } | { ok: false; reason: string }>
+  // When set, latest.yml must match the requested channel and staged rollout percent.
+  rollout?: SignedRollout
   // True when an x64 process is running under Rosetta 2 on Apple Silicon; false when definitively not;
   // undefined when the probe could not determine it. Electron-updater detects this via
   // sysctl.proc_translated and selects the arm64 artifact, so we must match that to show the correct
@@ -233,6 +254,10 @@ export class ElectronUpdaterStrategy implements UpdateStrategy {
   private readonly installGate?: InstallGate
   private readonly releaseInstallHandoff: () => void
   private readonly markUpdateShutdown: () => () => void
+  private readonly verifySignature?: ElectronUpdaterDeps['verifySignature']
+  private readonly rollout?: SignedRollout
+  private artifactPath?: string
+  private rolloutGate?: Promise<void>
 
   constructor(deps: ElectronUpdaterDeps = {}) {
     this.updater = deps.updater ?? (autoUpdater as unknown as MinimalAutoUpdater)
@@ -268,11 +293,64 @@ export class ElectronUpdaterStrategy implements UpdateStrategy {
     this.releaseInstallHandoff = deps.releaseInstallHandoff ?? (() => undefined)
     this.markUpdateShutdown =
       deps.markUpdateShutdown ?? (() => markApplicationShutdownTrigger('update'))
+    this.verifySignature = deps.verifySignature
+    this.rollout = deps.rollout
     this.status = { state: 'idle', current: this.currentVersion, applyKind: 'restart' }
 
+    // Download and install stay explicit. Quitting the app must not install an update.
     this.updater.autoDownload = false
     this.updater.autoInstallOnAppQuit = false
     this.subscribe()
+  }
+
+  private noteAvailableUpdate(info: unknown): void {
+    const i = info as { version?: string; releaseNotes?: unknown; files?: UpdateFeedFile[] }
+    const readyStatus = this.readyCheckStatus
+    if (
+      readyStatus &&
+      this.status === readyStatus &&
+      (!i.version || !isNewer(i.version, readyStatus.latest ?? this.currentVersion))
+    ) {
+      return
+    }
+    const totalBytes = extractArtifactSize(i.files, this.platform, this.arch, this.updater)
+    this.setStatus({
+      state: 'available',
+      latest: i.version,
+      notes: notesToString(i.releaseNotes),
+      ...(totalBytes != null ? { totalBytes } : {})
+    })
+    // electron-updater's *.yml feed carries no release notes, so the dialog would only get a
+    // GitHub link. Hydrate the notes from the CDN manifest (the same version.json the installer
+    // flow reads) so the "What's new" section renders in-app.
+    if (i.version) void this.hydrateNotes(i.version)
+  }
+
+  private async gateAvailableUpdate(info: unknown): Promise<void> {
+    const rollout = this.rollout
+    if (!rollout) {
+      this.noteAvailableUpdate(info)
+      return
+    }
+    const version = (info as { version?: string }).version
+    try {
+      const feed = await rollout.readFeed()
+      const eligible =
+        channelAllowsUpdate(feed.channel, rollout.requestedChannel) &&
+        isStagedRolloutEligible(rollout.installId, feed.stagingPercentage)
+      if (!eligible) {
+        if (this.readyCheckStatus && this.status === this.readyCheckStatus) return
+        this.setStatus({ state: 'up-to-date', latest: version ?? feed.version })
+        return
+      }
+    } catch (error) {
+      this.log.warn('update feed rollout check failed', error)
+      if (!(this.readyCheckStatus && this.status === this.readyCheckStatus)) {
+        this.setStatus({ state: 'error', error: UPDATE_FEED_UNREADABLE })
+      }
+      return
+    }
+    this.noteAvailableUpdate(info)
   }
 
   private subscribe(): void {
@@ -281,26 +359,11 @@ export class ElectronUpdaterStrategy implements UpdateStrategy {
       this.setStatus({ state: 'checking' })
     })
     this.updater.on('update-available', (info) => {
-      const i = info as { version?: string; releaseNotes?: unknown; files?: UpdateFeedFile[] }
-      const readyStatus = this.readyCheckStatus
-      if (
-        readyStatus &&
-        this.status === readyStatus &&
-        (!i.version || !isNewer(i.version, readyStatus.latest ?? this.currentVersion))
-      ) {
+      if (this.rollout) {
+        this.rolloutGate = this.gateAvailableUpdate(info)
         return
       }
-      const totalBytes = extractArtifactSize(i.files, this.platform, this.arch, this.updater)
-      this.setStatus({
-        state: 'available',
-        latest: i.version,
-        notes: notesToString(i.releaseNotes),
-        ...(totalBytes != null ? { totalBytes } : {})
-      })
-      // electron-updater's *.yml feed carries no release notes, so the dialog would only get a
-      // GitHub link. Hydrate the notes from the CDN manifest (the same version.json the installer
-      // flow reads) so the "What's new" section renders in-app.
-      if (i.version) void this.hydrateNotes(i.version)
+      this.noteAvailableUpdate(info)
     })
     this.updater.on('update-not-available', (info) => {
       if (this.readyCheckStatus && this.status === this.readyCheckStatus) return
@@ -343,13 +406,17 @@ export class ElectronUpdaterStrategy implements UpdateStrategy {
         totalBytes: total
       })
     })
-    this.updater.on('update-downloaded', () => {
+    this.updater.on('update-downloaded', (info) => {
       if (
         !this.transferToken ||
         this.transferToken.cancelled ||
         this.status.state !== 'downloading'
       )
         return
+      const downloaded = info as { downloadedFile?: unknown; path?: unknown }
+      if (typeof downloaded?.downloadedFile === 'string')
+        this.artifactPath = downloaded.downloadedFile
+      else if (typeof downloaded?.path === 'string') this.artifactPath = downloaded.path
       this.setStatus({ ...this.status, state: 'ready', progress: 100 })
     })
     this.updater.on('error', (err) => {
@@ -467,6 +534,9 @@ export class ElectronUpdaterStrategy implements UpdateStrategy {
         let providerFailure: unknown
         try {
           await this.updater.checkForUpdates()
+          const gate = this.rolloutGate
+          this.rolloutGate = undefined
+          if (gate) await gate
         } catch (error) {
           providerFailure = error
           if (!readyStatus || this.status !== readyStatus) {
@@ -692,6 +762,31 @@ export class ElectronUpdaterStrategy implements UpdateStrategy {
         return this.status
       }
       this.log.info('update install gate cleared; proceeding to quitAndInstall')
+    }
+
+    if (this.verifySignature) {
+      operation.phase('verify-signature')
+      let accepted = false
+      try {
+        accepted = (await this.verifySignature(this.artifactPath)).ok
+      } catch (error) {
+        this.log.warn('update signature check failed', error)
+        accepted = false
+      }
+      if (!this.applying) {
+        operation.cancel({ reason: 'apply-interrupted' })
+        return this.status
+      }
+      if (!accepted) {
+        this.applying = false
+        this.setStatus({
+          ...this.status,
+          state: 'ready',
+          error: UPDATE_SIGNATURE_REJECTED
+        })
+        operation.fail(new Error(UPDATE_SIGNATURE_REJECTED), { result: 'signature-rejected' })
+        return this.status
+      }
     }
 
     operation.phase('install')

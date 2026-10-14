@@ -1,0 +1,15 @@
+# Example electron-updater generic feed. Host this file at
+# https://updates.example/dra/latest.yml
+# channel is beta or stable. stagingPercentage is the percent of installs
+# (0-100) that may see this version. The app does not install it until the
+# user confirms.
+version: 0.0.0
+channel: stable
+stagingPercentage: 10
+files:
+  - url: DRA-setup.exe
+    sha512: REPLACE_WITH_SHA512
+    size: 0
+path: DRA-setup.exe
+sha512: REPLACE_WITH_SHA512
+releaseDate: '1970-01-01T00:00:00.000Z'

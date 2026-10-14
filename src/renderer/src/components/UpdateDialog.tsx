@@ -26,6 +26,10 @@ import { cn } from '@/lib/utils'
 import { useUpdateStore } from '@/stores/update-store'
 import { APP } from '../../../shared/app-config'
 import { isLocale } from '../../../shared/locale'
+import {
+  UPDATE_FEED_UNREADABLE,
+  UPDATE_SIGNATURE_REJECTED
+} from '../../../shared/signed-update-channel'
 import { formatBytes, UPDATE_INSTALLATION_REQUIRED } from '../../../shared/update'
 
 const UPDATE_BACKGROUND_PROCESS_ERROR =
@@ -225,7 +229,13 @@ const UpdateDialog = ({ active = true }: { active?: boolean }): React.JSX.Elemen
                                         ? t(
                                             'The installer is missing or has changed. Download the update again.'
                                           )
-                                        : (dialogStatus.error ?? t('Update failed'))
+                                        : dialogStatus.error === UPDATE_SIGNATURE_REJECTED
+                                          ? t(
+                                              'The update signature does not match the pinned publisher. The installer was not started.'
+                                            )
+                                          : dialogStatus.error === UPDATE_FEED_UNREADABLE
+                                            ? t('The update feed could not be verified.')
+                                            : (dialogStatus.error ?? t('Update failed'))
                       }
                     >
                       {legacyRecovery ? (

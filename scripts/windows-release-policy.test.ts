@@ -35,11 +35,15 @@ it('verifies real artifact paths using the electron-builder BuildResult hook con
   )
 })
 
-it('does not ship a default update feed or manifest', () => {
-  const config = load(readFileSync('electron-builder.yml', 'utf8')) as { publish: unknown }
-  expect(config.publish).toBeNull()
-  expect(APP.update.enabled).toBe(false)
-  expect(APP.update.manifestUrl).toBe('')
+it('points electron-updater at the placeholder generic feed', () => {
+  const config = load(readFileSync('electron-builder.yml', 'utf8')) as {
+    publish: { provider?: string; url?: string } | null
+  }
+  expect(config.publish).toEqual({
+    provider: 'generic',
+    url: 'https://updates.REPLACE_ME/dra/'
+  })
+  expect(APP.update.manifestUrl).not.toContain('REPLACE_ME')
 })
 
 it('rejects Windows releases without a signing identity before compiling', () => {
