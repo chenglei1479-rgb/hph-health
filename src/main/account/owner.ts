@@ -3,6 +3,7 @@ import { createServer, type Server } from 'node:http'
 import { createLocalJWKSet, jwtVerify, type JSONWebKeySet } from 'jose'
 import type { AccountLoginRequest, AccountState, NotebookAccessCheck } from '../../shared/account'
 import type { AccountConfig } from './config'
+import { isDraPrerelease } from '../../shared/prerelease'
 import type { AccountSessionStore, SavedAccountSession } from './session-store'
 import {
   MEMBERSHIP_CLAIM,
@@ -188,9 +189,15 @@ export class AccountOwner {
     }
   }
 
-  constructor(private readonly deps: Dependencies) {
-    this.now = deps.now ?? Date.now
-    this.request = deps.fetch ?? fetch
+  private readonly deps: Dependencies
+
+  constructor(deps: Dependencies) {
+    // Ignore any tenant, session file, or configuration error so login cannot collect an account.
+    this.deps = isDraPrerelease()
+      ? { ...deps, config: undefined, configurationError: false, sessionStore: undefined }
+      : deps
+    this.now = this.deps.now ?? Date.now
+    this.request = this.deps.fetch ?? fetch
   }
 
   snapshot(): AccountState {

@@ -2,6 +2,7 @@
   "common": {
     "The conversation changed. Close and reopen export to review it.": "대화가 변경되었습니다. 내용을 검토하려면 내보내기를 닫았다가 다시 여세요.",
     "Approval needed": "승인 필요",
+    "Approval number": "승인 번호",
     "Cancel": "취소",
     "Stay": "앱에 머물기",
     "Retry saving": "저장 다시 시도",
@@ -49,6 +50,15 @@
     "Confirm Notebook kernel and environment": "Notebook 커널 및 환경 확인"
   },
   "native": {
+    "Review de-identified text": "비식별화된 텍스트 검토",
+    "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "강조된 텍스트는 전송 전에 바뀌었습니다. 다른 환자 정보가 있으면 선택하여 표시하십시오. 확인해야 전송됩니다. 이 창을 닫으면 아무것도 전송되지 않습니다.",
+    "Confirm send": "전송 확인",
+    "Mark selection": "선택 영역 표시",
+    "Is this machine approved by the hospital?": "이 컴퓨터는 병원의 승인을 받았습니까?",
+    "This machine is not approved until you enter the hospital approval number and confirm. Closing this window leaves it not approved.": "병원 승인 번호를 입력하고 확인할 때까지 이 컴퓨터는 승인되지 않았습니다. 이 창을 닫으면 승인되지 않은 상태로 유지됩니다.",
+    "This machine is approved": "이 컴퓨터는 승인되었습니다",
+    "Not approved": "승인되지 않음",
+    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "이 컴퓨터는 병원의 승인을 받지 않았습니다. 요청이 전송되지 않았습니다. 다음 부분을 편집한 뒤 다시 시도하십시오: {{spans}}",
     "Linux OS credentials require the original selected Secret Service or KWallet backend and /usr/bin/busctl. Unlock the original default keyring or wallet and restart. Do not change the password-store backend or profile to bypass this check.": "Linux 시스템 자격 증명에는 원래 선택한 Secret Service 또는 KWallet 백엔드와 /usr/bin/busctl이 필요합니다. 원래 기본 키링 또는 지갑의 잠금을 해제하고 다시 시작하세요. 이 검사를 우회하기 위해 password-store 백엔드나 프로필을 변경하지 마세요.",
     "Credential storage needs recovery": "자격 증명 저장소를 복구해야 합니다",
     "Silent credential identity checks are not supported by this system credential backend. Startup has stopped to preserve existing encrypted data.": "이 시스템 자격 증명 백엔드는 사용자 상호 작용 없는 식별 정보 확인을 지원하지 않습니다. 기존 암호화 데이터를 보존하기 위해 시작을 중단했습니다.",
@@ -135,6 +145,16 @@
     "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "이 세션 패키지에는 더 최신 버전의 DRA가 필요합니다. DRA를 업데이트한 후 다시 가져오세요."
   },
   "renderer": {
+    "Hospital approval": "병원 승인",
+    "Patient information can be de-identified and sent only after this machine is approved by the hospital. A change is appended to the local audit log.": "이 컴퓨터가 병원의 승인을 받은 뒤에만 환자 정보를 비식별화하여 전송할 수 있습니다. 변경 사항은 로컬 감사 로그에 추가됩니다.",
+    "This machine is not approved.": "이 컴퓨터는 승인되지 않았습니다.",
+    "Approved under {{number}}.": "승인 번호 {{number}}(으)로 승인됨.",
+    "Approve this machine": "이 컴퓨터 승인",
+    "Revoke approval": "승인 취소",
+    "Enter the hospital approval number.": "병원 승인 번호를 입력하세요.",
+    "Could not read hospital approval.": "병원 승인 상태를 읽지 못했습니다.",
+    "Could not update hospital approval.": "병원 승인 상태를 업데이트하지 못했습니다.",
+    "Recorded {{at}}.": "기록 {{at}}.",
     "List GWAS summary statistics files, YAML metadata, reference genomes and standard column definitions by GCST accession.": "GCST 등록 번호로 GWAS 요약 통계 파일, YAML 메타데이터, 참조 유전체 및 표준 열 정의를 조회합니다.",
     "PDF analysis options": "PDF 분석 옵션",
     "Retrieve GEO series metadata, samples and supplementary-file links.": "GEO 시리즈의 메타데이터, 샘플 및 보충 파일 링크를 가져옵니다.",

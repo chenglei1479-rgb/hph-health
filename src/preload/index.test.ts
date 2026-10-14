@@ -416,6 +416,8 @@ describe('preload bridge — public surface inventory', () => {
       'logs.getStatus',
       'logs.openFile',
       'logs.revealInFolder',
+      'machineApproval.getStatus',
+      'machineApproval.setStatus',
       'managedFileVersions.cancelDiff',
       'managedFileVersions.diffText',
       'managedFileVersions.inspect',
@@ -988,6 +990,7 @@ describe('preload bridge — core renderer contract catalog', () => {
       'update',
       'local-models',
       'pdf-structure',
+      'machine-approval',
       'uploads',
       'window'
     ])

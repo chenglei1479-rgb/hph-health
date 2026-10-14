@@ -1,0 +1,11 @@
+Outpatient note / 外来記録
+Pt: Taro YAMADA（山田 太郎）, 47 y/o M, MRN 7740021
+Visit: 2024.10.03 内科外来 Dr. Hayato Kirishima
+Address: 大阪府大阪市北区梅田八丁目12-3　Tel +81-90-5555-0145
+Email: taro.yamada@example.jp
+My Number card presented for 資格確認：9753 6590 5437
+Insurance: 保険者番号：06139012 記号 1234 番号 567（枝番 01）
+#1 HTN — アムロジピン 5 mg → 10 mgに増量. Home BP 148/92.
+#2 Graves病（バセドウ病）— メルカゾール 15 mg/day. FT4 1.4 ng/dL.
+#3 Dyslipidemia — LDL-C 162 mg/dL, ロスバスタチン start.
+Follow-up in 4 weeks. Family hx: grandmother alive at 101 y/o; father had ハンチントン病? → HTT testing discussed.

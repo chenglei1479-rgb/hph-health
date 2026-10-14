@@ -32,7 +32,8 @@ const HOST_CAPABILITIES = [
   'storage',
   'update',
   'local-models',
-  'pdf-structure'
+  'pdf-structure',
+  'machine-approval'
 ] as const
 
 const remoteSnapshot: RemoteAccessSnapshot = {
@@ -111,6 +112,14 @@ const createDependencies = (): HostApplicationCommandDependencies => ({
     removeGrantedRoot: vi.fn(async () => []),
     revealInFolder: vi.fn(() => undefined),
     setGrantedRootAccess: vi.fn(async () => [])
+  },
+  machineApproval: {
+    getStatus: vi.fn(async () => ({ approved: false, approvalNumber: null, at: null })),
+    setStatus: vi.fn(async () => ({
+      approved: true,
+      approvalNumber: 'HP-2026-014',
+      at: '2026-10-14T03:27:00.000Z'
+    }))
   },
   logs: {
     getStatus: vi.fn(async () => ({
@@ -226,7 +235,7 @@ const commandByName = (name: string): ApplicationCommand<string, readonly unknow
 }
 
 describe('Host application commands', () => {
-  it('defines the exact 66 Electron request channels in their existing capability groups', () => {
+  it('defines the exact 68 Electron request channels in their existing capability groups', () => {
     const expected = RENDERER_CONTRACT_GROUPS.filter(({ capability }) =>
       HOST_CAPABILITIES.includes(capability as (typeof HOST_CAPABILITIES)[number])
     ).map(({ capability, contracts }) => {
@@ -246,7 +255,7 @@ describe('Host application commands', () => {
       }
     })
 
-    expect(expected.flatMap(({ channels }) => channels)).toHaveLength(66)
+    expect(expected.flatMap(({ channels }) => channels)).toHaveLength(68)
     expect(
       hostApplicationCommandGroups.map(({ name, commands }) => ({
         capability: name,
@@ -262,7 +271,7 @@ describe('Host application commands', () => {
       {} as HostApplicationCommandDependencies
     )
 
-    expect(router.dispatcher.commandNames()).toHaveLength(66)
+    expect(router.dispatcher.commandNames()).toHaveLength(68)
     installation.uninstall()
     expect(router.dispatcher.commandNames()).toEqual([])
   })
@@ -318,6 +327,14 @@ describe('Host application commands', () => {
     await router.dispatcher.invoke(hostApplicationCommands.logs.getStatus, invocation([]))
     await router.dispatcher.invoke(hostApplicationCommands.logs.openFile, invocation([]))
     await router.dispatcher.invoke(hostApplicationCommands.logs.revealInFolder, invocation([]))
+    await router.dispatcher.invoke(
+      hostApplicationCommands.machineApproval.getStatus,
+      invocation([])
+    )
+    await router.dispatcher.invoke(
+      hostApplicationCommands.machineApproval.setStatus,
+      invocation([{ approved: true, approvalNumber: 'HP-2026-014' }])
+    )
     await router.dispatcher.invoke(
       hostApplicationCommands.notifications.getSnapshot,
       invocation([])
@@ -591,7 +608,7 @@ describe('Host application commands', () => {
         .filter((channel): channel is string => channel !== null)
     )
 
-    expect(localOnlyChannels).toHaveLength(39)
+    expect(localOnlyChannels).toHaveLength(41)
     for (const channel of localOnlyChannels) {
       await expect(
         router.dispatcher.invoke(

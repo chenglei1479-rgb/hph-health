@@ -74,6 +74,14 @@ const fixtures = (): {
         )
       },
       translate: (text) => text,
+      machineApproval: {
+        getStatus: vi.fn(async () => ({ approved: false, approvalNumber: null, at: null })),
+        setStatus: vi.fn(async () => ({
+          approved: true,
+          approvalNumber: 'HP-2026-014',
+          at: '2026-10-14T03:27:00.000Z'
+        }))
+      },
       logs: {
         getStatus: vi.fn(async () => ({
           configured: false,
@@ -147,6 +155,8 @@ describe('desktop utilities Electron production surface', () => {
       'logs:get-status',
       'logs:open-file',
       'logs:reveal-in-folder',
+      'machine-approval:get-status',
+      'machine-approval:set-status',
       'github:get-stars',
       'cli:get-status',
       'cli:install',
@@ -169,6 +179,7 @@ describe('desktop utilities Electron production surface', () => {
       ['logs:get-status', owners.logs.getStatus],
       ['logs:open-file', owners.logs.openFile],
       ['logs:reveal-in-folder', owners.logs.revealInFolder],
+      ['machine-approval:get-status', owners.machineApproval.getStatus],
       ['github:get-stars', owners.github.getStars],
       ['cli:get-status', owners.cli.getStatus],
       ['cli:install', owners.cli.install],

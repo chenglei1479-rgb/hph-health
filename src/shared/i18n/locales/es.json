@@ -2,6 +2,7 @@
   "common": {
     "The conversation changed. Close and reopen export to review it.": "La conversación cambió. Cierre y vuelva a abrir la exportación para revisarla.",
     "Approval needed": "Se necesita aprobación",
+    "Approval number": "Número de aprobación",
     "Cancel": "Cancelar",
     "Stay": "Permanecer en la aplicación",
     "Retry saving": "Reintentar el guardado",
@@ -49,6 +50,15 @@
     "Confirm Notebook kernel and environment": "Confirmar el kernel y el entorno de Notebook"
   },
   "native": {
+    "Review de-identified text": "Revisar el texto desidentificado",
+    "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "El texto resaltado se reemplazó antes del envío. Seleccione cualquier otra información del paciente y márquela. Confirme el envío. Si cierra esta ventana, no se envía nada.",
+    "Confirm send": "Confirmar envío",
+    "Mark selection": "Marcar la selección",
+    "Is this machine approved by the hospital?": "¿Este equipo está aprobado por el hospital?",
+    "This machine is not approved until you enter the hospital approval number and confirm. Closing this window leaves it not approved.": "Este equipo no está aprobado hasta que usted introduzca el número de aprobación del hospital y confirme. Si cierra esta ventana, el equipo permanece sin aprobación.",
+    "This machine is approved": "Este equipo está aprobado",
+    "Not approved": "No aprobado",
+    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "Este equipo no está aprobado por el hospital. La solicitud no se envió. Edite estos fragmentos e inténtelo de nuevo: {{spans}}",
     "Linux OS credentials require the original selected Secret Service or KWallet backend and /usr/bin/busctl. Unlock the original default keyring or wallet and restart. Do not change the password-store backend or profile to bypass this check.": "Las credenciales del sistema Linux requieren el backend Secret Service o KWallet seleccionado originalmente y /usr/bin/busctl. Desbloquee el llavero o la cartera predeterminados originales y reinicie. No cambie el backend password-store ni el perfil para omitir esta comprobación.",
     "Credential storage needs recovery": "Es necesario recuperar el almacén de credenciales",
     "Silent credential identity checks are not supported by this system credential backend. Startup has stopped to preserve existing encrypted data.": "Este backend de credenciales del sistema no admite comprobaciones silenciosas de identidad. El inicio se ha detenido para preservar los datos cifrados existentes.",
@@ -137,6 +147,16 @@
     "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "Este paquete de sesión requiere una versión más reciente de DRA. Actualice DRA y vuelva a importarlo."
   },
   "renderer": {
+    "Hospital approval": "Aprobación del hospital",
+    "Patient information can be de-identified and sent only after this machine is approved by the hospital. A change is appended to the local audit log.": "La información del paciente solo se puede desidentificar y enviar cuando el hospital ha aprobado este equipo. Un cambio se añade al registro de auditoría local.",
+    "This machine is not approved.": "Este equipo no está aprobado.",
+    "Approved under {{number}}.": "Aprobado con el número {{number}}.",
+    "Approve this machine": "Aprobar este equipo",
+    "Revoke approval": "Revocar la aprobación",
+    "Enter the hospital approval number.": "Introduzca el número de aprobación del hospital.",
+    "Could not read hospital approval.": "No se pudo leer la aprobación del hospital.",
+    "Could not update hospital approval.": "No se pudo actualizar la aprobación del hospital.",
+    "Recorded {{at}}.": "Registrado {{at}}.",
     "List GWAS summary statistics files, YAML metadata, reference genomes and standard column definitions by GCST accession.": "Consultar archivos de estadísticas resumidas de GWAS, metadatos YAML, genomas de referencia y definiciones estándar de columnas mediante un identificador GCST.",
     "PDF analysis options": "Opciones de análisis del PDF",
     "Retrieve GEO series metadata, samples and supplementary-file links.": "Obtener metadatos, muestras y enlaces a archivos complementarios de una serie de GEO.",

@@ -3,6 +3,10 @@ import { registerFileSaveHandlers, type RegisterFileSaveHandlersOptions } from '
 import { registerGithubIpcHandlers, type GithubCommandOwner } from '../github-ipc'
 import type { NativeTranslator } from '../locale/main-process-messages'
 import { registerLogsIpcHandlers, type LogsCommandOwner } from '../logs-ipc'
+import {
+  registerMachineApprovalIpcHandlers,
+  type MachineApprovalCommandOwner
+} from '../phi/approval-ipc'
 import type { ManagedFileVersionService } from '../managed-file-versions/service'
 import type { NotebookInputRegistry } from '../notebook/input-registry'
 import type { NamedElectronSurfaceAdapter } from '../runtime-electron-wiring'
@@ -16,6 +20,7 @@ type DesktopUtilitiesOwners = {
   notebookInputs: Pick<NotebookInputRegistry, 'openPreviewKey'>
   translate: NativeTranslator
   logs: LogsCommandOwner
+  machineApproval: MachineApprovalCommandOwner
   github: GithubCommandOwner
   cli: CliCommandOwner
 }
@@ -26,6 +31,7 @@ export const createDesktopUtilitiesElectronSurface = ({
   notebookInputs,
   translate,
   logs,
+  machineApproval,
   github,
   cli
 }: DesktopUtilitiesOwners): NamedElectronSurfaceAdapter =>
@@ -43,6 +49,7 @@ export const createDesktopUtilitiesElectronSurface = ({
       translate
     })
     registerLogsIpcHandlers(logs)
+    registerMachineApprovalIpcHandlers(machineApproval)
     registerGithubIpcHandlers({}, github)
     registerCliInstallIpcHandlers(cli)
     registerWindowCloseIpcHandler()

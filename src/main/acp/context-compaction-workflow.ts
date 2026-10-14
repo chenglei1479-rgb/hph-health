@@ -9,6 +9,7 @@ import type { AcpPromptContentOwner } from './prompt-content-owner'
 import type { AcpProviderPromptSerializationOwner } from './provider-prompt-serialization-owner'
 import type { RuntimeEventInput } from './runtime-snapshot-owner'
 import type { AcpProviderTurnProbe, AcpProviderTurnResult } from './provider-turn-adapter'
+import { releaseModelText } from '../phi/gate'
 import type {
   AcpCompactionSessionInteractionScope,
   AcpPromptSessionInteractionScope,
@@ -235,8 +236,9 @@ class AcpContextCompactionWorkflow {
             let failureText: string | undefined
             let controlText = ''
             let compaction: AcpProviderTurnResult['compaction']
+            const command = await releaseModelText(strategy.command, sessionId)
             const promptFailure = new Promise<never>((_, reject) => {
-              session.prompt([{ type: 'text', text: strategy.command }]).catch(reject)
+              session.prompt([{ type: 'text', text: command }]).catch(reject)
             })
             for (;;) {
               const message = await Promise.race([session.nextUpdate(), promptFailure])

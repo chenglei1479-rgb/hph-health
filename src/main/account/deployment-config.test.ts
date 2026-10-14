@@ -14,6 +14,22 @@ const fixture = (value: string): string => {
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
 })
+it('ignores a deployed Auth0 tenant and environment overrides on a prerelease build', () => {
+  const file = fixture(
+    JSON.stringify({
+      mode: 'required',
+      issuer: 'https://tenant.auth0.com/',
+      clientId: 'public-client'
+    })
+  )
+  expect(
+    readDeployedAccountConfig([file], {
+      DRA_PRERELEASE: '1',
+      DRA_AUTH_ISSUER: 'https://tenant.auth0.com/',
+      DRA_AUTH_CLIENT_ID: 'override'
+    })
+  ).toBeUndefined()
+})
 it('loads explicit local mode without a tenant and refuses mixed or development configuration', () => {
   expect(readDeployedAccountConfig([fixture('{"mode":"local"}')], {})).toBeUndefined()
   expect(() =>

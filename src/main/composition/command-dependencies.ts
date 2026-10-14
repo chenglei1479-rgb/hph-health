@@ -14,6 +14,7 @@ import { createGithubCommandOwner } from '../github-ipc'
 import { createLiteratureCommandOwner } from '../literature/command-owner'
 import { errorLogFields } from '../logger'
 import { createLogsCommandOwner } from '../logs-ipc'
+import { createMachineApprovalCommandOwner } from '../phi/approval-ipc'
 import { ManagedFileVersionService } from '../managed-file-versions/service'
 import { createRuntimeWorkflows } from '../notebook/runtime-workflows'
 import { TaskNotificationService } from '../notifications/task-notifications'
@@ -65,6 +66,7 @@ export function composeCommandDependencies({
   cliCommandOwner,
   githubCommandOwner,
   logsCommandOwner,
+  machineApprovalCommandOwner,
   agentRuntime,
   agentWorkflows,
   handoff,
@@ -100,6 +102,7 @@ export function composeCommandDependencies({
   cliCommandOwner: ReturnType<typeof createCliCommandOwner>
   githubCommandOwner: ReturnType<typeof createGithubCommandOwner>
   logsCommandOwner: ReturnType<typeof createLogsCommandOwner>
+  machineApprovalCommandOwner: ReturnType<typeof createMachineApprovalCommandOwner>
   agentRuntime: Awaited<ReturnType<typeof composeAgentRuntime>>
   agentWorkflows: Awaited<ReturnType<typeof composeAgentWorkflows>>
   handoff: Awaited<ReturnType<typeof composeHandoff>>
@@ -373,6 +376,7 @@ export function composeCommandDependencies({
       github: githubCommandOwner,
       localFs: managedFiles.localFsService,
       logs: logsCommandOwner,
+      machineApproval: machineApprovalCommandOwner,
       notifications: {
         getSnapshot: () => storageStartup.notificationInbox.getSnapshot(),
         markRead: (request) => storageStartup.notificationInbox.markRead(request.ids),

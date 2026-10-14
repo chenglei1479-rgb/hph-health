@@ -49,6 +49,7 @@ export const RENDERER_API_CONTRACT = composeRendererApiContract(
   system.lifecycleClaimRuntimeWriterContracts,
   files.localFsGetRootsContracts,
   system.logsGetStatusContracts,
+  system.machineApprovalGetStatusContracts,
   literature.contracts,
   files.managedFileVersionsCancelDiffContracts,
   memory.contracts,
@@ -206,6 +207,7 @@ const RENDERER_CAPABILITY_ORDER = Object.freeze([
   'update',
   'local-models',
   'pdf-structure',
+  'machine-approval',
   'uploads',
   'window'
 ] as const)

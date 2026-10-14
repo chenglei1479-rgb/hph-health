@@ -1,0 +1,1453 @@
+{"record": "g001_退院時要約.txt", "start": 10, "end": 15, "category": "FACILITY", "text": "西ヶ原薬局", "is_phi": true}
+{"record": "g001_退院時要約.txt", "start": 20, "end": 28, "category": "DATE", "text": "令和元年9月5日", "is_phi": true}
+{"record": "g001_退院時要約.txt", "start": 32, "end": 38, "category": "PERSON_NAME", "text": "宮ノ崎ハル殿", "is_phi": true}
+{"record": "g001_退院時要約.txt", "start": 42, "end": 46, "category": "DATE", "text": "１０４才", "is_phi": true, "age_ge_90": true}
+{"record": "g001_退院時要約.txt", "start": 51, "end": 57, "category": "KARTE_NO", "text": "501596", "is_phi": true}
+{"record": "g001_退院時要約.txt", "start": 67, "end": 73, "category": "INSURER_NO", "text": "３７８６０４", "is_phi": true}
+{"record": "g001_退院時要約.txt", "start": 74, "end": 91, "category": "INSURED_ID", "text": "記号４７９１１６６９番号６９５６１", "is_phi": true}
+{"record": "g001_退院時要約.txt", "start": 97, "end": 111, "category": "MY_NUMBER", "text": "7726－1370－8211", "is_phi": true, "checksum_valid": true}
+{"record": "g001_退院時要約.txt", "start": 116, "end": 121, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 122, "end": 129, "category": "DISEASE", "text": "パーキンソン病", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 134, "end": 145, "category": "LAB", "text": "Plt 9.7万/μL", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 146, "end": 158, "category": "LAB", "text": "Plt 14.3万/μL", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 163, "end": 171, "category": "DRUG", "text": "ランソプラゾール", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 172, "end": 184, "category": "DOSE", "text": "1000 mg 1日1回", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 185, "end": 192, "category": "DRUG", "text": "バンコマイシン", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 193, "end": 197, "category": "DOSE", "text": "11単位", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 202, "end": 214, "category": "CODE", "text": "ICD-10 N55.8", "is_phi": false}
+{"record": "g001_退院時要約.txt", "start": 226, "end": 233, "category": "PERSON_NAME", "text": "やまだ たろう", "is_phi": true}
+{"record": "g001_退院時要約.txt", "start": 237, "end": 245, "category": "PHYSICIAN_NAME", "text": "医師 七瀬 義男", "is_phi": true}
+{"record": "g002_入院時記録.txt", "start": 10, "end": 13, "category": "FACILITY", "text": "HCU", "is_phi": true}
+{"record": "g002_入院時記録.txt", "start": 18, "end": 28, "category": "DATE", "text": "令和4年12月21日", "is_phi": true}
+{"record": "g002_入院時記録.txt", "start": 32, "end": 50, "category": "PERSON_NAME", "text": "SHIRATORIZAWA Hina", "is_phi": true}
+{"record": "g002_入院時記録.txt", "start": 54, "end": 57, "category": "DATE", "text": "満百歳", "is_phi": true, "age_ge_90": true}
+{"record": "g002_入院時記録.txt", "start": 63, "end": 76, "category": "KARTE_NO", "text": "CT2019-256956", "is_phi": true}
+{"record": "g002_入院時記録.txt", "start": 86, "end": 94, "category": "INSURER_NO", "text": "63130010", "is_phi": true}
+{"record": "g002_入院時記録.txt", "start": 95, "end": 111, "category": "INSURED_ID", "text": "記号/番号 6721/65457", "is_phi": true}
+{"record": "g002_入院時記録.txt", "start": 117, "end": 131, "category": "MY_NUMBER", "text": "8357 6310 5771", "is_phi": true, "checksum_valid": false}
+{"record": "g002_入院時記録.txt", "start": 136, "end": 145, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 146, "end": 151, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 156, "end": 168, "category": "LAB", "text": "Plt 39.2万/μL", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 169, "end": 182, "category": "LAB", "text": "WBC 15300 /μL", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 187, "end": 192, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 193, "end": 204, "category": "DOSE", "text": "500 mg 1日2回", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 205, "end": 210, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 211, "end": 217, "category": "DOSE", "text": "2.5 mg", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 222, "end": 226, "category": "CODE", "text": "K132", "is_phi": false}
+{"record": "g002_入院時記録.txt", "start": 233, "end": 239, "category": "DATE", "text": "89 y/o", "is_phi": true, "age_ge_90": false}
+{"record": "g002_入院時記録.txt", "start": 244, "end": 264, "category": "PHYSICIAN_NAME", "text": "Dr. Hayato Kirishima", "is_phi": true}
+{"record": "g003_訪問診療記録.txt", "start": 11, "end": 21, "category": "FACILITY", "text": "南3病棟 512号室", "is_phi": true}
+{"record": "g003_訪問診療記録.txt", "start": 26, "end": 36, "category": "DATE", "text": "令和3年11月26日", "is_phi": true}
+{"record": "g003_訪問診療記録.txt", "start": 40, "end": 56, "category": "PERSON_NAME", "text": "Soichiro Saikawa", "is_phi": true}
+{"record": "g003_訪問診療記録.txt", "start": 60, "end": 66, "category": "DATE", "text": "大正13年生", "is_phi": true, "age_ge_90": true}
+{"record": "g003_訪問診療記録.txt", "start": 67, "end": 80, "category": "KARTE_NO", "text": "ｶﾙﾃ番号 7356087", "is_phi": true}
+{"record": "g003_訪問診療記録.txt", "start": 90, "end": 96, "category": "INSURER_NO", "text": "２２２０６７", "is_phi": true}
+{"record": "g003_訪問診療記録.txt", "start": 97, "end": 109, "category": "INSURED_ID", "text": "A35-65120-09", "is_phi": true}
+{"record": "g003_訪問診療記録.txt", "start": 115, "end": 129, "category": "MY_NUMBER", "text": "8633 4142\n1096", "is_phi": true, "checksum_valid": true}
+{"record": "g003_訪問診療記録.txt", "start": 134, "end": 139, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 140, "end": 147, "category": "DISEASE", "text": "パーキンソン病", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 152, "end": 165, "category": "LAB", "text": "Cre 1.9 mg/dL", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 166, "end": 174, "category": "LAB", "text": "SpO2 99%", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 179, "end": 187, "category": "DRUG", "text": "リバーロキサバン", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 188, "end": 193, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 194, "end": 199, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 200, "end": 205, "category": "DOSE", "text": "20 mg", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 210, "end": 221, "category": "CODE", "text": "ロット番号 D2355", "is_phi": false}
+{"record": "g003_訪問診療記録.txt", "start": 226, "end": 235, "category": "PHYSICIAN_NAME", "text": "研修医 大友 拓真", "is_phi": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 18, "end": 25, "category": "FACILITY", "text": "日向クリニック", "is_phi": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 30, "end": 38, "category": "DATE", "text": "R5.12.10", "is_phi": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 42, "end": 50, "category": "PERSON_NAME", "text": "長男 坂上 拓海", "is_phi": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 54, "end": 67, "category": "DATE", "text": "102 years old", "is_phi": true, "age_ge_90": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 72, "end": 82, "category": "KARTE_NO", "text": "2025-16392", "is_phi": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 92, "end": 107, "category": "INSURER_NO", "text": "0 2 3 5 2 5 9 9", "is_phi": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 108, "end": 123, "category": "INSURED_ID", "text": "記号 A53 番号 60278", "is_phi": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 129, "end": 141, "category": "MY_NUMBER", "text": "５６６５７９８７７６７０", "is_phi": true, "checksum_valid": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 146, "end": 155, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 156, "end": 166, "category": "DISEASE", "text": "ギラン・バレー症候群", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 171, "end": 185, "category": "LAB", "text": "BP 156/78 mmHg", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 186, "end": 200, "category": "LAB", "text": "BP 163/57 mmHg", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 205, "end": 210, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 211, "end": 217, "category": "DOSE", "text": "2 g ×3", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 218, "end": 227, "category": "DRUG", "text": "アセトアミノフェン", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 228, "end": 237, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 242, "end": 253, "category": "CODE", "text": "ロット番号 D8552", "is_phi": false}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 265, "end": 272, "category": "PERSON_NAME", "text": "白鳥澤 聡一郎", "is_phi": true}
+{"record": "g004_介護保険主治医意見書下書き.txt", "start": 276, "end": 285, "category": "PHYSICIAN_NAME", "text": "医師 桐ヶ谷 陽菜", "is_phi": true}
+{"record": "g005_外来記録.txt", "start": 9, "end": 14, "category": "FACILITY", "text": "5階東病棟", "is_phi": true}
+{"record": "g005_外来記録.txt", "start": 19, "end": 25, "category": "DATE", "text": "R1.5.3", "is_phi": true}
+{"record": "g005_外来記録.txt", "start": 29, "end": 34, "category": "PERSON_NAME", "text": "御園 弥生", "is_phi": true}
+{"record": "g005_外来記録.txt", "start": 38, "end": 42, "category": "DATE", "text": "102才", "is_phi": true, "age_ge_90": true}
+{"record": "g005_外来記録.txt", "start": 48, "end": 61, "category": "KARTE_NO", "text": "CT2024-000771", "is_phi": true}
+{"record": "g005_外来記録.txt", "start": 71, "end": 79, "category": "INSURER_NO", "text": "75228742", "is_phi": true}
+{"record": "g005_外来記録.txt", "start": 80, "end": 95, "category": "INSURED_ID", "text": "記号・番号 A50・85150", "is_phi": true}
+{"record": "g005_外来記録.txt", "start": 101, "end": 115, "category": "MY_NUMBER", "text": "9593-1685-0168", "is_phi": true, "checksum_valid": true}
+{"record": "g005_外来記録.txt", "start": 120, "end": 126, "category": "DISEASE", "text": "メニエール病", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 127, "end": 131, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 136, "end": 150, "category": "LAB", "text": "BNP 2239 pg/mL", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 151, "end": 164, "category": "LAB", "text": "WBC 14700 /μL", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 169, "end": 177, "category": "DRUG", "text": "ランソプラゾール", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 178, "end": 187, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 188, "end": 196, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 197, "end": 202, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 207, "end": 211, "category": "CODE", "text": "K556", "is_phi": false}
+{"record": "g005_外来記録.txt", "start": 216, "end": 220, "category": "PHYSICIAN_NAME", "text": "森川医師", "is_phi": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 13, "end": 22, "category": "FACILITY", "text": "ICU 3番ベッド", "is_phi": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 27, "end": 35, "category": "DATE", "text": "令和8年4月5日", "is_phi": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 39, "end": 44, "category": "PERSON_NAME", "text": "真壁\n義男", "is_phi": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 48, "end": 53, "category": "DATE", "text": "100歳超", "is_phi": true, "age_ge_90": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 58, "end": 65, "category": "KARTE_NO", "text": "5848513", "is_phi": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 75, "end": 83, "category": "INSURER_NO", "text": "01270011", "is_phi": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 84, "end": 96, "category": "INSURED_ID", "text": "記号６５８番号４５６７７", "is_phi": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 102, "end": 116, "category": "MY_NUMBER", "text": "1198 6654 2535", "is_phi": true, "checksum_valid": true}
+{"record": "g006_死亡診断書下書き.txt", "start": 121, "end": 130, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 131, "end": 135, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 140, "end": 150, "category": "LAB", "text": "HbA1c 8.4%", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 151, "end": 159, "category": "LAB", "text": "SpO2 96%", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 164, "end": 169, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 170, "end": 182, "category": "DOSE", "text": "1000 mg 1日3回", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 183, "end": 189, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 190, "end": 194, "category": "DOSE", "text": "18単位", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 199, "end": 211, "category": "CODE", "text": "ICD-10 M11.6", "is_phi": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 218, "end": 224, "category": "DATE", "text": "昭和12年生", "is_phi": true, "age_ge_90": false}
+{"record": "g006_死亡診断書下書き.txt", "start": 229, "end": 233, "category": "PHYSICIAN_NAME", "text": "黒沢部長", "is_phi": true}
+{"record": "g007_転院紹介状.txt", "start": 10, "end": 24, "category": "FACILITY", "text": "東都医科大学 倫理審査委員会", "is_phi": true}
+{"record": "g007_転院紹介状.txt", "start": 29, "end": 37, "category": "DATE", "text": "R5.12.11", "is_phi": true}
+{"record": "g007_転院紹介状.txt", "start": 41, "end": 45, "category": "PERSON_NAME", "text": "七瀬さん", "is_phi": true}
+{"record": "g007_転院紹介状.txt", "start": 49, "end": 59, "category": "DATE", "text": "昭和2年11月7日生", "is_phi": true, "age_ge_90": true}
+{"record": "g007_転院紹介状.txt", "start": 65, "end": 73, "category": "KARTE_NO", "text": "K8209105", "is_phi": true}
+{"record": "g007_転院紹介状.txt", "start": 83, "end": 91, "category": "INSURER_NO", "text": "72069933", "is_phi": true}
+{"record": "g007_転院紹介状.txt", "start": 92, "end": 117, "category": "INSURED_ID", "text": "被保険者証記号 A92 番号 8534 枝番 06", "is_phi": true}
+{"record": "g007_転院紹介状.txt", "start": 123, "end": 135, "category": "MY_NUMBER", "text": "１８８３５２８０６０５５", "is_phi": true, "checksum_valid": true}
+{"record": "g007_転院紹介状.txt", "start": 140, "end": 144, "category": "DISEASE", "text": "COPD", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 145, "end": 152, "category": "DISEASE", "text": "パーキンソン病", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 157, "end": 165, "category": "LAB", "text": "SpO2 95%", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 166, "end": 178, "category": "LAB", "text": "Na 148 mEq/L", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 183, "end": 191, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 192, "end": 197, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 198, "end": 203, "category": "DRUG", "text": "デノスマブ", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 204, "end": 212, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 217, "end": 228, "category": "CODE", "text": "ロット番号 A1766", "is_phi": false}
+{"record": "g007_転院紹介状.txt", "start": 240, "end": 246, "category": "PERSON_NAME", "text": "雪村 陽菜菜", "is_phi": true}
+{"record": "g007_転院紹介状.txt", "start": 250, "end": 257, "category": "PHYSICIAN_NAME", "text": "指導医 早乙女", "is_phi": true}
+{"record": "g008_研究用症例票.txt", "start": 11, "end": 20, "category": "FACILITY", "text": "ひかり健診センター", "is_phi": true}
+{"record": "g008_研究用症例票.txt", "start": 25, "end": 34, "category": "DATE", "text": "平成31年4月9日", "is_phi": true}
+{"record": "g008_研究用症例票.txt", "start": 38, "end": 45, "category": "PERSON_NAME", "text": "やまだ たろう", "is_phi": true}
+{"record": "g008_研究用症例票.txt", "start": 46, "end": 52, "category": "DATE", "text": "Age 90", "is_phi": true, "age_ge_90": true}
+{"record": "g008_研究用症例票.txt", "start": 58, "end": 66, "category": "KARTE_NO", "text": "347 0644", "is_phi": true}
+{"record": "g008_研究用症例票.txt", "start": 76, "end": 84, "category": "INSURER_NO", "text": "０１１３００１２", "is_phi": true}
+{"record": "g008_研究用症例票.txt", "start": 91, "end": 98, "category": "INSURED_ID", "text": "9594295", "is_phi": true}
+{"record": "g008_研究用症例票.txt", "start": 104, "end": 116, "category": "MY_NUMBER", "text": "110899100077", "is_phi": true, "checksum_valid": true}
+{"record": "g008_研究用症例票.txt", "start": 121, "end": 125, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 126, "end": 133, "category": "DISEASE", "text": "大腿骨頸部骨折", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 138, "end": 149, "category": "LAB", "text": "Hb 8.7 g/dL", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 150, "end": 161, "category": "LAB", "text": "Hb 7.8 g/dL", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 166, "end": 171, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 172, "end": 180, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 181, "end": 192, "category": "DRUG", "text": "インスリン グラルギン", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 193, "end": 199, "category": "DOSE", "text": "2.5 mg", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 204, "end": 215, "category": "CODE", "text": "ロット番号 C4185", "is_phi": false}
+{"record": "g008_研究用症例票.txt", "start": 220, "end": 226, "category": "PHYSICIAN_NAME", "text": "Dr. 篠原", "is_phi": true}
+{"record": "g009_看護サマリー.txt", "start": 11, "end": 24, "category": "FACILITY", "text": "さくら訪問看護ステーション", "is_phi": true}
+{"record": "g009_看護サマリー.txt", "start": 29, "end": 35, "category": "DATE", "text": "R7.4.3", "is_phi": true}
+{"record": "g009_看護サマリー.txt", "start": 39, "end": 42, "category": "PERSON_NAME", "text": "葦原様", "is_phi": true}
+{"record": "g009_看護サマリー.txt", "start": 46, "end": 50, "category": "DATE", "text": "95\n歳", "is_phi": true, "age_ge_90": true}
+{"record": "g009_看護サマリー.txt", "start": 57, "end": 67, "category": "KARTE_NO", "text": "4991024970", "is_phi": true}
+{"record": "g009_看護サマリー.txt", "start": 77, "end": 92, "category": "INSURER_NO", "text": "3 4 4 5 0 3 0 4", "is_phi": true}
+{"record": "g009_看護サマリー.txt", "start": 93, "end": 113, "category": "INSURED_ID", "text": "記号・番号 65898558・41085", "is_phi": true}
+{"record": "g009_看護サマリー.txt", "start": 130, "end": 144, "category": "MY_NUMBER", "text": "7466 7188 8970", "is_phi": true, "checksum_valid": true}
+{"record": "g009_看護サマリー.txt", "start": 149, "end": 152, "category": "DISEASE", "text": "川崎病", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 153, "end": 163, "category": "DISEASE", "text": "ギラン・バレー症候群", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 168, "end": 182, "category": "LAB", "text": "BNP 1353 pg/mL", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 183, "end": 204, "category": "LAB", "text": "eGFR 53 mL/min/1.73m2", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 209, "end": 216, "category": "DRUG", "text": "バンコマイシン", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 217, "end": 229, "category": "DOSE", "text": "1000 mg 1日3回", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 230, "end": 238, "category": "DRUG", "text": "アトルバスタチン", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 239, "end": 248, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 253, "end": 264, "category": "CODE", "text": "ロット番号 B3049", "is_phi": false}
+{"record": "g009_看護サマリー.txt", "start": 269, "end": 280, "category": "PHYSICIAN_NAME", "text": "検査技師 二宮 さくら", "is_phi": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 13, "end": 27, "category": "FACILITY", "text": "みどりの丘特別養護老人ホーム", "is_phi": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 32, "end": 39, "category": "DATE", "text": "R4.8.14", "is_phi": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 43, "end": 58, "category": "PERSON_NAME", "text": "MIYANOSAKI Sato", "is_phi": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 59, "end": 63, "category": "DATE", "text": "享年97", "is_phi": true, "age_ge_90": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 67, "end": 74, "category": "KARTE_NO", "text": "３０９９９０３", "is_phi": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 82, "end": 90, "category": "INSURER_NO", "text": "63133466", "is_phi": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 91, "end": 112, "category": "INSURED_ID", "text": "記号 96911718 番号 672177", "is_phi": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 118, "end": 132, "category": "MY_NUMBER", "text": "9292・8372・1913", "is_phi": true, "checksum_valid": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 137, "end": 140, "category": "DISEASE", "text": "川崎病", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 141, "end": 149, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 154, "end": 165, "category": "LAB", "text": "HbA1c 10.5%", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 166, "end": 178, "category": "LAB", "text": "Plt 34.5万/μL", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 183, "end": 191, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 192, "end": 197, "category": "DOSE", "text": "10 mg", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 198, "end": 206, "category": "DRUG", "text": "スピロノラクトン", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 207, "end": 211, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 216, "end": 227, "category": "CODE", "text": "ロット番号 E5370", "is_phi": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 239, "end": 253, "category": "PERSON_NAME", "text": "御園 千鶴（ミソノ チヅル）", "is_phi": true}
+{"record": "g010_薬剤管理指導記録.txt", "start": 259, "end": 262, "category": "DATE", "text": "80代", "is_phi": true, "age_ge_90": false}
+{"record": "g010_薬剤管理指導記録.txt", "start": 267, "end": 277, "category": "PHYSICIAN_NAME", "text": "医師 水無瀬 美津子", "is_phi": true}
+{"record": "g011_退院時要約.txt", "start": 10, "end": 17, "category": "FACILITY", "text": "青葉台中央病院", "is_phi": true}
+{"record": "g011_退院時要約.txt", "start": 22, "end": 29, "category": "DATE", "text": "R2.5.25", "is_phi": true}
+{"record": "g011_退院時要約.txt", "start": 33, "end": 40, "category": "PERSON_NAME", "text": "白鳥澤 聡一郎", "is_phi": true}
+{"record": "g011_退院時要約.txt", "start": 44, "end": 50, "category": "DATE", "text": "94 y/o", "is_phi": true, "age_ge_90": true}
+{"record": "g011_退院時要約.txt", "start": 57, "end": 67, "category": "KARTE_NO", "text": "9247739064", "is_phi": true}
+{"record": "g011_退院時要約.txt", "start": 71, "end": 79, "category": "INSURER_NO", "text": "67463307", "is_phi": true}
+{"record": "g011_退院時要約.txt", "start": 80, "end": 92, "category": "INSURED_ID", "text": "番号 304（枝番00）", "is_phi": true}
+{"record": "g011_退院時要約.txt", "start": 98, "end": 112, "category": "MY_NUMBER", "text": "5330-7140-3422", "is_phi": true, "checksum_valid": true}
+{"record": "g011_退院時要約.txt", "start": 117, "end": 125, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 126, "end": 131, "category": "DISEASE", "text": "誤嚥性肺炎", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 136, "end": 148, "category": "LAB", "text": "Na 145 mEq/L", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 149, "end": 160, "category": "LAB", "text": "HbA1c 10.4%", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 165, "end": 173, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 174, "end": 180, "category": "DOSE", "text": "1 g ×3", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 181, "end": 186, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 187, "end": 191, "category": "DOSE", "text": "20単位", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 196, "end": 200, "category": "CODE", "text": "K431", "is_phi": false}
+{"record": "g011_退院時要約.txt", "start": 205, "end": 213, "category": "PHYSICIAN_NAME", "text": "医師 月岡 勘治", "is_phi": true}
+{"record": "g012_入院時記録.txt", "start": 10, "end": 14, "category": "FACILITY", "text": "内科外来", "is_phi": true}
+{"record": "g012_入院時記録.txt", "start": 19, "end": 29, "category": "DATE", "text": "令和7年10月16日", "is_phi": true}
+{"record": "g012_入院時記録.txt", "start": 33, "end": 39, "category": "PERSON_NAME", "text": "宮ノ崎,悠真", "is_phi": true}
+{"record": "g012_入院時記録.txt", "start": 43, "end": 47, "category": "DATE", "text": "100代", "is_phi": true, "age_ge_90": true}
+{"record": "g012_入院時記録.txt", "start": 52, "end": 59, "category": "KARTE_NO", "text": "3951728", "is_phi": true}
+{"record": "g012_入院時記録.txt", "start": 63, "end": 69, "category": "INSURER_NO", "text": "304642", "is_phi": true}
+{"record": "g012_入院時記録.txt", "start": 70, "end": 91, "category": "INSURED_ID", "text": "記号 東京ｱ 番号 58310 枝番 09", "is_phi": true}
+{"record": "g012_入院時記録.txt", "start": 97, "end": 111, "category": "MY_NUMBER", "text": "7956 5720\n2161", "is_phi": true, "checksum_valid": true}
+{"record": "g012_入院時記録.txt", "start": 116, "end": 123, "category": "DISEASE", "text": "大腿骨頸部骨折", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 124, "end": 129, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 134, "end": 155, "category": "LAB", "text": "eGFR 31 mL/min/1.73m2", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 156, "end": 177, "category": "LAB", "text": "eGFR 25 mL/min/1.73m2", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 182, "end": 187, "category": "DRUG", "text": "デノスマブ", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 188, "end": 192, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 193, "end": 199, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 200, "end": 211, "category": "DOSE", "text": "250 mg 1日1回", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 216, "end": 228, "category": "CODE", "text": "ICD-10 N13.0", "is_phi": false}
+{"record": "g012_入院時記録.txt", "start": 233, "end": 241, "category": "PHYSICIAN_NAME", "text": "看護師 三浦 舞", "is_phi": true}
+{"record": "g013_訪問診療記録.txt", "start": 11, "end": 23, "category": "FACILITY", "text": "医療法人光風会 光風病院", "is_phi": true}
+{"record": "g013_訪問診療記録.txt", "start": 28, "end": 35, "category": "DATE", "text": "R6.3.19", "is_phi": true}
+{"record": "g013_訪問診療記録.txt", "start": 39, "end": 45, "category": "PERSON_NAME", "text": "柊 昭三 様", "is_phi": true}
+{"record": "g013_訪問診療記録.txt", "start": 49, "end": 61, "category": "DATE", "text": "96 years old", "is_phi": true, "age_ge_90": true}
+{"record": "g013_訪問診療記録.txt", "start": 67, "end": 77, "category": "KARTE_NO", "text": "S24-118823", "is_phi": true}
+{"record": "g013_訪問診療記録.txt", "start": 85, "end": 93, "category": "INSURER_NO", "text": "73114571", "is_phi": true}
+{"record": "g013_訪問診療記録.txt", "start": 94, "end": 108, "category": "INSURED_ID", "text": "6697・42867（02）", "is_phi": true}
+{"record": "g013_訪問診療記録.txt", "start": 114, "end": 128, "category": "MY_NUMBER", "text": "1787 2806 0631", "is_phi": true, "checksum_valid": true}
+{"record": "g013_訪問診療記録.txt", "start": 133, "end": 137, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 138, "end": 148, "category": "DISEASE", "text": "ギラン・バレー症候群", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 153, "end": 167, "category": "LAB", "text": "BNP 1727 pg/mL", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 168, "end": 176, "category": "LAB", "text": "SpO2 99%", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 181, "end": 189, "category": "DRUG", "text": "アトルバスタチン", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 190, "end": 198, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 199, "end": 205, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 206, "end": 211, "category": "DOSE", "text": "20 mg", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 216, "end": 227, "category": "CODE", "text": "ロット番号 D6511", "is_phi": false}
+{"record": "g013_訪問診療記録.txt", "start": 239, "end": 248, "category": "PERSON_NAME", "text": "タカサゴヤ・タクミ", "is_phi": true}
+{"record": "g013_訪問診療記録.txt", "start": 252, "end": 261, "category": "PHYSICIAN_NAME", "text": "担当医 森川 誠一", "is_phi": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 18, "end": 31, "category": "FACILITY", "text": "北辰リハビリテーション病院", "is_phi": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 36, "end": 45, "category": "DATE", "text": "令和8年1月28日", "is_phi": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 49, "end": 55, "category": "PERSON_NAME", "text": "雪村 陽菜菜", "is_phi": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 59, "end": 63, "category": "DATE", "text": "91\n歳", "is_phi": true, "age_ge_90": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 68, "end": 75, "category": "KARTE_NO", "text": "5333027", "is_phi": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 85, "end": 93, "category": "INSURER_NO", "text": "73380404", "is_phi": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 94, "end": 119, "category": "INSURED_ID", "text": "被保険者証記号 共5 番号 95861 枝番 03", "is_phi": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 125, "end": 139, "category": "MY_NUMBER", "text": "3069-3088-3613", "is_phi": true, "checksum_valid": true}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 144, "end": 147, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 148, "end": 151, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 156, "end": 170, "category": "LAB", "text": "BNP 1641 pg/mL", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 171, "end": 179, "category": "LAB", "text": "SpO2 92%", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 184, "end": 192, "category": "DRUG", "text": "リバーロキサバン", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 193, "end": 199, "category": "DOSE", "text": "2 g ×1", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 200, "end": 205, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 206, "end": 210, "category": "DOSE", "text": "21単位", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 215, "end": 229, "category": "CODE", "text": "処方箋番号 RX-36171", "is_phi": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 236, "end": 242, "category": "DATE", "text": "89 y/o", "is_phi": true, "age_ge_90": false}
+{"record": "g014_介護保険主治医意見書下書き.txt", "start": 247, "end": 255, "category": "PHYSICIAN_NAME", "text": "医師 葦原 さと", "is_phi": true}
+{"record": "g015_外来記録.txt", "start": 9, "end": 20, "category": "FACILITY", "text": "県立みなと医療センター", "is_phi": true}
+{"record": "g015_外来記録.txt", "start": 25, "end": 34, "category": "DATE", "text": "令和6年8月16日", "is_phi": true}
+{"record": "g015_外来記録.txt", "start": 38, "end": 43, "category": "PERSON_NAME", "text": "葦原\nハル", "is_phi": true}
+{"record": "g015_外来記録.txt", "start": 47, "end": 52, "category": "DATE", "text": "103yo", "is_phi": true, "age_ge_90": true}
+{"record": "g015_外来記録.txt", "start": 58, "end": 66, "category": "KARTE_NO", "text": "K0653578", "is_phi": true}
+{"record": "g015_外来記録.txt", "start": 76, "end": 91, "category": "INSURER_NO", "text": "7 5 1 5 9 3 2 7", "is_phi": true}
+{"record": "g015_外来記録.txt", "start": 92, "end": 107, "category": "INSURED_ID", "text": "記号 A14\n番号 33506", "is_phi": true}
+{"record": "g015_外来記録.txt", "start": 113, "end": 127, "category": "MY_NUMBER", "text": "7693 1225 4575", "is_phi": true, "checksum_valid": true}
+{"record": "g015_外来記録.txt", "start": 132, "end": 141, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 142, "end": 150, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 155, "end": 176, "category": "LAB", "text": "eGFR 64 mL/min/1.73m2", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 177, "end": 189, "category": "LAB", "text": "WBC 4200 /μL", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 194, "end": 201, "category": "DRUG", "text": "ビソプロロール", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 202, "end": 211, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 212, "end": 218, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 219, "end": 225, "category": "DOSE", "text": "1 g ×2", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 230, "end": 242, "category": "CODE", "text": "ICD-10 K39.8", "is_phi": false}
+{"record": "g015_外来記録.txt", "start": 247, "end": 256, "category": "PHYSICIAN_NAME", "text": "主治医：桐生 玲奈", "is_phi": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 13, "end": 18, "category": "FACILITY", "text": "西ヶ原薬局", "is_phi": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 23, "end": 30, "category": "DATE", "text": "R3.3.26", "is_phi": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 34, "end": 40, "category": "PERSON_NAME", "text": "サカキ・ヒナ", "is_phi": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 44, "end": 50, "category": "DATE", "text": "95歳4か月", "is_phi": true, "age_ge_90": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 56, "end": 64, "category": "KARTE_NO", "text": "738 4805", "is_phi": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 74, "end": 82, "category": "INSURER_NO", "text": "01130012", "is_phi": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 83, "end": 99, "category": "INSURED_ID", "text": "記号 東京ｱ 番号 641977", "is_phi": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 110, "end": 122, "category": "MY_NUMBER", "text": "422447510466", "is_phi": true, "checksum_valid": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 127, "end": 132, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 133, "end": 138, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 143, "end": 153, "category": "LAB", "text": "HbA1c 6.3%", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 154, "end": 164, "category": "LAB", "text": "HbA1c 9.4%", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 169, "end": 175, "category": "DRUG", "text": "ゾレドロン酸", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 176, "end": 188, "category": "DOSE", "text": "1000 mg 1日2回", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 189, "end": 197, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 198, "end": 201, "category": "DOSE", "text": "4単位", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 206, "end": 220, "category": "CODE", "text": "処方箋番号 RX-79659", "is_phi": false}
+{"record": "g016_死亡診断書下書き.txt", "start": 232, "end": 242, "category": "PERSON_NAME", "text": "ｷﾘｶﾞﾔ ﾁﾂﾞﾙ", "is_phi": true}
+{"record": "g016_死亡診断書下書き.txt", "start": 246, "end": 266, "category": "PHYSICIAN_NAME", "text": "紹介元：日向クリニック 院長 日向 大輔", "is_phi": true}
+{"record": "g017_転院紹介状.txt", "start": 10, "end": 13, "category": "FACILITY", "text": "HCU", "is_phi": true}
+{"record": "g017_転院紹介状.txt", "start": 18, "end": 25, "category": "DATE", "text": "R8.3.27", "is_phi": true}
+{"record": "g017_転院紹介状.txt", "start": 29, "end": 43, "category": "PERSON_NAME", "text": "御園 千鶴（ミソノ チヅル）", "is_phi": true}
+{"record": "g017_転院紹介状.txt", "start": 44, "end": 50, "category": "DATE", "text": "年齢：103", "is_phi": true, "age_ge_90": true}
+{"record": "g017_転院紹介状.txt", "start": 54, "end": 61, "category": "KARTE_NO", "text": "３７８９７６６", "is_phi": true}
+{"record": "g017_転院紹介状.txt", "start": 77, "end": 85, "category": "INSURER_NO", "text": "63327688", "is_phi": true}
+{"record": "g017_転院紹介状.txt", "start": 86, "end": 97, "category": "INSURED_ID", "text": "記号共８番号５３３７５", "is_phi": true}
+{"record": "g017_転院紹介状.txt", "start": 103, "end": 117, "category": "MY_NUMBER", "text": "6706　5411　9223", "is_phi": true, "checksum_valid": true}
+{"record": "g017_転院紹介状.txt", "start": 122, "end": 127, "category": "DISEASE", "text": "慢性腎臓病", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 128, "end": 139, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 144, "end": 156, "category": "LAB", "text": "Alb 4.0 g/dL", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 157, "end": 171, "category": "LAB", "text": "BP 105/71 mmHg", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 176, "end": 181, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 182, "end": 193, "category": "DOSE", "text": "500 mg 1日1回", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 194, "end": 202, "category": "DRUG", "text": "ランソプラゾール", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 203, "end": 207, "category": "DOSE", "text": "25単位", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 212, "end": 216, "category": "CODE", "text": "K554", "is_phi": false}
+{"record": "g017_転院紹介状.txt", "start": 221, "end": 231, "category": "PHYSICIAN_NAME", "text": "医師 宮ノ崎 琥太郎", "is_phi": true}
+{"record": "g018_研究用症例票.txt", "start": 11, "end": 21, "category": "FACILITY", "text": "南3病棟 512号室", "is_phi": true}
+{"record": "g018_研究用症例票.txt", "start": 26, "end": 35, "category": "DATE", "text": "令和4年7月21日", "is_phi": true}
+{"record": "g018_研究用症例票.txt", "start": 39, "end": 46, "category": "PERSON_NAME", "text": "ｻｻｷ ﾊﾅｺ", "is_phi": true}
+{"record": "g018_研究用症例票.txt", "start": 50, "end": 53, "category": "DATE", "text": "９７才", "is_phi": true, "age_ge_90": true}
+{"record": "g018_研究用症例票.txt", "start": 58, "end": 65, "category": "KARTE_NO", "text": "2426045", "is_phi": true}
+{"record": "g018_研究用症例票.txt", "start": 75, "end": 82, "category": "INSURER_NO", "text": "329\n979", "is_phi": true}
+{"record": "g018_研究用症例票.txt", "start": 83, "end": 103, "category": "INSURED_ID", "text": "記号：千ﾁ　番号：97774（枝番06）", "is_phi": true}
+{"record": "g018_研究用症例票.txt", "start": 109, "end": 123, "category": "MY_NUMBER", "text": "4703・4737・3709", "is_phi": true, "checksum_valid": true}
+{"record": "g018_研究用症例票.txt", "start": 128, "end": 138, "category": "DISEASE", "text": "ギラン・バレー症候群", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 139, "end": 149, "category": "DISEASE", "text": "ギラン・バレー症候群", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 154, "end": 166, "category": "LAB", "text": "Alb 2.6 g/dL", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 167, "end": 180, "category": "LAB", "text": "CRP 3.9 mg/dL", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 185, "end": 190, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 191, "end": 197, "category": "DOSE", "text": "1 g ×1", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 198, "end": 203, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 204, "end": 215, "category": "DOSE", "text": "500 mg 1日3回", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 220, "end": 232, "category": "CODE", "text": "ICD-10 I26.8", "is_phi": false}
+{"record": "g018_研究用症例票.txt", "start": 239, "end": 245, "category": "DATE", "text": "昭和12年生", "is_phi": true, "age_ge_90": false}
+{"record": "g018_研究用症例票.txt", "start": 250, "end": 257, "category": "PHYSICIAN_NAME", "text": "署名：天野 修", "is_phi": true}
+{"record": "g019_看護サマリー.txt", "start": 11, "end": 18, "category": "FACILITY", "text": "日向クリニック", "is_phi": true}
+{"record": "g019_看護サマリー.txt", "start": 23, "end": 29, "category": "DATE", "text": "R3.2.5", "is_phi": true}
+{"record": "g019_看護サマリー.txt", "start": 33, "end": 36, "category": "PERSON_NAME", "text": "柊千鶴", "is_phi": true}
+{"record": "g019_看護サマリー.txt", "start": 40, "end": 48, "category": "DATE", "text": "T2.8.23生", "is_phi": true, "age_ge_90": true}
+{"record": "g019_看護サマリー.txt", "start": 54, "end": 64, "category": "KARTE_NO", "text": "64-616-992", "is_phi": true}
+{"record": "g019_看護サマリー.txt", "start": 74, "end": 82, "category": "INSURER_NO", "text": "６７072０５８", "is_phi": true}
+{"record": "g019_看護サマリー.txt", "start": 83, "end": 97, "category": "INSURED_ID", "text": "記号/番号 共1/76636", "is_phi": true}
+{"record": "g019_看護サマリー.txt", "start": 103, "end": 117, "category": "MY_NUMBER", "text": "8828-3591-7722", "is_phi": true, "checksum_valid": true}
+{"record": "g019_看護サマリー.txt", "start": 122, "end": 126, "category": "DISEASE", "text": "COPD", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 127, "end": 132, "category": "DISEASE", "text": "慢性腎臓病", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 137, "end": 149, "category": "LAB", "text": "WBC 7300 /μL", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 150, "end": 164, "category": "LAB", "text": "CRP 22.6 mg/dL", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 169, "end": 173, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 174, "end": 177, "category": "DOSE", "text": "2単位", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 178, "end": 186, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 187, "end": 193, "category": "DOSE", "text": "2 g ×3", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 198, "end": 210, "category": "CODE", "text": "ICD-10 I41.4", "is_phi": false}
+{"record": "g019_看護サマリー.txt", "start": 222, "end": 236, "category": "PERSON_NAME", "text": "斉川 さと（サイカワ サト）", "is_phi": true}
+{"record": "g019_看護サマリー.txt", "start": 240, "end": 249, "category": "PHYSICIAN_NAME", "text": "PI: 九条 智彦", "is_phi": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 13, "end": 18, "category": "FACILITY", "text": "5階東病棟", "is_phi": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 23, "end": 31, "category": "DATE", "text": "R3.12.28", "is_phi": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 35, "end": 44, "category": "PERSON_NAME", "text": "タカサゴヤ・タクミ", "is_phi": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 48, "end": 51, "category": "DATE", "text": "95才", "is_phi": true, "age_ge_90": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 57, "end": 69, "category": "KARTE_NO", "text": "20241003-017", "is_phi": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 77, "end": 85, "category": "INSURER_NO", "text": "72011810", "is_phi": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 86, "end": 100, "category": "INSURED_ID", "text": "記号・番号 千ﾁ・69516", "is_phi": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 111, "end": 125, "category": "MY_NUMBER", "text": "4861-1768-3702", "is_phi": true, "checksum_valid": true}
+{"record": "g020_薬剤管理指導記録.txt", "start": 130, "end": 134, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 135, "end": 141, "category": "DISEASE", "text": "メニエール病", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 146, "end": 158, "category": "LAB", "text": "Na 134 mEq/L", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 159, "end": 172, "category": "LAB", "text": "Cre 1.4 mg/dL", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 177, "end": 183, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 184, "end": 195, "category": "DOSE", "text": "500 mg 1日3回", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 196, "end": 204, "category": "DRUG", "text": "アトルバスタチン", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 205, "end": 209, "category": "DOSE", "text": "17単位", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 214, "end": 218, "category": "CODE", "text": "K600", "is_phi": false}
+{"record": "g020_薬剤管理指導記録.txt", "start": 223, "end": 231, "category": "PHYSICIAN_NAME", "text": "薬剤師 柏木 涼", "is_phi": true}
+{"record": "g021_退院時要約.txt", "start": 10, "end": 19, "category": "FACILITY", "text": "ICU 3番ベッド", "is_phi": true}
+{"record": "g021_退院時要約.txt", "start": 24, "end": 31, "category": "DATE", "text": "R7.12.5", "is_phi": true}
+{"record": "g021_退院時要約.txt", "start": 35, "end": 42, "category": "PERSON_NAME", "text": "ササキ ハナコ", "is_phi": true}
+{"record": "g021_退院時要約.txt", "start": 46, "end": 59, "category": "DATE", "text": "103 years old", "is_phi": true, "age_ge_90": true}
+{"record": "g021_退院時要約.txt", "start": 65, "end": 73, "category": "KARTE_NO", "text": "OP-55102", "is_phi": true}
+{"record": "g021_退院時要約.txt", "start": 83, "end": 91, "category": "INSURER_NO", "text": "67092361", "is_phi": true}
+{"record": "g021_退院時要約.txt", "start": 92, "end": 105, "category": "INSURED_ID", "text": "5724-15899-02", "is_phi": true}
+{"record": "g021_退院時要約.txt", "start": 111, "end": 124, "category": "MY_NUMBER", "text": "55001558\n9990", "is_phi": true, "checksum_valid": true}
+{"record": "g021_退院時要約.txt", "start": 129, "end": 136, "category": "DISEASE", "text": "パーキンソン病", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 137, "end": 145, "category": "DISEASE", "text": "ウェルニッケ脳症", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 150, "end": 160, "category": "LAB", "text": "HbA1c 9.8%", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 161, "end": 182, "category": "LAB", "text": "eGFR 85 mL/min/1.73m2", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 187, "end": 194, "category": "DRUG", "text": "ビソプロロール", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 195, "end": 199, "category": "DOSE", "text": "27単位", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 200, "end": 206, "category": "DRUG", "text": "エドキサバン", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 207, "end": 215, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 220, "end": 224, "category": "CODE", "text": "K845", "is_phi": false}
+{"record": "g021_退院時要約.txt", "start": 229, "end": 237, "category": "PHYSICIAN_NAME", "text": "医師 鷹取 悠真", "is_phi": true}
+{"record": "g022_入院時記録.txt", "start": 10, "end": 24, "category": "FACILITY", "text": "東都医科大学 倫理審査委員会", "is_phi": true}
+{"record": "g022_入院時記録.txt", "start": 29, "end": 37, "category": "DATE", "text": "令和元年7月6日", "is_phi": true}
+{"record": "g022_入院時記録.txt", "start": 41, "end": 56, "category": "PERSON_NAME", "text": "水無瀬 千鶴（ミナセ チヅル）", "is_phi": true}
+{"record": "g022_入院時記録.txt", "start": 60, "end": 65, "category": "DATE", "text": "大正2年生", "is_phi": true, "age_ge_90": true}
+{"record": "g022_入院時記録.txt", "start": 70, "end": 78, "category": "KARTE_NO", "text": "40975940", "is_phi": true}
+{"record": "g022_入院時記録.txt", "start": 88, "end": 97, "category": "INSURER_NO", "text": "3413\n9865", "is_phi": true}
+{"record": "g022_入院時記録.txt", "start": 98, "end": 118, "category": "INSURED_ID", "text": "記号 8812 番号 304 枝番 00", "is_phi": true}
+{"record": "g022_入院時記録.txt", "start": 129, "end": 143, "category": "MY_NUMBER", "text": "2319-1386-3650", "is_phi": true, "checksum_valid": true}
+{"record": "g022_入院時記録.txt", "start": 148, "end": 153, "category": "DISEASE", "text": "慢性腎臓病", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 154, "end": 165, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 170, "end": 183, "category": "LAB", "text": "WBC 13800 /μL", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 184, "end": 196, "category": "LAB", "text": "Alb 4.2 g/dL", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 201, "end": 209, "category": "DRUG", "text": "ランソプラゾール", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 210, "end": 218, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 219, "end": 228, "category": "DRUG", "text": "アセトアミノフェン", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 229, "end": 237, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 242, "end": 254, "category": "CODE", "text": "ICD-10 N28.7", "is_phi": false}
+{"record": "g022_入院時記録.txt", "start": 266, "end": 271, "category": "PERSON_NAME", "text": "真壁　弥生", "is_phi": true}
+{"record": "g022_入院時記録.txt", "start": 277, "end": 280, "category": "DATE", "text": "80代", "is_phi": true, "age_ge_90": false}
+{"record": "g022_入院時記録.txt", "start": 285, "end": 293, "category": "PHYSICIAN_NAME", "text": "医師 七瀬 義男", "is_phi": true}
+{"record": "g023_訪問診療記録.txt", "start": 11, "end": 20, "category": "FACILITY", "text": "ひかり健診センター", "is_phi": true}
+{"record": "g023_訪問診療記録.txt", "start": 25, "end": 35, "category": "DATE", "text": "平成31年4月27日", "is_phi": true}
+{"record": "g023_訪問診療記録.txt", "start": 39, "end": 49, "category": "PERSON_NAME", "text": "ｷﾘｶﾞﾔ ﾁﾂﾞﾙ", "is_phi": true}
+{"record": "g023_訪問診療記録.txt", "start": 53, "end": 58, "category": "DATE", "text": "大正5年生", "is_phi": true, "age_ge_90": true}
+{"record": "g023_訪問診療記録.txt", "start": 64, "end": 77, "category": "KARTE_NO", "text": "CT2019-267073", "is_phi": true}
+{"record": "g023_訪問診療記録.txt", "start": 81, "end": 89, "category": "INSURER_NO", "text": "74453879", "is_phi": true}
+{"record": "g023_訪問診療記録.txt", "start": 90, "end": 111, "category": "INSURED_ID", "text": "記号 東京ｱ 番号 89977 枝番 05", "is_phi": true}
+{"record": "g023_訪問診療記録.txt", "start": 129, "end": 141, "category": "MY_NUMBER", "text": "558699462170", "is_phi": true, "checksum_valid": true}
+{"record": "g023_訪問診療記録.txt", "start": 146, "end": 155, "category": "DISEASE", "text": "レビー小体型認知症", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 156, "end": 165, "category": "DISEASE", "text": "レビー小体型認知症", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 170, "end": 180, "category": "LAB", "text": "HbA1c 6.3%", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 181, "end": 193, "category": "LAB", "text": "Na 139 mEq/L", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 198, "end": 203, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 204, "end": 209, "category": "DOSE", "text": "10 mg", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 210, "end": 216, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 217, "end": 223, "category": "DOSE", "text": "2.5 mg", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 228, "end": 232, "category": "CODE", "text": "K199", "is_phi": false}
+{"record": "g023_訪問診療記録.txt", "start": 237, "end": 257, "category": "PHYSICIAN_NAME", "text": "Dr. Hayato Kirishima", "is_phi": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 18, "end": 31, "category": "FACILITY", "text": "さくら訪問看護ステーション", "is_phi": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 36, "end": 45, "category": "DATE", "text": "令和6年1月15日", "is_phi": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 49, "end": 53, "category": "PERSON_NAME", "text": "高砂谷様", "is_phi": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 57, "end": 61, "category": "DATE", "text": "96yo", "is_phi": true, "age_ge_90": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 67, "end": 76, "category": "KARTE_NO", "text": "IN10-8688", "is_phi": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 86, "end": 95, "category": "INSURER_NO", "text": "0215\n3724", "is_phi": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 96, "end": 113, "category": "INSURED_ID", "text": "記号 16-48 番号 43454", "is_phi": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 119, "end": 132, "category": "MY_NUMBER", "text": "61698063\n5067", "is_phi": true, "checksum_valid": true}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 137, "end": 142, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 143, "end": 148, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 153, "end": 161, "category": "LAB", "text": "SpO2 95%", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 162, "end": 183, "category": "LAB", "text": "eGFR 87 mL/min/1.73m2", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 188, "end": 194, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 195, "end": 206, "category": "DOSE", "text": "500 mg 1日2回", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 207, "end": 212, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 213, "end": 221, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 226, "end": 230, "category": "CODE", "text": "K356", "is_phi": false}
+{"record": "g024_介護保険主治医意見書下書き.txt", "start": 235, "end": 244, "category": "PHYSICIAN_NAME", "text": "研修医 大友 拓真", "is_phi": true}
+{"record": "g025_外来記録.txt", "start": 9, "end": 23, "category": "FACILITY", "text": "みどりの丘特別養護老人ホーム", "is_phi": true}
+{"record": "g025_外来記録.txt", "start": 28, "end": 36, "category": "DATE", "text": "R1.12.10", "is_phi": true}
+{"record": "g025_外来記録.txt", "start": 40, "end": 52, "category": "PERSON_NAME", "text": "Tsuru Minase", "is_phi": true}
+{"record": "g025_外来記録.txt", "start": 53, "end": 58, "category": "DATE", "text": "年齢：９０", "is_phi": true, "age_ge_90": true}
+{"record": "g025_外来記録.txt", "start": 64, "end": 77, "category": "KARTE_NO", "text": "CT2025-117223", "is_phi": true}
+{"record": "g025_外来記録.txt", "start": 87, "end": 102, "category": "INSURER_NO", "text": "0 7 3 6 3 6 8 2", "is_phi": true}
+{"record": "g025_外来記録.txt", "start": 103, "end": 123, "category": "INSURED_ID", "text": "記号 1０５５7４28 番号 39151", "is_phi": true}
+{"record": "g025_外来記録.txt", "start": 129, "end": 143, "category": "MY_NUMBER", "text": "8542-3047-6500", "is_phi": true, "checksum_valid": true}
+{"record": "g025_外来記録.txt", "start": 148, "end": 153, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 154, "end": 158, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 163, "end": 184, "category": "LAB", "text": "eGFR 48 mL/min/1.73m2", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 185, "end": 197, "category": "LAB", "text": "Alb 4.0 g/dL", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 202, "end": 207, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 208, "end": 216, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 217, "end": 222, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 223, "end": 228, "category": "DOSE", "text": "20 mg", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 233, "end": 247, "category": "CODE", "text": "処方箋番号 RX-29248", "is_phi": false}
+{"record": "g025_外来記録.txt", "start": 259, "end": 264, "category": "PERSON_NAME", "text": "柊 ハルル", "is_phi": true}
+{"record": "g025_外来記録.txt", "start": 268, "end": 277, "category": "PHYSICIAN_NAME", "text": "医師 桐ヶ谷 陽菜", "is_phi": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 13, "end": 20, "category": "FACILITY", "text": "青葉台中央病院", "is_phi": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 25, "end": 34, "category": "DATE", "text": "令和2年9月23日", "is_phi": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 38, "end": 52, "category": "PERSON_NAME", "text": "斉川 さと（サイカワ サト）", "is_phi": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 56, "end": 59, "category": "DATE", "text": "９６才", "is_phi": true, "age_ge_90": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 65, "end": 74, "category": "KARTE_NO", "text": "IN15-7364", "is_phi": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 83, "end": 91, "category": "INSURER_NO", "text": "74439035", "is_phi": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 92, "end": 106, "category": "INSURED_ID", "text": "記号６１－３７番号１１３９２", "is_phi": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 112, "end": 126, "category": "MY_NUMBER", "text": "3354-9484-2957", "is_phi": true, "checksum_valid": true}
+{"record": "g026_死亡診断書下書き.txt", "start": 131, "end": 142, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 143, "end": 148, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 153, "end": 165, "category": "LAB", "text": "Alb 3.1 g/dL", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 166, "end": 180, "category": "LAB", "text": "CRP 14.1 mg/dL", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 185, "end": 194, "category": "DRUG", "text": "エンパグリフロジン", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 195, "end": 204, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 205, "end": 209, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 210, "end": 214, "category": "DOSE", "text": "10単位", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 219, "end": 223, "category": "CODE", "text": "K266", "is_phi": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 230, "end": 236, "category": "DATE", "text": "89 y/o", "is_phi": true, "age_ge_90": false}
+{"record": "g026_死亡診断書下書き.txt", "start": 241, "end": 245, "category": "PHYSICIAN_NAME", "text": "森川医師", "is_phi": true}
+{"record": "g027_転院紹介状.txt", "start": 10, "end": 14, "category": "FACILITY", "text": "内科外来", "is_phi": true}
+{"record": "g027_転院紹介状.txt", "start": 19, "end": 29, "category": "DATE", "text": "令和6年11月12日", "is_phi": true}
+{"record": "g027_転院紹介状.txt", "start": 33, "end": 36, "category": "PERSON_NAME", "text": "葛城氏", "is_phi": true}
+{"record": "g027_転院紹介状.txt", "start": 40, "end": 45, "category": "DATE", "text": "105\n歳", "is_phi": true, "age_ge_90": true}
+{"record": "g027_転院紹介状.txt", "start": 52, "end": 60, "category": "KARTE_NO", "text": "660\n5835", "is_phi": true}
+{"record": "g027_転院紹介状.txt", "start": 68, "end": 76, "category": "INSURER_NO", "text": "31338312", "is_phi": true}
+{"record": "g027_転院紹介状.txt", "start": 77, "end": 95, "category": "INSURED_ID", "text": "記号 千ﾁ 番号 906 枝番 08", "is_phi": true}
+{"record": "g027_転院紹介状.txt", "start": 112, "end": 126, "category": "MY_NUMBER", "text": "7150 0999 6337", "is_phi": true, "checksum_valid": true}
+{"record": "g027_転院紹介状.txt", "start": 131, "end": 134, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 135, "end": 140, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 145, "end": 156, "category": "LAB", "text": "Hb 9.9 g/dL", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 157, "end": 171, "category": "LAB", "text": "BP 174/91 mmHg", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 176, "end": 183, "category": "DRUG", "text": "ビソプロロール", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 184, "end": 193, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 194, "end": 200, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 201, "end": 207, "category": "DOSE", "text": "1 g ×1", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 212, "end": 216, "category": "CODE", "text": "K459", "is_phi": false}
+{"record": "g027_転院紹介状.txt", "start": 221, "end": 225, "category": "PHYSICIAN_NAME", "text": "黒沢部長", "is_phi": true}
+{"record": "g028_研究用症例票.txt", "start": 11, "end": 23, "category": "FACILITY", "text": "医療法人光風会 光風病院", "is_phi": true}
+{"record": "g028_研究用症例票.txt", "start": 28, "end": 34, "category": "DATE", "text": "R3.8.8", "is_phi": true}
+{"record": "g028_研究用症例票.txt", "start": 38, "end": 44, "category": "PERSON_NAME", "text": "水無瀬 悠眞", "is_phi": true}
+{"record": "g028_研究用症例票.txt", "start": 45, "end": 50, "category": "DATE", "text": "年齢：91", "is_phi": true, "age_ge_90": true}
+{"record": "g028_研究用症例票.txt", "start": 56, "end": 64, "category": "KARTE_NO", "text": "19-78013", "is_phi": true}
+{"record": "g028_研究用症例票.txt", "start": 74, "end": 83, "category": "INSURER_NO", "text": "020157582", "is_phi": true}
+{"record": "g028_研究用症例票.txt", "start": 84, "end": 99, "category": "INSURED_ID", "text": "記号・番号 東京ｱ・74216", "is_phi": true}
+{"record": "g028_研究用症例票.txt", "start": 105, "end": 117, "category": "MY_NUMBER", "text": "８１２３００６７７４２２", "is_phi": true, "checksum_valid": true}
+{"record": "g028_研究用症例票.txt", "start": 122, "end": 130, "category": "DISEASE", "text": "ウェルニッケ脳症", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 131, "end": 135, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 140, "end": 152, "category": "LAB", "text": "Plt 33.8万/μL", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 153, "end": 165, "category": "LAB", "text": "Alb 4.4 g/dL", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 170, "end": 178, "category": "DRUG", "text": "ランソプラゾール", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 179, "end": 190, "category": "DOSE", "text": "250 mg 1日3回", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 191, "end": 199, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 200, "end": 206, "category": "DOSE", "text": "2.5 mg", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 211, "end": 222, "category": "CODE", "text": "ロット番号 E7814", "is_phi": false}
+{"record": "g028_研究用症例票.txt", "start": 234, "end": 241, "category": "PERSON_NAME", "text": "鈴森 和子 様", "is_phi": true}
+{"record": "g028_研究用症例票.txt", "start": 245, "end": 252, "category": "PHYSICIAN_NAME", "text": "指導医 早乙女", "is_phi": true}
+{"record": "g029_看護サマリー.txt", "start": 11, "end": 24, "category": "FACILITY", "text": "北辰リハビリテーション病院", "is_phi": true}
+{"record": "g029_看護サマリー.txt", "start": 29, "end": 37, "category": "DATE", "text": "令和5年5月5日", "is_phi": true}
+{"record": "g029_看護サマリー.txt", "start": 41, "end": 46, "category": "PERSON_NAME", "text": "真壁　弥生", "is_phi": true}
+{"record": "g029_看護サマリー.txt", "start": 50, "end": 53, "category": "DATE", "text": "９０才", "is_phi": true, "age_ge_90": true}
+{"record": "g029_看護サマリー.txt", "start": 58, "end": 68, "category": "KARTE_NO", "text": "2024-00871", "is_phi": true}
+{"record": "g029_看護サマリー.txt", "start": 77, "end": 85, "category": "INSURER_NO", "text": "31336902", "is_phi": true}
+{"record": "g029_看護サマリー.txt", "start": 86, "end": 112, "category": "INSURED_ID", "text": "被保険者証記号 東京ｱ 番号 62829 枝番 03", "is_phi": true}
+{"record": "g029_看護サマリー.txt", "start": 118, "end": 132, "category": "MY_NUMBER", "text": "2355 9255 6097", "is_phi": true, "checksum_valid": true}
+{"record": "g029_看護サマリー.txt", "start": 137, "end": 145, "category": "DISEASE", "text": "ウェルニッケ脳症", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 146, "end": 151, "category": "DISEASE", "text": "誤嚥性肺炎", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 156, "end": 168, "category": "LAB", "text": "Plt 32.6万/μL", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 169, "end": 181, "category": "LAB", "text": "Plt 28.1万/μL", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 186, "end": 192, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 193, "end": 204, "category": "DOSE", "text": "250 mg 1日2回", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 205, "end": 213, "category": "DRUG", "text": "ランソプラゾール", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 214, "end": 223, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 228, "end": 239, "category": "CODE", "text": "ロット番号 B6333", "is_phi": false}
+{"record": "g029_看護サマリー.txt", "start": 244, "end": 250, "category": "PHYSICIAN_NAME", "text": "Dr. 篠原", "is_phi": true}
+{"record": "g030_薬剤管理指導記録.txt", "start": 13, "end": 24, "category": "FACILITY", "text": "県立みなと医療センター", "is_phi": true}
+{"record": "g030_薬剤管理指導記録.txt", "start": 29, "end": 36, "category": "DATE", "text": "R6.8.20", "is_phi": true}
+{"record": "g030_薬剤管理指導記録.txt", "start": 40, "end": 47, "category": "PERSON_NAME", "text": "さいかわ ひな", "is_phi": true}
+{"record": "g030_薬剤管理指導記録.txt", "start": 51, "end": 58, "category": "DATE", "text": "T9.6.9生", "is_phi": true, "age_ge_90": true}
+{"record": "g030_薬剤管理指導記録.txt", "start": 65, "end": 73, "category": "KARTE_NO", "text": "151\n6883", "is_phi": true}
+{"record": "g030_薬剤管理指導記録.txt", "start": 86, "end": 92, "category": "INSURER_NO", "text": "276105", "is_phi": true}
+{"record": "g030_薬剤管理指導記録.txt", "start": 93, "end": 106, "category": "INSURED_ID", "text": "記号/番号 9902/18", "is_phi": true}
+{"record": "g030_薬剤管理指導記録.txt", "start": 112, "end": 126, "category": "MY_NUMBER", "text": "9806 3248 7816", "is_phi": true, "checksum_valid": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 131, "end": 140, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 141, "end": 145, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 150, "end": 163, "category": "LAB", "text": "WBC 15000 /μL", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 164, "end": 176, "category": "LAB", "text": "Alb 2.3 g/dL", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 181, "end": 187, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 188, "end": 192, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 193, "end": 201, "category": "DRUG", "text": "リバーロキサバン", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 202, "end": 206, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 211, "end": 222, "category": "CODE", "text": "ロット番号 B9487", "is_phi": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 229, "end": 235, "category": "DATE", "text": "昭和12年生", "is_phi": true, "age_ge_90": false}
+{"record": "g030_薬剤管理指導記録.txt", "start": 240, "end": 251, "category": "PHYSICIAN_NAME", "text": "検査技師 二宮 さくら", "is_phi": true}
+{"record": "g031_退院時要約.txt", "start": 10, "end": 15, "category": "FACILITY", "text": "西ヶ原薬局", "is_phi": true}
+{"record": "g031_退院時要約.txt", "start": 20, "end": 27, "category": "DATE", "text": "R4.8.20", "is_phi": true}
+{"record": "g031_退院時要約.txt", "start": 31, "end": 47, "category": "PERSON_NAME", "text": "真壁 琥太郎（マカベ コタロウ）", "is_phi": true}
+{"record": "g031_退院時要約.txt", "start": 48, "end": 53, "category": "DATE", "text": "享年101", "is_phi": true, "age_ge_90": true}
+{"record": "g031_退院時要約.txt", "start": 59, "end": 68, "category": "KARTE_NO", "text": "IN21-4330", "is_phi": true}
+{"record": "g031_退院時要約.txt", "start": 78, "end": 86, "category": "INSURER_NO", "text": "39272011", "is_phi": true}
+{"record": "g031_退院時要約.txt", "start": 87, "end": 105, "category": "INSURED_ID", "text": "記号 23-92 番号 553755", "is_phi": true}
+{"record": "g031_退院時要約.txt", "start": 118, "end": 130, "category": "MY_NUMBER", "text": "160623413591", "is_phi": true, "checksum_valid": true}
+{"record": "g031_退院時要約.txt", "start": 135, "end": 140, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 141, "end": 146, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 151, "end": 172, "category": "LAB", "text": "eGFR 39 mL/min/1.73m2", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 173, "end": 185, "category": "LAB", "text": "WBC 9200 /μL", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 190, "end": 198, "category": "DRUG", "text": "リバーロキサバン", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 199, "end": 207, "category": "DOSE", "text": "0.5 g ×1", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 208, "end": 213, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 214, "end": 218, "category": "DOSE", "text": "19単位", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 223, "end": 227, "category": "CODE", "text": "K483", "is_phi": false}
+{"record": "g031_退院時要約.txt", "start": 239, "end": 249, "category": "PERSON_NAME", "text": "シラトリザワ チヅル", "is_phi": true}
+{"record": "g031_退院時要約.txt", "start": 253, "end": 263, "category": "PHYSICIAN_NAME", "text": "医師 水無瀬 美津子", "is_phi": true}
+{"record": "g032_入院時記録.txt", "start": 10, "end": 13, "category": "FACILITY", "text": "HCU", "is_phi": true}
+{"record": "g032_入院時記録.txt", "start": 18, "end": 24, "category": "DATE", "text": "R2.6.4", "is_phi": true}
+{"record": "g032_入院時記録.txt", "start": 28, "end": 33, "category": "PERSON_NAME", "text": "柊 ハルル", "is_phi": true}
+{"record": "g032_入院時記録.txt", "start": 37, "end": 43, "category": "DATE", "text": "明治44年生", "is_phi": true, "age_ge_90": true}
+{"record": "g032_入院時記録.txt", "start": 49, "end": 58, "category": "KARTE_NO", "text": "IN19-8095", "is_phi": true}
+{"record": "g032_入院時記録.txt", "start": 62, "end": 70, "category": "INSURER_NO", "text": "33089343", "is_phi": true}
+{"record": "g032_入院時記録.txt", "start": 71, "end": 82, "category": "INSURED_ID", "text": "共3-57684-03", "is_phi": true}
+{"record": "g032_入院時記録.txt", "start": 88, "end": 100, "category": "MY_NUMBER", "text": "634026319071", "is_phi": true, "checksum_valid": true}
+{"record": "g032_入院時記録.txt", "start": 105, "end": 116, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 117, "end": 120, "category": "DISEASE", "text": "川崎病", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 125, "end": 139, "category": "LAB", "text": "CRP 21.9 mg/dL", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 140, "end": 150, "category": "LAB", "text": "HbA1c 6.9%", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 155, "end": 161, "category": "DRUG", "text": "エドキサバン", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 162, "end": 167, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 168, "end": 174, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 175, "end": 181, "category": "DOSE", "text": "2 g ×1", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 186, "end": 198, "category": "CODE", "text": "ICD-10 I86.6", "is_phi": false}
+{"record": "g032_入院時記録.txt", "start": 203, "end": 211, "category": "PHYSICIAN_NAME", "text": "医師 月岡 勘治", "is_phi": true}
+{"record": "g033_訪問診療記録.txt", "start": 11, "end": 21, "category": "FACILITY", "text": "南3病棟 512号室", "is_phi": true}
+{"record": "g033_訪問診療記録.txt", "start": 26, "end": 33, "category": "DATE", "text": "R2.8.26", "is_phi": true}
+{"record": "g033_訪問診療記録.txt", "start": 37, "end": 44, "category": "PERSON_NAME", "text": "小鳥遊 ゆかり", "is_phi": true}
+{"record": "g033_訪問診療記録.txt", "start": 45, "end": 50, "category": "DATE", "text": "享年104", "is_phi": true, "age_ge_90": true}
+{"record": "g033_訪問診療記録.txt", "start": 57, "end": 67, "category": "KARTE_NO", "text": "7576804734", "is_phi": true}
+{"record": "g033_訪問診療記録.txt", "start": 77, "end": 85, "category": "INSURER_NO", "text": "671０９８5０", "is_phi": true}
+{"record": "g033_訪問診療記録.txt", "start": 86, "end": 110, "category": "INSURED_ID", "text": "Insured ID: 東京ｱ-92076-03", "is_phi": true}
+{"record": "g033_訪問診療記録.txt", "start": 116, "end": 128, "category": "MY_NUMBER", "text": "316608104558", "is_phi": true, "checksum_valid": true}
+{"record": "g033_訪問診療記録.txt", "start": 133, "end": 138, "category": "DISEASE", "text": "慢性腎臓病", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 139, "end": 148, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 153, "end": 165, "category": "LAB", "text": "WBC 7400 /μL", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 166, "end": 177, "category": "LAB", "text": "Plt 5.2万/μL", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 182, "end": 187, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 188, "end": 194, "category": "DOSE", "text": "2 g ×3", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 195, "end": 203, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 204, "end": 215, "category": "DOSE", "text": "500 mg 1日3回", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 220, "end": 231, "category": "CODE", "text": "ロット番号 C9702", "is_phi": false}
+{"record": "g033_訪問診療記録.txt", "start": 236, "end": 244, "category": "PHYSICIAN_NAME", "text": "看護師 三浦 舞", "is_phi": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 18, "end": 25, "category": "FACILITY", "text": "日向クリニック", "is_phi": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 30, "end": 38, "category": "DATE", "text": "令和7年2月4日", "is_phi": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 42, "end": 49, "category": "PERSON_NAME", "text": "ユキムラ・ヒナ", "is_phi": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 53, "end": 59, "category": "DATE", "text": "94歳8か月", "is_phi": true, "age_ge_90": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 62, "end": 70, "category": "KARTE_NO", "text": "00381722", "is_phi": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 78, "end": 86, "category": "INSURER_NO", "text": "32454332", "is_phi": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 87, "end": 103, "category": "INSURED_ID", "text": "記号 東京ｱ 番号 941644", "is_phi": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 109, "end": 122, "category": "MY_NUMBER", "text": "92658773\n0480", "is_phi": true, "checksum_valid": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 127, "end": 131, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 132, "end": 142, "category": "DISEASE", "text": "ギラン・バレー症候群", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 147, "end": 159, "category": "LAB", "text": "WBC 3400 /μL", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 160, "end": 174, "category": "LAB", "text": "BNP 2200 pg/mL", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 179, "end": 187, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 188, "end": 197, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 198, "end": 203, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 204, "end": 215, "category": "DOSE", "text": "250 mg 1日1回", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 220, "end": 231, "category": "CODE", "text": "ロット番号 E6842", "is_phi": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 243, "end": 253, "category": "PERSON_NAME", "text": "ﾅﾅｾ ｿｳｲﾁﾛｳ", "is_phi": true}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 259, "end": 262, "category": "DATE", "text": "80代", "is_phi": true, "age_ge_90": false}
+{"record": "g034_介護保険主治医意見書下書き.txt", "start": 267, "end": 276, "category": "PHYSICIAN_NAME", "text": "担当医 森川 誠一", "is_phi": true}
+{"record": "g035_外来記録.txt", "start": 9, "end": 14, "category": "FACILITY", "text": "5階東病棟", "is_phi": true}
+{"record": "g035_外来記録.txt", "start": 19, "end": 26, "category": "DATE", "text": "R5.4.20", "is_phi": true}
+{"record": "g035_外来記録.txt", "start": 30, "end": 37, "category": "PERSON_NAME", "text": "鈴森 和子 様", "is_phi": true}
+{"record": "g035_外来記録.txt", "start": 41, "end": 45, "category": "DATE", "text": "１００才", "is_phi": true, "age_ge_90": true}
+{"record": "g035_外来記録.txt", "start": 50, "end": 60, "category": "KARTE_NO", "text": "2020-50191", "is_phi": true}
+{"record": "g035_外来記録.txt", "start": 64, "end": 72, "category": "INSURER_NO", "text": "74305962", "is_phi": true}
+{"record": "g035_外来記録.txt", "start": 73, "end": 87, "category": "INSURED_ID", "text": "記号・番号 共2・20190", "is_phi": true}
+{"record": "g035_外来記録.txt", "start": 93, "end": 105, "category": "MY_NUMBER", "text": "８７２８５６２１８８９６", "is_phi": true, "checksum_valid": true}
+{"record": "g035_外来記録.txt", "start": 110, "end": 116, "category": "DISEASE", "text": "メニエール病", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 117, "end": 122, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 127, "end": 139, "category": "LAB", "text": "Hb 12.3 g/dL", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 140, "end": 152, "category": "LAB", "text": "Hb 12.2 g/dL", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 157, "end": 163, "category": "DRUG", "text": "エドキサバン", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 164, "end": 168, "category": "DOSE", "text": "29単位", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 169, "end": 177, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 178, "end": 184, "category": "DOSE", "text": "1 g ×2", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 189, "end": 203, "category": "CODE", "text": "処方箋番号 RX-48686", "is_phi": false}
+{"record": "g035_外来記録.txt", "start": 208, "end": 216, "category": "PHYSICIAN_NAME", "text": "医師 葦原 さと", "is_phi": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 13, "end": 22, "category": "FACILITY", "text": "ICU 3番ベッド", "is_phi": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 27, "end": 37, "category": "DATE", "text": "平成31年1月13日", "is_phi": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 41, "end": 54, "category": "PERSON_NAME", "text": "KUONJI,TAKUMI", "is_phi": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 58, "end": 63, "category": "DATE", "text": "100\n歳", "is_phi": true, "age_ge_90": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 68, "end": 76, "category": "KARTE_NO", "text": "70035580", "is_phi": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 86, "end": 94, "category": "INSURER_NO", "text": "06253512", "is_phi": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 95, "end": 109, "category": "INSURED_ID", "text": "記号 1234 番号 567", "is_phi": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 115, "end": 129, "category": "MY_NUMBER", "text": "9882－6024－6270", "is_phi": true, "checksum_valid": true}
+{"record": "g036_死亡診断書下書き.txt", "start": 134, "end": 145, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 146, "end": 154, "category": "DISEASE", "text": "ウェルニッケ脳症", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 159, "end": 169, "category": "LAB", "text": "HbA1c 9.9%", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 170, "end": 184, "category": "LAB", "text": "CRP 15.5 mg/dL", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 189, "end": 197, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 198, "end": 209, "category": "DOSE", "text": "500 mg 1日3回", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 210, "end": 217, "category": "DRUG", "text": "バンコマイシン", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 218, "end": 226, "category": "DOSE", "text": "0.5 g ×1", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 231, "end": 245, "category": "CODE", "text": "処方箋番号 RX-94460", "is_phi": false}
+{"record": "g036_死亡診断書下書き.txt", "start": 250, "end": 259, "category": "PHYSICIAN_NAME", "text": "主治医：桐生 玲奈", "is_phi": true}
+{"record": "g037_転院紹介状.txt", "start": 10, "end": 24, "category": "FACILITY", "text": "東都医科大学 倫理審査委員会", "is_phi": true}
+{"record": "g037_転院紹介状.txt", "start": 29, "end": 35, "category": "DATE", "text": "R3.4.9", "is_phi": true}
+{"record": "g037_転院紹介状.txt", "start": 39, "end": 46, "category": "PERSON_NAME", "text": "髙砂谷 聡一郎", "is_phi": true}
+{"record": "g037_転院紹介状.txt", "start": 50, "end": 60, "category": "DATE", "text": "昭和4年8月13日生", "is_phi": true, "age_ge_90": true}
+{"record": "g037_転院紹介状.txt", "start": 65, "end": 72, "category": "KARTE_NO", "text": "3301847", "is_phi": true}
+{"record": "g037_転院紹介状.txt", "start": 85, "end": 91, "category": "INSURER_NO", "text": "132019", "is_phi": true}
+{"record": "g037_転院紹介状.txt", "start": 92, "end": 113, "category": "INSURED_ID", "text": "記号：756　番号：19530（枝番04）", "is_phi": true}
+{"record": "g037_転院紹介状.txt", "start": 126, "end": 138, "category": "MY_NUMBER", "text": "433512655053", "is_phi": true, "checksum_valid": true}
+{"record": "g037_転院紹介状.txt", "start": 143, "end": 149, "category": "DISEASE", "text": "メニエール病", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 150, "end": 155, "category": "DISEASE", "text": "誤嚥性肺炎", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 160, "end": 172, "category": "LAB", "text": "Plt 33.3万/μL", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 173, "end": 186, "category": "LAB", "text": "BNP 923 pg/mL", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 191, "end": 197, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 198, "end": 202, "category": "DOSE", "text": "10単位", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 203, "end": 211, "category": "DRUG", "text": "リバーロキサバン", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 212, "end": 218, "category": "DOSE", "text": "1 g ×2", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 223, "end": 234, "category": "CODE", "text": "ロット番号 D4741", "is_phi": false}
+{"record": "g037_転院紹介状.txt", "start": 246, "end": 254, "category": "PERSON_NAME", "text": "祖母 坂上 キヨ", "is_phi": true}
+{"record": "g037_転院紹介状.txt", "start": 258, "end": 278, "category": "PHYSICIAN_NAME", "text": "紹介元：日向クリニック 院長 日向 大輔", "is_phi": true}
+{"record": "g038_研究用症例票.txt", "start": 11, "end": 20, "category": "FACILITY", "text": "ひかり健診センター", "is_phi": true}
+{"record": "g038_研究用症例票.txt", "start": 25, "end": 35, "category": "DATE", "text": "令和元年12月19日", "is_phi": true}
+{"record": "g038_研究用症例票.txt", "start": 39, "end": 49, "category": "PERSON_NAME", "text": "シラトリザワ チヅル", "is_phi": true}
+{"record": "g038_研究用症例票.txt", "start": 53, "end": 58, "category": "DATE", "text": "90代後半", "is_phi": true, "age_ge_90": true}
+{"record": "g038_研究用症例票.txt", "start": 64, "end": 72, "category": "KARTE_NO", "text": "K5683883", "is_phi": true}
+{"record": "g038_研究用症例票.txt", "start": 82, "end": 89, "category": "INSURER_NO", "text": "367\n029", "is_phi": true}
+{"record": "g038_研究用症例票.txt", "start": 90, "end": 110, "category": "INSURED_ID", "text": "記号：千ﾁ　番号：12740（枝番01）", "is_phi": true}
+{"record": "g038_研究用症例票.txt", "start": 116, "end": 130, "category": "MY_NUMBER", "text": "2817-8404-0657", "is_phi": true, "checksum_valid": true}
+{"record": "g038_研究用症例票.txt", "start": 135, "end": 143, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 144, "end": 151, "category": "DISEASE", "text": "大腿骨頸部骨折", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 156, "end": 170, "category": "LAB", "text": "BNP 1543 pg/mL", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 171, "end": 182, "category": "LAB", "text": "Hb 9.2 g/dL", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 187, "end": 192, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 193, "end": 197, "category": "DOSE", "text": "29単位", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 198, "end": 207, "category": "DRUG", "text": "エンパグリフロジン", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 208, "end": 212, "category": "DOSE", "text": "24単位", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 217, "end": 231, "category": "CODE", "text": "処方箋番号 RX-83019", "is_phi": false}
+{"record": "g038_研究用症例票.txt", "start": 238, "end": 244, "category": "DATE", "text": "89 y/o", "is_phi": true, "age_ge_90": false}
+{"record": "g038_研究用症例票.txt", "start": 249, "end": 259, "category": "PHYSICIAN_NAME", "text": "医師 宮ノ崎 琥太郎", "is_phi": true}
+{"record": "g039_看護サマリー.txt", "start": 11, "end": 24, "category": "FACILITY", "text": "さくら訪問看護ステーション", "is_phi": true}
+{"record": "g039_看護サマリー.txt", "start": 29, "end": 37, "category": "DATE", "text": "令和3年6月3日", "is_phi": true}
+{"record": "g039_看護サマリー.txt", "start": 41, "end": 49, "category": "PERSON_NAME", "text": "白鳥沢 文代 様", "is_phi": true}
+{"record": "g039_看護サマリー.txt", "start": 53, "end": 59, "category": "DATE", "text": "90 y/o", "is_phi": true, "age_ge_90": true}
+{"record": "g039_看護サマリー.txt", "start": 64, "end": 71, "category": "KARTE_NO", "text": "2835031", "is_phi": true}
+{"record": "g039_看護サマリー.txt", "start": 81, "end": 89, "category": "INSURER_NO", "text": "02091353", "is_phi": true}
+{"record": "g039_看護サマリー.txt", "start": 90, "end": 115, "category": "INSURED_ID", "text": "記号 66466050 番号 7846 枝番 07", "is_phi": true}
+{"record": "g039_看護サマリー.txt", "start": 121, "end": 133, "category": "MY_NUMBER", "text": "119395576574", "is_phi": true, "checksum_valid": true}
+{"record": "g039_看護サマリー.txt", "start": 138, "end": 143, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 144, "end": 152, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 157, "end": 171, "category": "LAB", "text": "BP 147/51 mmHg", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 172, "end": 184, "category": "LAB", "text": "Alb 2.9 g/dL", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 189, "end": 193, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 194, "end": 202, "category": "DOSE", "text": "0.5 g ×1", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 203, "end": 209, "category": "DRUG", "text": "ゾレドロン酸", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 210, "end": 215, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 220, "end": 232, "category": "CODE", "text": "ICD-10 I36.4", "is_phi": false}
+{"record": "g039_看護サマリー.txt", "start": 237, "end": 244, "category": "PHYSICIAN_NAME", "text": "署名：天野 修", "is_phi": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 13, "end": 27, "category": "FACILITY", "text": "みどりの丘特別養護老人ホーム", "is_phi": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 32, "end": 41, "category": "DATE", "text": "令和7年6月16日", "is_phi": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 45, "end": 51, "category": "PERSON_NAME", "text": "佐々木　花子", "is_phi": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 55, "end": 59, "category": "DATE", "text": "92yo", "is_phi": true, "age_ge_90": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 63, "end": 70, "category": "KARTE_NO", "text": "２８６５５１９", "is_phi": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 74, "end": 84, "category": "INSURER_NO", "text": "67-2502-82", "is_phi": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 85, "end": 106, "category": "INSURED_ID", "text": "記号 東京ｱ 番号 17581 枝番 04", "is_phi": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 112, "end": 126, "category": "MY_NUMBER", "text": "9548 9577 6045", "is_phi": true, "checksum_valid": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 131, "end": 139, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 140, "end": 147, "category": "DISEASE", "text": "大腿骨頸部骨折", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 152, "end": 164, "category": "LAB", "text": "WBC 9800 /μL", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 165, "end": 177, "category": "LAB", "text": "WBC 4100 /μL", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 182, "end": 187, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 188, "end": 191, "category": "DOSE", "text": "8単位", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 192, "end": 203, "category": "DRUG", "text": "インスリン グラルギン", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 204, "end": 215, "category": "DOSE", "text": "250 mg 1日3回", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 220, "end": 232, "category": "CODE", "text": "ICD-10 M23.3", "is_phi": false}
+{"record": "g040_薬剤管理指導記録.txt", "start": 244, "end": 249, "category": "PERSON_NAME", "text": "鷹取,義男", "is_phi": true}
+{"record": "g040_薬剤管理指導記録.txt", "start": 253, "end": 262, "category": "PHYSICIAN_NAME", "text": "PI: 九条 智彦", "is_phi": true}
+{"record": "g041_退院時要約.txt", "start": 10, "end": 17, "category": "FACILITY", "text": "青葉台中央病院", "is_phi": true}
+{"record": "g041_退院時要約.txt", "start": 22, "end": 32, "category": "DATE", "text": "平成31年3月19日", "is_phi": true}
+{"record": "g041_退院時要約.txt", "start": 36, "end": 46, "category": "PERSON_NAME", "text": "ﾅﾅｾ ｿｳｲﾁﾛｳ", "is_phi": true}
+{"record": "g041_退院時要約.txt", "start": 50, "end": 63, "category": "DATE", "text": "101 years old", "is_phi": true, "age_ge_90": true}
+{"record": "g041_退院時要約.txt", "start": 68, "end": 78, "category": "KARTE_NO", "text": "2013-78811", "is_phi": true}
+{"record": "g041_退院時要約.txt", "start": 82, "end": 90, "category": "INSURER_NO", "text": "07149396", "is_phi": true}
+{"record": "g041_退院時要約.txt", "start": 91, "end": 105, "category": "INSURED_ID", "text": "記号/番号 千ﾁ/80017", "is_phi": true}
+{"record": "g041_退院時要約.txt", "start": 111, "end": 125, "category": "MY_NUMBER", "text": "2377-2023-2995", "is_phi": true, "checksum_valid": true}
+{"record": "g041_退院時要約.txt", "start": 130, "end": 138, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 139, "end": 148, "category": "DISEASE", "text": "レビー小体型認知症", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 153, "end": 161, "category": "LAB", "text": "SpO2 88%", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 162, "end": 175, "category": "LAB", "text": "CRP 3.3 mg/dL", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 180, "end": 187, "category": "DRUG", "text": "バンコマイシン", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 188, "end": 197, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 198, "end": 205, "category": "DRUG", "text": "ビソプロロール", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 206, "end": 215, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 220, "end": 231, "category": "CODE", "text": "ロット番号 C4548", "is_phi": false}
+{"record": "g041_退院時要約.txt", "start": 236, "end": 244, "category": "PHYSICIAN_NAME", "text": "薬剤師 柏木 涼", "is_phi": true}
+{"record": "g042_入院時記録.txt", "start": 10, "end": 14, "category": "FACILITY", "text": "内科外来", "is_phi": true}
+{"record": "g042_入院時記録.txt", "start": 19, "end": 26, "category": "DATE", "text": "R4.1.15", "is_phi": true}
+{"record": "g042_入院時記録.txt", "start": 30, "end": 46, "category": "PERSON_NAME", "text": "Chizuru Ichinose", "is_phi": true}
+{"record": "g042_入院時記録.txt", "start": 47, "end": 51, "category": "DATE", "text": "享年90", "is_phi": true, "age_ge_90": true}
+{"record": "g042_入院時記録.txt", "start": 56, "end": 66, "category": "KARTE_NO", "text": "2018-70545", "is_phi": true}
+{"record": "g042_入院時記録.txt", "start": 76, "end": 84, "category": "INSURER_NO", "text": "06273514", "is_phi": true}
+{"record": "g042_入院時記録.txt", "start": 85, "end": 100, "category": "INSURED_ID", "text": "記号・番号 あ92・38420", "is_phi": true}
+{"record": "g042_入院時記録.txt", "start": 106, "end": 120, "category": "MY_NUMBER", "text": "1385-9737-6539", "is_phi": true, "checksum_valid": true}
+{"record": "g042_入院時記録.txt", "start": 125, "end": 134, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 135, "end": 140, "category": "DISEASE", "text": "慢性腎臓病", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 145, "end": 156, "category": "LAB", "text": "Plt 6.5万/μL", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 157, "end": 168, "category": "LAB", "text": "HbA1c 10.2%", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 173, "end": 181, "category": "DRUG", "text": "アトルバスタチン", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 182, "end": 190, "category": "DOSE", "text": "0.5 g ×1", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 191, "end": 197, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 198, "end": 207, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 212, "end": 223, "category": "CODE", "text": "ロット番号 E8109", "is_phi": false}
+{"record": "g042_入院時記録.txt", "start": 230, "end": 236, "category": "DATE", "text": "昭和12年生", "is_phi": true, "age_ge_90": false}
+{"record": "g042_入院時記録.txt", "start": 241, "end": 249, "category": "PHYSICIAN_NAME", "text": "医師 鷹取 悠真", "is_phi": true}
+{"record": "g043_訪問診療記録.txt", "start": 11, "end": 23, "category": "FACILITY", "text": "医療法人光風会 光風病院", "is_phi": true}
+{"record": "g043_訪問診療記録.txt", "start": 28, "end": 38, "category": "DATE", "text": "令和4年12月11日", "is_phi": true}
+{"record": "g043_訪問診療記録.txt", "start": 42, "end": 46, "category": "PERSON_NAME", "text": "斉川さん", "is_phi": true}
+{"record": "g043_訪問診療記録.txt", "start": 47, "end": 53, "category": "DATE", "text": "Age 94", "is_phi": true, "age_ge_90": true}
+{"record": "g043_訪問診療記録.txt", "start": 60, "end": 67, "category": "KARTE_NO", "text": "3787093", "is_phi": true}
+{"record": "g043_訪問診療記録.txt", "start": 76, "end": 84, "category": "INSURER_NO", "text": "33322520", "is_phi": true}
+{"record": "g043_訪問診療記録.txt", "start": 91, "end": 98, "category": "INSURED_ID", "text": "1283045", "is_phi": true}
+{"record": "g043_訪問診療記録.txt", "start": 115, "end": 129, "category": "MY_NUMBER", "text": "1062 6297 1808", "is_phi": true, "checksum_valid": true}
+{"record": "g043_訪問診療記録.txt", "start": 134, "end": 143, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 144, "end": 147, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 152, "end": 166, "category": "LAB", "text": "CRP 14.6 mg/dL", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 167, "end": 181, "category": "LAB", "text": "BNP 2424 pg/mL", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 186, "end": 194, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 195, "end": 201, "category": "DOSE", "text": "2 g ×1", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 202, "end": 210, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 211, "end": 219, "category": "DOSE", "text": "0.5 g ×3", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 224, "end": 238, "category": "CODE", "text": "処方箋番号 RX-42593", "is_phi": false}
+{"record": "g043_訪問診療記録.txt", "start": 250, "end": 256, "category": "PERSON_NAME", "text": "宮ノ崎\n悠真", "is_phi": true}
+{"record": "g043_訪問診療記録.txt", "start": 260, "end": 268, "category": "PHYSICIAN_NAME", "text": "医師 七瀬 義男", "is_phi": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 18, "end": 31, "category": "FACILITY", "text": "北辰リハビリテーション病院", "is_phi": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 36, "end": 45, "category": "DATE", "text": "令和3年5月19日", "is_phi": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 49, "end": 57, "category": "PERSON_NAME", "text": "祖母 坂上 キヨ", "is_phi": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 61, "end": 66, "category": "DATE", "text": "100歳代", "is_phi": true, "age_ge_90": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 71, "end": 78, "category": "KARTE_NO", "text": "4410293", "is_phi": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 82, "end": 90, "category": "INSURER_NO", "text": "０６１３９０１２", "is_phi": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 91, "end": 102, "category": "INSURED_ID", "text": "千ﾁ-37756-06", "is_phi": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 115, "end": 127, "category": "MY_NUMBER", "text": "563068149520", "is_phi": true, "checksum_valid": true}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 132, "end": 137, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 138, "end": 147, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 152, "end": 166, "category": "LAB", "text": "CRP 22.5 mg/dL", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 167, "end": 180, "category": "LAB", "text": "WBC 17800 /μL", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 185, "end": 191, "category": "DRUG", "text": "エドキサバン", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 192, "end": 201, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 202, "end": 210, "category": "DRUG", "text": "スピロノラクトン", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 211, "end": 222, "category": "DOSE", "text": "500 mg 1日1回", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 227, "end": 238, "category": "CODE", "text": "ロット番号 D7342", "is_phi": false}
+{"record": "g044_介護保険主治医意見書下書き.txt", "start": 243, "end": 263, "category": "PHYSICIAN_NAME", "text": "Dr. Hayato Kirishima", "is_phi": true}
+{"record": "g045_外来記録.txt", "start": 9, "end": 20, "category": "FACILITY", "text": "県立みなと医療センター", "is_phi": true}
+{"record": "g045_外来記録.txt", "start": 25, "end": 35, "category": "DATE", "text": "令和元年12月26日", "is_phi": true}
+{"record": "g045_外来記録.txt", "start": 39, "end": 44, "category": "PERSON_NAME", "text": "坂城 ハル", "is_phi": true}
+{"record": "g045_外来記録.txt", "start": 48, "end": 52, "category": "DATE", "text": "90\n歳", "is_phi": true, "age_ge_90": true}
+{"record": "g045_外来記録.txt", "start": 56, "end": 63, "category": "KARTE_NO", "text": "００４５６７８", "is_phi": true}
+{"record": "g045_外来記録.txt", "start": 73, "end": 82, "category": "INSURER_NO", "text": "010433633", "is_phi": true}
+{"record": "g045_外来記録.txt", "start": 83, "end": 95, "category": "INSURED_ID", "text": "記号東京ｱ番号４９８３３", "is_phi": true}
+{"record": "g045_外来記録.txt", "start": 101, "end": 113, "category": "MY_NUMBER", "text": "100087145888", "is_phi": true, "checksum_valid": true}
+{"record": "g045_外来記録.txt", "start": 118, "end": 121, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 122, "end": 127, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 132, "end": 145, "category": "LAB", "text": "CRP 4.8 mg/dL", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 146, "end": 154, "category": "LAB", "text": "SpO2 93%", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 159, "end": 167, "category": "DRUG", "text": "ランソプラゾール", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 168, "end": 179, "category": "DOSE", "text": "250 mg 1日3回", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 180, "end": 189, "category": "DRUG", "text": "エンパグリフロジン", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 190, "end": 201, "category": "DOSE", "text": "500 mg 1日1回", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 206, "end": 220, "category": "CODE", "text": "処方箋番号 RX-66530", "is_phi": false}
+{"record": "g045_外来記録.txt", "start": 225, "end": 234, "category": "PHYSICIAN_NAME", "text": "研修医 大友 拓真", "is_phi": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 13, "end": 18, "category": "FACILITY", "text": "西ヶ原薬局", "is_phi": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 23, "end": 32, "category": "DATE", "text": "令和3年12月3日", "is_phi": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 36, "end": 41, "category": "PERSON_NAME", "text": "山田 太郎", "is_phi": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 45, "end": 48, "category": "DATE", "text": "90代", "is_phi": true, "age_ge_90": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 54, "end": 62, "category": "KARTE_NO", "text": "578 1560", "is_phi": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 72, "end": 81, "category": "INSURER_NO", "text": "7410\n2641", "is_phi": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 82, "end": 96, "category": "INSURED_ID", "text": "記号：あ12 番号：3456", "is_phi": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 102, "end": 116, "category": "MY_NUMBER", "text": "5873 6570 6744", "is_phi": true, "checksum_valid": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 121, "end": 128, "category": "DISEASE", "text": "大腿骨頸部骨折", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 129, "end": 134, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 139, "end": 153, "category": "LAB", "text": "BP 152/66 mmHg", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 154, "end": 167, "category": "LAB", "text": "WBC 15400 /μL", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 172, "end": 178, "category": "DRUG", "text": "エドキサバン", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 179, "end": 191, "category": "DOSE", "text": "1000 mg 1日1回", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 192, "end": 200, "category": "DRUG", "text": "ランソプラゾール", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 201, "end": 206, "category": "DOSE", "text": "10 mg", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 211, "end": 222, "category": "CODE", "text": "ロット番号 B4762", "is_phi": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 234, "end": 244, "category": "PERSON_NAME", "text": "ヒイラギ・ショウゾウ", "is_phi": true}
+{"record": "g046_死亡診断書下書き.txt", "start": 250, "end": 253, "category": "DATE", "text": "80代", "is_phi": true, "age_ge_90": false}
+{"record": "g046_死亡診断書下書き.txt", "start": 258, "end": 267, "category": "PHYSICIAN_NAME", "text": "医師 桐ヶ谷 陽菜", "is_phi": true}
+{"record": "g047_転院紹介状.txt", "start": 10, "end": 13, "category": "FACILITY", "text": "HCU", "is_phi": true}
+{"record": "g047_転院紹介状.txt", "start": 18, "end": 28, "category": "DATE", "text": "令和2年10月16日", "is_phi": true}
+{"record": "g047_転院紹介状.txt", "start": 32, "end": 37, "category": "PERSON_NAME", "text": "鷹取,義男", "is_phi": true}
+{"record": "g047_転院紹介状.txt", "start": 41, "end": 45, "category": "DATE", "text": "104歳", "is_phi": true, "age_ge_90": true}
+{"record": "g047_転院紹介状.txt", "start": 51, "end": 59, "category": "KARTE_NO", "text": "856 5155", "is_phi": true}
+{"record": "g047_転院紹介状.txt", "start": 69, "end": 76, "category": "INSURER_NO", "text": "0123981", "is_phi": true}
+{"record": "g047_転院紹介状.txt", "start": 77, "end": 88, "category": "INSURED_ID", "text": "共1・9819（05）", "is_phi": true}
+{"record": "g047_転院紹介状.txt", "start": 94, "end": 108, "category": "MY_NUMBER", "text": "3981－8580－9025", "is_phi": true, "checksum_valid": true}
+{"record": "g047_転院紹介状.txt", "start": 113, "end": 124, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 125, "end": 130, "category": "DISEASE", "text": "誤嚥性肺炎", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 135, "end": 146, "category": "LAB", "text": "HbA1c 10.9%", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 147, "end": 161, "category": "LAB", "text": "CRP 13.5 mg/dL", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 166, "end": 175, "category": "DRUG", "text": "エンパグリフロジン", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 176, "end": 181, "category": "DOSE", "text": "20 mg", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 182, "end": 191, "category": "DRUG", "text": "アセトアミノフェン", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 192, "end": 200, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 205, "end": 217, "category": "CODE", "text": "ICD-10 J23.2", "is_phi": false}
+{"record": "g047_転院紹介状.txt", "start": 222, "end": 226, "category": "PHYSICIAN_NAME", "text": "森川医師", "is_phi": true}
+{"record": "g048_研究用症例票.txt", "start": 11, "end": 21, "category": "FACILITY", "text": "南3病棟 512号室", "is_phi": true}
+{"record": "g048_研究用症例票.txt", "start": 26, "end": 34, "category": "DATE", "text": "令和2年9月1日", "is_phi": true}
+{"record": "g048_研究用症例票.txt", "start": 38, "end": 42, "category": "PERSON_NAME", "text": "柊 ハル", "is_phi": true}
+{"record": "g048_研究用症例票.txt", "start": 46, "end": 50, "category": "DATE", "text": "満99歳", "is_phi": true, "age_ge_90": true}
+{"record": "g048_研究用症例票.txt", "start": 56, "end": 64, "category": "KARTE_NO", "text": "018 0181", "is_phi": true}
+{"record": "g048_研究用症例票.txt", "start": 68, "end": 76, "category": "INSURER_NO", "text": "39021647", "is_phi": true}
+{"record": "g048_研究用症例票.txt", "start": 77, "end": 92, "category": "INSURED_ID", "text": "記号・番号 7101・2345", "is_phi": true}
+{"record": "g048_研究用症例票.txt", "start": 98, "end": 112, "category": "MY_NUMBER", "text": "5451 1069\n5256", "is_phi": true, "checksum_valid": true}
+{"record": "g048_研究用症例票.txt", "start": 117, "end": 124, "category": "DISEASE", "text": "大腿骨頸部骨折", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 125, "end": 132, "category": "DISEASE", "text": "大腿骨頸部骨折", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 137, "end": 149, "category": "LAB", "text": "Hb 12.7 g/dL", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 150, "end": 160, "category": "LAB", "text": "HbA1c 7.9%", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 165, "end": 171, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 172, "end": 178, "category": "DOSE", "text": "2 g ×2", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 179, "end": 183, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 184, "end": 188, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 193, "end": 204, "category": "CODE", "text": "ロット番号 C7864", "is_phi": false}
+{"record": "g048_研究用症例票.txt", "start": 209, "end": 213, "category": "PHYSICIAN_NAME", "text": "黒沢部長", "is_phi": true}
+{"record": "g049_看護サマリー.txt", "start": 11, "end": 18, "category": "FACILITY", "text": "日向クリニック", "is_phi": true}
+{"record": "g049_看護サマリー.txt", "start": 23, "end": 31, "category": "DATE", "text": "令和4年8月7日", "is_phi": true}
+{"record": "g049_看護サマリー.txt", "start": 35, "end": 50, "category": "PERSON_NAME", "text": "TAKASAGOYA Haru", "is_phi": true}
+{"record": "g049_看護サマリー.txt", "start": 51, "end": 56, "category": "DATE", "text": "年齢：94", "is_phi": true, "age_ge_90": true}
+{"record": "g049_看護サマリー.txt", "start": 62, "end": 70, "category": "KARTE_NO", "text": "15-31354", "is_phi": true}
+{"record": "g049_看護サマリー.txt", "start": 80, "end": 88, "category": "INSURER_NO", "text": "21130017", "is_phi": true}
+{"record": "g049_看護サマリー.txt", "start": 89, "end": 100, "category": "INSURED_ID", "text": "記号 千ﾁ 番号 88", "is_phi": true}
+{"record": "g049_看護サマリー.txt", "start": 106, "end": 120, "category": "MY_NUMBER", "text": "7051－6426－8415", "is_phi": true, "checksum_valid": true}
+{"record": "g049_看護サマリー.txt", "start": 125, "end": 128, "category": "DISEASE", "text": "川崎病", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 129, "end": 138, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 143, "end": 164, "category": "LAB", "text": "eGFR 82 mL/min/1.73m2", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 165, "end": 179, "category": "LAB", "text": "BP 146/57 mmHg", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 184, "end": 190, "category": "DRUG", "text": "ゾレドロン酸", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 191, "end": 194, "category": "DOSE", "text": "9単位", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 195, "end": 203, "category": "DRUG", "text": "アトルバスタチン", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 204, "end": 209, "category": "DOSE", "text": "10 mg", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 214, "end": 228, "category": "CODE", "text": "処方箋番号 RX-96399", "is_phi": false}
+{"record": "g049_看護サマリー.txt", "start": 240, "end": 253, "category": "PERSON_NAME", "text": "MISONO,KOTARO", "is_phi": true}
+{"record": "g049_看護サマリー.txt", "start": 257, "end": 264, "category": "PHYSICIAN_NAME", "text": "指導医 早乙女", "is_phi": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 13, "end": 18, "category": "FACILITY", "text": "5階東病棟", "is_phi": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 23, "end": 32, "category": "DATE", "text": "令和3年3月10日", "is_phi": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 36, "end": 42, "category": "PERSON_NAME", "text": "宮ノ崎\n悠真", "is_phi": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 43, "end": 47, "category": "DATE", "text": "享年99", "is_phi": true, "age_ge_90": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 54, "end": 62, "category": "KARTE_NO", "text": "A-954067", "is_phi": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 72, "end": 80, "category": "INSURER_NO", "text": "3９266３２5", "is_phi": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 81, "end": 107, "category": "INSURED_ID", "text": "被保険者証記号 A97 番号 13619 枝番 02", "is_phi": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 120, "end": 132, "category": "MY_NUMBER", "text": "712616010271", "is_phi": true, "checksum_valid": true}
+{"record": "g050_薬剤管理指導記録.txt", "start": 137, "end": 140, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 141, "end": 144, "category": "DISEASE", "text": "川崎病", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 149, "end": 161, "category": "LAB", "text": "Hb 10.3 g/dL", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 162, "end": 174, "category": "LAB", "text": "Na 133 mEq/L", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 179, "end": 183, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 184, "end": 188, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 189, "end": 193, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 194, "end": 199, "category": "DOSE", "text": "10 mg", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 204, "end": 218, "category": "CODE", "text": "処方箋番号 RX-91730", "is_phi": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 225, "end": 231, "category": "DATE", "text": "89 y/o", "is_phi": true, "age_ge_90": false}
+{"record": "g050_薬剤管理指導記録.txt", "start": 236, "end": 242, "category": "PHYSICIAN_NAME", "text": "Dr. 篠原", "is_phi": true}
+{"record": "g051_退院時要約.txt", "start": 10, "end": 19, "category": "FACILITY", "text": "ICU 3番ベッド", "is_phi": true}
+{"record": "g051_退院時要約.txt", "start": 24, "end": 31, "category": "DATE", "text": "R2.7.19", "is_phi": true}
+{"record": "g051_退院時要約.txt", "start": 35, "end": 49, "category": "PERSON_NAME", "text": "ASHIHARA,KANJI", "is_phi": true}
+{"record": "g051_退院時要約.txt", "start": 53, "end": 60, "category": "DATE", "text": "103 y/o", "is_phi": true, "age_ge_90": true}
+{"record": "g051_退院時要約.txt", "start": 66, "end": 74, "category": "KARTE_NO", "text": "11-85802", "is_phi": true}
+{"record": "g051_退院時要約.txt", "start": 78, "end": 86, "category": "INSURER_NO", "text": "67470195", "is_phi": true}
+{"record": "g051_退院時要約.txt", "start": 87, "end": 100, "category": "INSURED_ID", "text": "記号８８９８番号５０４５９", "is_phi": true}
+{"record": "g051_退院時要約.txt", "start": 106, "end": 118, "category": "MY_NUMBER", "text": "９９４３３９９５３３３９", "is_phi": true, "checksum_valid": true}
+{"record": "g051_退院時要約.txt", "start": 123, "end": 131, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 132, "end": 141, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 146, "end": 154, "category": "LAB", "text": "SpO2 96%", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 155, "end": 166, "category": "LAB", "text": "Hb 9.2 g/dL", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 171, "end": 176, "category": "DRUG", "text": "センノシド", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 177, "end": 188, "category": "DOSE", "text": "250 mg 1日3回", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 189, "end": 194, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 195, "end": 199, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 204, "end": 215, "category": "CODE", "text": "ロット番号 B4662", "is_phi": false}
+{"record": "g051_退院時要約.txt", "start": 220, "end": 231, "category": "PHYSICIAN_NAME", "text": "検査技師 二宮 さくら", "is_phi": true}
+{"record": "g052_入院時記録.txt", "start": 10, "end": 24, "category": "FACILITY", "text": "東都医科大学 倫理審査委員会", "is_phi": true}
+{"record": "g052_入院時記録.txt", "start": 29, "end": 37, "category": "DATE", "text": "令和3年4月7日", "is_phi": true}
+{"record": "g052_入院時記録.txt", "start": 41, "end": 45, "category": "PERSON_NAME", "text": "柊\n弥生", "is_phi": true}
+{"record": "g052_入院時記録.txt", "start": 46, "end": 52, "category": "DATE", "text": "Age 95", "is_phi": true, "age_ge_90": true}
+{"record": "g052_入院時記録.txt", "start": 58, "end": 68, "category": "KARTE_NO", "text": "88-104-221", "is_phi": true}
+{"record": "g052_入院時記録.txt", "start": 78, "end": 86, "category": "INSURER_NO", "text": "７４２７５７９３", "is_phi": true}
+{"record": "g052_入院時記録.txt", "start": 87, "end": 102, "category": "INSURED_ID", "text": "記号 東京ｱ 番号 50526", "is_phi": true}
+{"record": "g052_入院時記録.txt", "start": 108, "end": 120, "category": "MY_NUMBER", "text": "715814765872", "is_phi": true, "checksum_valid": true}
+{"record": "g052_入院時記録.txt", "start": 125, "end": 128, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 129, "end": 133, "category": "DISEASE", "text": "COPD", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 138, "end": 151, "category": "LAB", "text": "Cre 1.2 mg/dL", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 152, "end": 164, "category": "LAB", "text": "Alb 3.8 g/dL", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 169, "end": 175, "category": "DRUG", "text": "エドキサバン", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 176, "end": 182, "category": "DOSE", "text": "2 g ×2", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 183, "end": 189, "category": "DRUG", "text": "エドキサバン", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 190, "end": 195, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 200, "end": 211, "category": "CODE", "text": "ロット番号 B2765", "is_phi": false}
+{"record": "g052_入院時記録.txt", "start": 223, "end": 234, "category": "PERSON_NAME", "text": "Taro YAMADA", "is_phi": true}
+{"record": "g052_入院時記録.txt", "start": 238, "end": 248, "category": "PHYSICIAN_NAME", "text": "医師 水無瀬 美津子", "is_phi": true}
+{"record": "g053_訪問診療記録.txt", "start": 11, "end": 20, "category": "FACILITY", "text": "ひかり健診センター", "is_phi": true}
+{"record": "g053_訪問診療記録.txt", "start": 25, "end": 31, "category": "DATE", "text": "R5.7.5", "is_phi": true}
+{"record": "g053_訪問診療記録.txt", "start": 35, "end": 45, "category": "PERSON_NAME", "text": "ヒイラギ・ショウゾウ", "is_phi": true}
+{"record": "g053_訪問診療記録.txt", "start": 49, "end": 52, "category": "DATE", "text": "91歳", "is_phi": true, "age_ge_90": true}
+{"record": "g053_訪問診療記録.txt", "start": 58, "end": 71, "category": "KARTE_NO", "text": "CT2018-667921", "is_phi": true}
+{"record": "g053_訪問診療記録.txt", "start": 81, "end": 89, "category": "INSURER_NO", "text": "７３０９９５２５", "is_phi": true}
+{"record": "g053_訪問診療記録.txt", "start": 90, "end": 114, "category": "INSURED_ID", "text": "被保険者証記号 5501 番号 76 枝番 02", "is_phi": true}
+{"record": "g053_訪問診療記録.txt", "start": 120, "end": 134, "category": "MY_NUMBER", "text": "6623 6259 8939", "is_phi": true, "checksum_valid": false}
+{"record": "g053_訪問診療記録.txt", "start": 139, "end": 144, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 145, "end": 156, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 161, "end": 175, "category": "LAB", "text": "BP 104/75 mmHg", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 176, "end": 190, "category": "LAB", "text": "CRP 22.6 mg/dL", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 195, "end": 200, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 201, "end": 207, "category": "DOSE", "text": "1 g ×3", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 208, "end": 214, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 215, "end": 224, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 229, "end": 233, "category": "CODE", "text": "K655", "is_phi": false}
+{"record": "g053_訪問診療記録.txt", "start": 238, "end": 246, "category": "PHYSICIAN_NAME", "text": "医師 月岡 勘治", "is_phi": true}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 18, "end": 31, "category": "FACILITY", "text": "さくら訪問看護ステーション", "is_phi": true}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 36, "end": 43, "category": "DATE", "text": "R5.3.22", "is_phi": true}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 47, "end": 49, "category": "PERSON_NAME", "text": "東雲", "is_phi": true}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 53, "end": 60, "category": "DATE", "text": "104 y/o", "is_phi": true, "age_ge_90": true}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 66, "end": 72, "category": "KARTE_NO", "text": "９９８８７７", "is_phi": true}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 76, "end": 84, "category": "INSURER_NO", "text": "75081612", "is_phi": true}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 85, "end": 105, "category": "INSURED_ID", "text": "記号：千ﾁ　番号：54594（枝番02）", "is_phi": true}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 111, "end": 125, "category": "MY_NUMBER", "text": "6487 4575 8478", "is_phi": true, "checksum_valid": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 130, "end": 134, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 135, "end": 143, "category": "DISEASE", "text": "ウェルニッケ脳症", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 148, "end": 169, "category": "LAB", "text": "eGFR 81 mL/min/1.73m2", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 170, "end": 182, "category": "LAB", "text": "Alb 4.2 g/dL", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 187, "end": 191, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 192, "end": 196, "category": "DOSE", "text": "24単位", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 197, "end": 202, "category": "DRUG", "text": "デノスマブ", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 203, "end": 208, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 213, "end": 224, "category": "CODE", "text": "ロット番号 B9783", "is_phi": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 231, "end": 237, "category": "DATE", "text": "昭和12年生", "is_phi": true, "age_ge_90": false}
+{"record": "g054_介護保険主治医意見書下書き.txt", "start": 242, "end": 250, "category": "PHYSICIAN_NAME", "text": "看護師 三浦 舞", "is_phi": true}
+{"record": "g055_外来記録.txt", "start": 9, "end": 23, "category": "FACILITY", "text": "みどりの丘特別養護老人ホーム", "is_phi": true}
+{"record": "g055_外来記録.txt", "start": 28, "end": 34, "category": "DATE", "text": "R4.2.3", "is_phi": true}
+{"record": "g055_外来記録.txt", "start": 38, "end": 43, "category": "PERSON_NAME", "text": "柊,聡一郎", "is_phi": true}
+{"record": "g055_外来記録.txt", "start": 47, "end": 50, "category": "DATE", "text": "９１才", "is_phi": true, "age_ge_90": true}
+{"record": "g055_外来記録.txt", "start": 56, "end": 65, "category": "KARTE_NO", "text": "IN24-0331", "is_phi": true}
+{"record": "g055_外来記録.txt", "start": 75, "end": 83, "category": "INSURER_NO", "text": "06139012", "is_phi": true}
+{"record": "g055_外来記録.txt", "start": 84, "end": 110, "category": "INSURED_ID", "text": "被保険者証記号 あ73 番号 88780 枝番 04", "is_phi": true}
+{"record": "g055_外来記録.txt", "start": 116, "end": 130, "category": "MY_NUMBER", "text": "4410 7254\n1061", "is_phi": true, "checksum_valid": true}
+{"record": "g055_外来記録.txt", "start": 135, "end": 139, "category": "DISEASE", "text": "COPD", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 140, "end": 144, "category": "DISEASE", "text": "COPD", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 149, "end": 162, "category": "LAB", "text": "CRP 3.8 mg/dL", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 163, "end": 176, "category": "LAB", "text": "BNP 604 pg/mL", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 181, "end": 186, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 187, "end": 196, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 197, "end": 205, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 206, "end": 209, "category": "DOSE", "text": "7単位", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 214, "end": 226, "category": "CODE", "text": "ICD-10 J95.9", "is_phi": false}
+{"record": "g055_外来記録.txt", "start": 238, "end": 243, "category": "PERSON_NAME", "text": "月岡 巧巧", "is_phi": true}
+{"record": "g055_外来記録.txt", "start": 247, "end": 256, "category": "PHYSICIAN_NAME", "text": "担当医 森川 誠一", "is_phi": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 13, "end": 20, "category": "FACILITY", "text": "青葉台中央病院", "is_phi": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 25, "end": 31, "category": "DATE", "text": "R8.4.8", "is_phi": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 35, "end": 48, "category": "PERSON_NAME", "text": "MISONO,KOTARO", "is_phi": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 52, "end": 63, "category": "DATE", "text": "昭和7年12月24日生", "is_phi": true, "age_ge_90": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 69, "end": 79, "category": "KARTE_NO", "text": "S18-809195", "is_phi": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 91, "end": 99, "category": "INSURER_NO", "text": "54136015", "is_phi": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 100, "end": 122, "category": "INSURED_ID", "text": "Insured ID: 5501-76-02", "is_phi": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 140, "end": 152, "category": "MY_NUMBER", "text": "588717194532", "is_phi": true, "checksum_valid": true}
+{"record": "g056_死亡診断書下書き.txt", "start": 157, "end": 161, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 162, "end": 173, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 178, "end": 186, "category": "LAB", "text": "SpO2 96%", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 187, "end": 199, "category": "LAB", "text": "Alb 2.1 g/dL", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 204, "end": 212, "category": "DRUG", "text": "アトルバスタチン", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 213, "end": 224, "category": "DOSE", "text": "250 mg 1日2回", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 225, "end": 230, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 231, "end": 240, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 245, "end": 256, "category": "CODE", "text": "ロット番号 B4905", "is_phi": false}
+{"record": "g056_死亡診断書下書き.txt", "start": 261, "end": 269, "category": "PHYSICIAN_NAME", "text": "医師 葦原 さと", "is_phi": true}
+{"record": "g057_転院紹介状.txt", "start": 10, "end": 14, "category": "FACILITY", "text": "内科外来", "is_phi": true}
+{"record": "g057_転院紹介状.txt", "start": 19, "end": 28, "category": "DATE", "text": "令和7年12月3日", "is_phi": true}
+{"record": "g057_転院紹介状.txt", "start": 32, "end": 40, "category": "PERSON_NAME", "text": "宮ノ崎 義男 様", "is_phi": true}
+{"record": "g057_転院紹介状.txt", "start": 44, "end": 48, "category": "DATE", "text": "97yo", "is_phi": true, "age_ge_90": true}
+{"record": "g057_転院紹介状.txt", "start": 53, "end": 63, "category": "KARTE_NO", "text": "2016-59013", "is_phi": true}
+{"record": "g057_転院紹介状.txt", "start": 73, "end": 80, "category": "INSURER_NO", "text": "3915015", "is_phi": true}
+{"record": "g057_転院紹介状.txt", "start": 88, "end": 96, "category": "INSURED_ID", "text": "30078380", "is_phi": true}
+{"record": "g057_転院紹介状.txt", "start": 102, "end": 114, "category": "MY_NUMBER", "text": "973957169994", "is_phi": true, "checksum_valid": true}
+{"record": "g057_転院紹介状.txt", "start": 119, "end": 122, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 123, "end": 126, "category": "DISEASE", "text": "川崎病", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 131, "end": 139, "category": "LAB", "text": "SpO2 94%", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 140, "end": 152, "category": "LAB", "text": "Na 131 mEq/L", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 157, "end": 165, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 166, "end": 177, "category": "DOSE", "text": "250 mg 1日2回", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 178, "end": 186, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 187, "end": 193, "category": "DOSE", "text": "1 g ×3", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 198, "end": 212, "category": "CODE", "text": "処方箋番号 RX-21930", "is_phi": false}
+{"record": "g057_転院紹介状.txt", "start": 217, "end": 226, "category": "PHYSICIAN_NAME", "text": "主治医：桐生 玲奈", "is_phi": true}
+{"record": "g058_研究用症例票.txt", "start": 11, "end": 23, "category": "FACILITY", "text": "医療法人光風会 光風病院", "is_phi": true}
+{"record": "g058_研究用症例票.txt", "start": 28, "end": 38, "category": "DATE", "text": "令和5年10月16日", "is_phi": true}
+{"record": "g058_研究用症例票.txt", "start": 42, "end": 47, "category": "PERSON_NAME", "text": "御園\n文代", "is_phi": true}
+{"record": "g058_研究用症例票.txt", "start": 51, "end": 57, "category": "DATE", "text": "93歳9か月", "is_phi": true, "age_ge_90": true}
+{"record": "g058_研究用症例票.txt", "start": 62, "end": 68, "category": "KARTE_NO", "text": "695547", "is_phi": true}
+{"record": "g058_研究用症例票.txt", "start": 78, "end": 86, "category": "INSURER_NO", "text": "３３２９４５０５", "is_phi": true}
+{"record": "g058_研究用症例票.txt", "start": 94, "end": 102, "category": "INSURED_ID", "text": "70281471", "is_phi": true}
+{"record": "g058_研究用症例票.txt", "start": 120, "end": 132, "category": "MY_NUMBER", "text": "712860178656", "is_phi": true, "checksum_valid": true}
+{"record": "g058_研究用症例票.txt", "start": 137, "end": 147, "category": "DISEASE", "text": "ギラン・バレー症候群", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 148, "end": 153, "category": "DISEASE", "text": "慢性腎臓病", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 158, "end": 170, "category": "LAB", "text": "Alb 2.2 g/dL", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 171, "end": 179, "category": "LAB", "text": "SpO2 92%", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 184, "end": 191, "category": "DRUG", "text": "ビソプロロール", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 192, "end": 196, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 197, "end": 205, "category": "DRUG", "text": "酸化マグネシウム", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 206, "end": 214, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 219, "end": 230, "category": "CODE", "text": "ロット番号 D1630", "is_phi": false}
+{"record": "g058_研究用症例票.txt", "start": 242, "end": 249, "category": "PERSON_NAME", "text": "まかべ やよい", "is_phi": true}
+{"record": "g058_研究用症例票.txt", "start": 255, "end": 258, "category": "DATE", "text": "80代", "is_phi": true, "age_ge_90": false}
+{"record": "g058_研究用症例票.txt", "start": 263, "end": 283, "category": "PHYSICIAN_NAME", "text": "紹介元：日向クリニック 院長 日向 大輔", "is_phi": true}
+{"record": "g059_看護サマリー.txt", "start": 11, "end": 24, "category": "FACILITY", "text": "北辰リハビリテーション病院", "is_phi": true}
+{"record": "g059_看護サマリー.txt", "start": 29, "end": 37, "category": "DATE", "text": "令和6年9月6日", "is_phi": true}
+{"record": "g059_看護サマリー.txt", "start": 41, "end": 52, "category": "PERSON_NAME", "text": "Taro YAMADA", "is_phi": true}
+{"record": "g059_看護サマリー.txt", "start": 53, "end": 59, "category": "DATE", "text": "Age 97", "is_phi": true, "age_ge_90": true}
+{"record": "g059_看護サマリー.txt", "start": 65, "end": 73, "category": "KARTE_NO", "text": "K4010332", "is_phi": true}
+{"record": "g059_看護サマリー.txt", "start": 83, "end": 98, "category": "INSURER_NO", "text": "6 3 0 1 2 5 0 4", "is_phi": true}
+{"record": "g059_看護サマリー.txt", "start": 106, "end": 114, "category": "INSURED_ID", "text": "00112233", "is_phi": true}
+{"record": "g059_看護サマリー.txt", "start": 120, "end": 134, "category": "MY_NUMBER", "text": "7060-1153-8754", "is_phi": true, "checksum_valid": true}
+{"record": "g059_看護サマリー.txt", "start": 139, "end": 147, "category": "DISEASE", "text": "ウェルニッケ脳症", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 148, "end": 153, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 158, "end": 179, "category": "LAB", "text": "eGFR 45 mL/min/1.73m2", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 180, "end": 192, "category": "LAB", "text": "Na 145 mEq/L", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 197, "end": 203, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 204, "end": 212, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 213, "end": 224, "category": "DRUG", "text": "インスリン グラルギン", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 225, "end": 230, "category": "DOSE", "text": "20 mg", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 235, "end": 247, "category": "CODE", "text": "ICD-10 M45.3", "is_phi": false}
+{"record": "g059_看護サマリー.txt", "start": 252, "end": 262, "category": "PHYSICIAN_NAME", "text": "医師 宮ノ崎 琥太郎", "is_phi": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 13, "end": 24, "category": "FACILITY", "text": "県立みなと医療センター", "is_phi": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 29, "end": 37, "category": "DATE", "text": "令和7年7月5日", "is_phi": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 41, "end": 48, "category": "PERSON_NAME", "text": "白鳥沢　美津子", "is_phi": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 52, "end": 56, "category": "DATE", "text": "１０３才", "is_phi": true, "age_ge_90": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 61, "end": 71, "category": "KARTE_NO", "text": "2013-92131", "is_phi": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 81, "end": 87, "category": "INSURER_NO", "text": "１０８５９７", "is_phi": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 88, "end": 107, "category": "INSURED_ID", "text": "記号：千ﾁ　番号：4000（枝番08）", "is_phi": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 113, "end": 127, "category": "MY_NUMBER", "text": "4840－2740－4658", "is_phi": true, "checksum_valid": true}
+{"record": "g060_薬剤管理指導記録.txt", "start": 132, "end": 143, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 144, "end": 149, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 154, "end": 164, "category": "LAB", "text": "HbA1c 7.4%", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 165, "end": 179, "category": "LAB", "text": "BNP 2204 pg/mL", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 184, "end": 192, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 193, "end": 197, "category": "DOSE", "text": "14単位", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 198, "end": 207, "category": "DRUG", "text": "エンパグリフロジン", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 208, "end": 217, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 222, "end": 233, "category": "CODE", "text": "ロット番号 A4863", "is_phi": false}
+{"record": "g060_薬剤管理指導記録.txt", "start": 238, "end": 245, "category": "PHYSICIAN_NAME", "text": "署名：天野 修", "is_phi": true}
+{"record": "g061_退院時要約.txt", "start": 10, "end": 15, "category": "FACILITY", "text": "西ヶ原薬局", "is_phi": true}
+{"record": "g061_退院時要約.txt", "start": 20, "end": 30, "category": "DATE", "text": "令和2年12月21日", "is_phi": true}
+{"record": "g061_退院時要約.txt", "start": 34, "end": 37, "category": "PERSON_NAME", "text": "真壁様", "is_phi": true}
+{"record": "g061_退院時要約.txt", "start": 41, "end": 45, "category": "DATE", "text": "105才", "is_phi": true, "age_ge_90": true}
+{"record": "g061_退院時要約.txt", "start": 52, "end": 59, "category": "KARTE_NO", "text": "4953857", "is_phi": true}
+{"record": "g061_退院時要約.txt", "start": 69, "end": 84, "category": "INSURER_NO", "text": "6 3 1 8 1 0 6 9", "is_phi": true}
+{"record": "g061_退院時要約.txt", "start": 85, "end": 100, "category": "INSURED_ID", "text": "記号 東京ｱ 番号 62735", "is_phi": true}
+{"record": "g061_退院時要約.txt", "start": 106, "end": 118, "category": "MY_NUMBER", "text": "６６６８９４９４９７０６", "is_phi": true, "checksum_valid": true}
+{"record": "g061_退院時要約.txt", "start": 123, "end": 132, "category": "DISEASE", "text": "レビー小体型認知症", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 133, "end": 140, "category": "DISEASE", "text": "パーキンソン病", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 145, "end": 159, "category": "LAB", "text": "BP 110/94 mmHg", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 160, "end": 174, "category": "LAB", "text": "BNP 1661 pg/mL", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 179, "end": 187, "category": "DRUG", "text": "リバーロキサバン", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 188, "end": 200, "category": "DOSE", "text": "1000 mg 1日1回", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 201, "end": 207, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 208, "end": 217, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 222, "end": 233, "category": "CODE", "text": "ロット番号 B4262", "is_phi": false}
+{"record": "g061_退院時要約.txt", "start": 245, "end": 250, "category": "PERSON_NAME", "text": "朝比奈 蒼", "is_phi": true}
+{"record": "g061_退院時要約.txt", "start": 254, "end": 263, "category": "PHYSICIAN_NAME", "text": "PI: 九条 智彦", "is_phi": true}
+{"record": "g062_入院時記録.txt", "start": 10, "end": 13, "category": "FACILITY", "text": "HCU", "is_phi": true}
+{"record": "g062_入院時記録.txt", "start": 18, "end": 26, "category": "DATE", "text": "令和8年5月2日", "is_phi": true}
+{"record": "g062_入院時記録.txt", "start": 30, "end": 35, "category": "PERSON_NAME", "text": "月岡 巧巧", "is_phi": true}
+{"record": "g062_入院時記録.txt", "start": 39, "end": 45, "category": "DATE", "text": "91 y/o", "is_phi": true, "age_ge_90": true}
+{"record": "g062_入院時記録.txt", "start": 48, "end": 56, "category": "KARTE_NO", "text": "65852276", "is_phi": true}
+{"record": "g062_入院時記録.txt", "start": 65, "end": 73, "category": "INSURER_NO", "text": "32112146", "is_phi": true}
+{"record": "g062_入院時記録.txt", "start": 74, "end": 88, "category": "INSURED_ID", "text": "記号 A１3 番号 7706", "is_phi": true}
+{"record": "g062_入院時記録.txt", "start": 94, "end": 108, "category": "MY_NUMBER", "text": "3509 2974 4946", "is_phi": true, "checksum_valid": false}
+{"record": "g062_入院時記録.txt", "start": 113, "end": 118, "category": "DISEASE", "text": "慢性腎臓病", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 119, "end": 124, "category": "DISEASE", "text": "慢性腎臓病", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 129, "end": 150, "category": "LAB", "text": "eGFR 75 mL/min/1.73m2", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 151, "end": 163, "category": "LAB", "text": "Hb 12.0 g/dL", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 168, "end": 175, "category": "DRUG", "text": "ビソプロロール", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 176, "end": 188, "category": "DOSE", "text": "1000 mg 1日1回", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 189, "end": 195, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 196, "end": 201, "category": "DOSE", "text": "10 mg", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 206, "end": 217, "category": "CODE", "text": "ロット番号 A8530", "is_phi": false}
+{"record": "g062_入院時記録.txt", "start": 224, "end": 230, "category": "DATE", "text": "89 y/o", "is_phi": true, "age_ge_90": false}
+{"record": "g062_入院時記録.txt", "start": 235, "end": 243, "category": "PHYSICIAN_NAME", "text": "薬剤師 柏木 涼", "is_phi": true}
+{"record": "g063_訪問診療記録.txt", "start": 11, "end": 21, "category": "FACILITY", "text": "南3病棟 512号室", "is_phi": true}
+{"record": "g063_訪問診療記録.txt", "start": 26, "end": 35, "category": "DATE", "text": "令和6年1月25日", "is_phi": true}
+{"record": "g063_訪問診療記録.txt", "start": 39, "end": 46, "category": "PERSON_NAME", "text": "ナナセ フミヨ", "is_phi": true}
+{"record": "g063_訪問診療記録.txt", "start": 50, "end": 56, "category": "DATE", "text": "98 y/o", "is_phi": true, "age_ge_90": true}
+{"record": "g063_訪問診療記録.txt", "start": 63, "end": 70, "category": "KARTE_NO", "text": "1641475", "is_phi": true}
+{"record": "g063_訪問診療記録.txt", "start": 80, "end": 95, "category": "INSURER_NO", "text": "3 4 1 4 7 9 1 8", "is_phi": true}
+{"record": "g063_訪問診療記録.txt", "start": 96, "end": 121, "category": "INSURED_ID", "text": "被保険者証記号 A99 番号 5752 枝番 01", "is_phi": true}
+{"record": "g063_訪問診療記録.txt", "start": 139, "end": 151, "category": "MY_NUMBER", "text": "560137180044", "is_phi": true, "checksum_valid": true}
+{"record": "g063_訪問診療記録.txt", "start": 156, "end": 164, "category": "DISEASE", "text": "クッシング症候群", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 165, "end": 174, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 179, "end": 193, "category": "LAB", "text": "BNP 1097 pg/mL", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 194, "end": 208, "category": "LAB", "text": "CRP 16.6 mg/dL", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 213, "end": 217, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 218, "end": 227, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 228, "end": 236, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 237, "end": 248, "category": "DOSE", "text": "500 mg 1日2回", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 253, "end": 265, "category": "CODE", "text": "ICD-10 M61.2", "is_phi": false}
+{"record": "g063_訪問診療記録.txt", "start": 270, "end": 278, "category": "PHYSICIAN_NAME", "text": "医師 鷹取 悠真", "is_phi": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 18, "end": 25, "category": "FACILITY", "text": "日向クリニック", "is_phi": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 30, "end": 37, "category": "DATE", "text": "R2.8.20", "is_phi": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 41, "end": 56, "category": "PERSON_NAME", "text": "中邑 恵子（なかむら けいこ）", "is_phi": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 60, "end": 64, "category": "DATE", "text": "１０４歳", "is_phi": true, "age_ge_90": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 69, "end": 77, "category": "KARTE_NO", "text": "50513110", "is_phi": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 87, "end": 93, "category": "INSURER_NO", "text": "273011", "is_phi": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 94, "end": 106, "category": "INSURED_ID", "text": "記号Ａ３３番号３２２７２", "is_phi": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 123, "end": 137, "category": "MY_NUMBER", "text": "6339 0282 4335", "is_phi": true, "checksum_valid": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 142, "end": 152, "category": "DISEASE", "text": "ギラン・バレー症候群", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 153, "end": 159, "category": "DISEASE", "text": "メニエール病", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 164, "end": 176, "category": "LAB", "text": "Alb 2.8 g/dL", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 177, "end": 190, "category": "LAB", "text": "WBC 17000 /μL", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 195, "end": 200, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 201, "end": 209, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 210, "end": 217, "category": "DRUG", "text": "ビソプロロール", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 218, "end": 222, "category": "DOSE", "text": "15単位", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 227, "end": 238, "category": "CODE", "text": "ロット番号 B1797", "is_phi": false}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 250, "end": 256, "category": "PERSON_NAME", "text": "宮ノ崎ハル殿", "is_phi": true}
+{"record": "g064_介護保険主治医意見書下書き.txt", "start": 260, "end": 268, "category": "PHYSICIAN_NAME", "text": "医師 七瀬 義男", "is_phi": true}
+{"record": "g065_外来記録.txt", "start": 9, "end": 14, "category": "FACILITY", "text": "5階東病棟", "is_phi": true}
+{"record": "g065_外来記録.txt", "start": 19, "end": 28, "category": "DATE", "text": "令和元年12月9日", "is_phi": true}
+{"record": "g065_外来記録.txt", "start": 32, "end": 39, "category": "PERSON_NAME", "text": "まかべ やよい", "is_phi": true}
+{"record": "g065_外来記録.txt", "start": 43, "end": 47, "category": "DATE", "text": "１０４才", "is_phi": true, "age_ge_90": true}
+{"record": "g065_外来記録.txt", "start": 53, "end": 61, "category": "KARTE_NO", "text": "19-97197", "is_phi": true}
+{"record": "g065_外来記録.txt", "start": 71, "end": 78, "category": "INSURER_NO", "text": "3119387", "is_phi": true}
+{"record": "g065_外来記録.txt", "start": 79, "end": 94, "category": "INSURED_ID", "text": "記号 A76\n番号 49610", "is_phi": true}
+{"record": "g065_外来記録.txt", "start": 100, "end": 114, "category": "MY_NUMBER", "text": "6350 7661 6884", "is_phi": true, "checksum_valid": false}
+{"record": "g065_外来記録.txt", "start": 119, "end": 127, "category": "DISEASE", "text": "ウェルニッケ脳症", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 128, "end": 132, "category": "DISEASE", "text": "心房細動", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 137, "end": 150, "category": "LAB", "text": "Cre 2.4 mg/dL", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 151, "end": 161, "category": "LAB", "text": "HbA1c 9.6%", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 166, "end": 177, "category": "DRUG", "text": "インスリン グラルギン", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 178, "end": 184, "category": "DOSE", "text": "2 g ×3", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 185, "end": 189, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 190, "end": 195, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 200, "end": 214, "category": "CODE", "text": "処方箋番号 RX-24556", "is_phi": false}
+{"record": "g065_外来記録.txt", "start": 219, "end": 239, "category": "PHYSICIAN_NAME", "text": "Dr. Hayato Kirishima", "is_phi": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 13, "end": 22, "category": "FACILITY", "text": "ICU 3番ベッド", "is_phi": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 27, "end": 36, "category": "DATE", "text": "令和6年4月27日", "is_phi": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 40, "end": 45, "category": "PERSON_NAME", "text": "久遠寺さん", "is_phi": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 49, "end": 52, "category": "DATE", "text": "満百歳", "is_phi": true, "age_ge_90": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 57, "end": 64, "category": "KARTE_NO", "text": "5521093", "is_phi": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 72, "end": 80, "category": "INSURER_NO", "text": "01130012", "is_phi": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 81, "end": 98, "category": "INSURED_ID", "text": "記号・番号 67-80・83799", "is_phi": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 111, "end": 123, "category": "MY_NUMBER", "text": "450901168178", "is_phi": true, "checksum_valid": true}
+{"record": "g066_死亡診断書下書き.txt", "start": 128, "end": 133, "category": "DISEASE", "text": "誤嚥性肺炎", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 134, "end": 139, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 144, "end": 157, "category": "LAB", "text": "BNP 882 pg/mL", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 158, "end": 172, "category": "LAB", "text": "BP 157/64 mmHg", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 177, "end": 185, "category": "DRUG", "text": "レボフロキサシン", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 186, "end": 191, "category": "DOSE", "text": "10 mg", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 192, "end": 196, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 197, "end": 206, "category": "DOSE", "text": "1000 mL/日", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 211, "end": 223, "category": "CODE", "text": "ICD-10 J41.7", "is_phi": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 230, "end": 236, "category": "DATE", "text": "昭和12年生", "is_phi": true, "age_ge_90": false}
+{"record": "g066_死亡診断書下書き.txt", "start": 241, "end": 250, "category": "PHYSICIAN_NAME", "text": "研修医 大友 拓真", "is_phi": true}
+{"record": "g067_転院紹介状.txt", "start": 10, "end": 24, "category": "FACILITY", "text": "東都医科大学 倫理審査委員会", "is_phi": true}
+{"record": "g067_転院紹介状.txt", "start": 29, "end": 38, "category": "DATE", "text": "令和3年9月16日", "is_phi": true}
+{"record": "g067_転院紹介状.txt", "start": 42, "end": 47, "category": "PERSON_NAME", "text": "椎名凛太郎", "is_phi": true}
+{"record": "g067_転院紹介状.txt", "start": 51, "end": 57, "category": "DATE", "text": "大正13年生", "is_phi": true, "age_ge_90": true}
+{"record": "g067_転院紹介状.txt", "start": 63, "end": 70, "category": "KARTE_NO", "text": "8００２９07", "is_phi": true}
+{"record": "g067_転院紹介状.txt", "start": 80, "end": 87, "category": "INSURER_NO", "text": "103\n804", "is_phi": true}
+{"record": "g067_転院紹介状.txt", "start": 88, "end": 102, "category": "INSURED_ID", "text": "記号 東京ｱ 番号 1029", "is_phi": true}
+{"record": "g067_転院紹介状.txt", "start": 108, "end": 120, "category": "MY_NUMBER", "text": "108176183964", "is_phi": true, "checksum_valid": true}
+{"record": "g067_転院紹介状.txt", "start": 125, "end": 130, "category": "DISEASE", "text": "高安動脈炎", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 131, "end": 140, "category": "DISEASE", "text": "シェーグレン症候群", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 145, "end": 157, "category": "LAB", "text": "Na 130 mEq/L", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 158, "end": 168, "category": "LAB", "text": "HbA1c 6.6%", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 173, "end": 179, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 180, "end": 184, "category": "DOSE", "text": "25単位", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 185, "end": 190, "category": "DRUG", "text": "メマンチン", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 191, "end": 202, "category": "DOSE", "text": "500 mg 1日1回", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 207, "end": 221, "category": "CODE", "text": "処方箋番号 RX-28303", "is_phi": false}
+{"record": "g067_転院紹介状.txt", "start": 233, "end": 241, "category": "PERSON_NAME", "text": "長男 坂上 拓海", "is_phi": true}
+{"record": "g067_転院紹介状.txt", "start": 245, "end": 254, "category": "PHYSICIAN_NAME", "text": "医師 桐ヶ谷 陽菜", "is_phi": true}
+{"record": "g068_研究用症例票.txt", "start": 11, "end": 20, "category": "FACILITY", "text": "ひかり健診センター", "is_phi": true}
+{"record": "g068_研究用症例票.txt", "start": 25, "end": 34, "category": "DATE", "text": "令和元年6月15日", "is_phi": true}
+{"record": "g068_研究用症例票.txt", "start": 38, "end": 43, "category": "PERSON_NAME", "text": "朝比奈 蒼", "is_phi": true}
+{"record": "g068_研究用症例票.txt", "start": 47, "end": 60, "category": "DATE", "text": "102 years old", "is_phi": true, "age_ge_90": true}
+{"record": "g068_研究用症例票.txt", "start": 67, "end": 75, "category": "KARTE_NO", "text": "820\n7525", "is_phi": true}
+{"record": "g068_研究用症例票.txt", "start": 85, "end": 93, "category": "INSURER_NO", "text": "３943915３", "is_phi": true}
+{"record": "g068_研究用症例票.txt", "start": 94, "end": 120, "category": "INSURED_ID", "text": "被保険者証記号 あ81 番号 52792 枝番 04", "is_phi": true}
+{"record": "g068_研究用症例票.txt", "start": 137, "end": 151, "category": "MY_NUMBER", "text": "4356 5161 9242", "is_phi": true, "checksum_valid": true}
+{"record": "g068_研究用症例票.txt", "start": 156, "end": 163, "category": "DISEASE", "text": "パーキンソン病", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 164, "end": 175, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 180, "end": 192, "category": "LAB", "text": "Alb 2.6 g/dL", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 193, "end": 201, "category": "LAB", "text": "SpO2 86%", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 206, "end": 212, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 213, "end": 219, "category": "DOSE", "text": "2 g ×3", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 220, "end": 226, "category": "DRUG", "text": "メトホルミン", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 227, "end": 230, "category": "DOSE", "text": "7単位", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 235, "end": 249, "category": "CODE", "text": "処方箋番号 RX-73267", "is_phi": false}
+{"record": "g068_研究用症例票.txt", "start": 254, "end": 258, "category": "PHYSICIAN_NAME", "text": "森川医師", "is_phi": true}
+{"record": "g069_看護サマリー.txt", "start": 11, "end": 24, "category": "FACILITY", "text": "さくら訪問看護ステーション", "is_phi": true}
+{"record": "g069_看護サマリー.txt", "start": 29, "end": 39, "category": "DATE", "text": "平成31年3月28日", "is_phi": true}
+{"record": "g069_看護サマリー.txt", "start": 43, "end": 48, "category": "PERSON_NAME", "text": "渡辺野文代", "is_phi": true}
+{"record": "g069_看護サマリー.txt", "start": 52, "end": 56, "category": "DATE", "text": "102才", "is_phi": true, "age_ge_90": true}
+{"record": "g069_看護サマリー.txt", "start": 61, "end": 67, "category": "KARTE_NO", "text": "826650", "is_phi": true}
+{"record": "g069_看護サマリー.txt", "start": 77, "end": 85, "category": "INSURER_NO", "text": "34130013", "is_phi": true}
+{"record": "g069_看護サマリー.txt", "start": 86, "end": 100, "category": "INSURED_ID", "text": "記号 A12 番号 3301", "is_phi": true}
+{"record": "g069_看護サマリー.txt", "start": 113, "end": 125, "category": "MY_NUMBER", "text": "968426537804", "is_phi": true, "checksum_valid": true}
+{"record": "g069_看護サマリー.txt", "start": 130, "end": 141, "category": "DISEASE", "text": "アルツハイマー型認知症", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 142, "end": 149, "category": "DISEASE", "text": "大腿骨頸部骨折", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 154, "end": 165, "category": "LAB", "text": "Hb 8.4 g/dL", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 166, "end": 179, "category": "LAB", "text": "CRP 9.0 mg/dL", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 184, "end": 188, "category": "DRUG", "text": "ヘパリン", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 189, "end": 194, "category": "DOSE", "text": "20 mg", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 195, "end": 204, "category": "DRUG", "text": "アセトアミノフェン", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 205, "end": 213, "category": "DOSE", "text": "500 mL/日", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 218, "end": 232, "category": "CODE", "text": "処方箋番号 RX-40856", "is_phi": false}
+{"record": "g069_看護サマリー.txt", "start": 237, "end": 241, "category": "PHYSICIAN_NAME", "text": "黒沢部長", "is_phi": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 13, "end": 27, "category": "FACILITY", "text": "みどりの丘特別養護老人ホーム", "is_phi": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 32, "end": 39, "category": "DATE", "text": "R4.4.21", "is_phi": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 43, "end": 58, "category": "PERSON_NAME", "text": "KANZAKI Mitsuru", "is_phi": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 62, "end": 67, "category": "DATE", "text": "100歳超", "is_phi": true, "age_ge_90": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 68, "end": 81, "category": "KARTE_NO", "text": "ｶﾙﾃ番号 0282033", "is_phi": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 91, "end": 99, "category": "INSURER_NO", "text": "01286178", "is_phi": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 100, "end": 117, "category": "INSURED_ID", "text": "記号・番号 57-52・23586", "is_phi": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 123, "end": 137, "category": "MY_NUMBER", "text": "9327　2409　5062", "is_phi": true, "checksum_valid": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 142, "end": 148, "category": "DISEASE", "text": "メニエール病", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 149, "end": 155, "category": "DISEASE", "text": "メニエール病", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 160, "end": 172, "category": "LAB", "text": "Plt 20.9万/μL", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 173, "end": 185, "category": "LAB", "text": "Na 129 mEq/L", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 190, "end": 199, "category": "DRUG", "text": "エンパグリフロジン", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 200, "end": 205, "category": "DOSE", "text": "20 mg", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 206, "end": 212, "category": "DRUG", "text": "トルバプタン", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 213, "end": 224, "category": "DOSE", "text": "500 mg 1日1回", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 229, "end": 241, "category": "CODE", "text": "ICD-10 M55.5", "is_phi": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 253, "end": 257, "category": "PERSON_NAME", "text": "七瀬さん", "is_phi": true}
+{"record": "g070_薬剤管理指導記録.txt", "start": 263, "end": 266, "category": "DATE", "text": "80代", "is_phi": true, "age_ge_90": false}
+{"record": "g070_薬剤管理指導記録.txt", "start": 271, "end": 278, "category": "PHYSICIAN_NAME", "text": "指導医 早乙女", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 7, "end": 15, "category": "FACILITY", "text": "市立東部総合病院", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 16, "end": 21, "category": "FACILITY", "text": "循環器内科", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 27, "end": 32, "category": "PERSON_NAME", "text": "坂上 正義", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 33, "end": 42, "category": "PERSON_NAME", "text": "サカガミ マサヨシ", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 47, "end": 51, "category": "DATE", "text": "満78歳", "is_phi": true, "age_ge_90": false}
+{"record": "r01_退院サマリー.txt", "start": 57, "end": 66, "category": "DATE", "text": "昭和21年8月3日", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 73, "end": 80, "category": "KARTE_NO", "text": "0083341", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 90, "end": 98, "category": "INSURER_NO", "text": "06131015", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 99, "end": 119, "category": "INSURED_ID", "text": "記号 8812 番号 304 枝番 00", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 123, "end": 149, "category": "ADDRESS", "text": "〒135-0099 東京都江東区豊洲9丁目88番7号", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 154, "end": 160, "category": "DATE", "text": "R6.9.2", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 165, "end": 174, "category": "DATE", "text": "令和6年9月20日", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 178, "end": 183, "category": "FACILITY", "text": "5階東病棟", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 188, "end": 193, "category": "PHYSICIAN_NAME", "text": "森川 誠一", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 207, "end": 215, "category": "SCALE", "text": "NYHA III", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 217, "end": 220, "category": "DISEASE", "text": "橋本病", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 238, "end": 249, "category": "LAB", "text": "1,280 pg/mL", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 256, "end": 261, "category": "DOSE", "text": "40 mg", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 270, "end": 276, "category": "DRUG", "text": "アムロジピン", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 277, "end": 281, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 285, "end": 290, "category": "DRUG", "text": "エンレスト", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 299, "end": 302, "category": "LAB", "text": "32%", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 325, "end": 335, "category": "LAB", "text": "2.1 μIU/mL", "is_phi": false}
+{"record": "r01_退院サマリー.txt", "start": 346, "end": 350, "category": "DATE", "text": "満92歳", "is_phi": true, "age_ge_90": true}
+{"record": "r01_退院サマリー.txt", "start": 361, "end": 366, "category": "PERSON_NAME", "text": "坂上 拓海", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 367, "end": 380, "category": "PHONE", "text": "090-5555-0321", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 395, "end": 402, "category": "FACILITY", "text": "日向クリニック", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 403, "end": 408, "category": "PHYSICIAN_NAME", "text": "日向 大輔", "is_phi": true}
+{"record": "r01_退院サマリー.txt", "start": 416, "end": 421, "category": "YEAR", "text": "2016年", "is_phi": false}
+{"record": "r02_紹介状.txt", "start": 8, "end": 19, "category": "FACILITY", "text": "県立みなと医療センター", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 20, "end": 25, "category": "FACILITY", "text": "脳神経内科", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 30, "end": 39, "category": "DATE", "text": "令和6年10月1日", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 44, "end": 51, "category": "FACILITY", "text": "日向クリニック", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 52, "end": 57, "category": "PHYSICIAN_NAME", "text": "日向 大輔", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 58, "end": 74, "category": "PHONE", "text": "TEL 045-555-0177", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 78, "end": 85, "category": "PERSON_NAME", "text": "鈴森 和子 様", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 86, "end": 95, "category": "DATE", "text": "S27.11.5生", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 96, "end": 99, "category": "DATE", "text": "71歳", "is_phi": true, "age_ge_90": false}
+{"record": "r02_紹介状.txt", "start": 106, "end": 125, "category": "ADDRESS", "text": "神奈川県横浜市港北区日吉本町９－８－７", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 130, "end": 143, "category": "PHONE", "text": "０９０－５５５５－０１２３", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 149, "end": 152, "category": "DATE", "text": "９５歳", "is_phi": true, "age_ge_90": true}
+{"record": "r02_紹介状.txt", "start": 185, "end": 189, "category": "DATE", "text": "本年5月", "is_phi": true}
+{"record": "r02_紹介状.txt", "start": 210, "end": 217, "category": "DISEASE", "text": "パーキンソン病", "is_phi": false}
+{"record": "r02_紹介状.txt", "start": 238, "end": 240, "category": "SCALE", "text": "2度", "is_phi": false}
+{"record": "r02_紹介状.txt", "start": 246, "end": 251, "category": "SCALE", "text": "27/30", "is_phi": false}
+{"record": "r02_紹介状.txt", "start": 255, "end": 258, "category": "DISEASE", "text": "川崎病", "is_phi": false}
+{"record": "r02_紹介状.txt", "start": 268, "end": 273, "category": "DRUG", "text": "ドネペジル", "is_phi": false}
+{"record": "r02_紹介状.txt", "start": 274, "end": 278, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "r02_紹介状.txt", "start": 279, "end": 284, "category": "DRUG", "text": "ロサルタン", "is_phi": false}
+{"record": "r02_紹介状.txt", "start": 285, "end": 290, "category": "DOSE", "text": "50 mg", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 5, "end": 9, "category": "FACILITY", "text": "南3病棟", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 10, "end": 15, "category": "FACILITY", "text": "512号室", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 20, "end": 30, "category": "KARTE_NO", "text": "2024-00871", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 31, "end": 36, "category": "PERSON_NAME", "text": "木ノ下 葵", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 39, "end": 49, "category": "DATE", "text": "2024/10/03", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 60, "end": 65, "category": "PHYSICIAN_NAME", "text": "藤堂 亜紀", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 91, "end": 94, "category": "PERSON_NAME", "text": "ゆかり", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 105, "end": 108, "category": "DATE", "text": "89歳", "is_phi": true, "age_ge_90": false}
+{"record": "r03_経過記録SOAP.txt", "start": 121, "end": 126, "category": "LAB", "text": "36.8℃", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 131, "end": 142, "category": "LAB", "text": "128/76 mmHg", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 147, "end": 153, "category": "LAB", "text": "72/min", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 160, "end": 163, "category": "LAB", "text": "97%", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 169, "end": 178, "category": "LAB", "text": "3.2 mg/dL", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 182, "end": 185, "category": "LAB", "text": "8.9", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 202, "end": 207, "category": "DISEASE", "text": "クローン病", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 222, "end": 229, "category": "DRUG", "text": "セフメタゾール", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 230, "end": 236, "category": "DOSE", "text": "1 g ×2", "is_phi": false}
+{"record": "r03_経過記録SOAP.txt", "start": 239, "end": 243, "category": "DATE", "text": "10/7", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 244, "end": 249, "category": "FACILITY", "text": "消化器外科", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 259, "end": 263, "category": "PHYSICIAN_NAME", "text": "宮下医師", "is_phi": true}
+{"record": "r03_経過記録SOAP.txt", "start": 268, "end": 275, "category": "PHONE", "text": "内線 4521", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 8, "end": 18, "category": "FACILITY", "text": "東都医科大学附属病院", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 19, "end": 24, "category": "FACILITY", "text": "消化器外科", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 29, "end": 38, "category": "DATE", "text": "令和6年10月7日", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 42, "end": 55, "category": "PERSON_NAME", "text": "KINOSHITA Aoi", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 62, "end": 70, "category": "KARTE_NO", "text": "A-102938", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 71, "end": 74, "category": "DATE", "text": "52歳", "is_phi": true, "age_ge_90": false}
+{"record": "r04_手術記録.txt", "start": 79, "end": 84, "category": "PHYSICIAN_NAME", "text": "宮下 浩介", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 88, "end": 93, "category": "PHYSICIAN_NAME", "text": "大友 拓真", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 99, "end": 103, "category": "PHYSICIAN_NAME", "text": "白石 遥", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 117, "end": 123, "category": "CODE", "text": "K672-2", "is_phi": false}
+{"record": "r04_手術記録.txt", "start": 133, "end": 140, "category": "DRUG", "text": "プロポフォール", "is_phi": false}
+{"record": "r04_手術記録.txt", "start": 141, "end": 149, "category": "DRUG", "text": "レミフェンタニル", "is_phi": false}
+{"record": "r04_手術記録.txt", "start": 158, "end": 159, "category": "SCALE", "text": "2", "is_phi": false}
+{"record": "r04_手術記録.txt", "start": 165, "end": 171, "category": "LAB", "text": "1時間12分", "is_phi": false}
+{"record": "r04_手術記録.txt", "start": 176, "end": 185, "category": "LAB", "text": "少量（10 mL）", "is_phi": false}
+{"record": "r04_手術記録.txt", "start": 202, "end": 210, "category": "DISEASE", "text": "ミリッツィ症候群", "is_phi": false}
+{"record": "r04_手術記録.txt", "start": 222, "end": 225, "category": "FACILITY", "text": "HCU", "is_phi": true}
+{"record": "r04_手術記録.txt", "start": 230, "end": 234, "category": "FACILITY", "text": "南3病棟", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 12, "end": 23, "category": "FACILITY", "text": "ひかり病理診断センター", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 28, "end": 35, "category": "FACILITY", "text": "青葉台中央病院", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 36, "end": 41, "category": "FACILITY", "text": "呼吸器内科", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 42, "end": 47, "category": "PHYSICIAN_NAME", "text": "桐生 玲奈", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 56, "end": 66, "category": "KARTE_NO", "text": "S24-118823", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 70, "end": 78, "category": "PERSON_NAME", "text": "ﾅｶﾑﾗ ｹｲｺ", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 79, "end": 89, "category": "DATE", "text": "1959年2月14日", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 95, "end": 104, "category": "DATE", "text": "2024-9-18", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 109, "end": 119, "category": "DATE", "text": "２０２４年１０月３日", "is_phi": true}
+{"record": "r05_検査報告.txt", "start": 127, "end": 145, "category": "STAGE", "text": "cT2aN1M0 Stage IIB", "is_phi": false}
+{"record": "r05_検査報告.txt", "start": 153, "end": 157, "category": "GENE", "text": "EGFR", "is_phi": false}
+{"record": "r05_検査報告.txt", "start": 177, "end": 180, "category": "GENE", "text": "ALK", "is_phi": false}
+{"record": "r05_検査報告.txt", "start": 187, "end": 191, "category": "GENE", "text": "KRAS", "is_phi": false}
+{"record": "r05_検査報告.txt", "start": 192, "end": 196, "category": "GENE", "text": "G12C", "is_phi": false}
+{"record": "r05_検査報告.txt", "start": 210, "end": 213, "category": "LAB", "text": "60%", "is_phi": false}
+{"record": "r05_検査報告.txt", "start": 225, "end": 232, "category": "DRUG", "text": "オシメルチニブ", "is_phi": false}
+{"record": "r05_検査報告.txt", "start": 239, "end": 252, "category": "STUDYID", "text": "LC-SCRUM-Asia", "is_phi": false}
+{"record": "r05_検査報告.txt", "start": 269, "end": 275, "category": "PHYSICIAN_NAME", "text": "二宮 さくら", "is_phi": true}
+{"record": "r06_研究用症例報告書.txt", "start": 44, "end": 58, "category": "STUDYID", "text": "TEH-AF-2024-03", "is_phi": false}
+{"record": "r06_研究用症例報告書.txt", "start": 66, "end": 80, "category": "STUDYID", "text": "jRCT1030249999", "is_phi": false}
+{"record": "r06_研究用症例報告書.txt", "start": 86, "end": 94, "category": "FACILITY", "text": "市立東部総合病院", "is_phi": true}
+{"record": "r06_研究用症例報告書.txt", "start": 101, "end": 106, "category": "PHYSICIAN_NAME", "text": "九条 智彦", "is_phi": true}
+{"record": "r06_研究用症例報告書.txt", "start": 114, "end": 120, "category": "STUDYID", "text": "AF-017", "is_phi": false}
+{"record": "r06_研究用症例報告書.txt", "start": 155, "end": 159, "category": "PERSON_NAME", "text": "S.M.", "is_phi": true}
+{"record": "r06_研究用症例報告書.txt", "start": 166, "end": 173, "category": "DATE", "text": "1946年8月", "is_phi": true}
+{"record": "r06_研究用症例報告書.txt", "start": 189, "end": 196, "category": "KARTE_NO", "text": "0083341", "is_phi": true}
+{"record": "r06_研究用症例報告書.txt", "start": 205, "end": 212, "category": "DATE", "text": "R6.9.10", "is_phi": true}
+{"record": "r06_研究用症例報告書.txt", "start": 228, "end": 229, "category": "SCALE", "text": "5", "is_phi": false}
+{"record": "r06_研究用症例報告書.txt", "start": 241, "end": 242, "category": "SCALE", "text": "2", "is_phi": false}
+{"record": "r06_研究用症例報告書.txt", "start": 249, "end": 255, "category": "DRUG", "text": "アピキサバン", "is_phi": false}
+{"record": "r06_研究用症例報告書.txt", "start": 256, "end": 267, "category": "DOSE", "text": "2.5 mg 1日2回", "is_phi": false}
+{"record": "r06_研究用症例報告書.txt", "start": 275, "end": 291, "category": "LAB", "text": "38 mL/min/1.73m2", "is_phi": false}
+{"record": "r06_研究用症例報告書.txt", "start": 300, "end": 305, "category": "PHYSICIAN_NAME", "text": "神谷 由衣", "is_phi": true}
+{"record": "r06_研究用症例報告書.txt", "start": 306, "end": 340, "category": "EMAIL", "text": "crc-kamiya@tohto-med.example.ac.jp", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 27, "end": 38, "category": "PERSON_NAME", "text": "Taro YAMADA", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 39, "end": 44, "category": "PERSON_NAME", "text": "山田 太郎", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 47, "end": 53, "category": "DATE", "text": "47 y/o", "is_phi": true, "age_ge_90": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 61, "end": 68, "category": "KARTE_NO", "text": "7740021", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 76, "end": 86, "category": "DATE", "text": "2024.10.03", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 87, "end": 91, "category": "FACILITY", "text": "内科外来", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 96, "end": 112, "category": "PHYSICIAN_NAME", "text": "Hayato Kirishima", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 122, "end": 139, "category": "ADDRESS", "text": "大阪府大阪市北区梅田八丁目12-3", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 144, "end": 160, "category": "PHONE", "text": "+81-90-5555-0145", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 168, "end": 190, "category": "EMAIL", "text": "taro.yamada@example.jp", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 225, "end": 239, "category": "MY_NUMBER", "text": "9753 6590 5437", "is_phi": true, "checksum_valid": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 257, "end": 265, "category": "INSURER_NO", "text": "06139012", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 266, "end": 287, "category": "INSURED_ID", "text": "記号 1234 番号 567（枝番 01）", "is_phi": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 297, "end": 303, "category": "DRUG", "text": "アムロジピン", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 304, "end": 308, "category": "DOSE", "text": "5 mg", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 311, "end": 316, "category": "DOSE", "text": "10 mg", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 329, "end": 335, "category": "LAB", "text": "148/92", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 340, "end": 347, "category": "DISEASE", "text": "Graves病", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 348, "end": 353, "category": "DISEASE", "text": "バセドウ病", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 356, "end": 362, "category": "DRUG", "text": "メルカゾール", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 363, "end": 372, "category": "DOSE", "text": "15 mg/day", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 378, "end": 387, "category": "LAB", "text": "1.4 ng/dL", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 413, "end": 422, "category": "LAB", "text": "162 mg/dL", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 424, "end": 431, "category": "DRUG", "text": "ロスバスタチン", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 452, "end": 459, "category": "DURATION", "text": "4 weeks", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 493, "end": 500, "category": "DATE", "text": "101 y/o", "is_phi": true, "age_ge_90": true}
+{"record": "r08_外来記録_英日混在.txt", "start": 513, "end": 520, "category": "DISEASE", "text": "ハンチントン病", "is_phi": false}
+{"record": "r08_外来記録_英日混在.txt", "start": 524, "end": 527, "category": "GENE", "text": "HTT", "is_phi": false}

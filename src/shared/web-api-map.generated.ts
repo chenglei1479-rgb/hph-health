@@ -114,6 +114,8 @@ export const WEB_INVOKE_CHANNELS = {
   'logs.getStatus': 'logs:get-status',
   'logs.openFile': 'logs:open-file',
   'logs.revealInFolder': 'logs:reveal-in-folder',
+  'machineApproval.getStatus': 'machine-approval:get-status',
+  'machineApproval.setStatus': 'machine-approval:set-status',
   'memory.clearAll': 'memory:clear-all',
   'memory.createCategory': 'memory:create-category',
   'memory.createEntry': 'memory:create-entry',

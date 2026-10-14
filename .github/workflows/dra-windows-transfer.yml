@@ -1,0 +1,96 @@
+name: Upload verified existing DRA Windows pilot installer
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/dra-windows-transfer.yml]
+permissions:
+  contents: write
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download and reassemble exact original installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp 'repos/${{ github.repository }}/releases/412404950/assets' > assets.json
+          python3 <<'PY'
+          import json, hashlib, subprocess
+          from pathlib import Path
+          assets = [a for page in json.load(open('assets.json')) for a in page]
+          by_name = {a['name']: a for a in assets if a['state'] == 'uploaded'}
+          def download(asset, target):
+              with open(target,'wb') as output:
+                  subprocess.run(['gh','api','-H','Accept: application/octet-stream',f"repos/${{ github.repository }}/releases/assets/{asset['id']}"], stdout=output, check=True)
+          download(by_name['windows-upload-parts.json'], 'manifest.json')
+          manifest = json.load(open('manifest.json'))
+          expected = '794d620ffcca62a6816be2980531db1c4311ec4136e903a77db60d200f7f5134'
+          assert manifest['sourceSha256'] == expected and manifest['sourceBytes'] == 442273280
+          assert len(manifest['parts']) == 27
+          installer = Path('DRA-0.1.33-unified.1-win-x64-setup.exe')
+          with installer.open('wb') as output:
+              for index, part in enumerate(manifest['parts']):
+                  name = f'DRA-win-upload-{index:03}.part'
+                  assert part['name'] == name
+                  asset = by_name[name]
+                  assert asset['size'] == part['bytes']
+                  download(asset, name)
+                  content = Path(name).read_bytes()
+                  assert len(content) == part['bytes']
+                  assert hashlib.sha256(content).hexdigest() == part['sha256']
+                  output.write(content)
+          assert installer.stat().st_size == 442273280
+          assert hashlib.sha256(installer.read_bytes()).hexdigest() == expected
+          json.dump({'bytes':442273280,'sha256':expected,'partCount':27,'verified':True,'signed':False},open('windows-transfer-verification.json','w'),indent=2)
+          print('Original Windows installer reconstructed and SHA256 verified.')
+          PY
+      - name: Upload complete original installer without replacing existing assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp 'repos/${{ github.repository }}/releases/412404950/assets' > current-assets.json
+          python3 <<'PY'
+          import json, subprocess
+          name = 'DRA-0.1.33-unified.1-win-x64-setup.exe'
+          expected = 'sha256:794d620ffcca62a6816be2980531db1c4311ec4136e903a77db60d200f7f5134'
+          assets = [a for page in json.load(open('current-assets.json')) for a in page]
+          existing = [a for a in assets if a['name'] == name]
+          if existing:
+              assert len(existing) == 1
+              asset = existing[0]
+          else:
+              response = subprocess.check_output(['gh','api','--method','POST','-H','Content-Type: application/octet-stream',f'https://uploads.github.com/repos/${{ github.repository }}/releases/412404950/assets?name={name}','--input',name])
+              asset = json.loads(response)
+          assert asset['state'] == 'uploaded' and asset['size'] == 442273280
+          assert asset['digest'] == expected
+          json.dump(asset,open('windows-upload-receipt.json','w'),indent=2)
+          print('GitHub received the exact original installer and confirmed its SHA256.')
+          PY
+      - name: Remove task-created temporary chunks after receipt verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json, subprocess
+          receipt = json.load(open('windows-upload-receipt.json'))
+          assert receipt['digest'] == 'sha256:794d620ffcca62a6816be2980531db1c4311ec4136e903a77db60d200f7f5134'
+          manifest = json.load(open('manifest.json'))
+          own_names = {p['name'] for p in manifest['parts']} | {'windows-upload-parts.json'}
+          assets = [a for page in json.load(open('assets.json')) for a in page]
+          for asset in assets:
+              if asset['name'] in own_names:
+                  subprocess.run(['gh','api','--method','DELETE',f"repos/${{ github.repository }}/releases/assets/{asset['id']}"],check=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-transfer-evidence
+          path: |
+            windows-transfer-verification.json
+            windows-upload-receipt.json
+          if-no-files-found: error
+

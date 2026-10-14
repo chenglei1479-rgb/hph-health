@@ -34,6 +34,7 @@ import {
 import { buildReviewScopeSnapshot } from './scope-snapshot'
 import { assertDelegatedReviewEvidenceScope } from './scope'
 import { resolveReviewerTurnEvidence, type ReviewerFileEvidenceResolver } from './turn-evidence'
+import { releaseModelText, restoreModelValue } from '../phi/gate'
 
 const log = createLogger('reviewer:orchestrator')
 
@@ -382,14 +383,17 @@ export const runReviewAssessment = async (
           providerSessionId: reviewerSession!.sessionId,
           cwd: built.cwd
         })
-        const promptRequest = reviewerSession!.prompt([{ type: 'text', text: prompt }])
+        const promptRequest = reviewerSession!.prompt([
+          { type: 'text', text: await releaseModelText(prompt, projectId) }
+        ])
         void Promise.resolve(promptRequest).catch(() => undefined)
         const stopReason = await driveReviewerToStop(
           reviewerSession!,
           { timeoutMs: reviewerTimeoutMs, maxUpdates: reviewerMaxUpdates, signal: abortSignal },
           {
             ...reviewerLogDriveCallbacks,
-            onNotification: (notification) => probe?.observe?.(notification),
+            onNotification: (notification) =>
+              probe?.observe?.(restoreModelValue(notification, projectId)),
             onStop: (value) => {
               response = value
             }

@@ -1,6 +1,7 @@
 import { PackageFileOpenRelay, packagePathsFromArgv } from './session-package/file-open'
 import { configureCredentialStore, getCredentialStore } from './settings/credential-store-mode'
 import { configureAccountProfile } from './account/profile-bootstrap'
+import { installMainPrereleaseLockdown } from './prerelease/lockdown'
 import {
   selectStartupCredentialIdentity,
   prepareCredentialValidation
@@ -53,7 +54,7 @@ import type {
 import type { InterfaceScaleShortcut } from '../shared/interface-scale'
 
 const APP_NAME = 'DRA'
-const APP_USER_MODEL_ID = 'com.aipoch.medresearch-agent'
+const APP_USER_MODEL_ID = 'com.dra-hph.desktop'
 const STARTUP_IMPORTS_TIMING = 'open-science:startup-imports'
 const shouldRunArtifactMcpServer = process.argv.includes(ARTIFACT_MCP_SERVER_ARG)
 const shouldRunNotebookMcpServer = process.argv.includes(NOTEBOOK_MCP_SERVER_ARG)
@@ -279,6 +280,7 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
   // metadata probe must finish before the first await, profile initialization, or secret access.
   bootstrapPhase = 'credential-store-mode'
   configureAccountProfile(process.argv, app.getPath('appData'))
+  installMainPrereleaseLockdown()
   const webMode = parseWebModeOptions(process.argv)
   configureCredentialStore(process.argv, process.platform, webMode.headless)
   bootstrapPhase = 'credential-identity'
@@ -512,6 +514,9 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
       startupDiagnostics?.phase('electron-ready')
       await app.whenReady()
       app.setName(app.isPackaged ? APP_NAME : `${APP_NAME} (DEV)`)
+      const { installProductionPhiGate } = await import('./phi/production-gate')
+      const phiDirectory = join(app.getPath('userData'), 'phi-vault')
+      installProductionPhiGate(phiDirectory)
       // Electron created its default menu before ready using the selected credential identity.
       // Rebuild standard roles after the display brand is known.
       const { Menu } = createRequire(import.meta.url)('electron') as typeof import('electron')
@@ -591,6 +596,13 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
         startupSettings.localePreference
       )
       const translate = localeOwner.t.bind(localeOwner)
+      const { createElectronPhiConfirmer } = await import('./phi/confirm-window')
+      const { installMachineApprovalTranslator, installPhiConfirmer } = await import('./phi/gate')
+      const { ensureMachineApprovalDeclaration } = await import('./phi/approval-window')
+      const { machineApprovalLogPath } = await import('./phi/production-gate')
+      installPhiConfirmer(createElectronPhiConfirmer(translate))
+      installMachineApprovalTranslator(translate)
+      await ensureMachineApprovalDeclaration(machineApprovalLogPath(phiDirectory), translate)
       const disposeLocalePreferenceIpc = registerLocalePreferenceIpc(localeOwner)
 
       // Set app user model id for windows

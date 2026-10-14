@@ -20,6 +20,7 @@ import type {
   AcpProviderTurnProbe,
   AcpProviderTurnResult
 } from './provider-turn-adapter'
+import { releasePromptContent, restoreModelValue } from '../phi/gate'
 
 type ProviderPromptObservationStage = 'accepted' | 'begin' | 'cancel' | 'finalize' | 'observe'
 
@@ -258,7 +259,8 @@ class AcpProviderPromptExecutor {
 
       let promptRequest: Promise<unknown>
       try {
-        promptRequest = input.session.prompt(input.content)
+        const content = await releasePromptContent(input.content, input.cwd)
+        promptRequest = input.session.prompt(content)
         input.onDispatched?.()
       } catch (error) {
         await cancelProbe()
@@ -290,12 +292,13 @@ class AcpProviderPromptExecutor {
         }
 
         if (message.kind !== 'stop') {
+          const notification = restoreModelValue(message.notification, input.cwd)
           try {
-            probe.observe?.(message.notification)
+            probe.observe?.(notification)
           } catch (error) {
             reportBestEffort(input.reportBestEffortFailure, 'observe', error)
           }
-          input.routeNotification(message.notification)
+          input.routeNotification(notification)
           continue
         }
         if (!input.captureStop()) {

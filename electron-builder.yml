@@ -1,11 +1,14 @@
-appId: com.aipoch.medresearch-agent
+appId: com.dra-hph.desktop
 productName: DRA
-copyright: Copyright © 2026 AIPOCH
+copyright: Copyright © 2026 DRA. Based on AIPOCH Open-Science.
 directories:
   buildResources: build
 # Apply a valid deep ad-hoc signature on macOS (no Developer ID available). Without this,
 # electron-builder ships an incompletely-signed bundle that Gatekeeper flags as "damaged"
 # on downloaded/quarantined copies, so the app won't launch on other machines. See the hook.
+# Refuse a packaged build while a legal notice still has fill-in brackets.
+# DRA_PRERELEASE=1 still checks the privacy notice and skips only unused consent and terms files.
+beforePack: build/assert-placeholder-brackets.cjs
 afterPack: build/deployment-pack.cjs
 afterSign: build/sign-windows.cjs
 afterAllArtifactBuild: build/verify-windows-release.cjs
