@@ -110,8 +110,52 @@ jobs:
         run: |
           npm run build:e2e
           npm run build:web
+      - name: Ensure native credential helpers are physically packaged
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          import yaml from 'js-yaml'
+          import { createRequire } from 'node:module'
+          const require = createRequire(import.meta.url)
+          const native = require('@aipoch/credential-identity-probe-native')
+          for (const helper of [native.executablePath, native.validatorExecutablePath]) {
+            if (!fs.existsSync(helper)) throw new Error('Native credential helper missing before packaging: '+helper)
+          }
+          const config = yaml.load(fs.readFileSync('electron-builder.yml', 'utf8'))
+          for (const name of ['credential_identity_probe', 'credential_key_validator']) {
+            config.mac.extraResources.push({
+              from: 'node_modules/@aipoch/credential-identity-probe-native/build/Release/'+name,
+              to: 'app.asar.unpacked/node_modules/@aipoch/credential-identity-probe-native/build/Release/'+name
+            })
+          }
+          config.extraMetadata = {version:'0.1.33-macpilot.1'}
+          config.dmg.sign = false
+          config.mac.notarize = false
+          config.electronDownload.mirror = 'https://github.com/electron/electron/releases/download/'
+          fs.writeFileSync('dra-mac-pilot.config.json', JSON.stringify(config,null,2))
+          NODE
       - name: Package ad-hoc signed research pilot
-        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never -c.dmg.sign=false -c.mac.notarize=false -c.electronDownload.mirror=https://github.com/electron/electron/releases/download/
+        run: npx electron-builder --config dra-mac-pilot.config.json --mac dmg zip --${{ matrix.arch }} --publish never
+      - name: Preserve built candidate for independent verification retries
+        uses: actions/upload-artifact@v4
+        with:
+          name: dra-mac-candidate-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Diagnose actual packaged credential helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          app=$(find dist -maxdepth 2 -type d -name DRA.app | head -n 1)
+          test -n "$app"
+          helper="$app/Contents/Resources/app.asar.unpacked/node_modules/@aipoch/credential-identity-probe-native/build/Release/credential_identity_probe"
+          test -x "$helper"
+          file "$helper"
+          codesign --verify --strict "$helper"
+          "$helper" 'MedResearch Agent'
       - name: Adapt verification harness to DRA branding
         run: |
           node --input-type=module <<'NODE'
@@ -130,12 +174,12 @@ jobs:
           set -euo pipefail
           mkdir -p deliverables
           for ext in dmg zip; do
-            cp "dist/deep-research-agent-0.1.33-unified.1-mac-${{ matrix.arch }}.$ext" "deliverables/DRA-0.1.33-unified.1-mac-${{ matrix.arch }}.$ext"
+            cp "dist/deep-research-agent-0.1.33-macpilot.1-mac-${{ matrix.arch }}.$ext" "deliverables/DRA-0.1.33-macpilot.1-mac-${{ matrix.arch }}.$ext"
           done
           cp dist/database-migration-certification.json 'deliverables/database-migration-mac-${{ matrix.arch }}.json'
           cd deliverables
           shasum -a 256 *.dmg *.zip > 'SHA256-mac-${{ matrix.arch }}.txt'
-          printf '%s\n' 'source=67d17d57ff56b6f48aa0a3231e8000903797b282' 'version=0.1.33-unified.1' 'arch=${{ matrix.arch }}' 'signing=ad-hoc' 'notarized=false' 'gatekeeperAccepted=false' 'packageSmoke=passed' 'fullRegression=false' 'realDoctorAccepted=false' > 'verification-mac-${{ matrix.arch }}.txt'
+          printf '%s\n' 'source=67d17d57ff56b6f48aa0a3231e8000903797b282' 'version=0.1.33-macpilot.1' 'arch=${{ matrix.arch }}' 'signing=ad-hoc' 'notarized=false' 'gatekeeperAccepted=false' 'packageSmoke=passed' 'fullRegression=false' 'realDoctorAccepted=false' > 'verification-mac-${{ matrix.arch }}.txt'
       - uses: actions/upload-artifact@v4
         with:
           name: dra-mac-${{ matrix.arch }}
