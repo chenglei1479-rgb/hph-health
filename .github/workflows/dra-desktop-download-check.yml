@@ -1,0 +1,34 @@
+name: Verify public DRA desktop downloads
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/dra-desktop-download-check.yml]
+permissions:
+  contents: read
+jobs:
+  public-download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify anonymous installer links and sizes
+        run: |
+          python3 <<'PY'
+          import urllib.request, json
+          assets = [{"url":"https://github.com/chenglei1479-rgb/hph-health/releases/download/v0.1.33-unified.1/DRA-0.1.33-macpilot.2-mac-arm64.dmg","bytes":334115495,"sha256":"b305641191395216bb0fdc6df11620bd07a4a9b38f7e9badec5b33a6f43ba728"},{"url":"https://github.com/chenglei1479-rgb/hph-health/releases/download/v0.1.33-unified.1/DRA-0.1.33-macpilot.2-mac-arm64.zip","bytes":336142845,"sha256":"2b7f3abd7e547cd52e048ad244a6b0a922a2be428ca252dd81a2711538929ec9"},{"url":"https://github.com/chenglei1479-rgb/hph-health/releases/download/v0.1.33-unified.1/DRA-0.1.33-macpilot.2-mac-x64.dmg","bytes":343497663,"sha256":"b36afa23e0573100b6b955b842243342476006f5179268e11e4858bbc83a563a"},{"url":"https://github.com/chenglei1479-rgb/hph-health/releases/download/v0.1.33-unified.1/DRA-0.1.33-macpilot.2-mac-x64.zip","bytes":345567433,"sha256":"8f84bd5bb537f540029d16e788073932c5c78be78e6e8186aa536c90524cc958"},{"url":"https://github.com/chenglei1479-rgb/hph-health/releases/download/v0.1.33-unified.1/DRA-0.1.33-unified.1-win-x64-setup.exe","bytes":442273280,"sha256":"794d620ffcca62a6816be2980531db1c4311ec4136e903a77db60d200f7f5134"}]
+          results = []
+          for asset in assets:
+              request = urllib.request.Request(asset['url'], method='HEAD', headers={'User-Agent':'DRA-download-verification'})
+              with urllib.request.urlopen(request, timeout=45) as response:
+                  result = {'url':asset['url'], 'status':response.status, 'bytes':int(response.headers['Content-Length']), 'authenticated':False}
+                  assert result['status'] == 200 and result['bytes'] == asset['bytes']
+                  results.append(result)
+                  print(json.dumps(result))
+          with open('public-desktop-download-check.json','w') as output:
+              json.dump(results,output,indent=2)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-desktop-download-check
+          path: public-desktop-download-check.json
+          if-no-files-found: error
