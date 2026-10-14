@@ -47,7 +47,7 @@ const ExternalTransmissionsSection = (): React.JSX.Element => {
             {externalEndpointEntries().map((entry) => (
               <tr key={entry.id} className="border-b border-border align-top">
                 <td className="px-2 py-1 font-mono break-all">
-                  {entry.host ?? t('User-configured model endpoint')}
+                  {entry.disclosureNameJa ?? entry.host ?? t('User-configured model endpoint')}
                 </td>
                 <td className="px-2 py-1">{entry.dataSentJa}</td>
                 <td className="px-2 py-1">{entry.recipientJa}</td>

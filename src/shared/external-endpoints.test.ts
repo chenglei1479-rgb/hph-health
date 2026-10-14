@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { decideOutboundUrl, externalEndpointEntries } from './external-endpoints'
+import {
+  decideOutboundUrl,
+  externalEndpointEntries,
+  userConfiguredModelEntry
+} from './external-endpoints'
 
 describe('outbound endpoint decisions', () => {
   it('allows catalog hosts and user-configured model hosts, and blocks anything else', () => {
@@ -25,5 +29,13 @@ describe('outbound endpoint decisions', () => {
     expect(
       externalEndpointEntries().some((entry) => entry.defaultEnabled && entry.id === 'telemetry')
     ).toBe(false)
+    const disclosed = userConfiguredModelEntry()
+    expect(disclosed.disclosureNameJa).toBe('利用者が設定した AI サービス')
+    expect(disclosed.dataSentJa).toContain('表の構造')
+    expect(disclosed.dataSentJa).toContain('合成サンプル')
+    expect(disclosed.dataSentJa).toContain('脱識別チェック済みの出力')
+    expect(disclosed.dataSentJa).toContain('脱識別済みの本文')
+    expect(disclosed.recipientJa).toContain('利用者が選んだ提供者')
+    expect(disclosed.purposeJa).toContain('利用者が選んだ提供者の規約')
   })
 })

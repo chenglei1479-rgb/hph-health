@@ -13,6 +13,8 @@ export type ExternalEndpointEntry = {
   companyJa: string
   countryJa: string
   purposeJa: string
+  /** Generic disclosure label when the host is chosen by the user. */
+  disclosureNameJa?: string
   exampleHosts?: string[]
 }
 

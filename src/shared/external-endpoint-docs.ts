@@ -10,9 +10,12 @@ const requirementLabel = (entry: ExternalEndpointEntry): string =>
 const defaultLabel = (entry: ExternalEndpointEntry): string =>
   entry.defaultEnabled ? 'オン' : 'オフ'
 
+const disclosedName = (entry: ExternalEndpointEntry): string =>
+  entry.disclosureNameJa ?? entry.host ?? '利用者が設定した AI サービス'
+
 const row = (entry: ExternalEndpointEntry): string =>
   [
-    entry.host ?? 'ユーザーが設定したモデルエンドポイント',
+    disclosedName(entry),
     entry.dataSentJa,
     entry.recipientJa,
     entry.purposeJa,
@@ -25,7 +28,7 @@ export const renderExternalTransmissionsMarkdown = (): string => {
   const lines = [
     '## 外部送信',
     '',
-    'この一覧は `resources/external-endpoints.json` から生成しています。アプリが連絡してよい外部ホストは、ここに載る静的ホストと、ユーザーが設定したモデルエンドポイントだけです。',
+    'この一覧は `resources/external-endpoints.json` から生成しています。アプリが連絡してよい外部ホストは、ここに載る静的ホストと、利用者が設定した AI サービスだけです。',
     '',
     '| ホスト | 送信するデータ | 送信先 | 目的 | 必須/任意 | 既定 |',
     '| --- | --- | --- | --- | --- | --- |',
@@ -50,7 +53,7 @@ export const renderHospitalAllowlistMarkdown = (): string => {
     '',
     'このファイルは `resources/external-endpoints.json` から生成しています。手で編集せず、カタログを更新してから生成し直してください。',
     '',
-    'DRA のメインプロセスは、この一覧にないホスト（およびユーザーが設定したモデルエンドポイント以外）への送信を拒否し、ホスト名だけをログに残します。',
+    'DRA のメインプロセスは、この一覧にないホスト（および利用者が設定した AI サービス以外）への送信を拒否し、ホスト名だけをログに残します。',
     '',
     renderExternalTransmissionsMarkdown(),
     ''
