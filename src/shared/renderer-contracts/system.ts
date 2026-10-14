@@ -3,6 +3,8 @@ import type { RendererFailureReport } from '../diagnostics'
 
 import type { LogFileStatus, OpenLogFileResult, RevealLogFileResult } from '../logs'
 
+import type { MachineApprovalStatus, SetMachineApprovalRequest } from '../machine-approval'
+
 import type { NetworkInfo } from '../network'
 
 import type { CliLauncherStatus } from '../cli'
@@ -82,6 +84,16 @@ export const lifecycleClaimRuntimeWriterContracts = {
   'locale.setPreference': callable<
     (request: SetLocalePreferenceRequest) => Promise<LocalePreferenceSnapshot>
   >()('locale', ['locale:set-preference', ELECTRON])
+} as const
+
+export const machineApprovalGetStatusContracts = {
+  'machineApproval.getStatus': callable<() => Promise<MachineApprovalStatus>>()(
+    'machine-approval',
+    ['machine-approval:get-status', LOCAL]
+  ),
+  'machineApproval.setStatus': callable<
+    (request: SetMachineApprovalRequest) => Promise<MachineApprovalStatus>
+  >()('machine-approval', ['machine-approval:set-status', LOCAL])
 } as const
 
 export const logsGetStatusContracts = {

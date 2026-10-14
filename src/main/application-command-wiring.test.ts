@@ -180,7 +180,7 @@ describe('production application command wiring', () => {
   it('installs desktop utilities with shared owners and retains find-event cleanup', () => {
     const desktop = domainCompact('desktop-utilities')
     expect(desktop).toContain(
-      'resolveManagedFilePath: managedFiles.resolveManagedFilePath, managedFileVersions: managedFileVersionService, notebookInputs: sessionAuthority.notebookInputRegistry, translate, logs: logsCommandOwner, github: githubCommandOwner, cli: cliCommandOwner'
+      'resolveManagedFilePath: managedFiles.resolveManagedFilePath, managedFileVersions: managedFileVersionService, notebookInputs: sessionAuthority.notebookInputRegistry, translate, logs: logsCommandOwner, machineApproval: machineApprovalCommandOwner, github: githubCommandOwner, cli: cliCommandOwner'
     )
     expect(
       between(
@@ -194,6 +194,7 @@ describe('production application command wiring', () => {
     for (const call of [
       "createElectronSurfaceAdapter('desktop-utilities'",
       'registerLogsIpcHandlers(logs)',
+      'registerMachineApprovalIpcHandlers(machineApproval)',
       'registerGithubIpcHandlers({}, github)',
       'registerCliInstallIpcHandlers(cli)',
       'return registerWindowFindIpcHandlers()'
@@ -349,6 +350,11 @@ describe('production application command wiring', () => {
       ['desktop-utilities', 'cli: cliCommandOwner', 'cli: cliCommandOwner'],
       ['desktop-utilities', 'github: githubCommandOwner', 'github: githubCommandOwner'],
       ['desktop-utilities', 'logs: logsCommandOwner', 'logs: logsCommandOwner'],
+      [
+        'desktop-utilities',
+        'machineApproval: machineApprovalCommandOwner',
+        'machineApproval: machineApprovalCommandOwner'
+      ],
       [
         'artifact-surfaces',
         'createUploadElectronSurface(uploadCommandOwner)',

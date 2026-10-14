@@ -259,6 +259,10 @@ const getApiCallable = (publicPath: string): ((...args: unknown[]) => unknown) =
 describe('preload bridge — public surface inventory', () => {
   it('pins every callable path exposed through window.api', () => {
     expect(collectFunctionPaths(api)).toEqual([
+      'account.checkNotebookAccess',
+      'account.getState',
+      'account.login',
+      'account.logout',
       'acp.cancel',
       'acp.compactSession',
       'acp.connect',
@@ -411,6 +415,8 @@ describe('preload bridge — public surface inventory', () => {
       'logs.getStatus',
       'logs.openFile',
       'logs.revealInFolder',
+      'machineApproval.getStatus',
+      'machineApproval.setStatus',
       'managedFileVersions.cancelDiff',
       'managedFileVersions.diffText',
       'managedFileVersions.inspect',
@@ -978,6 +984,7 @@ describe('preload bridge — core renderer contract catalog', () => {
       'update',
       'local-models',
       'pdf-structure',
+      'machine-approval',
       'uploads',
       'window'
     ])

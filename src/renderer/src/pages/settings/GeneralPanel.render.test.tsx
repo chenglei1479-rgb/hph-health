@@ -127,6 +127,10 @@ beforeEach(() => {
     sendTest: vi.fn().mockResolvedValue('shown')
   }
   ;(window as unknown as { api: unknown }).api = {
+    machineApproval: {
+      getStatus: vi.fn().mockResolvedValue({ approved: false, approvalNumber: null, at: null }),
+      setStatus: vi.fn()
+    },
     logs: {
       getStatus: vi.fn().mockResolvedValue({
         configured: true,
