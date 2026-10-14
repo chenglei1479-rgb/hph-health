@@ -98,6 +98,11 @@ jobs:
 
       - name: Build the app
         shell: bash
+        # macos-latest is a 7 GB arm64 runner. electron-vite aborts at Node's
+        # default ~2 GB heap (exit 134). Same NODE_OPTIONS mechanism as the
+        # DRA Mac pilot workflow, sized to fit this runner.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           npm run build:web
           npx electron-vite build
