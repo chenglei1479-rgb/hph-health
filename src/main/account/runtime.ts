@@ -1,8 +1,7 @@
 import { app, shell } from 'electron'
 import { join } from 'node:path'
 import { AccountOwner } from './owner'
-import { readAccountConfig } from './config'
-import { readDeployedAccountConfig } from './deployment-config'
+import { loadBundledAccountConfig } from './deployment-config'
 import { createIdentityBinding } from './identity-binding'
 import { resolveConfigRoot } from '../storage-root'
 import { membershipFeatureForChannel } from '../../shared/membership'
@@ -12,16 +11,16 @@ import { protectedSafeStorage } from '../secure-storage'
 let owner: AccountOwner | undefined
 export const getAccountOwner = (): AccountOwner => {
   if (!owner) {
-    let config: ReturnType<typeof readAccountConfig>
-    let configurationError = false
-    try {
-      config = readDeployedAccountConfig([
+    const loaded = loadBundledAccountConfig(
+      [
         join(process.resourcesPath, 'dra-auth.json'),
         join(app.getAppPath(), 'resources', 'dra-auth.json')
-      ])
-    } catch {
-      configurationError = true
-    }
+      ],
+      process.env,
+      { packaged: app.isPackaged }
+    )
+    const config = loaded.config
+    const configurationError = loaded.configurationError
     owner = new AccountOwner({
       config,
       configurationError,

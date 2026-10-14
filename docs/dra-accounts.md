@@ -21,9 +21,9 @@ $env:DRA_AUTH_APPLE_CONNECTION = 'apple'
 npm run dev
 ```
 
-上面的环境变量是占位示例。0.1.17 专用发行包已在 `resources/dra-auth.json` 携带用户创建的 Auth0 Native 应用公开配置，普通用户无需设置环境变量。已确认真实注册登录页面可打开、邮箱数据库注册开放、邮箱密码和 Google 连接启用；真实邮箱注册、验证邮件送达、登录回调及 Google 登录成功仍需用户验收。Microsoft 和 Apple 尚未配置。
+上面的环境变量是占位示例，只在未打包的开发构建中生效。打包后的应用忽略 `DRA_AUTH_*`，避免用环境变量关掉登录。
 
-从 0.1.16 起，还可使用公开部署文件，无需环境变量：安装目录下的 `resources/dra-auth.json`，或随包发布的 `resources/dra-auth.json`。内容例如 `{"issuer":"https://YOUR-TENANT.auth0.com/","clientId":"YOUR-NATIVE-APP-CLIENT-ID","callbackPort":49174,"connections":{}}`。仅允许这些字段及 Google/Microsoft/Apple 连接名称，禁止放入 Client Secret、密码或令牌。显式环境变量配置优先；文件损坏、字段不完整或无效时锁定访问，不回退本地模式。修改后重启生效。发行方应随安装包发布配置；安装后手动设置的文件在升级后可能需要重新配置。
+随包发布的 `resources/dra-auth.json` 是生产租户占位文件，不是可用的开发租户。所有者创建 Auth0 租户后，把 `REPLACE_WITH_*` 换成公开的 issuer、Native 应用 Client ID、API audience、organization 和连接名。不要写入 Client Secret、密码或令牌。占位符未替换、文件被删除、内容损坏或字段不完整时，应用锁定并要求配置，不会退回无限制本地模式。开发构建若要跳过登录，必须显式设置 `DRA_AUTH_MODE=local`。修改后重启生效。安装后手动替换的文件在升级后可能需要重新配置。
 
 ## 用户流程
 
@@ -33,7 +33,7 @@ npm run dev
 - Google、Microsoft、Apple 按钮打开对应服务的登录流程。没有配置的入口不显示。
 - 首页“账号”可查看当前邮箱及退出。退出会清除 DRA 内存会话；认证服务及浏览器的其他应用会话不受影响。再次登录要求新的登录流程。
 - 登录请求最多等待五分钟，可取消。会话有效期取签名 ID Token 到期时间与八小时上限的较短值。到期需重新登录；重启 DRA 后也需重新登录。没有持久化 ID Token、Access Token 或 Refresh Token。
-- 认证服务配置完全缺失时保留原有本地模式；部分填写或无效配置会锁定，不能退回本地模式绕过登录。启用账号需要发行方配置，不能把未配置的构建当成强制登录发行版本。
+- 打包应用在账号配置缺失、被删除或仍是占位符时锁定，不能靠删掉 `dra-auth.json` 进入无限制本地模式。未打包的开发构建只有在显式 `DRA_AUTH_MODE=local` 时才跳过登录；部分填写或无效配置会锁定。
 
 ## 本地数据与手机访问
 

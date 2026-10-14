@@ -42,6 +42,8 @@ const fixture = (): {
     idToken: 'sensitive-id-token',
     nonce: 'nonce',
     keys: { keys: [] },
+    keysFetchedAt: 1,
+    pinnedKeyThumbprints: ['pin'],
     refreshToken: 'sensitive-refresh-token'
   }
   return {
@@ -76,6 +78,33 @@ it('fails closed on corrupted or plaintext files', () => {
   expect(existsSync(f.file)).toBe(false)
   writeFileSync(f.file, JSON.stringify(f.session))
   expect(f.store.read()).toBeUndefined()
+})
+it('keeps the signing-key pin when the session blob is replaced and drops both on logout', () => {
+  const f = fixture()
+  f.store.write(f.session)
+  f.store.writePin({
+    version: 1,
+    issuer: f.session.issuer,
+    clientId: f.session.clientId,
+    thumbprints: ['issuer-pin'],
+    fetchedAt: 10
+  })
+  f.store.write({
+    ...f.session,
+    keys: { keys: [{ kty: 'RSA', n: 'attacker', e: 'AQAB' }] },
+    pinnedKeyThumbprints: ['attacker-pin']
+  })
+  expect(f.store.readPin()?.thumbprints).toEqual(['issuer-pin'])
+  expect(f.store.read()?.pinnedKeyThumbprints).toEqual(['attacker-pin'])
+  f.store.clear()
+  expect(f.store.read()).toBeUndefined()
+  expect(f.store.readPin()).toBeUndefined()
+})
+it('rejects a session that has no signature pin', () => {
+  const f = fixture()
+  f.store.write({ ...f.session, pinnedKeyThumbprints: [] })
+  expect(f.store.read()).toBeUndefined()
+  expect(existsSync(f.file)).toBe(false)
 })
 it('never falls back to plaintext when secure storage is unavailable', () => {
   const f = fixture()

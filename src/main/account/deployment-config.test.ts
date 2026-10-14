@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, expect, it } from 'vitest'
-import { readDeployedAccountConfig } from './deployment-config'
+import { loadBundledAccountConfig, readDeployedAccountConfig } from './deployment-config'
 const roots: string[] = []
 const fixture = (value: string): string => {
   const root = mkdtempSync(join(tmpdir(), 'dra-public-auth-'))
@@ -28,6 +28,18 @@ it('ignores a deployed Auth0 tenant and environment overrides on a prerelease bu
       DRA_AUTH_ISSUER: 'https://tenant.auth0.com/',
       DRA_AUTH_CLIENT_ID: 'override'
     })
+  ).toBeUndefined()
+  expect(
+    readDeployedAccountConfig(
+      [file],
+      {
+        DRA_PRERELEASE: '1',
+        DRA_AUTH_MODE: 'local',
+        DRA_AUTH_ISSUER: 'https://tenant.auth0.com/',
+        DRA_AUTH_CLIENT_ID: 'override'
+      },
+      { packaged: true }
+    )
   ).toBeUndefined()
 })
 it('loads explicit local mode without a tenant and refuses mixed or development configuration', () => {
@@ -86,9 +98,9 @@ it('fails closed for malformed, partial, or secret-bearing deployment files', ()
   ])
     expect(() => readDeployedAccountConfig([fixture(content)], {})).toThrow()
 })
-it('only skips absent files and gives explicit environment configuration precedence', () => {
+it('only skips absent files and gives explicit environment configuration precedence in dev builds', () => {
   const file = fixture('{}')
-  expect(readDeployedAccountConfig([file + '.missing'], {})).toBeUndefined()
+  expect(() => readDeployedAccountConfig([file + '.missing'], {})).toThrow(/missing/)
   expect(
     readDeployedAccountConfig([file], {
       DRA_AUTH_ISSUER: 'https://override.auth0.com/',
@@ -96,4 +108,39 @@ it('only skips absent files and gives explicit environment configuration precede
     })?.clientId
   ).toBe('override')
   expect(() => readDeployedAccountConfig([file], { DRA_AUTH_CLIENT_ID: 'partial' })).toThrow()
+})
+it('fails closed when dra-auth.json is deleted instead of opening local mode', () => {
+  expect(() => readDeployedAccountConfig(['/tmp/dra-auth-missing.json'], {})).toThrow(/missing/)
+  expect(
+    loadBundledAccountConfig(['/tmp/dra-auth-missing.json'], { DRA_AUTH_MODE: 'local' }, {})
+  ).toEqual({ config: undefined, configurationError: false })
+  expect(
+    loadBundledAccountConfig(
+      ['/tmp/dra-auth-missing.json'],
+      { DRA_AUTH_MODE: 'local', DRA_AUTH_ISSUER: 'https://evil.example/', DRA_AUTH_CLIENT_ID: 'x' },
+      { packaged: true }
+    )
+  ).toEqual({ configurationError: true })
+})
+it('ignores DRA_AUTH_* overrides in packaged builds', () => {
+  const file = fixture(
+    JSON.stringify({
+      mode: 'required',
+      issuer: 'https://hospital.auth0.com/',
+      clientId: 'native-client'
+    })
+  )
+  expect(
+    readDeployedAccountConfig(
+      [file],
+      { DRA_AUTH_ISSUER: 'https://override.auth0.com/', DRA_AUTH_CLIENT_ID: 'override' },
+      { packaged: true }
+    )?.clientId
+  ).toBe('native-client')
+  expect(
+    readDeployedAccountConfig([file], { DRA_AUTH_MODE: 'local' }, { packaged: true })?.clientId
+  ).toBe('native-client')
+  expect(() =>
+    readDeployedAccountConfig([fixture('{"mode":"local"}')], {}, { packaged: true })
+  ).toThrow(/local mode/)
 })

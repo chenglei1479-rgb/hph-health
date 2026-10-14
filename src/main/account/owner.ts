@@ -1,10 +1,11 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:http'
-import { createLocalJWKSet, jwtVerify, type JSONWebKeySet } from 'jose'
+import { createLocalJWKSet, jwtVerify, type JSONWebKeySet, type JWTPayload } from 'jose'
 import type { AccountLoginRequest, AccountState, NotebookAccessCheck } from '../../shared/account'
 import type { AccountConfig } from './config'
 import { isDraPrerelease } from '../../shared/prerelease'
-import type { AccountSessionStore, SavedAccountSession } from './session-store'
+import { idTokenStillValid, jwksCacheFresh, rsaKeyThumbprints, sameThumbprints } from './jwks-pin'
+import type { AccountJwksPin, AccountSessionStore, SavedAccountSession } from './session-store'
 import {
   MEMBERSHIP_CLAIM,
   MEMBERSHIP_MINIMUM,
@@ -72,6 +73,65 @@ export class AccountOwner {
     return this.snapshot()
   }
 
+  private cachedKeysTrusted(saved: SavedAccountSession): boolean {
+    const pin = this.deps.sessionStore?.readPin()
+    if (!pin) return false
+    if (pin.issuer !== saved.issuer || pin.clientId !== saved.clientId) return false
+    if (
+      !jwksCacheFresh(pin.fetchedAt, this.now()) ||
+      !jwksCacheFresh(saved.keysFetchedAt, this.now())
+    )
+      return false
+    const actual = rsaKeyThumbprints(saved.keys)
+    return (
+      sameThumbprints(pin.thumbprints, saved.pinnedKeyThumbprints) &&
+      sameThumbprints(pin.thumbprints, actual)
+    )
+  }
+
+  private async verifyIdToken(
+    token: string,
+    keys: JSONWebKeySet,
+    config: AccountConfig
+  ): Promise<JWTPayload> {
+    return (
+      await jwtVerify(token, createLocalJWKSet(keys), {
+        issuer: config.issuer,
+        audience: config.clientId,
+        algorithms: ['RS256'],
+        requiredClaims: ['exp', 'iat', 'sub'],
+        currentDate: new Date(this.now())
+      })
+    ).payload
+  }
+
+  private async fetchJwks(config: AccountConfig, signal: AbortSignal): Promise<JSONWebKeySet> {
+    const keysResponse = await this.request(new URL('.well-known/jwks.json', config.issuer), {
+      signal,
+      redirect: 'error'
+    })
+    if (!keysResponse.ok) throw new Error('Signing keys unavailable.')
+    return (await keysResponse.json()) as JSONWebKeySet
+  }
+
+  private async rememberKeys(
+    keys: JSONWebKeySet,
+    session: SavedAccountSession
+  ): Promise<SavedAccountSession> {
+    const thumbprints = rsaKeyThumbprints(keys)
+    if (thumbprints.length === 0) throw new Error('Signing keys unavailable.')
+    const fetchedAt = this.now()
+    const pin: AccountJwksPin = {
+      version: 1,
+      issuer: session.issuer,
+      clientId: session.clientId,
+      thumbprints,
+      fetchedAt
+    }
+    this.deps.sessionStore?.writePin(pin)
+    return { ...session, keys, keysFetchedAt: fetchedAt, pinnedKeyThumbprints: thumbprints }
+  }
+
   private async recover(): Promise<void> {
     const revision = this.revision
     const config = this.deps.config!
@@ -84,28 +144,36 @@ export class AccountOwner {
     const active = (): boolean => !this.disposed && revision === this.revision && !this.attempt
     try {
       let session: SavedAccountSession = saved
-      let payload
-      try {
-        payload = (
-          await jwtVerify(saved.idToken, createLocalJWKSet(saved.keys), {
-            issuer: config.issuer,
-            audience: config.clientId,
-            algorithms: ['RS256'],
-            requiredClaims: ['exp', 'iat', 'sub'],
-            currentDate: new Date(this.now())
-          })
-        ).payload
-        if ((payload.exp ?? 0) * 1000 - this.now() < 60_000 && saved.refreshToken)
+      let payload: JWTPayload | undefined
+      const trusted = this.cachedKeysTrusted(saved)
+      let issuerRejected = false
+      const signal = AbortSignal.timeout(15_000)
+      if (trusted) {
+        try {
+          payload = await this.verifyIdToken(saved.idToken, saved.keys, config)
+          if ((payload.exp ?? 0) * 1000 - this.now() < 60_000 && saved.refreshToken)
+            payload = undefined
+        } catch {
           payload = undefined
-      } catch {
-        payload = undefined
+        }
+      } else if (idTokenStillValid(saved.idToken, this.now())) {
+        // Stale or unpinned keys are not a signature. Re-fetch the issuer JWKS
+        // and pin whatever that response actually contains.
+        const keys = await this.fetchJwks(config, signal)
+        try {
+          payload = await this.verifyIdToken(saved.idToken, keys, config)
+          session = await this.rememberKeys(keys, saved)
+        } catch {
+          payload = undefined
+          issuerRejected = true
+        }
       }
       if (!payload) {
         if (!saved.refreshToken) {
-          this.deps.sessionStore!.clear()
+          if (trusted || issuerRejected || !idTokenStillValid(saved.idToken, this.now()))
+            this.deps.sessionStore!.clear()
           return
         }
-        const signal = AbortSignal.timeout(15_000)
         const response = await this.request(new URL('oauth/token', config.issuer), {
           method: 'POST',
           redirect: 'error',
@@ -135,27 +203,13 @@ export class AccountOwner {
             (typeof tokens.refresh_token !== 'string' || !tokens.refresh_token))
         )
           throw new Error('Invalid refresh response.')
-        const keysResponse = await this.request(new URL('.well-known/jwks.json', config.issuer), {
-          signal,
-          redirect: 'error'
-        })
-        if (!keysResponse.ok) throw new Error('Signing keys unavailable.')
-        const keys = (await keysResponse.json()) as JSONWebKeySet
-        payload = (
-          await jwtVerify(tokens.id_token, createLocalJWKSet(keys), {
-            issuer: config.issuer,
-            audience: config.clientId,
-            algorithms: ['RS256'],
-            requiredClaims: ['exp', 'iat', 'sub'],
-            currentDate: new Date(this.now())
-          })
-        ).payload
-        session = {
+        const keys = await this.fetchJwks(config, signal)
+        payload = await this.verifyIdToken(tokens.id_token, keys, config)
+        session = await this.rememberKeys(keys, {
           ...saved,
           idToken: tokens.id_token,
-          keys,
           refreshToken: tokens.refresh_token ?? saved.refreshToken
-        }
+        })
       }
       if (
         payload.sub !== saved.subject ||
@@ -235,6 +289,8 @@ export class AccountOwner {
 
   assertFeature(feature: MembershipFeature): void {
     this.assertAccess()
+    // TODO(membership): a signed ID-token claim is not a server-side membership
+    // check. Real enforcement still needs an issuer or API check after beta.
     // Preserve existing offline/local-only deployments. Authenticated distributions enforce plans.
     if (!this.deps.config && !this.deps.configurationError) return
     if (!membershipAllows(this.snapshot().membership ?? { plan: 'free', status: 'free' }, feature))
@@ -475,7 +531,13 @@ export class AccountOwner {
         email: payload.email,
         name: typeof payload.name === 'string' ? payload.name : undefined
       }
-      this.deps.sessionStore?.write({
+      const refreshToken =
+        'refresh_token' in tokens &&
+        typeof tokens.refresh_token === 'string' &&
+        tokens.refresh_token
+          ? tokens.refresh_token
+          : undefined
+      const stored = await this.rememberKeys(keys, {
         version: 1,
         issuer: config.issuer,
         clientId: config.clientId,
@@ -483,13 +545,11 @@ export class AccountOwner {
         idToken: tokens.id_token,
         nonce: attempt.nonce,
         keys,
-        refreshToken:
-          'refresh_token' in tokens &&
-          typeof tokens.refresh_token === 'string' &&
-          tokens.refresh_token
-            ? tokens.refresh_token
-            : undefined
+        keysFetchedAt: this.now(),
+        pinnedKeyThumbprints: rsaKeyThumbprints(keys),
+        refreshToken
       })
+      this.deps.sessionStore?.write(stored)
       this.error = undefined
       return true
     } catch {

@@ -1,9 +1,14 @@
 {
-  "mode": "test",
-  "issuer": "https://dev-s0savnzm2r5rtdvt.us.auth0.com/",
-  "clientId": "Rh2MZp3aNDrmGLuI3VHsnNI1mG4SPUqf",
+  "mode": "required",
+  "issuer": "https://REPLACE_WITH_PRODUCTION_TENANT.auth0.com/",
+  "clientId": "REPLACE_WITH_NATIVE_APPLICATION_CLIENT_ID",
   "callbackPort": 49174,
+  "audience": "https://REPLACE_WITH_API_AUDIENCE",
+  "organization": "org_REPLACE_WITH_ORGANIZATION",
   "connections": {
-    "google": "google-oauth2"
+    "google": "google-oauth2",
+    "microsoft": "windowslive",
+    "apple": "apple",
+    "institution": "REPLACE_WITH_ENTERPRISE_CONNECTION_NAME"
   }
 }
