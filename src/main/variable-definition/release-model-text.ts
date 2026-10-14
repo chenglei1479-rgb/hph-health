@@ -1,3 +1,4 @@
+import { releaseModelText } from '../phi/gate'
 import { redactPatientPhi } from './patient-phi'
 
 export type VariableDefinitionTextReleaser = (
@@ -14,13 +15,11 @@ export const installVariableDefinitionTextReleaser = (
 }
 
 /**
- * TODO(phi-gate): PR #7 (https://github.com/chenglei1479-rgb/hph-health/pull/7)
- * adds `releaseModelText` and the `gate` object in `src/main/phi/gate.ts`.
- * Replace the body of `releaser` with `(text, projectId) => releaseModelText(text, projectId)`
- * once that file is on main. Do not import `src/main/phi/gate` until then.
- * Both the research plan and the model reply pass through this hook. Neither
- * is patient-table data; the hook still strips identifiers before a model call
- * or before a reply is shown or written into the template.
+ * Local redaction runs first so known patient marks become `[仮名化済み]`.
+ * The production gate then scans the same string (`releaseModelText`).
+ * Provider HTTP bodies are scanned again by `guardProviderBody` inside
+ * `fetchProviderRequest`. Both the research plan and the model reply pass
+ * through this hook before a model call, display, or template write.
  */
 export const releaseVariableDefinitionText = async (
   text: string,
@@ -30,5 +29,5 @@ export const releaseVariableDefinitionText = async (
   if (typeof released !== 'string') {
     throw new Error('Variable definition text was not released to the model.')
   }
-  return released
+  return releaseModelText(released, projectId)
 }

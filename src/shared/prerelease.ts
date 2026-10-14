@@ -5,7 +5,7 @@ export const PRERELEASE_BANNER_TEXT = '内部テスト版：架空データの�
 
 // Shown beside the provider key and before the first model call. Fixed Japanese on every locale.
 export const PRERELEASE_DATA_DESTINATION_NOTICE =
-  '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。'
+  '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
 
 const runtimeEnv = (): NodeJS.ProcessEnv => (typeof process === 'undefined' ? {} : process.env)
 

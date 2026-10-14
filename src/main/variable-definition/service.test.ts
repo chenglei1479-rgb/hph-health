@@ -287,7 +287,7 @@ describe('variable definition template', () => {
       const body = JSON.parse(String(init?.body)) as {
         messages: Array<{ content: string }>
       }
-      expect(body.messages[0].content).toBe('released plan')
+      expect(body.messages[0].content).toBe('released plan 100')
       expect(body.messages[0].content).not.toContain('山田太郎')
       return new Response(JSON.stringify({ choices: [{ message: { content: modelReply } }] }), {
         status: 200
@@ -298,7 +298,7 @@ describe('variable definition template', () => {
       model: 'local',
       fetchImpl: fetchImpl as unknown as typeof fetch
     })
-    await expect(complete('released plan')).resolves.toContain('術後感染')
+    await expect(complete('released plan 100')).resolves.toContain('術後感染')
     expect(fetchImpl).toHaveBeenCalledOnce()
   })
 })

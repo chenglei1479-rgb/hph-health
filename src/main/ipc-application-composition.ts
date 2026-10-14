@@ -41,6 +41,9 @@ import {
 import { composeStorageStartup } from './composition/storage-startup'
 import { composeUploadStorage } from './composition/upload-storage'
 import { registerVariableDefinitionIpc } from './variable-definition/ipc'
+import { defaultVariableDefinitionCompleter } from './variable-definition/model-client'
+import { captureVariableDefinitionProviderTarget } from './variable-definition/provider-target'
+import { createVariableDefinitionService } from './variable-definition/service'
 
 import { app } from 'electron'
 import { join } from 'node:path'
@@ -654,7 +657,15 @@ export const createApplicationModules = async (
     })
   )
   surfaceAdapters.push(
-    createElectronSurfaceAdapter('variable-definition', registerVariableDefinitionIpc)
+    createElectronSurfaceAdapter('variable-definition', () => {
+      registerVariableDefinitionIpc(
+        createVariableDefinitionService({
+          complete: defaultVariableDefinitionCompleter(() =>
+            captureVariableDefinitionProviderTarget(settingsBootstrap.settingsService)
+          )
+        })
+      )
+    })
   )
   // Compute IPC handlers are registered earlier (before the notebook RPC server) so computeService
   // can be injected into the RPC server for the computeCall route. See above.

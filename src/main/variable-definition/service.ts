@@ -27,8 +27,11 @@ export const createVariableDefinitionService = (options: {
   async generate(request) {
     const projectId = requireText(request.projectId, 'projectId is required.')
     const researchPlan = requireText(request.researchPlan, '研究計画を入力してください。')
-    const releasedPlan = await releaseVariableDefinitionText(researchPlan, projectId)
-    const raw = await options.complete(buildVariableDefinitionPrompt(releasedPlan))
+    const releasedPrompt = await releaseVariableDefinitionText(
+      buildVariableDefinitionPrompt(researchPlan),
+      projectId
+    )
+    const raw = await options.complete(releasedPrompt)
     const releasedReply = await releaseVariableDefinitionText(raw, projectId)
     const prepared = prepareVariableDefinitions(parseVariableDefinitions(releasedReply))
     return { projectId, ...prepared }

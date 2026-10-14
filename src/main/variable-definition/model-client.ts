@@ -1,4 +1,10 @@
+import { VARIABLE_DEFINITION_MISSING_KEY_MESSAGE } from '../../shared/variable-definition'
+import { guardProviderBody } from '../phi/gate'
+import type { ProviderTextGenerationTarget } from '../settings/provider-text-generation'
+
 export type VariableDefinitionCompleter = (prompt: string) => Promise<string>
+
+export type VariableDefinitionProviderResolver = () => Promise<ProviderTextGenerationTarget | null>
 
 const contentFrom = (payload: unknown): string => {
   if (!payload || typeof payload !== 'object') return ''
@@ -18,17 +24,21 @@ export const createOpenAiVariableDefinitionCompleter = (options: {
 }): VariableDefinitionCompleter => {
   const fetchImpl = options.fetchImpl ?? fetch
   return async (prompt) => {
+    const guarded = await guardProviderBody(
+      JSON.stringify({
+        model: options.model,
+        temperature: 0,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    )
+    if (typeof guarded !== 'string') throw new Error('変数定義のモデル呼び出しに失敗しました。')
     const response = await fetchImpl(`${options.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         ...(options.apiKey ? { authorization: `Bearer ${options.apiKey}` } : {})
       },
-      body: JSON.stringify({
-        model: options.model,
-        temperature: 0,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: guarded
     })
     if (!response.ok) throw new Error('変数定義のモデル呼び出しに失敗しました。')
     const text = contentFrom(await response.json())
@@ -37,19 +47,29 @@ export const createOpenAiVariableDefinitionCompleter = (options: {
   }
 }
 
-export const defaultVariableDefinitionCompleter = (): VariableDefinitionCompleter => {
+/**
+ * `DRA_VARIABLE_DEFINITION_BASE_URL` and `DRA_VARIABLE_DEFINITION_MODEL` are an
+ * optional dev override. The prerelease build uses the provider saved in
+ * settings (the user's OpenAI key or custom Azure base URL) when they are unset.
+ */
+export const defaultVariableDefinitionCompleter = (
+  resolveTarget?: VariableDefinitionProviderResolver
+): VariableDefinitionCompleter => {
   const baseUrl = process.env.DRA_VARIABLE_DEFINITION_BASE_URL?.trim()
   const model = process.env.DRA_VARIABLE_DEFINITION_MODEL?.trim()
-  if (!baseUrl || !model) {
-    return async () => {
-      throw new Error(
-        '変数定義のモデルが未設定です。DRA_VARIABLE_DEFINITION_BASE_URL と DRA_VARIABLE_DEFINITION_MODEL を設定してください。'
-      )
-    }
+  if (baseUrl && model) {
+    return createOpenAiVariableDefinitionCompleter({
+      baseUrl,
+      model,
+      apiKey: process.env.DRA_VARIABLE_DEFINITION_API_KEY
+    })
   }
-  return createOpenAiVariableDefinitionCompleter({
-    baseUrl,
-    model,
-    apiKey: process.env.DRA_VARIABLE_DEFINITION_API_KEY
-  })
+  return async (prompt) => {
+    const { createSettingsVariableDefinitionCompleter } = await import('./settings-completer')
+    return createSettingsVariableDefinitionCompleter({
+      resolveTarget: resolveTarget ?? (async () => null)
+    })(prompt)
+  }
 }
+
+export { VARIABLE_DEFINITION_MISSING_KEY_MESSAGE }

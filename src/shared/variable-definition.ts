@@ -14,6 +14,10 @@ export const NOTES_SHEET_NAME = '注意'
 /** First column of every collection template. It is not a chart number. */
 export const RESEARCH_ID_COLUMN_NAME = '研究用ID'
 
+/** Shown when variable-definition generation has no usable provider key. */
+export const VARIABLE_DEFINITION_MISSING_KEY_MESSAGE =
+  'API キーが設定されていません。設定の API キー欄に、ご自身の OpenAI または Azure のキーを入力してください。'
+
 /**
  * Shown on the notes sheet. The research-ID to chart-number key stays in the
  * hospital-designated location, and this workbook is still hospital personal data.
