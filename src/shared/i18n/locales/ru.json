@@ -7463,6 +7463,7 @@
     "Account could not be loaded": "Не удалось загрузить учётную запись",
     "Loading account…": "Загрузка учётной записи…",
     "Account service configuration is invalid.": "Недопустимая конфигурация службы учётных записей.",
+    "The account consent notice could not be loaded.": "Не удалось загрузить текст согласия для учётной записи.",
     "Verify your email in the browser, then sign in again.": "Подтвердите адрес электронной почты в браузере и войдите снова.",
     "This local research profile belongs to another account. Sign in with its owner account.": "Этот локальный исследовательский профиль принадлежит другой учётной записи. Войдите в учётную запись владельца.",
     "Login timed out. Please try again.": "Время входа истекло. Попробуйте снова.",

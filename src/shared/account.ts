@@ -1,7 +1,17 @@
 import type { MembershipState } from './membership'
 
 export type AccountLoginMethod = 'email' | 'google' | 'microsoft' | 'apple' | 'institution'
-export type AccountLoginRequest = { method: AccountLoginMethod; signup?: boolean }
+export type AccountConsentNotice = {
+  version: string
+  title: string
+  body: string
+  acknowledgement: string
+}
+export type AccountLoginRequest = {
+  method: AccountLoginMethod
+  signup?: boolean
+  consentAccepted?: boolean
+}
 export type NotebookAccessCheck = {
   checkedAt: number
   state: AccountState
@@ -17,5 +27,6 @@ export type AccountState = {
   user?: { subject: string; email?: string; name?: string }
   expiresAt?: number
   membership?: MembershipState
-  error?: 'configuration' | 'login' | 'timeout' | 'email-unverified' | 'different-owner'
+  error?: 'configuration' | 'consent' | 'login' | 'timeout' | 'email-unverified' | 'different-owner'
+  consent?: { required: boolean; notice?: AccountConsentNotice; acceptedAt?: string }
 }

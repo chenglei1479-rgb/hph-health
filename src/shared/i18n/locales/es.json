@@ -7324,6 +7324,7 @@
     "Account could not be loaded": "No se pudo cargar la cuenta",
     "Loading account…": "Cargando cuenta…",
     "Account service configuration is invalid.": "La configuración del servicio de cuentas no es válida.",
+    "The account consent notice could not be loaded.": "No se pudo cargar el aviso de consentimiento de la cuenta.",
     "Verify your email in the browser, then sign in again.": "Verifique su correo en el navegador y vuelva a iniciar sesión.",
     "This local research profile belongs to another account. Sign in with its owner account.": "Este perfil de investigación local pertenece a otra cuenta. Inicie sesión con la cuenta del propietario.",
     "Login timed out. Please try again.": "Se agotó el tiempo de inicio de sesión. Vuelva a intentarlo.",

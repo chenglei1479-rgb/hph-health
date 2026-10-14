@@ -5,6 +5,7 @@ import { loadBundledAccountConfig } from './deployment-config'
 import { createIdentityBinding } from './identity-binding'
 import { resolveConfigRoot } from '../storage-root'
 import { membershipFeatureForChannel } from '../../shared/membership'
+import { createAccountConsentStore, readAccountConsent } from './consent'
 import { createAccountSessionStore } from './session-store'
 import { protectedSafeStorage } from '../secure-storage'
 
@@ -21,13 +22,29 @@ export const getAccountOwner = (): AccountOwner => {
     )
     const config = loaded.config
     const configurationError = loaded.configurationError
+    const root = resolveConfigRoot()
+    let consent: ReturnType<typeof readAccountConsent> | undefined
+    let consentError = false
+    if (config) {
+      try {
+        consent = readAccountConsent([
+          join(process.resourcesPath, 'account-consent.json'),
+          join(app.getAppPath(), 'resources', 'account-consent.json')
+        ])
+      } catch {
+        consentError = true
+      }
+    }
     owner = new AccountOwner({
       config,
       configurationError,
+      consent,
+      consentError,
+      consentStore: createAccountConsentStore(root),
       profile: process.env.DRA_ACTIVE_PROFILE,
       openBrowser: (url) => shell.openExternal(url),
-      bindOwner: createIdentityBinding(resolveConfigRoot()),
-      sessionStore: createAccountSessionStore(resolveConfigRoot(), protectedSafeStorage)
+      bindOwner: createIdentityBinding(root),
+      sessionStore: createAccountSessionStore(root, protectedSafeStorage)
     })
   }
   return owner
@@ -35,7 +52,7 @@ export const getAccountOwner = (): AccountOwner => {
 
 export const isAccountAccessAllowed = (): boolean => {
   const state = getAccountOwner().snapshot()
-  return !state.required || Boolean(state.user)
+  return !state.required || (Boolean(state.user) && !state.consent?.required)
 }
 
 export const assertAccountChannelAccess = (channel: string): void => {

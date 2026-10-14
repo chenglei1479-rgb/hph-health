@@ -35,6 +35,14 @@ npm run dev
 - 登录请求最多等待五分钟，可取消。会话有效期取签名 ID Token 到期时间与八小时上限的较短值。到期需重新登录；重启 DRA 后也需重新登录。没有持久化 ID Token、Access Token 或 Refresh Token。
 - 打包应用在账号配置缺失、被删除或仍是占位符时锁定，不能靠删掉 `dra-auth.json` 进入无限制本地模式。未打包的开发构建只有在显式 `DRA_AUTH_MODE=local` 时才跳过登录；部分填写或无效配置会锁定。
 
+## 国外转移同意（APPI 第 28 条）
+
+首次注册或登录前必须勾选同意。说明文从版本化文件 `resources/account-consent.json` 读取，当前内容是法务确认前的日文假文。正式文案由法务替换该文件，并提高 `version`。已保存的版本与文件版本不一致时，下次登录会重新要求勾选。
+
+勾选结果写在配置目录的 `account-consent-record.json`，只包含 `version` 和 `acceptedAt`。同一版本再次登录沿用原来的时间戳。授权请求在 `/authorize` 上附加 `ext-consent_version` 和 `ext-consent_accepted_at`。说明正文不会放进 URL。桌面应用不调用 Auth0 Management API，也不保存管理令牌。租户需要一条 Post-Login Action，把这两个查询参数复制到用户的 `app_metadata`（`api.user.setAppMetadata`），才能记入 Auth0 用户资料。
+
+账号已配置而说明文件缺失或损坏时，登录被拒绝。未配置账号的本地模式不要求这份同意。
+
 ## 本地数据与手机访问
 
 本版本仍是单个研究者的本地桌面应用，账号功能不是共享服务器的多租户实现。首次成功登录将当前本地配置绑定到认证服务的 `issuer + sub`，记录在 DRA 配置目录的 `account-owner.json` 中。后续不同账号无法打开这一份本地数据。不会按邮箱自动合并第三方身份；需要由认证服务执行经过验证的账号关联。更换所有者应先备份，并由管理员进行独立数据迁移；不要直接删除绑定文件让另一账号使用原数据。

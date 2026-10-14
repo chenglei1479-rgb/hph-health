@@ -1,7 +1,13 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:http'
 import { createLocalJWKSet, jwtVerify, type JSONWebKeySet, type JWTPayload } from 'jose'
-import type { AccountLoginRequest, AccountState, NotebookAccessCheck } from '../../shared/account'
+import type {
+  AccountConsentNotice,
+  AccountLoginRequest,
+  AccountState,
+  NotebookAccessCheck
+} from '../../shared/account'
+import type { AccountConsentStore } from './consent'
 import type { AccountConfig } from './config'
 import { isDraPrerelease } from '../../shared/prerelease'
 import { idTokenStillValid, jwksCacheFresh, rsaKeyThumbprints, sameThumbprints } from './jwks-pin'
@@ -27,6 +33,9 @@ type Dependencies = {
   profile?: string
   config?: AccountConfig
   configurationError?: boolean
+  consent?: AccountConsentNotice
+  consentError?: boolean
+  consentStore?: AccountConsentStore
   openBrowser: (url: string) => Promise<void>
   bindOwner: (identity: { issuer: string; subject: string }) => Promise<boolean>
   fetch?: typeof fetch
@@ -278,13 +287,49 @@ export class AccountOwner {
       membership: this.user
         ? membershipFromVerifiedClaim(this.membershipClaim, this.now())
         : undefined,
-      error: this.deps.configurationError ? 'configuration' : this.error
+      error: this.deps.configurationError
+        ? 'configuration'
+        : this.deps.consentError
+          ? 'consent'
+          : this.error,
+      consent: this.consentState()
     }
+  }
+
+  private consentState(): AccountState['consent'] {
+    if (!this.deps.config) return undefined
+    if (!this.deps.consent && !this.deps.consentError && !this.deps.consentStore) return undefined
+    if (this.deps.consentError || !this.deps.consent) return { required: true }
+    const stored = this.deps.consentStore?.read()
+    const current = stored?.version === this.deps.consent.version ? stored : undefined
+    return {
+      required: !current,
+      notice: this.deps.consent,
+      acceptedAt: current?.acceptedAt
+    }
+  }
+
+  private acceptanceForLogin(
+    request: AccountLoginRequest
+  ): { version: string; acceptedAt: string } | undefined {
+    if (!this.deps.consent && !this.deps.consentError && !this.deps.consentStore) return undefined
+    if (this.deps.consentError || !this.deps.consent || !this.deps.consentStore)
+      throw new Error('Account consent is unavailable.')
+    const stored = this.deps.consentStore.read()
+    if (stored?.version === this.deps.consent.version) return stored
+    if (request.consentAccepted !== true) throw new Error('Account consent is required.')
+    const record = {
+      version: this.deps.consent.version,
+      acceptedAt: new Date(this.now()).toISOString()
+    }
+    this.deps.consentStore.write(record)
+    return record
   }
 
   assertAccess(): void {
     const state = this.snapshot()
-    if (state.required && !state.user) throw new Error('DRA account login required.')
+    if (state.required && (!state.user || state.consent?.required))
+      throw new Error('DRA account login required.')
   }
 
   assertFeature(feature: MembershipFeature): void {
@@ -357,11 +402,13 @@ export class AccountOwner {
       !config ||
       !request ||
       !this.snapshot().methods.includes(request.method) ||
-      (request.signup !== undefined && typeof request.signup !== 'boolean')
+      (request.signup !== undefined && typeof request.signup !== 'boolean') ||
+      (request.consentAccepted !== undefined && typeof request.consentAccepted !== 'boolean')
     ) {
       throw new Error('Account login method is unavailable.')
     }
     if (this.attempt) return this.snapshot()
+    const consent = this.acceptanceForLogin(request)
     this.revision++
     this.error = undefined
     const attempt: Attempt = {
@@ -452,6 +499,10 @@ export class AccountOwner {
       if (config.organization) url.searchParams.set('organization', config.organization)
       if (request.method !== 'email') {
         url.searchParams.set('connection', config.connections[request.method]!)
+      }
+      if (consent) {
+        url.searchParams.set('ext-consent_version', consent.version)
+        url.searchParams.set('ext-consent_accepted_at', consent.acceptedAt)
       }
       await this.deps.openBrowser(url.href)
     } catch {

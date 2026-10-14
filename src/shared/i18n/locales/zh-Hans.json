@@ -6996,6 +6996,7 @@
     "Account could not be loaded": "无法加载账号",
     "Loading account…": "正在加载账号…",
     "Account service configuration is invalid.": "账号服务配置无效。",
+    "The account consent notice could not be loaded.": "无法加载账号同意说明。",
     "Verify your email in the browser, then sign in again.": "请在浏览器中验证邮箱，然后重新登录。",
     "This local research profile belongs to another account. Sign in with its owner account.": "此本地研究配置属于另一个账号。请使用所属账号登录。",
     "Login timed out. Please try again.": "登录超时，请重试。",

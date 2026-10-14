@@ -33,6 +33,7 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
   const [busy, setBusy] = useState(false)
   const [open, setOpen] = useState(false)
   const [showMembership, setShowMembership] = useState(false)
+  const [acceptedVersion, setAcceptedVersion] = useState<string>()
   const api = window.api.account
   const refresh = useCallback(async () => {
     if (!api) return
@@ -69,9 +70,18 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
 
   const login = async (method: AccountLoginMethod, signup = false): Promise<void> => {
     if (!api || busy) return
+    const mustConsent = Boolean(state?.consent?.required)
+    const noticeVersion = state?.consent?.notice?.version
+    if (mustConsent && (!noticeVersion || acceptedVersion !== noticeVersion)) return
     setBusy(true)
     try {
-      setState(await api.login({ method, signup }))
+      setState(
+        await api.login({
+          method,
+          signup,
+          ...(mustConsent ? { consentAccepted: true } : {})
+        })
+      )
       setFailed(false)
     } catch {
       setFailed(true)
@@ -107,20 +117,26 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
       </main>
     )
 
+  const consentNotice = state.consent?.notice
+  const consentBlocked =
+    Boolean(state.consent?.required) &&
+    (!consentNotice || acceptedVersion !== consentNotice.version)
   const error =
     state.error === 'configuration'
       ? t('Account service configuration is invalid.')
-      : state.error === 'email-unverified'
-        ? t('Verify your email in the browser, then sign in again.')
-        : state.error === 'different-owner'
-          ? t(
-              'This local research profile belongs to another account. Sign in with its owner account.'
-            )
-          : state.error === 'timeout'
-            ? t('Login timed out. Please try again.')
-            : state.error === 'login'
-              ? t('Login failed. Please try again.')
-              : undefined
+      : state.error === 'consent'
+        ? t('The account consent notice could not be loaded.')
+        : state.error === 'email-unverified'
+          ? t('Verify your email in the browser, then sign in again.')
+          : state.error === 'different-owner'
+            ? t(
+                'This local research profile belongs to another account. Sign in with its owner account.'
+              )
+            : state.error === 'timeout'
+              ? t('Login timed out. Please try again.')
+              : state.error === 'login'
+                ? t('Login failed. Please try again.')
+                : undefined
   const content = (
     <div className="flex w-full flex-col gap-4">
       <p className="text-sm text-muted-foreground">{t('Your DRA account')}</p>
@@ -134,7 +150,16 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
           {t('DRA sign-in is not required. Model providers may still use the network.')}
         </p>
       )}
-      {state.user ? (
+      {state.pending ? (
+        <>
+          <p role="status" className="text-sm">
+            {t('Complete registration or login in your browser, then return to DRA.')}
+          </p>
+          <Button disabled={busy} variant="outline" onClick={() => void logout()}>
+            {t('Cancel login')}
+          </Button>
+        </>
+      ) : state.user && !state.consent?.required ? (
         <>
           <p className="break-all text-sm">{state.user.email ?? state.user.name}</p>
           <p className="text-sm text-muted-foreground">
@@ -147,44 +172,79 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
             {t('Sign out of DRA')}
           </Button>
         </>
-      ) : state.pending ? (
-        <>
-          <p role="status" className="text-sm">
-            {t('Complete registration or login in your browser, then return to DRA.')}
-          </p>
-          <Button disabled={busy} variant="outline" onClick={() => void logout()}>
-            {t('Cancel login')}
-          </Button>
-        </>
       ) : (
         <>
-          <Button disabled={busy || !state.configured} onClick={() => void login('email')}>
+          {state.consent?.required && consentNotice && (
+            <section
+              data-testid="account-consent"
+              className="flex flex-col gap-3 rounded-md border p-3"
+            >
+              <h2 className="text-sm font-medium">{consentNotice.title}</h2>
+              <p className="whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                {consentNotice.body}
+              </p>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  data-testid="account-consent-accept"
+                  className="mt-1"
+                  type="checkbox"
+                  checked={acceptedVersion === consentNotice.version}
+                  onChange={(event) =>
+                    setAcceptedVersion(
+                      event.currentTarget.checked ? consentNotice.version : undefined
+                    )
+                  }
+                />
+                <span>{consentNotice.acknowledgement}</span>
+              </label>
+            </section>
+          )}
+          <Button
+            disabled={busy || !state.configured || consentBlocked}
+            onClick={() => void login('email')}
+          >
             {t('Continue with email')}
           </Button>
           <Button
-            disabled={busy || !state.configured}
+            disabled={busy || !state.configured || consentBlocked}
             variant="outline"
             onClick={() => void login('email', true)}
           >
             {t('Create a DRA account')}
           </Button>
           {state.methods.includes('google') && (
-            <Button disabled={busy} variant="outline" onClick={() => void login('google')}>
+            <Button
+              disabled={busy || consentBlocked}
+              variant="outline"
+              onClick={() => void login('google')}
+            >
               {t('Continue with Google')}
             </Button>
           )}
           {state.methods.includes('microsoft') && (
-            <Button disabled={busy} variant="outline" onClick={() => void login('microsoft')}>
+            <Button
+              disabled={busy || consentBlocked}
+              variant="outline"
+              onClick={() => void login('microsoft')}
+            >
               {t('Continue with Microsoft')}
             </Button>
           )}
           {state.methods.includes('apple') && (
-            <Button disabled={busy} variant="outline" onClick={() => void login('apple')}>
+            <Button
+              disabled={busy || consentBlocked}
+              variant="outline"
+              onClick={() => void login('apple')}
+            >
               {t('Continue with Apple')}
             </Button>
           )}
           {state.methods.includes('institution') && (
-            <Button disabled={busy} variant="outline" onClick={() => void login('institution')}>
+            <Button
+              disabled={busy || consentBlocked}
+              variant="outline"
+              onClick={() => void login('institution')}
+            >
               {t('Continue with institution SSO')}
             </Button>
           )}
@@ -196,10 +256,14 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
     </div>
   )
 
-  if (state.required && !state.user)
+  if (state.required && (!state.user || state.consent?.required))
     return (
       <main className="flex min-h-svh items-center justify-center bg-background p-6 text-foreground">
-        <section className="w-full max-w-sm rounded-xl border bg-card p-8 shadow-sm">
+        <section
+          className={`w-full rounded-xl border bg-card p-8 shadow-sm ${
+            state.consent?.required ? 'max-w-lg' : 'max-w-sm'
+          }`}
+        >
           <h1 aria-label={t('Welcome to DRA')} className="text-3xl font-semibold tracking-tight">
             <AppBrand />
           </h1>
