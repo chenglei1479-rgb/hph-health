@@ -1,4 +1,5 @@
 import { i18next } from '@/i18n'
+import { requestPrereleaseModelCallNotice } from '@/lib/prerelease-model-call-notice'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import type { PermissionProfileId } from '../../../../shared/permission-profiles'
@@ -435,6 +436,7 @@ const useWorkspaceConversationController = (
       const current = optionsRef.current
       const { activeSession, composer, session, runtime } = current
       if (!current.agentConfiguration) return
+      if (requestPrereleaseModelCallNotice(() => submitDraft({ forcedSkillIds, mode }))) return
       const reconfigureRetry = mode === 'retry-reconfigure'
       if (reconfigureRetry && !session.actions.beginReconfigureRetry()) return
       const queueDraft = mode === 'continue' && canQueueDraft(current)
