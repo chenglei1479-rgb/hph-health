@@ -65,7 +65,8 @@ describe('AppVersionSection', () => {
 
     expect(container.textContent).toContain('DRA')
     expect(container.textContent).toContain('v0.2.0')
-    expect(container.textContent).toContain('© 2026 AIPOCH')
+    expect(container.textContent).toContain('© 2026 DRA')
+    expect(container.textContent).toContain('Based on AIPOCH Open-Science')
   })
 
   it('links help and release history to the canonical external resources', () => {
