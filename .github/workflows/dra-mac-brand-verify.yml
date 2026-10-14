@@ -1,0 +1,65 @@
+name: DRA Mac packaged brand verification
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/dra-mac-brand-verify.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  brand:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 0d90f827c1a596915403cf188acaacb8b23e2061
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: dra-mac-candidate-${{ matrix.arch }}
+          run-id: 38529669100
+          github-token: ${{ github.token }}
+          path: dist
+      - name: Inspect renderer and referenced logos inside actual shipped ASAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix work/asar-tool @electron/asar@3.4.1 --ignore-scripts --no-audit --no-fund
+          unzip -q dist/*.zip '*/Contents/Resources/app.asar' -d work/app
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+          const crypto = require('node:crypto')
+          const asar = require('./work/asar-tool/node_modules/@electron/asar')
+          function walk(dir) { return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]) }
+          const archive = walk('work/app').find(p=>p.endsWith('/app.asar'))
+          if (!archive) throw new Error('Actual shipped ASAR absent')
+          const files = asar.listPackage(archive).map(p=>p.replace(/^\//,''))
+          const renderer = files.filter(p=>p.startsWith('out/renderer/') && /\.(js|css)$/.test(p))
+          const js = renderer.filter(p=>p.endsWith('.js')).map(p=>asar.extractFile(archive,p).toString()).join('\n')
+          const css = renderer.filter(p=>p.endsWith('.css')).map(p=>asar.extractFile(archive,p).toString()).join('\n')
+          for (const text of ['dra-app-brand','dra-app-brand-logo','dra-app-brand-name','dra-app-brand-tagline','AI Research','Infrastructure','for Medicine']) {
+            if(!js.includes(text)) throw new Error('Packaged component lacks '+text)
+          }
+          for(const text of ['.dra-app-brand{','.dra-app-brand-logo{','.dra-app-brand-name{','.dra-app-brand-tagline{','.dra-app-brand-tagline>span{']) {
+            if(!css.includes(text)) throw new Error('Packaged styles lack '+text)
+          }
+          const hash = b=>crypto.createHash('sha256').update(b).digest('hex')
+          const pngs = files.filter(p=>p.startsWith('out/renderer/') && p.endsWith('.png'))
+          const logos = []
+          for (const source of ['logo.png','logo-dark.png']) {
+            const expected = hash(fs.readFileSync('src/renderer/src/assets/'+source))
+            const packed = pngs.find(p=>hash(asar.extractFile(archive,p))===expected)
+            if(!packed || !js.includes(path.basename(packed))) throw new Error('Actual referenced logo missing or changed: '+source)
+            logos.push({source,packed,sha256:expected})
+          }
+          console.log(JSON.stringify({arch:'${{ matrix.arch }}',source:'0d90f827c1a596915403cf188acaacb8b23e2061',packageBrand:'passed',logos,visualReview:false},null,2))
+          NODE
