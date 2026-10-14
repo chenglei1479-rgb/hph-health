@@ -18,8 +18,9 @@ import {
   pythonCommand,
   schemaNotebookPythonTarget,
   standaloneArchiveName,
-  wheelPlatformTag,
-  standaloneArchiveUrl
+  standaloneArchiveUrl,
+  tarExtractCommand,
+  wheelPlatformTag
 } from './stage-schema-notebook-python.mjs'
 
 describe('schema-notebook Python staging', () => {
@@ -69,6 +70,30 @@ describe('schema-notebook Python staging', () => {
         arch: 'arm64'
       }).command
     ).toBe('/prefix/bin/python')
+  })
+
+  it('extracts Windows archives with System32 bsdtar so C: is not a remote host', () => {
+    const archive = 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\cpython-3.12.15.tar.gz'
+    const dest = 'D:\\a\\hph-health\\hph-health\\resources\\schema-notebook-python\\win-x64'
+    const command = tarExtractCommand(archive, dest, {
+      platform: 'win32',
+      env: { SystemRoot: 'C:\\Windows' }
+    })
+    expect(command.command).toBe('C:\\Windows\\System32\\tar.exe')
+    expect(command.args).toEqual(['-xzf', archive, '-C', dest, '--strip-components=1'])
+    expect(command.command).not.toBe('tar')
+    expect(command.args.join(' ')).not.toContain('--force-local')
+  })
+
+  it('keeps system tar on macOS and Linux', () => {
+    const command = tarExtractCommand('/tmp/cpython.tar.gz', '/tmp/prefix', {
+      platform: 'darwin',
+      env: {}
+    })
+    expect(command).toEqual({
+      command: 'tar',
+      args: ['-xzf', '/tmp/cpython.tar.gz', '-C', '/tmp/prefix', '--strip-components=1']
+    })
   })
 
   it('replaces bin/python symlink with a regular executable', () => {

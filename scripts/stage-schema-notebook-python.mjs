@@ -18,7 +18,7 @@ import {
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, resolve, win32 } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -106,6 +106,25 @@ export function materializePythonBinary(dest, executable) {
   chmodSync(binary, 0o755)
 }
 
+/**
+ * Git Bash on the Windows runner puts GNU tar first on PATH. GNU tar treats
+ * `C:` in `-xzf C:\...` as a remote host (`Cannot connect to C: resolve failed`).
+ * Windows bsdtar at System32\tar.exe takes those paths as local files.
+ */
+export function tarExtractCommand(archive, dest, host = process) {
+  if (host.platform === 'win32') {
+    const root = host.env?.SystemRoot || host.env?.SYSTEMROOT || 'C:\\Windows'
+    return {
+      command: win32.join(root, 'System32', 'tar.exe'),
+      args: ['-xzf', archive, '-C', dest, '--strip-components=1']
+    }
+  }
+  return {
+    command: 'tar',
+    args: ['-xzf', archive, '-C', dest, '--strip-components=1']
+  }
+}
+
 const run = (spawn, command, args, env) => {
   const result = spawn(command, args, { stdio: 'inherit', env })
   if ((result.status ?? 1) !== 0) {
@@ -140,7 +159,8 @@ export async function stageSchemaNotebookPython({
   }
   const archive = join(tmpdir(), standaloneArchiveName(target))
   writeFileSync(archive, bytes)
-  run(spawn, 'tar', ['-xzf', archive, '-C', dest, '--strip-components=1'])
+  const extract = tarExtractCommand(archive, dest)
+  run(spawn, extract.command, extract.args)
   rmSync(archive, { force: true })
   materializePythonBinary(dest, target.executable)
 
