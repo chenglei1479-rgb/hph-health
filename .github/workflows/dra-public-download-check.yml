@@ -1,0 +1,31 @@
+name: Verify public DRA Windows download
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/dra-public-download-check.yml]
+permissions:
+  contents: read
+jobs:
+  public-download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check unauthenticated public download
+        run: |
+          python3 <<'PY'
+          import urllib.request, json
+          url = 'https://github.com/chenglei1479-rgb/hph-health/releases/download/v0.1.33-unified.1/DRA-0.1.33-unified.1-win-x64-setup.exe'
+          request = urllib.request.Request(url, method='HEAD', headers={'User-Agent':'DRA-download-verification'})
+          with urllib.request.urlopen(request, timeout=60) as response:
+              result = {'url':url,'status':response.status,'bytes':int(response.headers['Content-Length']),'authenticated':False}
+              assert result['status'] == 200 and result['bytes'] == 442273280
+          with open('public-download-check.json','w') as output:
+              json.dump(result,output,indent=2)
+          print(json.dumps(result))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-windows-download-check
+          path: public-download-check.json
+          if-no-files-found: error
