@@ -81,7 +81,8 @@ jobs:
           path: signed-source
           merge-multiple: true
       - name: Install staging dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        # Same packed file: lockfile; npm ci requires --install-links.
+        run: npm ci --install-links --ignore-scripts --no-audit --no-fund
       - name: Stage and verify signed components
         shell: pwsh
         run: |

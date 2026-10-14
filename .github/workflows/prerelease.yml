@@ -68,8 +68,10 @@ jobs:
           fi
 
       - name: Install dependencies
+        # package-lock.json packs the file: native packages. npm ci only
+        # accepts that lockfile when it is given the same --install-links flag.
         shell: bash
-        run: node scripts/ci/npm-ci.mjs
+        run: node scripts/ci/npm-ci.mjs --install-links
 
       - name: Set the beta version from the tag
         shell: bash

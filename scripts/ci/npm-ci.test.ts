@@ -112,7 +112,13 @@ describe('npm ci Electron mirror policy', () => {
       for (const [lineNumber, line] of text.split('\n').entries()) {
         const match = line.match(/^\s+run:\s*(npm ci.*)$/)
         if (!match) continue
-        if (match[1].includes('--ignore-scripts') && match[1].includes('--no-audit')) continue
+        if (
+          match[1].includes('--install-links') &&
+          match[1].includes('--ignore-scripts') &&
+          match[1].includes('--no-audit')
+        ) {
+          continue
+        }
         leftover.push(`${name}:${lineNumber + 1}: ${match[1]}`)
       }
     }
