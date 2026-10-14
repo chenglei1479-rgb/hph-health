@@ -2,6 +2,7 @@
   "common": {
     "The conversation changed. Close and reopen export to review it.": "La conversation a changé. Fermez puis rouvrez l’exportation pour la vérifier.",
     "Approval needed": "Approbation nécessaire",
+    "Approval number": "Numéro d'approbation",
     "Cancel": "Annuler",
     "Stay": "Rester dans l’application",
     "Retry saving": "Réessayer d’enregistrer",
@@ -55,7 +56,6 @@
     "Mark selection": "Marquer la sélection",
     "Is this machine approved by the hospital?": "Cet ordinateur est-il approuvé par l'hôpital ?",
     "This machine is not approved until you enter the hospital approval number and confirm. Closing this window leaves it not approved.": "Cet ordinateur n'est pas approuvé tant que vous n'avez pas saisi le numéro d'approbation de l'hôpital et confirmé. Fermer cette fenêtre le laisse non approuvé.",
-    "Approval number": "Numéro d'approbation",
     "This machine is approved": "Cet ordinateur est approuvé",
     "Not approved": "Non approuvé",
     "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "Cet ordinateur n'est pas approuvé par l'hôpital. La requête n'a pas été envoyée. Modifiez ces passages et réessayez : {{spans}}",
@@ -147,6 +147,16 @@
     "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "Ce paquet de session nécessite une version plus récente d’DRA. Mettez DRA à jour, puis réessayez de l’importer."
   },
   "renderer": {
+    "Hospital approval": "Approbation de l'hôpital",
+    "Patient information can be de-identified and sent only after this machine is approved by the hospital. A change is appended to the local audit log.": "Les informations sur le patient ne peuvent être dé-identifiées et envoyées que si cet ordinateur est approuvé par l'hôpital. Une modification est ajoutée au journal d'audit local.",
+    "This machine is not approved.": "Cet ordinateur n'est pas approuvé.",
+    "Approved under {{number}}.": "Approuvé sous {{number}}.",
+    "Approve this machine": "Approuver cet ordinateur",
+    "Revoke approval": "Révoquer l'approbation",
+    "Enter the hospital approval number.": "Saisissez le numéro d'approbation de l'hôpital.",
+    "Could not read hospital approval.": "Impossible de lire l'approbation de l'hôpital.",
+    "Could not update hospital approval.": "Impossible de mettre à jour l'approbation de l'hôpital.",
+    "Recorded {{at}}.": "Enregistré {{at}}.",
     "List GWAS summary statistics files, YAML metadata, reference genomes and standard column definitions by GCST accession.": "Lister les fichiers de statistiques récapitulatives GWAS, les métadonnées YAML, les génomes de référence et les définitions standard des colonnes à partir d’un identifiant GCST.",
     "PDF analysis options": "Options d’analyse du PDF",
     "Retrieve GEO series metadata, samples and supplementary-file links.": "Récupérer les métadonnées, les échantillons et les liens vers les fichiers supplémentaires d’une série GEO.",

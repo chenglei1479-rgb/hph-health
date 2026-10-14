@@ -2,6 +2,7 @@
   "common": {
     "The conversation changed. Close and reopen export to review it.": "对话已发生变化。请关闭并重新打开导出以检查内容。",
     "Approval needed": "需要批准",
+    "Approval number": "批准编号",
     "Cancel": "取消",
     "Stay": "留在应用中",
     "Retry saving": "重试保存",
@@ -55,7 +56,6 @@
     "Mark selection": "标记所选内容",
     "Is this machine approved by the hospital?": "这台计算机是否已获得医院批准？",
     "This machine is not approved until you enter the hospital approval number and confirm. Closing this window leaves it not approved.": "在您输入医院批准编号并确认之前，这台计算机未获批准。关闭此窗口将保持未批准状态。",
-    "Approval number": "批准编号",
     "This machine is approved": "这台计算机已获批准",
     "Not approved": "未批准",
     "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "这台计算机未获得医院批准。请求未发送。请编辑这些片段后重试：{{spans}}",
@@ -145,6 +145,16 @@
     "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "此会话研究包需要更新版本的 DRA。请更新 DRA 后重新导入。"
   },
   "renderer": {
+    "Hospital approval": "医院批准",
+    "Patient information can be de-identified and sent only after this machine is approved by the hospital. A change is appended to the local audit log.": "只有在医院批准这台计算机之后，患者信息才会去标识并发送。每次更改都会追加到本地审计日志。",
+    "This machine is not approved.": "这台计算机未获批准。",
+    "Approved under {{number}}.": "已批准，编号 {{number}}。",
+    "Approve this machine": "批准这台计算机",
+    "Revoke approval": "撤销批准",
+    "Enter the hospital approval number.": "请输入医院批准编号。",
+    "Could not read hospital approval.": "无法读取医院批准状态。",
+    "Could not update hospital approval.": "无法更新医院批准状态。",
+    "Recorded {{at}}.": "记录于 {{at}}。",
     "List GWAS summary statistics files, YAML metadata, reference genomes and standard column definitions by GCST accession.": "按 GCST 编号列出 GWAS 汇总统计文件、YAML 元数据、参考基因组和标准列定义。",
     "PDF analysis options": "PDF 分析选项",
     "Retrieve GEO series metadata, samples and supplementary-file links.": "获取 GEO 系列的元数据、样本和补充文件链接。",

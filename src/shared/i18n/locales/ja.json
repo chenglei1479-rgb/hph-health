@@ -2,6 +2,7 @@
   "common": {
     "The conversation changed. Close and reopen export to review it.": "会話が変更されました。内容を確認するには、エクスポートを閉じて再度開いてください。",
     "Approval needed": "承認が必要です",
+    "Approval number": "承認番号",
     "Cancel": "キャンセル",
     "Stay": "アプリに留まる",
     "Retry saving": "保存を再試行",
@@ -55,7 +56,6 @@
     "Mark selection": "選択範囲をマーク",
     "Is this machine approved by the hospital?": "この端末は病院に承認されていますか？",
     "This machine is not approved until you enter the hospital approval number and confirm. Closing this window leaves it not approved.": "病院の承認番号を入力して確認するまで、この端末は未承認です。このウィンドウを閉じると未承認のままです。",
-    "Approval number": "承認番号",
     "This machine is approved": "この端末は承認されています",
     "Not approved": "未承認",
     "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "この端末は病院に承認されていません。リクエストは送信されませんでした。これらの箇所を編集して再送信してください：{{spans}}",
@@ -145,6 +145,16 @@
     "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "このセッションパッケージには、より新しいバージョンの DRA が必要です。DRA を更新してから、もう一度インポートしてください。"
   },
   "renderer": {
+    "Hospital approval": "病院の承認",
+    "Patient information can be de-identified and sent only after this machine is approved by the hospital. A change is appended to the local audit log.": "この端末が病院に承認された後にのみ、患者情報は匿名化して送信できます。変更はローカルの監査ログに追記されます。",
+    "This machine is not approved.": "この端末は未承認です。",
+    "Approved under {{number}}.": "承認番号 {{number}} で承認済み。",
+    "Approve this machine": "この端末を承認",
+    "Revoke approval": "承認を取り消す",
+    "Enter the hospital approval number.": "病院の承認番号を入力してください。",
+    "Could not read hospital approval.": "病院の承認状態を読み取れませんでした。",
+    "Could not update hospital approval.": "病院の承認状態を更新できませんでした。",
+    "Recorded {{at}}.": "記録 {{at}}。",
     "List GWAS summary statistics files, YAML metadata, reference genomes and standard column definitions by GCST accession.": "GCST アクセッション番号で GWAS 要約統計量ファイル、YAML メタデータ、参照ゲノム、標準の列定義を一覧表示します。",
     "PDF analysis options": "PDF 解析オプション",
     "Retrieve GEO series metadata, samples and supplementary-file links.": "GEO シリーズのメタデータ、サンプル、補足ファイルへのリンクを取得。",

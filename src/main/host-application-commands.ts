@@ -88,6 +88,8 @@ import {
 import type { RemoteAccessService } from './remote-access/service'
 import type { ReviewerCommandOwner } from './reviewer/ipc'
 import type { UpdateCommandOwner } from './update/ipc'
+import type { MachineApprovalStatus, SetMachineApprovalRequest } from '../shared/machine-approval'
+import type { MachineApprovalCommandOwner } from './phi/approval-ipc'
 
 type StorageParentRequest = Readonly<{ parent: string }>
 type StorageRootRequest = Readonly<{ parent: string; markOnboarding?: boolean }>
@@ -149,6 +151,19 @@ const localFsCommands = Object.freeze({
     readonly [request: SetGrantedLocalRootAccessRequest],
     GrantedLocalRoot[]
   >('local-fs:granted-roots:set-access')
+})
+
+const machineApprovalCommands = Object.freeze({
+  getStatus: defineApplicationCommand<
+    'machine-approval:get-status',
+    readonly [],
+    MachineApprovalStatus
+  >('machine-approval:get-status'),
+  setStatus: defineApplicationCommand<
+    'machine-approval:set-status',
+    readonly [request: SetMachineApprovalRequest],
+    MachineApprovalStatus
+  >('machine-approval:set-status')
 })
 
 const logsCommands = Object.freeze({
@@ -410,6 +425,7 @@ const hostApplicationCommands = Object.freeze({
   github: githubCommands,
   localFs: localFsCommands,
   logs: logsCommands,
+  machineApproval: machineApprovalCommands,
   notifications: notificationCommands,
   remoteAccess: remoteAccessCommands,
   reviewer: reviewerCommands,
@@ -428,7 +444,8 @@ const hostApplicationCommandGroups = Object.freeze([
   defineApplicationCommandGroup('storage', Object.values(storageCommands)),
   defineApplicationCommandGroup('update', Object.values(updateCommands)),
   defineApplicationCommandGroup('local-models', Object.values(localModelCommands)),
-  defineApplicationCommandGroup('pdf-structure', Object.values(pdfStructureCommands))
+  defineApplicationCommandGroup('pdf-structure', Object.values(pdfStructureCommands)),
+  defineApplicationCommandGroup('machine-approval', Object.values(machineApprovalCommands))
 ] as const)
 
 type HostApplicationCommandDependencies = Readonly<{
@@ -453,6 +470,7 @@ type HostApplicationCommandDependencies = Readonly<{
     | 'setGrantedRootAccess'
   >
   logs: LogsCommandOwner
+  machineApproval: MachineApprovalCommandOwner
   notifications: Readonly<{
     getSnapshot: () => Promise<NotificationInboxSnapshot>
     markAllRead: (request: NotificationMarkAllReadRequest) => Promise<void>
@@ -775,6 +793,16 @@ const registerHostApplicationCommands = (
       'pdf-structure:clear-cache': ({ callerContext, callerLease }) =>
         localCommand(callerContext, 'pdf-structure:clear-cache', () =>
           dependencies.pdfStructure.clearCache(callerContext, callerLease)
+        )
+    })
+    scope.registerGroup(hostApplicationCommandGroups[11], {
+      'machine-approval:get-status': ({ callerContext }) =>
+        localCommand(callerContext, 'machine-approval:get-status', () =>
+          dependencies.machineApproval.getStatus()
+        ),
+      'machine-approval:set-status': ({ callerContext, args }) =>
+        localCommand(callerContext, 'machine-approval:set-status', () =>
+          dependencies.machineApproval.setStatus(args[0])
         )
     })
     return scope.complete()

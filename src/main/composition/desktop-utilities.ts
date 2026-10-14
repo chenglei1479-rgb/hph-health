@@ -2,6 +2,7 @@ import { createCliCommandOwner } from '../cli-install/ipc'
 import { createGithubCommandOwner } from '../github-ipc'
 import { createDesktopUtilitiesElectronSurface } from '../ipc-surfaces/desktop-utilities'
 import { createLogsCommandOwner } from '../logs-ipc'
+import { createMachineApprovalCommandOwner } from '../phi/approval-ipc'
 import { ManagedFileVersionService } from '../managed-file-versions/service'
 import { netFetchStandard } from '../skills/net-fetch'
 import type { composeManagedFiles } from './managed-files'
@@ -23,6 +24,7 @@ export async function composeDesktopUtilities({
   cliCommandOwner: ReturnType<typeof createCliCommandOwner>
   githubCommandOwner: ReturnType<typeof createGithubCommandOwner>
   logsCommandOwner: ReturnType<typeof createLogsCommandOwner>
+  machineApprovalCommandOwner: ReturnType<typeof createMachineApprovalCommandOwner>
 }> {
   const cliCommandOwner = createCliCommandOwner()
   // Reconcile an existing legacy AppImage shim before startup completes. The owner scopes the
@@ -30,6 +32,7 @@ export async function composeDesktopUtilities({
   await cliCommandOwner.ensureCurrent()
   const githubCommandOwner = createGithubCommandOwner({ fetch: netFetchStandard })
   const logsCommandOwner = createLogsCommandOwner()
+  const machineApprovalCommandOwner = createMachineApprovalCommandOwner()
   surfaceAdapters.push(
     createDesktopUtilitiesElectronSurface({
       resolveManagedFilePath: managedFiles.resolveManagedFilePath,
@@ -37,9 +40,10 @@ export async function composeDesktopUtilities({
       notebookInputs: sessionAuthority.notebookInputRegistry,
       translate,
       logs: logsCommandOwner,
+      machineApproval: machineApprovalCommandOwner,
       github: githubCommandOwner,
       cli: cliCommandOwner
     })
   )
-  return { cliCommandOwner, githubCommandOwner, logsCommandOwner }
+  return { cliCommandOwner, githubCommandOwner, logsCommandOwner, machineApprovalCommandOwner }
 }
