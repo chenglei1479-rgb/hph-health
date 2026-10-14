@@ -65,6 +65,11 @@ jobs:
           const count = source.split('Deep Research Agent').length - 1
           if (count !== 3) throw new Error('Unexpected upstream smoke harness')
           fs.writeFileSync(file, source.replaceAll('Deep Research Agent', 'DRA'))
+          const branded = fs.readFileSync(file, 'utf8')
+          fs.writeFileSync(file, branded.replace(
+            "OPEN_SCIENCE_E2E_NATIVE_SHELL_CERTIFICATION: '1'",
+            "OPEN_SCIENCE_E2E_NATIVE_SHELL_CERTIFICATION: '1', DRA_AUTH_MODE: 'local', DRA_ACTIVE_PROFILE: 'local-mac-package-smoke'"
+          ))
           const authFile = 'scripts/packaged-web-service-auth.mjs'
           const auth = fs.readFileSync(authFile, 'utf8')
           if (!auth.includes('(?:Deep Research Agent|MedResearch Agent) Web:')) throw new Error('Unexpected auth parser')
@@ -83,7 +88,7 @@ jobs:
           cp dist/database-migration-certification.json 'deliverables/database-migration-mac-${{ matrix.arch }}.json'
           cd deliverables
           shasum -a 256 *.dmg *.zip > 'SHA256-mac-${{ matrix.arch }}.txt'
-          printf '%s\n' 'source=0d90f827c1a596915403cf188acaacb8b23e2061' 'version=0.1.33-macpilot.2' 'arch=${{ matrix.arch }}' 'signing=ad-hoc' 'notarized=false' 'gatekeeperAccepted=false' 'packageSmoke=passed' 'fullRegression=false' 'realDoctorAccepted=false' > 'verification-mac-${{ matrix.arch }}.txt'
+          printf '%s\n' 'source=0d90f827c1a596915403cf188acaacb8b23e2061' 'version=0.1.33-macpilot.2' 'arch=${{ matrix.arch }}' 'signing=ad-hoc' 'notarized=false' 'gatekeeperAccepted=false' 'packageSmoke=passed' 'accountMode=isolated-local-test' 'realAccountLoginAccepted=false' 'fullRegression=false' 'realDoctorAccepted=false' > 'verification-mac-${{ matrix.arch }}.txt'
       - uses: actions/upload-artifact@v4
         with:
           name: dra-mac-verified-${{ matrix.arch }}
