@@ -47,7 +47,7 @@ export const buildWslSupportPrefillDoc = (
         '```',
         '',
         t(
-          'Goal: Diagnose the current state, set up or repair WSL2 Bash, save the verified profile, and offer the explicit activation action.'
+          'Goal: Inspect the current state, set up or repair WSL2 Bash, save the verified profile, and offer the explicit activation action.'
         ),
         t(
           'Use the bundled WSL2 setup guide and only the setup tools available in this conversation. Recheck after each change. Do not enter or request passwords in chat, replay an uncertain operation, or activate WSL2 Bash without my explicit action.'

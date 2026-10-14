@@ -197,7 +197,7 @@ const MedicalResearchLaunchpad = ({
         />
         <p>
           {t(
-            'For academic research only; not for diagnosis or treatment. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.'
+            'For research support only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.'
           )}
         </p>
       </div>

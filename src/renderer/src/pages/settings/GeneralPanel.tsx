@@ -472,7 +472,7 @@ const GeneralPanel = (): React.JSX.Element => {
         data-settings-anchor="general.diagnostics"
         title={t('Diagnostics')}
         description={t(
-          "View this device's runtime log — it records what the app is doing so problems can be diagnosed."
+          "View this device's runtime log — it records what the app is doing so problems can be traced."
         )}
         aria-label={t('Diagnostics')}
       >
