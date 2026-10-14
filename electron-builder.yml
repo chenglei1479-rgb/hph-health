@@ -114,6 +114,9 @@ extraResources:
   # Keep the project license readable outside app.asar on every platform.
   - from: LICENSE
     to: LICENSE.txt
+  # Placeholder signing policy. Updates stay disabled until REPLACE_ME values are replaced.
+  - from: resources/dra-signing.yml
+    to: dra-signing.yml
   # Keep the copied third-party provider icon paths' MIT notice readable in every packaged app.
   - from: src/renderer/src/assets/provider-icons/LobeHub-icons-LICENSE
     to: LobeHub-icons-LICENSE
@@ -299,7 +302,9 @@ deb:
     - libsecret-1-0
     - bubblewrap
 npmRebuild: false
-# No third-party update feed. Re-enable only with an operator-controlled DRA release service.
-publish: null
+# Own electron-updater generic feed. The REPLACE_ME host is inert until dra-signing.yml is real.
+publish:
+  provider: generic
+  url: https://updates.REPLACE_ME/dra/
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/

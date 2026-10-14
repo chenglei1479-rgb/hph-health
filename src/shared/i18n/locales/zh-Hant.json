@@ -7294,6 +7294,8 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "目前顯示 {{total}} 項發現中的 {{shown}} 項。請審查下方完整程式碼。",
     "Current environment": "目前環境",
     "Selected environment": "所選環境",
-    "Switching environments clears the current kernel's variables.": "切換環境會清除目前核心中的變數。"
+    "Switching environments clears the current kernel's variables.": "切換環境會清除目前核心中的變數。",
+    "The update signature does not match the pinned publisher. The installer was not started.": "更新簽章與固定的發佈者不相符。安裝程式未啟動。",
+    "The update feed could not be verified.": "未能驗證更新來源。"
   }
 }

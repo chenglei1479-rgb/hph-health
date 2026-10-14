@@ -1,0 +1,8 @@
+# Placeholder signing policy for DRA's own update channel.
+# Any REPLACE_ME value, or a host ending in .invalid, keeps updates disabled.
+# Replace every value before shipping a signed build. Do not commit real certificates.
+updateFeedUrl: https://updates.REPLACE_ME/dra/
+macTeamId: REPLACE_ME
+windowsPublisherName: REPLACE_ME
+requireNotarization: true
+requestedChannel: stable

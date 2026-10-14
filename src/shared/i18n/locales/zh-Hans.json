@@ -7294,6 +7294,8 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "当前显示 {{total}} 项发现中的 {{shown}} 项。请审查下方完整代码。",
     "Current environment": "当前环境",
     "Selected environment": "所选环境",
-    "Switching environments clears the current kernel's variables.": "切换环境会清除当前内核中的变量。"
+    "Switching environments clears the current kernel's variables.": "切换环境会清除当前内核中的变量。",
+    "The update signature does not match the pinned publisher. The installer was not started.": "更新签名与固定的发布者不匹配。安装程序未启动。",
+    "The update feed could not be verified.": "未能验证更新源。"
   }
 }

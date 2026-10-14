@@ -1,7 +1,14 @@
 import { spawnSync } from 'node:child_process'
 import { dirname, resolve, join } from 'node:path'
 import { readDraUpdateDeployment } from './deployment-config'
+import { fetchLatestYml } from './latest-feed'
+import { verifyDownloadedArtifact } from './signature-gate'
+import { loadSigningConfigFile, readOrCreateCohortId } from './signing-config'
 import type { DraUpdateDeployment } from '../../shared/dra-update-deployment'
+import {
+  updatesDisabledBySigningConfig,
+  type DraSigningConfig
+} from '../../shared/signed-update-channel'
 
 import { app } from 'electron'
 import { APP } from '../../shared/app-config'
@@ -18,6 +25,11 @@ export type CreateStrategyOptions = {
   // Build policy; injectable only for strategy regression tests.
   updatesEnabled?: boolean
   deployment?: DraUpdateDeployment
+  // Operator signing policy. A placeholder config disables the channel.
+  signingConfig?: DraSigningConfig
+  signingConfigPath?: string
+  rolloutInstallId?: string
+  fetchImpl?: typeof fetch
   // Whether this is a packaged (installed) build. Defaults to app.isPackaged; injectable for tests.
   isPackaged?: boolean
   // Running app version. Defaults to app.getVersion(); injectable for tests.
@@ -61,11 +73,52 @@ const macCanAutoUpdate = (isPackaged: boolean, version: string): boolean =>
 // Picks the update strategy for the host platform. Windows/Linux always get true in-place auto-update
 // via electron-updater. macOS gets it too on signed stable builds (see macCanAutoUpdate); otherwise
 // (dev, nightly, or any other platform) it falls back to the manifest installer flow (UpdateService).
+const deploymentFromSigning = (signing: DraSigningConfig): DraUpdateDeployment => {
+  const feed = signing.updateFeedUrl.endsWith('/')
+    ? signing.updateFeedUrl
+    : `${signing.updateFeedUrl}/`
+  return {
+    provider: 'generic',
+    url: feed,
+    manifestUrl: new URL('version.json', feed).href,
+    publisherName: signing.windowsPublisherName,
+    channel: 'latest'
+  }
+}
+
+const cohortIdFor = (explicit: string | undefined): string | undefined => {
+  if (explicit) return explicit
+  try {
+    const directory = app?.getPath?.('userData')
+    return directory ? readOrCreateCohortId(directory) : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export const createUpdateStrategy = (
   platform: NodeJS.Platform = process.platform,
   opts: CreateStrategyOptions = {}
 ): UpdateStrategy => {
-  let deployment = opts.deployment
+  const currentVersion = opts.version ?? app?.getVersion?.() ?? '0.0.0'
+  let signing = opts.signingConfig
+  if (!signing && opts.updatesEnabled === undefined) {
+    const signingPath =
+      opts.signingConfigPath ??
+      (process.resourcesPath ? join(process.resourcesPath, 'dra-signing.yml') : undefined)
+    if (signingPath) {
+      const loaded = loadSigningConfigFile(signingPath)
+      if (loaded === 'disabled') return new DisabledUpdateStrategy(currentVersion)
+      if (loaded !== 'missing') signing = loaded
+    }
+  }
+  if (signing && updatesDisabledBySigningConfig(signing)) {
+    return new DisabledUpdateStrategy(currentVersion)
+  }
+  const activeSigning = signing
+
+  let deployment =
+    opts.deployment ?? (activeSigning ? deploymentFromSigning(activeSigning) : undefined)
   if (opts.updatesEnabled === undefined && !deployment && process.resourcesPath) {
     try {
       deployment = readDraUpdateDeployment(join(process.resourcesPath, 'app-update.yml'))
@@ -77,12 +130,25 @@ export const createUpdateStrategy = (
     return new DisabledUpdateStrategy(opts.version ?? app?.getVersion?.() ?? '0.0.0')
   }
   const log = createLogger('update')
+  const signedFeed = activeSigning
+    ? {
+        rollout: {
+          installId: cohortIdFor(opts.rolloutInstallId),
+          requestedChannel: activeSigning.requestedChannel,
+          readFeed: () => fetchLatestYml(activeSigning.updateFeedUrl, opts.fetchImpl)
+        },
+        verifySignature: (artifactPath: string | undefined) =>
+          Promise.resolve(verifyDownloadedArtifact(artifactPath, activeSigning))
+      }
+    : {}
   const createInPlaceStrategy = (): ElectronUpdaterStrategy =>
     new ElectronUpdaterStrategy({
       installationGuard: createMacInstallationGuard(),
       ...(deployment ? { deployment, manifestUrl: deployment.manifestUrl } : {}),
+      ...signedFeed,
       ...(opts.installGate ? { installGate: opts.installGate } : {}),
       ...(opts.releaseInstallHandoff ? { releaseInstallHandoff: opts.releaseInstallHandoff } : {}),
+      ...(opts.fetchImpl ? { fetchImpl: opts.fetchImpl } : {}),
       log
     })
 
