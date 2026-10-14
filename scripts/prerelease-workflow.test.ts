@@ -60,10 +60,27 @@ it('builds unsigned macOS dmg and Windows NSIS packages and publishes a prerelea
   expect(buildApp?.run).toContain('npm run build:web')
   expect(buildApp?.run).toContain('npx electron-vite build')
 
-  const packageStep = build?.steps?.find((step) => step.name === 'Package unsigned installers')
+  const names = build?.steps?.map((step) => step.name)
+  const buildIndex = names?.indexOf('Build the app') ?? -1
+  const pythonIndex = names?.indexOf('Bundle the offline schema-notebook Python') ?? -1
+  const packageIndex = names?.indexOf('Package unsigned installers') ?? -1
+  expect(buildIndex).toBeGreaterThanOrEqual(0)
+  expect(pythonIndex).toBeGreaterThan(buildIndex)
+  expect(packageIndex).toBeGreaterThan(pythonIndex)
+
+  const bundlePython = build?.steps?.[pythonIndex]
+  expect(bundlePython?.run).toBe('node scripts/stage-schema-notebook-python.mjs')
+  expect(bundlePython?.env).toEqual({
+    SCHEMA_NOTEBOOK_PLATFORM: '${{ matrix.platform }}',
+    SCHEMA_NOTEBOOK_ARCH: '${{ matrix.arch }}'
+  })
+
+  const packageStep = build?.steps?.[packageIndex]
+  expect(packageStep?.env).toEqual({ NODE_OPTIONS: '--max-old-space-size=6144' })
   expect(packageStep?.run).toContain('build/prerelease-electron-builder.cjs')
   expect(packageStep?.run).toContain('--${{ matrix.platform }}')
   const raw = readFileSync('.github/workflows/prerelease.yml', 'utf8')
+  expect(raw).not.toContain('--max-old-space-size=8192')
   expect(raw).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
   expect(raw).toContain("DRA_PRERELEASE: '1'")
   expect(raw).not.toMatch(/^\s*CSC_LINK:/m)
@@ -82,6 +99,8 @@ it('writes the release body in Japanese and Chinese', () => {
   expect(notes).toContain('病院の PC')
   expect(notes).toContain('240 症例の再入院データセット')
   expect(notes).toContain('実際の患者データは決して使わない')
+  expect(notes).toContain('初回起動時にダウンロードしません')
+  expect(notes).toContain('lifelines')
   expect(notes).toContain(
     '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。'
   )
@@ -94,6 +113,7 @@ it('writes the release body in Japanese and Chinese', () => {
   expect(notes).toContain('医院电脑')
   expect(notes).toContain('240 例再入院数据集')
   expect(notes).toContain('切勿使用真实患者数据')
+  expect(notes).toContain('首次启动不会下载')
   expect(notes).toContain(
     '仅使用虚构数据。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。'
   )

@@ -8,8 +8,8 @@ import { findPythonCommand, probeInterpreterVersion, type PythonCommand } from '
  * Offline statistical stack for the schema-only Notebook. These wheels are part of
  * the installer prefix. The app must not pip-install or CDN-fetch them on first run.
  *
- * Unpacked size is about 450–800 MB per OS/architecture (numpy, scipy, and
- * matplotlib dominate). Ship only the target being packaged. See
+ * The unsigned beta stages one prefix per arch. Current stripped CPython plus
+ * wheels add roughly 120–200 MB to that installer. See
  * resources/schema-notebook-python/PACKAGING.md.
  */
 export const SCHEMA_NOTEBOOK_PYTHON_PACKAGES = [

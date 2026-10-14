@@ -5,12 +5,10 @@ statistical packages must already be inside the installer. The app looks for
 that prefix first and does not download Python, wheels, or a conda environment
 on first run.
 
-This pull request does not commit the prefix. A CPython 3.12 install plus
-pandas, numpy, scipy, statsmodels, matplotlib, openpyxl, and lifelines is about
-**450–800 MB unpacked per operating system and CPU architecture** (numpy, scipy,
-and matplotlib are most of that). Putting win-x64, macOS arm64, and macOS x64
-into one installer adds roughly **1.5–2.5 GB**. Package only the target being
-built.
+This pull request does not commit the prefix. The unsigned beta workflow
+downloads a stripped CPython 3.12 and the wheels for one architecture. That
+adds roughly **120–200 MB** to each installer (about 110 MB compressed before
+the dmg or NSIS packer). Package only the target being built.
 
 ## Layout
 
@@ -46,23 +44,32 @@ python3.12 -m venv "resources/schema-notebook-python/linux-x64"
 On Windows, `python.exe` must sit at the root of `win-x64`, which is the venv
 layout. Do not commit the prefix.
 
-## electron-builder
+## Unsigned internal beta
 
-Add this only in the release job that has staged the prefix. A `from` path that
-does not exist fails the packaging build. Keep the tree **out of app.asar**
-(a binary cannot be spawned from inside the archive). Add a `files` exclusion
-and one `extraResources` entry for the platform being built:
+`.github/workflows/prerelease.yml` (Unsigned internal beta) stages one prefix
+per matrix leg, after the electron-vite build and before packaging:
 
-```yaml
-files:
-  - '!resources/schema-notebook-python{,/**/*}'
+- macOS arm64 → `darwin-arm64`
+- macOS x64 → `darwin-x64` (the arm64 GitHub runner launches it with `arch -x86_64`)
+- Windows x64 → `win-x64`
 
-extraResources:
-  - from: resources/schema-notebook-python
-    to: schema-notebook-python
-```
+`scripts/stage-schema-notebook-python.mjs` downloads the pinned
+python-build-standalone CPython 3.12 `install_only_stripped` archive, checks
+its SHA256, and `pip install --only-binary=:all:` from `requirements.txt`.
+Each job stages only its own architecture.
 
-That copy lands at `process.resourcesPath/schema-notebook-python`. Installer
-size grows by the compressed size of that one prefix, typically a few hundred
-megabytes on top of the current DRA installer. Do not also leave the prefix in
-the asar file list.
+`build/prerelease-electron-builder.cjs` then copies that directory with
+`extraResources` to `schema-notebook-python` and excludes it from `app.asar`.
+A `from` path that does not exist fails the packaging build, so the stage step
+is required. Signed pilot workflows keep `electron-builder.yml` and do not
+package this prefix.
+
+The macOS jobs keep `NODE_OPTIONS=--max-old-space-size=6144`. `macos-latest`
+has 7 GB of RAM; an 8 GB Node heap does not fit beside the OS. The prefix stays
+on disk while electron-builder copies it.
+
+Current wheels plus the stripped CPython archive are about 110 MB compressed
+per architecture (about 85–95 MB of wheels and about 22–25 MB of CPython).
+Installed into the prefix that is closer to 200 MB, and the dmg or NSIS
+installer grows by roughly 120–200 MB for that one architecture. Do not also
+leave the prefix in the asar file list. Do not commit the staged tree.

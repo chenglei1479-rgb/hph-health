@@ -50,7 +50,7 @@
     "Confirm Notebook kernel and environment": "Notebookのカーネルと環境を確認"
   },
   "native": {
-    "Review de-identified text": "匿名化テキストの確認",
+    "Review de-identified text": "仮名化済みテキストの確認",
     "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "強調されたテキストは送信前に置き換えられています。ほかの患者情報があれば選択してマークしてください。確認すると送信します。このウィンドウを閉じると何も送信されません。",
     "Confirm send": "送信を確認",
     "Mark selection": "選択範囲をマーク",
@@ -146,7 +146,7 @@
   },
   "renderer": {
     "Hospital approval": "病院の承認",
-    "Patient information can be de-identified and sent only after this machine is approved by the hospital. A change is appended to the local audit log.": "この端末が病院に承認された後にのみ、患者情報は匿名化して送信できます。変更はローカルの監査ログに追記されます。",
+    "Patient information can be de-identified and sent only after this machine is approved by the hospital. A change is appended to the local audit log.": "この端末が病院に承認された後にのみ、患者情報はマスキングチェックを通して仮名化済みにしてから送信できます。変更はローカルの監査ログに追記されます。",
     "This machine is not approved.": "この端末は未承認です。",
     "Approved under {{number}}.": "承認番号 {{number}} で承認済み。",
     "Approve this machine": "この端末を承認",

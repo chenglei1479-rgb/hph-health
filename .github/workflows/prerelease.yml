@@ -107,8 +107,20 @@ jobs:
           npm run build:web
           npx electron-vite build
 
+      - name: Bundle the offline schema-notebook Python
+        shell: bash
+        env:
+          SCHEMA_NOTEBOOK_PLATFORM: ${{ matrix.platform }}
+          SCHEMA_NOTEBOOK_ARCH: ${{ matrix.arch }}
+        run: node scripts/stage-schema-notebook-python.mjs
+
       - name: Package unsigned installers
         shell: bash
+        # Same 6 GB ceiling as the app build. macos-latest has 7 GB of RAM;
+        # 8192 does not leave room for the OS beside Node. The Python prefix
+        # is copied from disk and is not loaded into this heap.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: npx electron-builder --config build/prerelease-electron-builder.cjs --${{ matrix.platform }} ${{ matrix.target }} --${{ matrix.arch }}
 
       - name: Upload installers
