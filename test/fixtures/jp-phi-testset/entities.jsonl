@@ -1,0 +1,527 @@
+{"id": "PERSON_NAME-001", "category": "PERSON_NAME", "text": "山田 太郎", "notes": "漢字 姓名(半角空格)", "value_start": 0, "value": "山田 太郎"}
+{"id": "PERSON_NAME-002", "category": "PERSON_NAME", "text": "佐々木　花子", "notes": "漢字 全角空格", "value_start": 0, "value": "佐々木　花子"}
+{"id": "PERSON_NAME-003", "category": "PERSON_NAME", "text": "やまだ たろう", "notes": "平假名", "value_start": 0, "value": "やまだ たろう"}
+{"id": "PERSON_NAME-004", "category": "PERSON_NAME", "text": "ササキ ハナコ", "notes": "全角片假名", "value_start": 0, "value": "ササキ ハナコ"}
+{"id": "PERSON_NAME-005", "category": "PERSON_NAME", "text": "ｻｻｷ ﾊﾅｺ", "notes": "半角片假名", "value_start": 0, "value": "ｻｻｷ ﾊﾅｺ"}
+{"id": "PERSON_NAME-006", "category": "PERSON_NAME", "text": "Taro YAMADA", "notes": "罗马字 名姓", "value_start": 0, "value": "Taro YAMADA"}
+{"id": "PERSON_NAME-007", "category": "PERSON_NAME", "text": "KANZAKI Mitsuru", "notes": "罗马字 姓名大写", "value_start": 0, "value": "KANZAKI Mitsuru"}
+{"id": "PERSON_NAME-009", "category": "PERSON_NAME", "text": "鈴森 和子 様", "notes": "姓名+様", "value_start": 0, "value": "鈴森 和子 様"}
+{"id": "PERSON_NAME-011", "category": "PERSON_NAME", "text": "葛城氏", "notes": "姓+氏", "value_start": 0, "value": "葛城氏"}
+{"id": "PERSON_NAME-012", "category": "PERSON_NAME", "text": "東雲", "notes": "仅姓", "value_start": 0, "value": "東雲"}
+{"id": "PERSON_NAME-015", "category": "PERSON_NAME", "text": "小鳥遊 ゆかり", "notes": "漢字+平假名", "value_start": 0, "value": "小鳥遊 ゆかり"}
+{"id": "PERSON_NAME-017", "category": "PERSON_NAME", "text": "中邑 恵子（なかむら けいこ）", "notes": "汉字+读音", "value_start": 0, "value": "中邑 恵子（なかむら けいこ）"}
+{"id": "PERSON_NAME-018", "category": "PERSON_NAME", "text": "椎名凛太郎", "notes": "无空格", "value_start": 0, "value": "椎名凛太郎"}
+{"id": "PERSON_NAME-021", "category": "PERSON_NAME", "text": "祖母 坂上 キヨ", "notes": "家属姓名(前缀不计)", "value_start": 0, "value": "祖母 坂上 キヨ"}
+{"id": "PERSON_NAME-022", "category": "PERSON_NAME", "text": "長男 坂上 拓海", "notes": "家属", "value_start": 0, "value": "長男 坂上 拓海"}
+{"id": "PERSON_NAME-024", "category": "PERSON_NAME", "text": "朝比奈 蒼", "notes": "单字名", "value_start": 0, "value": "朝比奈 蒼"}
+{"id": "PHYSICIAN_NAME-001", "category": "PHYSICIAN_NAME", "text": "担当医 森川 誠一", "notes": "含职称前缀", "value_start": 0, "value": "担当医 森川 誠一"}
+{"id": "PHYSICIAN_NAME-002", "category": "PHYSICIAN_NAME", "text": "森川医師", "notes": "姓+医師", "value_start": 0, "value": "森川医師"}
+{"id": "PHYSICIAN_NAME-003", "category": "PHYSICIAN_NAME", "text": "主治医：桐生 玲奈", "notes": "主治医", "value_start": 0, "value": "主治医：桐生 玲奈"}
+{"id": "PHYSICIAN_NAME-004", "category": "PHYSICIAN_NAME", "text": "Dr. Hayato Kirishima", "notes": "英文", "value_start": 0, "value": "Dr. Hayato Kirishima"}
+{"id": "PHYSICIAN_NAME-008", "category": "PHYSICIAN_NAME", "text": "研修医 大友 拓真", "notes": "研修医", "value_start": 0, "value": "研修医 大友 拓真"}
+{"id": "PHYSICIAN_NAME-010", "category": "PHYSICIAN_NAME", "text": "紹介元：日向クリニック 院長 日向 大輔", "notes": "院长", "value_start": 0, "value": "紹介元：日向クリニック 院長 日向 大輔"}
+{"id": "PHYSICIAN_NAME-012", "category": "PHYSICIAN_NAME", "text": "指導医 早乙女", "notes": "仅姓", "value_start": 0, "value": "指導医 早乙女"}
+{"id": "PHYSICIAN_NAME-013", "category": "PHYSICIAN_NAME", "text": "看護師 三浦 舞", "notes": "护士(医疗人员)", "value_start": 0, "value": "看護師 三浦 舞"}
+{"id": "PHYSICIAN_NAME-014", "category": "PHYSICIAN_NAME", "text": "薬剤師 柏木 涼", "notes": "药剂师", "value_start": 0, "value": "薬剤師 柏木 涼"}
+{"id": "PHYSICIAN_NAME-015", "category": "PHYSICIAN_NAME", "text": "検査技師 二宮 さくら", "notes": "技师", "value_start": 0, "value": "検査技師 二宮 さくら"}
+{"id": "PHYSICIAN_NAME-016", "category": "PHYSICIAN_NAME", "text": "PI: 九条 智彦", "notes": "研究责任者", "value_start": 0, "value": "PI: 九条 智彦"}
+{"id": "PHYSICIAN_NAME-018", "category": "PHYSICIAN_NAME", "text": "Dr. 篠原", "notes": "Dr.+姓", "value_start": 0, "value": "Dr. 篠原"}
+{"id": "PHYSICIAN_NAME-019", "category": "PHYSICIAN_NAME", "text": "黒沢部長", "notes": "姓+部長", "value_start": 0, "value": "黒沢部長"}
+{"id": "PHYSICIAN_NAME-020", "category": "PHYSICIAN_NAME", "text": "署名：天野 修", "notes": "署名", "value_start": 0, "value": "署名：天野 修"}
+{"id": "DATE-001", "category": "DATE", "text": "R6.4.1", "notes": "和暦略写", "value_start": 0, "value": "R6.4.1"}
+{"id": "DATE-003", "category": "DATE", "text": "令和元年5月1日", "notes": "元年", "value_start": 0, "value": "令和元年5月1日"}
+{"id": "DATE-004", "category": "DATE", "text": "令和元年10月3日", "notes": "元年", "value_start": 0, "value": "令和元年10月3日"}
+{"id": "DATE-006", "category": "DATE", "text": "平成30年12月25日", "notes": "平成", "value_start": 0, "value": "平成30年12月25日"}
+{"id": "DATE-007", "category": "DATE", "text": "平成元年1月8日", "notes": "平成元年", "value_start": 0, "value": "平成元年1月8日"}
+{"id": "DATE-008", "category": "DATE", "text": "S48.7.15", "notes": "昭和略写", "value_start": 0, "value": "S48.7.15"}
+{"id": "DATE-009", "category": "DATE", "text": "昭和48年7月15日", "notes": "昭和", "value_start": 0, "value": "昭和48年7月15日"}
+{"id": "DATE-010", "category": "DATE", "text": "昭和３５年２月２日", "notes": "全角数字", "value_start": 0, "value": "昭和３５年２月２日"}
+{"id": "DATE-011", "category": "DATE", "text": "2024/04/01", "notes": "西暦斜杠", "value_start": 0, "value": "2024/04/01"}
+{"id": "DATE-012", "category": "DATE", "text": "2024-4-1", "notes": "西暦连字符", "value_start": 0, "value": "2024-4-1"}
+{"id": "DATE-014", "category": "DATE", "text": "２０２４年１０月３日", "notes": "全角西暦", "value_start": 0, "value": "２０２４年１０月３日"}
+{"id": "DATE-015", "category": "DATE", "text": "24/10/03", "notes": "两位年", "value_start": 0, "value": "24/10/03"}
+{"id": "DATE-017", "category": "DATE", "text": "2024年4月", "notes": "仅年月", "value_start": 0, "value": "2024年4月"}
+{"id": "DATE-018", "category": "DATE", "text": "4月1日", "notes": "仅月日", "value_start": 0, "value": "4月1日"}
+{"id": "DATE-019", "category": "DATE", "text": "生年月日：昭和52年3月8日", "notes": "出生日期", "value_start": 0, "value": "生年月日：昭和52年3月8日"}
+{"id": "DATE-020", "category": "DATE", "text": "S52.3.8生", "notes": "出生日期略写", "value_start": 0, "value": "S52.3.8生"}
+{"id": "DATE-022", "category": "DATE", "text": "47歳", "notes": "年龄", "age_ge_90": false, "value_start": 0, "value": "47歳"}
+{"id": "DATE-024", "category": "DATE", "text": "92歳", "notes": "高龄(HIPAA 视为PHI)", "age_ge_90": true, "value_start": 0, "value": "92歳"}
+{"id": "DATE-026", "category": "DATE", "text": "5/12", "notes": "月/日", "value_start": 0, "value": "5/12"}
+{"id": "DATE-027", "category": "DATE", "text": "満90歳", "notes": "边界90", "age_ge_90": true, "value_start": 0, "value": "満90歳"}
+{"id": "DATE-028", "category": "DATE", "text": "９５歳", "notes": "全角", "age_ge_90": true, "value_start": 0, "value": "９５歳"}
+{"id": "DATE-029", "category": "DATE", "text": "90代", "notes": "年代", "age_ge_90": true, "value_start": 0, "value": "90代"}
+{"id": "DATE-030", "category": "DATE", "text": "90歳代", "notes": "年代", "age_ge_90": true, "value_start": 0, "value": "90歳代"}
+{"id": "DATE-031", "category": "DATE", "text": "卒寿", "notes": "90岁雅称", "age_ge_90": true, "value_start": 0, "value": "卒寿"}
+{"id": "DATE-036", "category": "DATE", "text": "九十六歳", "notes": "汉数字", "age_ge_90": true, "value_start": 0, "value": "九十六歳"}
+{"id": "DATE-037", "category": "DATE", "text": "89歳", "notes": "边界对照<90", "age_ge_90": false, "value_start": 0, "value": "89歳"}
+{"id": "KARTE_NO-003", "category": "KARTE_NO", "text": "ID: 2024-00871", "notes": "年+序号", "value_start": 4, "value": "2024-00871"}
+{"id": "KARTE_NO-004", "category": "KARTE_NO", "text": "患者ID 88-104-221", "notes": "分段", "value_start": 5, "value": "88-104-221"}
+{"id": "KARTE_NO-006", "category": "KARTE_NO", "text": "ＩＤ：００４５６７８", "notes": "全角", "value_start": 3, "value": "００４５６７８"}
+{"id": "KARTE_NO-010", "category": "KARTE_NO", "text": "入院番号 IN24-0331", "notes": "入院番号", "value_start": 5, "value": "IN24-0331"}
+{"id": "KARTE_NO-011", "category": "KARTE_NO", "text": "外来ID：OP-55102", "notes": "外来", "value_start": 5, "value": "OP-55102"}
+{"id": "KARTE_NO-012", "category": "KARTE_NO", "text": "No. 3301847", "notes": "No.", "value_start": 4, "value": "3301847"}
+{"id": "KARTE_NO-014", "category": "KARTE_NO", "text": "ID00381722", "notes": "无分隔", "value_start": 2, "value": "00381722"}
+{"id": "KARTE_NO-015", "category": "KARTE_NO", "text": "患者ID：９９８８７７", "notes": "全角6位", "value_start": 5, "value": "９９８８７７"}
+{"id": "KARTE_NO-016", "category": "KARTE_NO", "text": "受付番号 20241003-017", "notes": "受付", "value_start": 5, "value": "20241003-017"}
+{"id": "KARTE_NO-017", "category": "KARTE_NO", "text": "カルテ 4410293", "notes": "简写", "value_start": 4, "value": "4410293"}
+{"id": "KARTE_NO-018", "category": "KARTE_NO", "text": "PID=5521093", "notes": "系统格式", "value_start": 4, "value": "5521093"}
+{"id": "KARTE_NO-019", "category": "KARTE_NO", "text": "検体ID S24-118823", "notes": "检体号(可回溯患者)", "value_start": 5, "value": "S24-118823"}
+{"id": "KARTE_NO-020", "category": "KARTE_NO", "text": "画像ID CT2024-000771", "notes": "影像号", "value_start": 5, "value": "CT2024-000771"}
+{"id": "INSURER_NO-001", "category": "INSURER_NO", "text": "保険者番号：06139012", "notes": "8位 健保組合", "value_start": 6, "value": "06139012"}
+{"id": "INSURER_NO-003", "category": "INSURER_NO", "text": "保険者番号 01130012", "notes": "协会けんぽ", "value_start": 6, "value": "01130012"}
+{"id": "INSURER_NO-006", "category": "INSURER_NO", "text": "保険者番号 06273514", "notes": "健保組合 法别06", "value_start": 6, "value": "06273514"}
+{"id": "INSURER_NO-007", "category": "INSURER_NO", "text": "保険者番号：01270011", "notes": "协会けんぽ 大阪", "value_start": 6, "value": "01270011"}
+{"id": "INSURER_NO-008", "category": "INSURER_NO", "text": "国保 保険者番号 132019", "notes": "国保", "value_start": 9, "value": "132019"}
+{"id": "INSURER_NO-009", "category": "INSURER_NO", "text": "保険者番号=273011", "notes": "6位", "value_start": 6, "value": "273011"}
+{"id": "INSURER_NO-010", "category": "INSURER_NO", "text": "０６１３９０１２", "notes": "全角", "value_start": 0, "value": "０６１３９０１２"}
+{"id": "INSURER_NO-011", "category": "INSURER_NO", "text": "公費負担者番号 54136015", "notes": "公費負担者番号(机构侧)", "value_start": 8, "value": "54136015"}
+{"id": "INSURER_NO-012", "category": "INSURER_NO", "text": "負担者番号 21130017", "notes": "公費", "value_start": 6, "value": "21130017"}
+{"id": "INSURER_NO-013", "category": "INSURER_NO", "text": "保険者番号 39272011", "notes": "後期高齢者 大阪", "value_start": 6, "value": "39272011"}
+{"id": "INSURER_NO-015", "category": "INSURER_NO", "text": "保険者番号 63130010", "notes": "特例退職", "value_start": 6, "value": "63130010"}
+{"id": "INSURER_NO-016", "category": "INSURER_NO", "text": "保険者番号：０１１３００１２", "notes": "全角+前缀", "value_start": 6, "value": "０１１３００１２"}
+{"id": "INSURER_NO-017", "category": "INSURER_NO", "text": "保険者番号 34130013", "notes": "私学共済", "value_start": 6, "value": "34130013"}
+{"id": "INSURER_NO-019", "category": "INSURER_NO", "text": "保険者 01130012", "notes": "省略番号二字", "value_start": 4, "value": "01130012"}
+{"id": "INSURED_ID-001", "category": "INSURED_ID", "text": "記号 1234 番号 567", "notes": "記号・番号(原INSURER_NO拆出)", "value_start": 0, "value": "記号 1234 番号 567"}
+{"id": "INSURED_ID-002", "category": "INSURED_ID", "text": "記号：あ12 番号：3456", "notes": "含假名記号", "value_start": 0, "value": "記号：あ12 番号：3456"}
+{"id": "INSURED_ID-003", "category": "INSURED_ID", "text": "記号・番号 7101・2345", "notes": "中黒", "value_start": 0, "value": "記号・番号 7101・2345"}
+{"id": "INSURED_ID-006", "category": "INSURED_ID", "text": "被保険者番号 00112233", "notes": "後期高齢者 被保険者番号", "value_start": 7, "value": "00112233"}
+{"id": "INSURED_ID-007", "category": "INSURED_ID", "text": "記号 千ﾁ 番号 88", "notes": "半角假名記号", "value_start": 0, "value": "記号 千ﾁ 番号 88"}
+{"id": "INSURED_ID-008", "category": "INSURED_ID", "text": "被保険者証記号 5501 番号 76 枝番 02", "notes": "完整", "value_start": 0, "value": "被保険者証記号 5501 番号 76 枝番 02"}
+{"id": "INSURED_ID-011", "category": "INSURED_ID", "text": "記号 8812 番号 304 枝番 00", "notes": "标准", "value_start": 0, "value": "記号 8812 番号 304 枝番 00"}
+{"id": "INSURED_ID-014", "category": "INSURED_ID", "text": "記号 東京ｱ 番号 1029", "notes": "国保 汉字+半角假名記号", "value_start": 0, "value": "記号 東京ｱ 番号 1029"}
+{"id": "INSURED_ID-017", "category": "INSURED_ID", "text": "Insured ID: 5501-76-02", "notes": "英文", "value_start": 0, "value": "Insured ID: 5501-76-02"}
+{"id": "INSURED_ID-018", "category": "INSURED_ID", "text": "記号/番号 9902/18", "notes": "斜杠", "value_start": 0, "value": "記号/番号 9902/18"}
+{"id": "INSURED_ID-020", "category": "INSURED_ID", "text": "記号 A12 番号 3301", "notes": "字母記号", "value_start": 0, "value": "記号 A12 番号 3301"}
+{"id": "INSURED_ID-022", "category": "INSURED_ID", "text": "番号 304（枝番00）", "notes": "仅番号+枝番", "value_start": 0, "value": "番号 304（枝番00）"}
+{"id": "MY_NUMBER-001", "category": "MY_NUMBER", "text": "973957169994", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "973957169994", "checksum_valid": true}
+{"id": "MY_NUMBER-003", "category": "MY_NUMBER", "text": "2377-2023-2995", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "2377-2023-2995", "checksum_valid": true}
+{"id": "MY_NUMBER-004", "category": "MY_NUMBER", "text": "５６６５７９８７７６７０", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "５６６５７９８７７６７０", "checksum_valid": true}
+{"id": "MY_NUMBER-005", "category": "MY_NUMBER", "text": "634026319071", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "634026319071", "checksum_valid": true}
+{"id": "MY_NUMBER-006", "category": "MY_NUMBER", "text": "1787 2806 0631", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "1787 2806 0631", "checksum_valid": true}
+{"id": "MY_NUMBER-007", "category": "MY_NUMBER", "text": "5330-7140-3422", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "5330-7140-3422", "checksum_valid": true}
+{"id": "MY_NUMBER-008", "category": "MY_NUMBER", "text": "８７２８５６２１８８９６", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "８７２８５６２１８８９６", "checksum_valid": true}
+{"id": "MY_NUMBER-010", "category": "MY_NUMBER", "text": "9548 9577 6045", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "9548 9577 6045", "checksum_valid": true}
+{"id": "MY_NUMBER-011", "category": "MY_NUMBER", "text": "3354-9484-2957", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "3354-9484-2957", "checksum_valid": true}
+{"id": "MY_NUMBER-012", "category": "MY_NUMBER", "text": "９９４３３９９５３３３９", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "９９４３３９９５３３３９", "checksum_valid": true}
+{"id": "MY_NUMBER-013", "category": "MY_NUMBER", "text": "715814765872", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "715814765872", "checksum_valid": true}
+{"id": "MY_NUMBER-014", "category": "MY_NUMBER", "text": "2355 9255 6097", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "2355 9255 6097", "checksum_valid": true}
+{"id": "MY_NUMBER-015", "category": "MY_NUMBER", "text": "9593-1685-0168", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "9593-1685-0168", "checksum_valid": true}
+{"id": "MY_NUMBER-016", "category": "MY_NUMBER", "text": "１８８３５２８０６０５５", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "１８８３５２８０６０５５", "checksum_valid": true}
+{"id": "MY_NUMBER-018", "category": "MY_NUMBER", "text": "1198 6654 2535", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "1198 6654 2535", "checksum_valid": true}
+{"id": "MY_NUMBER-019", "category": "MY_NUMBER", "text": "2817-8404-0657", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "2817-8404-0657", "checksum_valid": true}
+{"id": "MY_NUMBER-021", "category": "MY_NUMBER", "text": "110899100077", "notes": "虚构 12位 校验位合法", "value_start": 0, "value": "110899100077", "checksum_valid": true}
+{"id": "MY_NUMBER-024", "category": "MY_NUMBER", "text": "個人番号 422447510466", "notes": "個人番号前缀", "value_start": 5, "value": "422447510466", "checksum_valid": true}
+{"id": "ADDRESS-002", "category": "ADDRESS", "text": "〒１５０－０００２", "notes": "全角郵便番号", "value_start": 0, "value": "〒１５０－０００２"}
+{"id": "ADDRESS-005", "category": "ADDRESS", "text": "北海道札幌市中央区北99条西88丁目1-1", "notes": "北海道条丁目", "value_start": 0, "value": "北海道札幌市中央区北99条西88丁目1-1"}
+{"id": "ADDRESS-006", "category": "ADDRESS", "text": "京都府京都市中京区烏丸通四条上ル笋町999番地", "notes": "京都通名", "value_start": 0, "value": "京都府京都市中京区烏丸通四条上ル笋町999番地"}
+{"id": "ADDRESS-007", "category": "ADDRESS", "text": "神奈川県横浜市港北区日吉本町９－８－７", "notes": "全角", "value_start": 0, "value": "神奈川県横浜市港北区日吉本町９－８－７"}
+{"id": "ADDRESS-008", "category": "ADDRESS", "text": "福岡市博多区博多駅前9-88-7-1203", "notes": "省都道府县+房间", "value_start": 0, "value": "福岡市博多区博多駅前9-88-7-1203"}
+{"id": "ADDRESS-009", "category": "ADDRESS", "text": "愛知県名古屋市千種区不老町99番地の8", "notes": "番地の", "value_start": 0, "value": "愛知県名古屋市千種区不老町99番地の8"}
+{"id": "ADDRESS-011", "category": "ADDRESS", "text": "宮城県仙台市青葉区一番町9-9-99", "notes": "仙台", "value_start": 0, "value": "宮城県仙台市青葉区一番町9-9-99"}
+{"id": "ADDRESS-012", "category": "ADDRESS", "text": "広島県広島市南区宇品海岸九丁目88番", "notes": "汉数字", "value_start": 0, "value": "広島県広島市南区宇品海岸九丁目88番"}
+{"id": "ADDRESS-013", "category": "ADDRESS", "text": "札幌市北区北88条西7丁目", "notes": "无都道府县", "value_start": 0, "value": "札幌市北区北88条西7丁目"}
+{"id": "ADDRESS-014", "category": "ADDRESS", "text": "沖縄県那覇市字安里999番地", "notes": "字", "value_start": 0, "value": "沖縄県那覇市字安里999番地"}
+{"id": "ADDRESS-015", "category": "ADDRESS", "text": "長野県松本市大字島内9999-1", "notes": "大字", "value_start": 0, "value": "長野県松本市大字島内9999-1"}
+{"id": "ADDRESS-017", "category": "ADDRESS", "text": "世田谷区桜新町9-8-7", "notes": "仅区", "value_start": 0, "value": "世田谷区桜新町9-8-7"}
+{"id": "ADDRESS-020", "category": "ADDRESS", "text": "熊本市中央区水前寺9丁目8番7号 サンハイツ201", "notes": "建筑", "value_start": 0, "value": "熊本市中央区水前寺9丁目8番7号 サンハイツ201"}
+{"id": "ADDRESS-021", "category": "ADDRESS", "text": "新潟県新潟市中央区古町通99番町", "notes": "番町", "value_start": 0, "value": "新潟県新潟市中央区古町通99番町"}
+{"id": "ADDRESS-022", "category": "ADDRESS", "text": "静岡県浜松市中区元城町999-9", "notes": "浜松", "value_start": 0, "value": "静岡県浜松市中区元城町999-9"}
+{"id": "ADDRESS-023", "category": "ADDRESS", "text": "ｵｵｻｶﾌ ｽｲﾀｼ", "notes": "半角假名地址", "value_start": 0, "value": "ｵｵｻｶﾌ ｽｲﾀｼ"}
+{"id": "ADDRESS-024", "category": "ADDRESS", "text": "岐阜県高山市本町9丁目88番地", "notes": "高山", "value_start": 0, "value": "岐阜県高山市本町9丁目88番地"}
+{"id": "PHONE-001", "category": "PHONE", "text": "03-5555-0123", "notes": "东京固话", "value_start": 0, "value": "03-5555-0123"}
+{"id": "PHONE-002", "category": "PHONE", "text": "06-6555-0198", "notes": "大阪", "value_start": 0, "value": "06-6555-0198"}
+{"id": "PHONE-003", "category": "PHONE", "text": "090-1234-5678", "notes": "手机", "value_start": 0, "value": "090-1234-5678"}
+{"id": "PHONE-005", "category": "PHONE", "text": "07012345678", "notes": "无分隔", "value_start": 0, "value": "07012345678"}
+{"id": "PHONE-008", "category": "PHONE", "text": "045(555)0177", "notes": "括号局号", "value_start": 0, "value": "045(555)0177"}
+{"id": "PHONE-009", "category": "PHONE", "text": "TEL：011-555-0101", "notes": "前缀", "value_start": 0, "value": "TEL：011-555-0101"}
+{"id": "PHONE-010", "category": "PHONE", "text": "携帯 080-5555-0912", "notes": "前缀", "value_start": 0, "value": "携帯 080-5555-0912"}
+{"id": "PHONE-011", "category": "PHONE", "text": "0120-555-019", "notes": "免费电话", "value_start": 0, "value": "0120-555-019"}
+{"id": "PHONE-012", "category": "PHONE", "text": "092-555-0130", "notes": "福冈", "value_start": 0, "value": "092-555-0130"}
+{"id": "PHONE-013", "category": "PHONE", "text": "+81-90-5555-0145", "notes": "国际", "value_start": 0, "value": "+81-90-5555-0145"}
+{"id": "PHONE-014", "category": "PHONE", "text": "+81 3 5555 0166", "notes": "国际空格", "value_start": 0, "value": "+81 3 5555 0166"}
+{"id": "PHONE-015", "category": "PHONE", "text": "0263-55-0188", "notes": "长区号", "value_start": 0, "value": "0263-55-0188"}
+{"id": "PHONE-019", "category": "PHONE", "text": "内線 4521", "notes": "院内分机", "value_start": 0, "value": "内線 4521"}
+{"id": "PHONE-020", "category": "PHONE", "text": "050-5555-0102", "notes": "IP电话", "value_start": 0, "value": "050-5555-0102"}
+{"id": "FACILITY-002", "category": "FACILITY", "text": "県立みなと医療センター", "notes": "虚构", "value_start": 0, "value": "県立みなと医療センター"}
+{"id": "FACILITY-003", "category": "FACILITY", "text": "青葉台中央病院", "notes": "虚构", "value_start": 0, "value": "青葉台中央病院"}
+{"id": "FACILITY-005", "category": "FACILITY", "text": "日向クリニック", "notes": "虚构诊所", "value_start": 0, "value": "日向クリニック"}
+{"id": "FACILITY-006", "category": "FACILITY", "text": "さくら訪問看護ステーション", "notes": "访问护理", "value_start": 0, "value": "さくら訪問看護ステーション"}
+{"id": "FACILITY-007", "category": "FACILITY", "text": "医療法人光風会 光風病院", "notes": "医疗法人", "value_start": 0, "value": "医療法人光風会 光風病院"}
+{"id": "FACILITY-008", "category": "FACILITY", "text": "北辰リハビリテーション病院", "notes": "康复", "value_start": 0, "value": "北辰リハビリテーション病院"}
+{"id": "FACILITY-011", "category": "FACILITY", "text": "5階東病棟", "notes": "病栋", "value_start": 0, "value": "5階東病棟"}
+{"id": "FACILITY-012", "category": "FACILITY", "text": "HCU", "notes": "病栋略称", "value_start": 0, "value": "HCU"}
+{"id": "FACILITY-013", "category": "FACILITY", "text": "ICU 3番ベッド", "notes": "床位", "value_start": 0, "value": "ICU 3番ベッド"}
+{"id": "FACILITY-014", "category": "FACILITY", "text": "みどりの丘特別養護老人ホーム", "notes": "养老设施", "value_start": 0, "value": "みどりの丘特別養護老人ホーム"}
+{"id": "FACILITY-015", "category": "FACILITY", "text": "西ヶ原薬局", "notes": "药局", "value_start": 0, "value": "西ヶ原薬局"}
+{"id": "FACILITY-017", "category": "FACILITY", "text": "内科外来", "notes": "外来", "value_start": 0, "value": "内科外来"}
+{"id": "FACILITY-018", "category": "FACILITY", "text": "南3病棟 512号室", "notes": "病室", "value_start": 0, "value": "南3病棟 512号室"}
+{"id": "FACILITY-019", "category": "FACILITY", "text": "ひかり健診センター", "notes": "健诊", "value_start": 0, "value": "ひかり健診センター"}
+{"id": "FACILITY-020", "category": "FACILITY", "text": "東都医科大学 倫理審査委員会", "notes": "伦理委员会", "value_start": 0, "value": "東都医科大学 倫理審査委員会"}
+{"id": "EMAIL-002", "category": "EMAIL", "text": "h-sasaki1977@example.com", "notes": "个人", "value_start": 0, "value": "h-sasaki1977@example.com"}
+{"id": "EMAIL-004", "category": "EMAIL", "text": "info@hinata-clinic.example", "notes": "诊所", "value_start": 0, "value": "info@hinata-clinic.example"}
+{"id": "EMAIL-005", "category": "EMAIL", "text": "kanzaki_m@example.ne.jp", "notes": "ne.jp", "value_start": 0, "value": "kanzaki_m@example.ne.jp"}
+{"id": "EMAIL-006", "category": "EMAIL", "text": "ｔａｒｏ＠ｅｘａｍｐｌｅ．ｊｐ", "notes": "全角", "value_start": 0, "value": "ｔａｒｏ＠ｅｘａｍｐｌｅ．ｊｐ"}
+{"id": "EMAIL-007", "category": "EMAIL", "text": "crc-kamiya@tohto-med.example.ac.jp", "notes": "ac.jp", "value_start": 0, "value": "crc-kamiya@tohto-med.example.ac.jp"}
+{"id": "EMAIL-008", "category": "EMAIL", "text": "nakamura.k+dra@example.org", "notes": "plus", "value_start": 0, "value": "nakamura.k+dra@example.org"}
+{"id": "EMAIL-009", "category": "EMAIL", "text": "yuka.t@example.co.jp", "notes": "co.jp", "value_start": 0, "value": "yuka.t@example.co.jp"}
+{"id": "EMAIL-010", "category": "EMAIL", "text": "aoi.tsukishima@example.com", "notes": "个人", "value_start": 0, "value": "aoi.tsukishima@example.com"}
+{"id": "EMAIL-011", "category": "EMAIL", "text": "rinta.shiina@example.net", "notes": "个人", "value_start": 0, "value": "rinta.shiina@example.net"}
+{"id": "EMAIL-013", "category": "EMAIL", "text": "research@minato-mc.example.jp", "notes": "机构", "value_start": 0, "value": "research@minato-mc.example.jp"}
+{"id": "EMAIL-014", "category": "EMAIL", "text": "ishikai@example.or.jp", "notes": "or.jp", "value_start": 0, "value": "ishikai@example.or.jp"}
+{"id": "EMAIL-017", "category": "EMAIL", "text": "kirishima.h@example.jp", "notes": "医生", "value_start": 0, "value": "kirishima.h@example.jp"}
+{"id": "EMAIL-018", "category": "EMAIL", "text": "myao@example.co.jp", "notes": "个人", "value_start": 0, "value": "myao@example.co.jp"}
+{"id": "EMAIL-020", "category": "EMAIL", "text": "a.amano@example.go.jp", "notes": "go.jp", "value_start": 0, "value": "a.amano@example.go.jp"}
+{"id": "PERSON_NAME-026", "category": "PERSON_NAME", "text": "ｷﾘｶﾞﾔ ﾁﾂﾞﾙ", "notes": "生成:半角片假名", "value_start": 0, "value": "ｷﾘｶﾞﾔ ﾁﾂﾞﾙ"}
+{"id": "PERSON_NAME-028", "category": "PERSON_NAME", "text": "宮ノ崎\n悠真", "notes": "生成:姓名被换行拆开", "value_start": 0, "value": "宮ノ崎\n悠真"}
+{"id": "PERSON_NAME-030", "category": "PERSON_NAME", "text": "MISONO,KOTARO", "notes": "生成:罗马字全大写 逗号", "value_start": 0, "value": "MISONO,KOTARO"}
+{"id": "PERSON_NAME-031", "category": "PERSON_NAME", "text": "葦原様", "notes": "生成:姓+様", "value_start": 0, "value": "葦原様"}
+{"id": "PERSON_NAME-034", "category": "PERSON_NAME", "text": "宮ノ崎,悠真", "notes": "生成:逗号分隔(系统导出)", "value_start": 0, "value": "宮ノ崎,悠真"}
+{"id": "PERSON_NAME-035", "category": "PERSON_NAME", "text": "水無瀬 悠眞", "notes": "生成:误记(異体字/错字)", "value_start": 0, "value": "水無瀬 悠眞"}
+{"id": "PERSON_NAME-036", "category": "PERSON_NAME", "text": "宮ノ崎 義男 様", "notes": "生成:姓名+様", "value_start": 0, "value": "宮ノ崎 義男 様"}
+{"id": "PERSON_NAME-039", "category": "PERSON_NAME", "text": "白鳥澤 聡一郎", "notes": "生成:误记(異体字/错字)", "value_start": 0, "value": "白鳥澤 聡一郎"}
+{"id": "PERSON_NAME-040", "category": "PERSON_NAME", "text": "真壁　弥生", "notes": "生成:漢字 全角空格", "value_start": 0, "value": "真壁　弥生"}
+{"id": "PERSON_NAME-041", "category": "PERSON_NAME", "text": "柊 ハルル", "notes": "生成:误记(異体字/错字)", "value_start": 0, "value": "柊 ハルル"}
+{"id": "PERSON_NAME-042", "category": "PERSON_NAME", "text": "真壁 琥太郎（マカベ コタロウ）", "notes": "生成:汉字+读音", "value_start": 0, "value": "真壁 琥太郎（マカベ コタロウ）"}
+{"id": "PERSON_NAME-043", "category": "PERSON_NAME", "text": "ﾅﾅｾ ｿｳｲﾁﾛｳ", "notes": "生成:半角片假名", "value_start": 0, "value": "ﾅﾅｾ ｿｳｲﾁﾛｳ"}
+{"id": "PERSON_NAME-045", "category": "PERSON_NAME", "text": "柊\n弥生", "notes": "生成:姓名被换行拆开", "value_start": 0, "value": "柊\n弥生"}
+{"id": "PERSON_NAME-049", "category": "PERSON_NAME", "text": "渡辺野文代", "notes": "生成:漢字 无空格", "value_start": 0, "value": "渡辺野文代"}
+{"id": "PERSON_NAME-051", "category": "PERSON_NAME", "text": "真壁\n義男", "notes": "生成:姓名被换行拆开", "value_start": 0, "value": "真壁\n義男"}
+{"id": "PERSON_NAME-052", "category": "PERSON_NAME", "text": "坂城 ハル", "notes": "生成:漢字 半角空格", "value_start": 0, "value": "坂城 ハル"}
+{"id": "PERSON_NAME-055", "category": "PERSON_NAME", "text": "KUONJI,TAKUMI", "notes": "生成:罗马字全大写 逗号", "value_start": 0, "value": "KUONJI,TAKUMI"}
+{"id": "PERSON_NAME-056", "category": "PERSON_NAME", "text": "MIYANOSAKI Sato", "notes": "生成:罗马字 姓大写", "value_start": 0, "value": "MIYANOSAKI Sato"}
+{"id": "PERSON_NAME-057", "category": "PERSON_NAME", "text": "柊 ハル", "notes": "生成:漢字 半角空格", "value_start": 0, "value": "柊 ハル"}
+{"id": "PERSON_NAME-058", "category": "PERSON_NAME", "text": "シラトリザワ チヅル", "notes": "生成:片假名", "value_start": 0, "value": "シラトリザワ チヅル"}
+{"id": "PERSON_NAME-059", "category": "PERSON_NAME", "text": "Tsuru Minase", "notes": "生成:罗马字 名姓", "value_start": 0, "value": "Tsuru Minase"}
+{"id": "PERSON_NAME-060", "category": "PERSON_NAME", "text": "Soichiro Saikawa", "notes": "生成:罗马字 名姓", "value_start": 0, "value": "Soichiro Saikawa"}
+{"id": "PERSON_NAME-061", "category": "PERSON_NAME", "text": "柊 昭三 様", "notes": "生成:姓名+様", "value_start": 0, "value": "柊 昭三 様"}
+{"id": "PERSON_NAME-062", "category": "PERSON_NAME", "text": "Chizuru Ichinose", "notes": "生成:罗马字 名姓", "value_start": 0, "value": "Chizuru Ichinose"}
+{"id": "PERSON_NAME-063", "category": "PERSON_NAME", "text": "御園 弥生", "notes": "生成:漢字 半角空格", "value_start": 0, "value": "御園 弥生"}
+{"id": "PERSON_NAME-064", "category": "PERSON_NAME", "text": "鷹取,義男", "notes": "生成:逗号分隔(系统导出)", "value_start": 0, "value": "鷹取,義男"}
+{"id": "PERSON_NAME-065", "category": "PERSON_NAME", "text": "ユキムラ・ヒナ", "notes": "生成:片假名中黒", "value_start": 0, "value": "ユキムラ・ヒナ"}
+{"id": "PERSON_NAME-066", "category": "PERSON_NAME", "text": "サカキ・ヒナ", "notes": "生成:片假名中黒", "value_start": 0, "value": "サカキ・ヒナ"}
+{"id": "PERSON_NAME-067", "category": "PERSON_NAME", "text": "TAKASAGOYA Haru", "notes": "生成:罗马字 姓大写", "value_start": 0, "value": "TAKASAGOYA Haru"}
+{"id": "PERSON_NAME-068", "category": "PERSON_NAME", "text": "髙砂谷 聡一郎", "notes": "生成:误记(異体字/错字)", "value_start": 0, "value": "髙砂谷 聡一郎"}
+{"id": "PERSON_NAME-070", "category": "PERSON_NAME", "text": "水無瀬 千鶴（ミナセ チヅル）", "notes": "生成:汉字+读音", "value_start": 0, "value": "水無瀬 千鶴（ミナセ チヅル）"}
+{"id": "PERSON_NAME-071", "category": "PERSON_NAME", "text": "雪村 陽菜菜", "notes": "生成:误记(異体字/错字)", "value_start": 0, "value": "雪村 陽菜菜"}
+{"id": "PERSON_NAME-072", "category": "PERSON_NAME", "text": "月岡 巧巧", "notes": "生成:误记(異体字/错字)", "value_start": 0, "value": "月岡 巧巧"}
+{"id": "PERSON_NAME-073", "category": "PERSON_NAME", "text": "葦原\nハル", "notes": "生成:姓名被换行拆开", "value_start": 0, "value": "葦原\nハル"}
+{"id": "PERSON_NAME-074", "category": "PERSON_NAME", "text": "ナナセ フミヨ", "notes": "生成:片假名", "value_start": 0, "value": "ナナセ フミヨ"}
+{"id": "PERSON_NAME-075", "category": "PERSON_NAME", "text": "さいかわ ひな", "notes": "生成:平假名", "value_start": 0, "value": "さいかわ ひな"}
+{"id": "PERSON_NAME-076", "category": "PERSON_NAME", "text": "白鳥沢　美津子", "notes": "生成:漢字 全角空格", "value_start": 0, "value": "白鳥沢　美津子"}
+{"id": "PERSON_NAME-077", "category": "PERSON_NAME", "text": "御園\n文代", "notes": "生成:姓名被换行拆开", "value_start": 0, "value": "御園\n文代"}
+{"id": "PERSON_NAME-078", "category": "PERSON_NAME", "text": "宮ノ崎ハル殿", "notes": "生成:姓名+殿", "value_start": 0, "value": "宮ノ崎ハル殿"}
+{"id": "PERSON_NAME-079", "category": "PERSON_NAME", "text": "斉川 さと（サイカワ サト）", "notes": "生成:汉字+读音", "value_start": 0, "value": "斉川 さと（サイカワ サト）"}
+{"id": "PERSON_NAME-080", "category": "PERSON_NAME", "text": "七瀬さん", "notes": "生成:姓+さん", "value_start": 0, "value": "七瀬さん"}
+{"id": "PERSON_NAME-083", "category": "PERSON_NAME", "text": "御園 千鶴（ミソノ チヅル）", "notes": "生成:汉字+读音", "value_start": 0, "value": "御園 千鶴（ミソノ チヅル）"}
+{"id": "PERSON_NAME-084", "category": "PERSON_NAME", "text": "高砂谷様", "notes": "生成:姓+様", "value_start": 0, "value": "高砂谷様"}
+{"id": "PERSON_NAME-085", "category": "PERSON_NAME", "text": "斉川さん", "notes": "生成:姓+さん", "value_start": 0, "value": "斉川さん"}
+{"id": "PERSON_NAME-087", "category": "PERSON_NAME", "text": "タカサゴヤ・タクミ", "notes": "生成:片假名中黒", "value_start": 0, "value": "タカサゴヤ・タクミ"}
+{"id": "PERSON_NAME-088", "category": "PERSON_NAME", "text": "柊千鶴", "notes": "生成:漢字 无空格", "value_start": 0, "value": "柊千鶴"}
+{"id": "PERSON_NAME-090", "category": "PERSON_NAME", "text": "柊,聡一郎", "notes": "生成:逗号分隔(系统导出)", "value_start": 0, "value": "柊,聡一郎"}
+{"id": "PERSON_NAME-092", "category": "PERSON_NAME", "text": "SHIRATORIZAWA Hina", "notes": "生成:罗马字 姓大写", "value_start": 0, "value": "SHIRATORIZAWA Hina"}
+{"id": "PERSON_NAME-094", "category": "PERSON_NAME", "text": "ヒイラギ・ショウゾウ", "notes": "生成:片假名中黒", "value_start": 0, "value": "ヒイラギ・ショウゾウ"}
+{"id": "PERSON_NAME-095", "category": "PERSON_NAME", "text": "久遠寺さん", "notes": "生成:姓+さん", "value_start": 0, "value": "久遠寺さん"}
+{"id": "PERSON_NAME-097", "category": "PERSON_NAME", "text": "白鳥沢 文代 様", "notes": "生成:姓名+様", "value_start": 0, "value": "白鳥沢 文代 様"}
+{"id": "PERSON_NAME-098", "category": "PERSON_NAME", "text": "まかべ やよい", "notes": "生成:平假名", "value_start": 0, "value": "まかべ やよい"}
+{"id": "PERSON_NAME-099", "category": "PERSON_NAME", "text": "ASHIHARA,KANJI", "notes": "生成:罗马字全大写 逗号", "value_start": 0, "value": "ASHIHARA,KANJI"}
+{"id": "PERSON_NAME-100", "category": "PERSON_NAME", "text": "真壁様", "notes": "生成:姓+様", "value_start": 0, "value": "真壁様"}
+{"id": "MY_NUMBER-025", "category": "MY_NUMBER", "text": "マイナンバーカード番号 712860178656", "notes": "生成 校验位合法:长标签", "value_start": 12, "value": "712860178656", "checksum_valid": true}
+{"id": "MY_NUMBER-026", "category": "MY_NUMBER", "text": "119395576574", "notes": "生成 校验位合法:连写", "value_start": 0, "value": "119395576574", "checksum_valid": true}
+{"id": "MY_NUMBER-027", "category": "MY_NUMBER", "text": "８１２３００６７７４２２", "notes": "生成 校验位合法:全角", "value_start": 0, "value": "８１２３００６７７４２２", "checksum_valid": true}
+{"id": "MY_NUMBER-028", "category": "MY_NUMBER", "text": "My Number: 1062 6297 1808", "notes": "生成 校验位合法:英文标签", "value_start": 11, "value": "1062 6297 1808", "checksum_valid": true}
+{"id": "MY_NUMBER-029", "category": "MY_NUMBER", "text": "4410 7254\n1061", "notes": "生成 校验位合法:空格+换行", "value_start": 0, "value": "4410 7254\n1061", "checksum_valid": true}
+{"id": "MY_NUMBER-032", "category": "MY_NUMBER", "text": "9327　2409　5062", "notes": "生成 校验位合法:全角空格", "value_start": 0, "value": "9327　2409　5062", "checksum_valid": true}
+{"id": "MY_NUMBER-033", "category": "MY_NUMBER", "text": "108176183964", "notes": "生成 校验位合法:连写", "value_start": 0, "value": "108176183964", "checksum_valid": true}
+{"id": "MY_NUMBER-036", "category": "MY_NUMBER", "text": "8633 4142\n1096", "notes": "生成 校验位合法:空格+换行", "value_start": 0, "value": "8633 4142\n1096", "checksum_valid": true}
+{"id": "MY_NUMBER-037", "category": "MY_NUMBER", "text": "3981－8580－9025", "notes": "生成 校验位合法:全角连字符", "value_start": 0, "value": "3981－8580－9025", "checksum_valid": true}
+{"id": "MY_NUMBER-039", "category": "MY_NUMBER", "text": "4703・4737・3709", "notes": "生成 校验位合法:中黒分隔", "value_start": 0, "value": "4703・4737・3709", "checksum_valid": true}
+{"id": "MY_NUMBER-041", "category": "MY_NUMBER", "text": "8542-3047-6500", "notes": "生成 校验位合法:连字符", "value_start": 0, "value": "8542-3047-6500", "checksum_valid": true}
+{"id": "MY_NUMBER-042", "category": "MY_NUMBER", "text": "マイナンバー：450901168178", "notes": "生成 校验位合法:标签 マイナンバー", "value_start": 7, "value": "450901168178", "checksum_valid": true}
+{"id": "MY_NUMBER-043", "category": "MY_NUMBER", "text": "My Number: 6339 0282 4335", "notes": "生成 校验位合法:英文标签", "value_start": 11, "value": "6339 0282 4335", "checksum_valid": true}
+{"id": "MY_NUMBER-044", "category": "MY_NUMBER", "text": "マイナンバー：968426537804", "notes": "生成 校验位合法:标签 マイナンバー", "value_start": 7, "value": "968426537804", "checksum_valid": true}
+{"id": "MY_NUMBER-045", "category": "MY_NUMBER", "text": "マイナンバー：160623413591", "notes": "生成 校验位合法:标签 マイナンバー", "value_start": 7, "value": "160623413591", "checksum_valid": true}
+{"id": "MY_NUMBER-048", "category": "MY_NUMBER", "text": "9882－6024－6270", "notes": "生成 校验位合法:全角连字符", "value_start": 0, "value": "9882－6024－6270", "checksum_valid": true}
+{"id": "MY_NUMBER-050", "category": "MY_NUMBER", "text": "7060-1153-8754", "notes": "生成 校验位合法:连字符", "value_start": 0, "value": "7060-1153-8754", "checksum_valid": true}
+{"id": "MY_NUMBER-051", "category": "MY_NUMBER", "text": "316608104558", "notes": "生成 校验位合法:连写", "value_start": 0, "value": "316608104558", "checksum_valid": true}
+{"id": "MY_NUMBER-052", "category": "MY_NUMBER", "text": "マイナンバーカード番号 558699462170", "notes": "生成 校验位合法:长标签", "value_start": 12, "value": "558699462170", "checksum_valid": true}
+{"id": "MY_NUMBER-053", "category": "MY_NUMBER", "text": "9292・8372・1913", "notes": "生成 校验位合法:中黒分隔", "value_start": 0, "value": "9292・8372・1913", "checksum_valid": true}
+{"id": "MY_NUMBER-054", "category": "MY_NUMBER", "text": "My Number: 7150 0999 6337", "notes": "生成 校验位合法:英文标签", "value_start": 11, "value": "7150 0999 6337", "checksum_valid": true}
+{"id": "MY_NUMBER-055", "category": "MY_NUMBER", "text": "マイナンバー：712616010271", "notes": "生成 校验位合法:标签 マイナンバー", "value_start": 7, "value": "712616010271", "checksum_valid": true}
+{"id": "MY_NUMBER-056", "category": "MY_NUMBER", "text": "My Number: 4356 5161 9242", "notes": "生成 校验位合法:英文标签", "value_start": 11, "value": "4356 5161 9242", "checksum_valid": true}
+{"id": "MY_NUMBER-057", "category": "MY_NUMBER", "text": "4840－2740－4658", "notes": "生成 校验位合法:全角连字符", "value_start": 0, "value": "4840－2740－4658", "checksum_valid": true}
+{"id": "MY_NUMBER-059", "category": "MY_NUMBER", "text": "8828-3591-7722", "notes": "生成 校验位合法:连字符", "value_start": 0, "value": "8828-3591-7722", "checksum_valid": true}
+{"id": "MY_NUMBER-060", "category": "MY_NUMBER", "text": "マイナンバー：433512655053", "notes": "生成 校验位合法:标签 マイナンバー", "value_start": 7, "value": "433512655053", "checksum_valid": true}
+{"id": "MY_NUMBER-061", "category": "MY_NUMBER", "text": "My Number: 7466 7188 8970", "notes": "生成 校验位合法:英文标签", "value_start": 11, "value": "7466 7188 8970", "checksum_valid": true}
+{"id": "MY_NUMBER-062", "category": "MY_NUMBER", "text": "マイナンバーカード番号 588717194532", "notes": "生成 校验位合法:长标签", "value_start": 12, "value": "588717194532", "checksum_valid": true}
+{"id": "MY_NUMBER-063", "category": "MY_NUMBER", "text": "92658773\n0480", "notes": "生成 校验位合法:换行拆分", "value_start": 0, "value": "92658773\n0480", "checksum_valid": true}
+{"id": "MY_NUMBER-064", "category": "MY_NUMBER", "text": "55001558\n9990", "notes": "生成 校验位合法:换行拆分", "value_start": 0, "value": "55001558\n9990", "checksum_valid": true}
+{"id": "MY_NUMBER-065", "category": "MY_NUMBER", "text": "7693 1225 4575", "notes": "生成 校验位合法:4-4-4 空格", "value_start": 0, "value": "7693 1225 4575", "checksum_valid": true}
+{"id": "MY_NUMBER-066", "category": "MY_NUMBER", "text": "61698063\n5067", "notes": "生成 校验位合法:换行拆分", "value_start": 0, "value": "61698063\n5067", "checksum_valid": true}
+{"id": "MY_NUMBER-067", "category": "MY_NUMBER", "text": "1385-9737-6539", "notes": "生成 校验位合法:连字符", "value_start": 0, "value": "1385-9737-6539", "checksum_valid": true}
+{"id": "MY_NUMBER-068", "category": "MY_NUMBER", "text": "個人番号 2319-1386-3650", "notes": "生成 校验位合法:标签 個人番号", "value_start": 5, "value": "2319-1386-3650", "checksum_valid": true}
+{"id": "MY_NUMBER-069", "category": "MY_NUMBER", "text": "6706　5411　9223", "notes": "生成 校验位合法:全角空格", "value_start": 0, "value": "6706　5411　9223", "checksum_valid": true}
+{"id": "MY_NUMBER-070", "category": "MY_NUMBER", "text": "マイナンバーカード番号 560137180044", "notes": "生成 校验位合法:长标签", "value_start": 12, "value": "560137180044", "checksum_valid": true}
+{"id": "MY_NUMBER-071", "category": "MY_NUMBER", "text": "100087145888", "notes": "生成 校验位合法:连写", "value_start": 0, "value": "100087145888", "checksum_valid": true}
+{"id": "MY_NUMBER-076", "category": "MY_NUMBER", "text": "3069-3088-3613", "notes": "生成 校验位合法:连字符", "value_start": 0, "value": "3069-3088-3613", "checksum_valid": true}
+{"id": "MY_NUMBER-078", "category": "MY_NUMBER", "text": "7956 5720\n2161", "notes": "生成 校验位合法:空格+换行", "value_start": 0, "value": "7956 5720\n2161", "checksum_valid": true}
+{"id": "MY_NUMBER-079", "category": "MY_NUMBER", "text": "マイナンバー：563068149520", "notes": "生成 校验位合法:标签 マイナンバー", "value_start": 7, "value": "563068149520", "checksum_valid": true}
+{"id": "MY_NUMBER-080", "category": "MY_NUMBER", "text": "5873 6570 6744", "notes": "生成 校验位合法:4-4-4 空格", "value_start": 0, "value": "5873 6570 6744", "checksum_valid": true}
+{"id": "MY_NUMBER-082", "category": "MY_NUMBER", "text": "7051－6426－8415", "notes": "生成 校验位合法:全角连字符", "value_start": 0, "value": "7051－6426－8415", "checksum_valid": true}
+{"id": "MY_NUMBER-083", "category": "MY_NUMBER", "text": "個人番号 4861-1768-3702", "notes": "生成 校验位合法:标签 個人番号", "value_start": 5, "value": "4861-1768-3702", "checksum_valid": true}
+{"id": "MY_NUMBER-086", "category": "MY_NUMBER", "text": "６６６８９４９４９７０６", "notes": "生成 校验位合法:全角", "value_start": 0, "value": "６６６８９４９４９７０６", "checksum_valid": true}
+{"id": "MY_NUMBER-088", "category": "MY_NUMBER", "text": "7726－1370－8211", "notes": "生成 校验位合法:全角连字符", "value_start": 0, "value": "7726－1370－8211", "checksum_valid": true}
+{"id": "MY_NUMBER-091", "category": "MY_NUMBER", "text": "5451 1069\n5256", "notes": "生成 校验位合法:空格+换行", "value_start": 0, "value": "5451 1069\n5256", "checksum_valid": true}
+{"id": "MY_NUMBER-093", "category": "MY_NUMBER", "text": "9806 3248 7816", "notes": "抄录错误(校验位不合法) checksum_invalid", "value_start": 0, "value": "9806 3248 7816", "checksum_valid": false}
+{"id": "MY_NUMBER-094", "category": "MY_NUMBER", "text": "6350 7661 6884", "notes": "抄录错误(校验位不合法) checksum_invalid", "value_start": 0, "value": "6350 7661 6884", "checksum_valid": false}
+{"id": "MY_NUMBER-097", "category": "MY_NUMBER", "text": "3509 2974 4946", "notes": "抄录错误(校验位不合法) checksum_invalid", "value_start": 0, "value": "3509 2974 4946", "checksum_valid": false}
+{"id": "MY_NUMBER-098", "category": "MY_NUMBER", "text": "6487 4575 8478", "notes": "抄录错误(校验位不合法) checksum_invalid", "value_start": 0, "value": "6487 4575 8478", "checksum_valid": false}
+{"id": "MY_NUMBER-099", "category": "MY_NUMBER", "text": "6623 6259 8939", "notes": "抄录错误(校验位不合法) checksum_invalid", "value_start": 0, "value": "6623 6259 8939", "checksum_valid": false}
+{"id": "MY_NUMBER-100", "category": "MY_NUMBER", "text": "8357 6310 5771", "notes": "抄录错误(校验位不合法) checksum_invalid", "value_start": 0, "value": "8357 6310 5771", "checksum_valid": false}
+{"id": "INSURER_NO-022", "category": "INSURER_NO", "text": "保険者番号74439035", "notes": "生成 法别74:无空格", "value_start": 5, "value": "74439035"}
+{"id": "INSURER_NO-024", "category": "INSURER_NO", "text": "保険者番号 0215\n3724", "notes": "生成 法别02:换行拆分", "value_start": 6, "value": "0215\n3724"}
+{"id": "INSURER_NO-025", "category": "INSURER_NO", "text": "保険者番号 72069933", "notes": "生成 法别72:标签", "value_start": 6, "value": "72069933"}
+{"id": "INSURER_NO-029", "category": "INSURER_NO", "text": "保険者番号：７４２７５７９３", "notes": "生成 法别74:全角", "value_start": 6, "value": "７４２７５７９３"}
+{"id": "INSURER_NO-030", "category": "INSURER_NO", "text": "保険者番号 7410\n2641", "notes": "生成 法别74:换行拆分", "value_start": 6, "value": "7410\n2641"}
+{"id": "INSURER_NO-031", "category": "INSURER_NO", "text": "保険者番号 3119387", "notes": "生成 法别31:抄录错误(7位/9位)", "value_start": 6, "value": "3119387"}
+{"id": "INSURER_NO-032", "category": "INSURER_NO", "text": "保険者番号：７３０９９５２５", "notes": "生成 法别73:全角", "value_start": 6, "value": "７３０９９５２５"}
+{"id": "INSURER_NO-033", "category": "INSURER_NO", "text": "75081612", "notes": "生成 法别75:无标签", "value_start": 0, "value": "75081612"}
+{"id": "INSURER_NO-034", "category": "INSURER_NO", "text": "保険者 73114571", "notes": "生成 法别73:简写标签", "value_start": 4, "value": "73114571"}
+{"id": "INSURER_NO-035", "category": "INSURER_NO", "text": "保険者番号 0 2 3 5 2 5 9 9", "notes": "生成 法别02:OCR 空格", "value_start": 6, "value": "0 2 3 5 2 5 9 9"}
+{"id": "INSURER_NO-036", "category": "INSURER_NO", "text": "07149396", "notes": "生成 法别07:无标签", "value_start": 0, "value": "07149396"}
+{"id": "INSURER_NO-038", "category": "INSURER_NO", "text": "67470195", "notes": "生成 法别67:无标签", "value_start": 0, "value": "67470195"}
+{"id": "INSURER_NO-039", "category": "INSURER_NO", "text": "保険者番号 6 3 0 1 2 5 0 4", "notes": "生成 法别63:OCR 空格", "value_start": 6, "value": "6 3 0 1 2 5 0 4"}
+{"id": "INSURER_NO-040", "category": "INSURER_NO", "text": "保険者番号 020157582", "notes": "生成 法别02:抄录错误(7位/9位)", "value_start": 6, "value": "020157582"}
+{"id": "INSURER_NO-042", "category": "INSURER_NO", "text": "保険者 32454332", "notes": "生成 法别32:简写标签", "value_start": 4, "value": "32454332"}
+{"id": "INSURER_NO-043", "category": "INSURER_NO", "text": "保険者番号 01286178", "notes": "生成 法别01:标签", "value_start": 6, "value": "01286178"}
+{"id": "INSURER_NO-044", "category": "INSURER_NO", "text": "74453879", "notes": "生成 法别74:无标签", "value_start": 0, "value": "74453879"}
+{"id": "INSURER_NO-045", "category": "INSURER_NO", "text": "保険者番号 6 3 1 8 1 0 6 9", "notes": "生成 法别63:OCR 空格", "value_start": 6, "value": "6 3 1 8 1 0 6 9"}
+{"id": "INSURER_NO-046", "category": "INSURER_NO", "text": "保険者番号32112146", "notes": "生成 法别32:无空格", "value_start": 5, "value": "32112146"}
+{"id": "INSURER_NO-047", "category": "INSURER_NO", "text": "保険者番号：３３２９４５０５", "notes": "生成 法别33:全角", "value_start": 6, "value": "３３２９４５０５"}
+{"id": "INSURER_NO-048", "category": "INSURER_NO", "text": "保険者番号 0123981", "notes": "生成 法别01:抄录错误(7位/9位)", "value_start": 6, "value": "0123981"}
+{"id": "INSURER_NO-049", "category": "INSURER_NO", "text": "保険者番号=06253512", "notes": "生成 法别06:等号", "value_start": 6, "value": "06253512"}
+{"id": "INSURER_NO-050", "category": "INSURER_NO", "text": "74305962", "notes": "生成 法别74:无标签", "value_start": 0, "value": "74305962"}
+{"id": "INSURER_NO-051", "category": "INSURER_NO", "text": "保険者 72011810", "notes": "生成 法别72:简写标签", "value_start": 4, "value": "72011810"}
+{"id": "INSURER_NO-052", "category": "INSURER_NO", "text": "67463307", "notes": "生成 法别67:无标签", "value_start": 0, "value": "67463307"}
+{"id": "INSURER_NO-055", "category": "INSURER_NO", "text": "保険者番号33322520", "notes": "生成 法别33:无空格", "value_start": 5, "value": "33322520"}
+{"id": "INSURER_NO-056", "category": "INSURER_NO", "text": "33089343", "notes": "生成 法别33:无标签", "value_start": 0, "value": "33089343"}
+{"id": "INSURER_NO-058", "category": "INSURER_NO", "text": "Insurer No. 63327688", "notes": "生成 法别63:英文", "value_start": 12, "value": "63327688"}
+{"id": "INSURER_NO-059", "category": "INSURER_NO", "text": "保険者番号 02091353", "notes": "生成 法别02:标签", "value_start": 6, "value": "02091353"}
+{"id": "INSURER_NO-060", "category": "INSURER_NO", "text": "保険者 63133466", "notes": "生成 法别63:简写标签", "value_start": 4, "value": "63133466"}
+{"id": "INSURER_NO-061", "category": "INSURER_NO", "text": "保険者 31338312", "notes": "生成 法别31:简写标签", "value_start": 4, "value": "31338312"}
+{"id": "INSURER_NO-064", "category": "INSURER_NO", "text": "保険者番号 0 7 3 6 3 6 8 2", "notes": "生成 法别07:OCR 空格", "value_start": 6, "value": "0 7 3 6 3 6 8 2"}
+{"id": "INSURER_NO-065", "category": "INSURER_NO", "text": "保険者番号 7 5 1 5 9 3 2 7", "notes": "生成 法别75:OCR 空格", "value_start": 6, "value": "7 5 1 5 9 3 2 7"}
+{"id": "INSURER_NO-066", "category": "INSURER_NO", "text": "保険者番号=73380404", "notes": "生成 法别73:等号", "value_start": 6, "value": "73380404"}
+{"id": "INSURER_NO-067", "category": "INSURER_NO", "text": "保険者番号 3915015", "notes": "生成 法别39:抄录错误(7位/9位)", "value_start": 6, "value": "3915015"}
+{"id": "INSURER_NO-068", "category": "INSURER_NO", "text": "保険者番号 671０９８5０", "notes": "生成 法别67:全半角混杂", "value_start": 6, "value": "671０９８5０"}
+{"id": "INSURER_NO-069", "category": "INSURER_NO", "text": "保険者番号 3413\n9865", "notes": "生成 法别34:换行拆分", "value_start": 6, "value": "3413\n9865"}
+{"id": "INSURER_NO-071", "category": "INSURER_NO", "text": "保険者番号=67092361", "notes": "生成 法别67:等号", "value_start": 6, "value": "67092361"}
+{"id": "INSURER_NO-072", "category": "INSURER_NO", "text": "67-2502-82", "notes": "生成 法别67:连字符分段(误)", "value_start": 0, "value": "67-2502-82"}
+{"id": "INSURER_NO-074", "category": "INSURER_NO", "text": "保険者番号=75228742", "notes": "生成 法别75:等号", "value_start": 6, "value": "75228742"}
+{"id": "INSURER_NO-075", "category": "INSURER_NO", "text": "保険者番号 3 4 4 5 0 3 0 4", "notes": "生成 法别34:OCR 空格", "value_start": 6, "value": "3 4 4 5 0 3 0 4"}
+{"id": "INSURER_NO-078", "category": "INSURER_NO", "text": "39021647", "notes": "生成 法别39:无标签", "value_start": 0, "value": "39021647"}
+{"id": "INSURER_NO-079", "category": "INSURER_NO", "text": "保険者番号 ３943915３", "notes": "生成 法别39:全半角混杂", "value_start": 6, "value": "３943915３"}
+{"id": "INSURER_NO-081", "category": "INSURER_NO", "text": "保険者番号31336902", "notes": "生成 法别31:无空格", "value_start": 5, "value": "31336902"}
+{"id": "INSURER_NO-082", "category": "INSURER_NO", "text": "保険者番号 3９266３２5", "notes": "生成 法别39:全半角混杂", "value_start": 6, "value": "3９266３２5"}
+{"id": "INSURER_NO-084", "category": "INSURER_NO", "text": "保険者番号 3 4 1 4 7 9 1 8", "notes": "生成 法别34:OCR 空格", "value_start": 6, "value": "3 4 1 4 7 9 1 8"}
+{"id": "INSURER_NO-085", "category": "INSURER_NO", "text": "保険者番号 010433633", "notes": "生成 法别01:抄录错误(7位/9位)", "value_start": 6, "value": "010433633"}
+{"id": "INSURER_NO-086", "category": "INSURER_NO", "text": "保険者番号 ６７072０５８", "notes": "生成 法别67:全半角混杂", "value_start": 6, "value": "６７072０５８"}
+{"id": "INSURER_NO-089", "category": "INSURER_NO", "text": "保険者番号：１０８５９７", "notes": "生成 国保6位", "value_start": 6, "value": "１０８５９７"}
+{"id": "INSURER_NO-090", "category": "INSURER_NO", "text": "保険者番号 329\n979", "notes": "生成 国保6位", "value_start": 6, "value": "329\n979"}
+{"id": "INSURER_NO-092", "category": "INSURER_NO", "text": "304642", "notes": "生成 国保6位", "value_start": 0, "value": "304642"}
+{"id": "INSURER_NO-093", "category": "INSURER_NO", "text": "保険者番号：２２２０６７", "notes": "生成 国保6位", "value_start": 6, "value": "２２２０６７"}
+{"id": "INSURER_NO-094", "category": "INSURER_NO", "text": "保険者番号 103\n804", "notes": "生成 国保6位", "value_start": 6, "value": "103\n804"}
+{"id": "INSURER_NO-095", "category": "INSURER_NO", "text": "国保 保険者番号 276105", "notes": "生成 国保6位", "value_start": 9, "value": "276105"}
+{"id": "INSURER_NO-097", "category": "INSURER_NO", "text": "保険者番号：３７８６０４", "notes": "生成 国保6位", "value_start": 6, "value": "３７８６０４"}
+{"id": "INSURER_NO-098", "category": "INSURER_NO", "text": "保険者番号 367\n029", "notes": "生成 国保6位", "value_start": 6, "value": "367\n029"}
+{"id": "INSURED_ID-025", "category": "INSURED_ID", "text": "記号 東京ｱ 番号 89977 枝番 05", "notes": "生成:含枝番", "value_start": 0, "value": "記号 東京ｱ 番号 89977 枝番 05"}
+{"id": "INSURED_ID-026", "category": "INSURED_ID", "text": "被保険者証記号 共5 番号 95861 枝番 03", "notes": "生成:完整", "value_start": 0, "value": "被保険者証記号 共5 番号 95861 枝番 03"}
+{"id": "INSURED_ID-027", "category": "INSURED_ID", "text": "5724-15899-02", "notes": "生成:无标签 连字符", "value_start": 0, "value": "5724-15899-02"}
+{"id": "INSURED_ID-028", "category": "INSURED_ID", "text": "記号・番号 65898558・41085", "notes": "生成:中黒", "value_start": 0, "value": "記号・番号 65898558・41085"}
+{"id": "INSURED_ID-029", "category": "INSURED_ID", "text": "被保険者証記号 東京ｱ 番号 62829 枝番 03", "notes": "生成:完整", "value_start": 0, "value": "被保険者証記号 東京ｱ 番号 62829 枝番 03"}
+{"id": "INSURED_ID-030", "category": "INSURED_ID", "text": "記号：千ﾁ　番号：12740（枝番01）", "notes": "生成:枝番括号", "value_start": 0, "value": "記号：千ﾁ　番号：12740（枝番01）"}
+{"id": "INSURED_ID-031", "category": "INSURED_ID", "text": "被保険者証記号 あ81 番号 52792 枝番 04", "notes": "生成:完整", "value_start": 0, "value": "被保険者証記号 あ81 番号 52792 枝番 04"}
+{"id": "INSURED_ID-032", "category": "INSURED_ID", "text": "記号 東京ｱ 番号 941644", "notes": "生成:番号抄录错误", "value_start": 0, "value": "記号 東京ｱ 番号 941644"}
+{"id": "INSURED_ID-033", "category": "INSURED_ID", "text": "記号共８番号５３３７５", "notes": "生成:全角无空格", "value_start": 0, "value": "記号共８番号５３３７５"}
+{"id": "INSURED_ID-034", "category": "INSURED_ID", "text": "記号・番号 東京ｱ・74216", "notes": "生成:中黒", "value_start": 0, "value": "記号・番号 東京ｱ・74216"}
+{"id": "INSURED_ID-035", "category": "INSURED_ID", "text": "記号 千ﾁ 番号 906 枝番 08", "notes": "生成:含枝番", "value_start": 0, "value": "記号 千ﾁ 番号 906 枝番 08"}
+{"id": "INSURED_ID-036", "category": "INSURED_ID", "text": "千ﾁ-37756-06", "notes": "生成:无标签 连字符", "value_start": 0, "value": "千ﾁ-37756-06"}
+{"id": "INSURED_ID-037", "category": "INSURED_ID", "text": "A35-65120-09", "notes": "生成:无标签 连字符", "value_start": 0, "value": "A35-65120-09"}
+{"id": "INSURED_ID-040", "category": "INSURED_ID", "text": "記号・番号 A50・85150", "notes": "生成:中黒", "value_start": 0, "value": "記号・番号 A50・85150"}
+{"id": "INSURED_ID-041", "category": "INSURED_ID", "text": "Insured ID: 東京ｱ-92076-03", "notes": "生成:英文", "value_start": 0, "value": "Insured ID: 東京ｱ-92076-03"}
+{"id": "INSURED_ID-044", "category": "INSURED_ID", "text": "記号東京ｱ番号４９８３３", "notes": "生成:全角无空格", "value_start": 0, "value": "記号東京ｱ番号４９８３３"}
+{"id": "INSURED_ID-045", "category": "INSURED_ID", "text": "記号：千ﾁ　番号：54594（枝番02）", "notes": "生成:枝番括号", "value_start": 0, "value": "記号：千ﾁ　番号：54594（枝番02）"}
+{"id": "INSURED_ID-047", "category": "INSURED_ID", "text": "記号・番号 67-80・83799", "notes": "生成:中黒", "value_start": 0, "value": "記号・番号 67-80・83799"}
+{"id": "INSURED_ID-048", "category": "INSURED_ID", "text": "記号８８９８番号５０４５９", "notes": "生成:全角无空格", "value_start": 0, "value": "記号８８９８番号５０４５９"}
+{"id": "INSURED_ID-049", "category": "INSURED_ID", "text": "記号 東京ｱ 番号 62735", "notes": "生成:全半角混杂", "value_start": 0, "value": "記号 東京ｱ 番号 62735"}
+{"id": "INSURED_ID-050", "category": "INSURED_ID", "text": "記号/番号 千ﾁ/80017", "notes": "生成:斜杠", "value_start": 0, "value": "記号/番号 千ﾁ/80017"}
+{"id": "INSURED_ID-052", "category": "INSURED_ID", "text": "記号 23-92 番号 553755", "notes": "生成:番号抄录错误", "value_start": 0, "value": "記号 23-92 番号 553755"}
+{"id": "INSURED_ID-053", "category": "INSURED_ID", "text": "被保険者証記号 あ73 番号 88780 枝番 04", "notes": "生成:完整", "value_start": 0, "value": "被保険者証記号 あ73 番号 88780 枝番 04"}
+{"id": "INSURED_ID-055", "category": "INSURED_ID", "text": "記号 東京ｱ 番号 17581 枝番 04", "notes": "生成:含枝番", "value_start": 0, "value": "記号 東京ｱ 番号 17581 枝番 04"}
+{"id": "INSURED_ID-058", "category": "INSURED_ID", "text": "記号：756　番号：19530（枝番04）", "notes": "生成:枝番括号", "value_start": 0, "value": "記号：756　番号：19530（枝番04）"}
+{"id": "INSURED_ID-060", "category": "INSURED_ID", "text": "6697・42867（02）", "notes": "生成:无标签", "value_start": 0, "value": "6697・42867（02）"}
+{"id": "INSURED_ID-061", "category": "INSURED_ID", "text": "共1・9819（05）", "notes": "生成:无标签", "value_start": 0, "value": "共1・9819（05）"}
+{"id": "INSURED_ID-062", "category": "INSURED_ID", "text": "被保険者証記号 A99 番号 5752 枝番 01", "notes": "生成:完整", "value_start": 0, "value": "被保険者証記号 A99 番号 5752 枝番 01"}
+{"id": "INSURED_ID-063", "category": "INSURED_ID", "text": "記号 東京ｱ 番号 641977", "notes": "生成:番号抄录错误", "value_start": 0, "value": "記号 東京ｱ 番号 641977"}
+{"id": "INSURED_ID-066", "category": "INSURED_ID", "text": "被保険者番号 70281471", "notes": "生成:後期高齢者8位", "value_start": 7, "value": "70281471"}
+{"id": "INSURED_ID-067", "category": "INSURED_ID", "text": "記号/番号 共1/76636", "notes": "生成:斜杠", "value_start": 0, "value": "記号/番号 共1/76636"}
+{"id": "INSURED_ID-068", "category": "INSURED_ID", "text": "記号・番号 あ92・38420", "notes": "生成:中黒", "value_start": 0, "value": "記号・番号 あ92・38420"}
+{"id": "INSURED_ID-069", "category": "INSURED_ID", "text": "記号 東京ｱ 番号 50526", "notes": "生成:标准", "value_start": 0, "value": "記号 東京ｱ 番号 50526"}
+{"id": "INSURED_ID-070", "category": "INSURED_ID", "text": "記号 96911718 番号 672177", "notes": "生成:番号抄录错误", "value_start": 0, "value": "記号 96911718 番号 672177"}
+{"id": "INSURED_ID-072", "category": "INSURED_ID", "text": "記号 66466050 番号 7846 枝番 07", "notes": "生成:含枝番", "value_start": 0, "value": "記号 66466050 番号 7846 枝番 07"}
+{"id": "INSURED_ID-073", "category": "INSURED_ID", "text": "受給者番号 1283045", "notes": "生成:公費受給者番号7位", "value_start": 6, "value": "1283045"}
+{"id": "INSURED_ID-074", "category": "INSURED_ID", "text": "被保険者証記号 A92 番号 8534 枝番 06", "notes": "生成:完整", "value_start": 0, "value": "被保険者証記号 A92 番号 8534 枝番 06"}
+{"id": "INSURED_ID-075", "category": "INSURED_ID", "text": "記号：千ﾁ　番号：97774（枝番06）", "notes": "生成:枝番括号", "value_start": 0, "value": "記号：千ﾁ　番号：97774（枝番06）"}
+{"id": "INSURED_ID-079", "category": "INSURED_ID", "text": "記号・番号 57-52・23586", "notes": "生成:中黒", "value_start": 0, "value": "記号・番号 57-52・23586"}
+{"id": "INSURED_ID-080", "category": "INSURED_ID", "text": "被保険者番号 30078380", "notes": "生成:後期高齢者8位", "value_start": 7, "value": "30078380"}
+{"id": "INSURED_ID-081", "category": "INSURED_ID", "text": "記号 A76\n番号 49610", "notes": "生成:换行拆分", "value_start": 0, "value": "記号 A76\n番号 49610"}
+{"id": "INSURED_ID-082", "category": "INSURED_ID", "text": "記号 A１3 番号 7706", "notes": "生成:全半角混杂", "value_start": 0, "value": "記号 A１3 番号 7706"}
+{"id": "INSURED_ID-083", "category": "INSURED_ID", "text": "受給者番号 9594295", "notes": "生成:公費受給者番号7位", "value_start": 6, "value": "9594295"}
+{"id": "INSURED_ID-084", "category": "INSURED_ID", "text": "記号/番号 6721/65457", "notes": "生成:斜杠", "value_start": 0, "value": "記号/番号 6721/65457"}
+{"id": "INSURED_ID-085", "category": "INSURED_ID", "text": "記号６１－３７番号１１３９２", "notes": "生成:全角无空格", "value_start": 0, "value": "記号６１－３７番号１１３９２"}
+{"id": "INSURED_ID-086", "category": "INSURED_ID", "text": "記号・番号 共2・20190", "notes": "生成:中黒", "value_start": 0, "value": "記号・番号 共2・20190"}
+{"id": "INSURED_ID-087", "category": "INSURED_ID", "text": "記号４７９１１６６９番号６９５６１", "notes": "生成:全角无空格", "value_start": 0, "value": "記号４７９１１６６９番号６９５６１"}
+{"id": "INSURED_ID-088", "category": "INSURED_ID", "text": "記号６５８番号４５６７７", "notes": "生成:全角无空格", "value_start": 0, "value": "記号６５８番号４５６７７"}
+{"id": "INSURED_ID-089", "category": "INSURED_ID", "text": "記号 東京ｱ 番号 58310 枝番 09", "notes": "生成:含枝番", "value_start": 0, "value": "記号 東京ｱ 番号 58310 枝番 09"}
+{"id": "INSURED_ID-090", "category": "INSURED_ID", "text": "記号 1０５５7４28 番号 39151", "notes": "生成:全半角混杂", "value_start": 0, "value": "記号 1０５５7４28 番号 39151"}
+{"id": "INSURED_ID-092", "category": "INSURED_ID", "text": "記号：千ﾁ　番号：4000（枝番08）", "notes": "生成:枝番括号", "value_start": 0, "value": "記号：千ﾁ　番号：4000（枝番08）"}
+{"id": "INSURED_ID-093", "category": "INSURED_ID", "text": "被保険者証記号 A97 番号 13619 枝番 02", "notes": "生成:完整", "value_start": 0, "value": "被保険者証記号 A97 番号 13619 枝番 02"}
+{"id": "INSURED_ID-095", "category": "INSURED_ID", "text": "記号・番号 千ﾁ・69516", "notes": "生成:中黒", "value_start": 0, "value": "記号・番号 千ﾁ・69516"}
+{"id": "INSURED_ID-096", "category": "INSURED_ID", "text": "記号 A14\n番号 33506", "notes": "生成:换行拆分", "value_start": 0, "value": "記号 A14\n番号 33506"}
+{"id": "INSURED_ID-097", "category": "INSURED_ID", "text": "記号Ａ３３番号３２２７２", "notes": "生成:全角无空格", "value_start": 0, "value": "記号Ａ３３番号３２２７２"}
+{"id": "INSURED_ID-098", "category": "INSURED_ID", "text": "共3-57684-03", "notes": "生成:无标签 连字符", "value_start": 0, "value": "共3-57684-03"}
+{"id": "INSURED_ID-099", "category": "INSURED_ID", "text": "記号 A53 番号 60278", "notes": "生成:标准", "value_start": 0, "value": "記号 A53 番号 60278"}
+{"id": "INSURED_ID-100", "category": "INSURED_ID", "text": "記号 16-48 番号 43454", "notes": "生成:标准", "value_start": 0, "value": "記号 16-48 番号 43454"}
+{"id": "KARTE_NO-021", "category": "KARTE_NO", "text": "病歴番号 19-97197", "notes": "生成:病历号", "value_start": 5, "value": "19-97197"}
+{"id": "KARTE_NO-023", "category": "KARTE_NO", "text": "MRN 5333027", "notes": "生成:MRN", "value_start": 4, "value": "5333027"}
+{"id": "KARTE_NO-024", "category": "KARTE_NO", "text": "ＩＤ：３０９９９０３", "notes": "生成:全角", "value_start": 3, "value": "３０９９９０３"}
+{"id": "KARTE_NO-030", "category": "KARTE_NO", "text": "カルテNo.A-954067", "notes": "生成:字母前缀", "value_start": 6, "value": "A-954067"}
+{"id": "KARTE_NO-031", "category": "KARTE_NO", "text": "病歴番号 11-85802", "notes": "生成:病历号", "value_start": 5, "value": "11-85802"}
+{"id": "KARTE_NO-032", "category": "KARTE_NO", "text": "カルテ 826650", "notes": "生成:抄录错误(位数)", "value_start": 4, "value": "826650"}
+{"id": "KARTE_NO-033", "category": "KARTE_NO", "text": "ID: 2025-16392", "notes": "生成:年+序号", "value_start": 4, "value": "2025-16392"}
+{"id": "KARTE_NO-034", "category": "KARTE_NO", "text": "患者ID 738 4805", "notes": "生成:空格", "value_start": 5, "value": "738 4805"}
+{"id": "KARTE_NO-035", "category": "KARTE_NO", "text": "カルテ番号 660\n5835", "notes": "生成:换行拆分", "value_start": 6, "value": "660\n5835"}
+{"id": "KARTE_NO-036", "category": "KARTE_NO", "text": "画像ID CT2019-256956", "notes": "生成:影像号", "value_start": 5, "value": "CT2019-256956"}
+{"id": "KARTE_NO-037", "category": "KARTE_NO", "text": "画像ID CT2018-667921", "notes": "生成:影像号", "value_start": 5, "value": "CT2018-667921"}
+{"id": "KARTE_NO-038", "category": "KARTE_NO", "text": "ＩＤ：３７８９７６６", "notes": "生成:全角", "value_start": 3, "value": "３７８９７６６"}
+{"id": "KARTE_NO-039", "category": "KARTE_NO", "text": "診察券番号 9247739064", "notes": "生成:诊察券", "value_start": 6, "value": "9247739064"}
+{"id": "KARTE_NO-040", "category": "KARTE_NO", "text": "病歴番号 15-31354", "notes": "生成:病历号", "value_start": 5, "value": "15-31354"}
+{"id": "KARTE_NO-041", "category": "KARTE_NO", "text": "カルテ 695547", "notes": "生成:抄录错误(位数)", "value_start": 4, "value": "695547"}
+{"id": "KARTE_NO-043", "category": "KARTE_NO", "text": "カルテ番号：1641475", "notes": "生成:前缀", "value_start": 6, "value": "1641475"}
+{"id": "KARTE_NO-044", "category": "KARTE_NO", "text": "カルテ 70035580", "notes": "生成:抄录错误(位数)", "value_start": 4, "value": "70035580"}
+{"id": "KARTE_NO-045", "category": "KARTE_NO", "text": "PID=2426045", "notes": "生成:系统格式", "value_start": 4, "value": "2426045"}
+{"id": "KARTE_NO-046", "category": "KARTE_NO", "text": "ID: 2018-70545", "notes": "生成:年+序号", "value_start": 4, "value": "2018-70545"}
+{"id": "KARTE_NO-047", "category": "KARTE_NO", "text": "PID=3951728", "notes": "生成:系统格式", "value_start": 4, "value": "3951728"}
+{"id": "KARTE_NO-049", "category": "KARTE_NO", "text": "ＩＤ：２８６５５１９", "notes": "生成:全角", "value_start": 3, "value": "２８６５５１９"}
+{"id": "KARTE_NO-050", "category": "KARTE_NO", "text": "ID: 2013-92131", "notes": "生成:年+序号", "value_start": 4, "value": "2013-92131"}
+{"id": "KARTE_NO-051", "category": "KARTE_NO", "text": "患者ID 578 1560", "notes": "生成:空格", "value_start": 5, "value": "578 1560"}
+{"id": "KARTE_NO-052", "category": "KARTE_NO", "text": "患者ID 856 5155", "notes": "生成:空格", "value_start": 5, "value": "856 5155"}
+{"id": "KARTE_NO-053", "category": "KARTE_NO", "text": "MRN 5848513", "notes": "生成:MRN", "value_start": 4, "value": "5848513"}
+{"id": "KARTE_NO-054", "category": "KARTE_NO", "text": "PID=2835031", "notes": "生成:系统格式", "value_start": 4, "value": "2835031"}
+{"id": "KARTE_NO-055", "category": "KARTE_NO", "text": "患者番号：K4010332", "notes": "生成:K前缀", "value_start": 5, "value": "K4010332"}
+{"id": "KARTE_NO-056", "category": "KARTE_NO", "text": "カルテ 50513110", "notes": "生成:抄录错误(位数)", "value_start": 4, "value": "50513110"}
+{"id": "KARTE_NO-057", "category": "KARTE_NO", "text": "診察券番号 4991024970", "notes": "生成:诊察券", "value_start": 6, "value": "4991024970"}
+{"id": "KARTE_NO-058", "category": "KARTE_NO", "text": "入院番号 IN10-8688", "notes": "生成:入院", "value_start": 5, "value": "IN10-8688"}
+{"id": "KARTE_NO-060", "category": "KARTE_NO", "text": "患者ID：8００２９07", "notes": "生成:全半角混杂", "value_start": 5, "value": "8００２９07"}
+{"id": "KARTE_NO-062", "category": "KARTE_NO", "text": "患者番号：K5683883", "notes": "生成:K前缀", "value_start": 5, "value": "K5683883"}
+{"id": "KARTE_NO-063", "category": "KARTE_NO", "text": "カルテ番号：3787093", "notes": "生成:前缀", "value_start": 6, "value": "3787093"}
+{"id": "KARTE_NO-064", "category": "KARTE_NO", "text": "カルテ番号 151\n6883", "notes": "生成:换行拆分", "value_start": 6, "value": "151\n6883"}
+{"id": "KARTE_NO-065", "category": "KARTE_NO", "text": "ID: 2013-78811", "notes": "生成:年+序号", "value_start": 4, "value": "2013-78811"}
+{"id": "KARTE_NO-067", "category": "KARTE_NO", "text": "入院番号 IN21-4330", "notes": "生成:入院", "value_start": 5, "value": "IN21-4330"}
+{"id": "KARTE_NO-068", "category": "KARTE_NO", "text": "カルテ番号：4953857", "notes": "生成:前缀", "value_start": 6, "value": "4953857"}
+{"id": "KARTE_NO-069", "category": "KARTE_NO", "text": "ｶﾙﾃ番号 0282033", "notes": "生成:半角假名标签", "value_start": 0, "value": "ｶﾙﾃ番号 0282033"}
+{"id": "KARTE_NO-070", "category": "KARTE_NO", "text": "検体ID S18-809195", "notes": "生成:检体号", "value_start": 5, "value": "S18-809195"}
+{"id": "KARTE_NO-071", "category": "KARTE_NO", "text": "画像ID CT2019-267073", "notes": "生成:影像号", "value_start": 5, "value": "CT2019-267073"}
+{"id": "KARTE_NO-073", "category": "KARTE_NO", "text": "入院番号 IN15-7364", "notes": "生成:入院", "value_start": 5, "value": "IN15-7364"}
+{"id": "KARTE_NO-075", "category": "KARTE_NO", "text": "カルテ 501596", "notes": "生成:抄录错误(位数)", "value_start": 4, "value": "501596"}
+{"id": "KARTE_NO-077", "category": "KARTE_NO", "text": "ID: 2016-59013", "notes": "生成:年+序号", "value_start": 4, "value": "2016-59013"}
+{"id": "KARTE_NO-078", "category": "KARTE_NO", "text": "患者ID 64-616-992", "notes": "生成:分段", "value_start": 5, "value": "64-616-992"}
+{"id": "KARTE_NO-081", "category": "KARTE_NO", "text": "診察券番号 7576804734", "notes": "生成:诊察券", "value_start": 6, "value": "7576804734"}
+{"id": "KARTE_NO-083", "category": "KARTE_NO", "text": "入院番号 IN19-8095", "notes": "生成:入院", "value_start": 5, "value": "IN19-8095"}
+{"id": "KARTE_NO-086", "category": "KARTE_NO", "text": "病歴番号 19-78013", "notes": "生成:病历号", "value_start": 5, "value": "19-78013"}
+{"id": "KARTE_NO-087", "category": "KARTE_NO", "text": "画像ID CT2025-117223", "notes": "生成:影像号", "value_start": 5, "value": "CT2025-117223"}
+{"id": "KARTE_NO-088", "category": "KARTE_NO", "text": "カルテ 40975940", "notes": "生成:抄录错误(位数)", "value_start": 4, "value": "40975940"}
+{"id": "KARTE_NO-089", "category": "KARTE_NO", "text": "ｶﾙﾃ番号 7356087", "notes": "生成:半角假名标签", "value_start": 0, "value": "ｶﾙﾃ番号 7356087"}
+{"id": "KARTE_NO-090", "category": "KARTE_NO", "text": "患者番号：K0653578", "notes": "生成:K前缀", "value_start": 5, "value": "K0653578"}
+{"id": "KARTE_NO-091", "category": "KARTE_NO", "text": "患者ID 347 0644", "notes": "生成:空格", "value_start": 5, "value": "347 0644"}
+{"id": "KARTE_NO-093", "category": "KARTE_NO", "text": "患者番号：K8209105", "notes": "生成:K前缀", "value_start": 5, "value": "K8209105"}
+{"id": "KARTE_NO-095", "category": "KARTE_NO", "text": "ID65852276", "notes": "生成:无分隔", "value_start": 2, "value": "65852276"}
+{"id": "KARTE_NO-096", "category": "KARTE_NO", "text": "ID: 2020-50191", "notes": "生成:年+序号", "value_start": 4, "value": "2020-50191"}
+{"id": "KARTE_NO-098", "category": "KARTE_NO", "text": "カルテ番号 820\n7525", "notes": "生成:换行拆分", "value_start": 6, "value": "820\n7525"}
+{"id": "KARTE_NO-100", "category": "KARTE_NO", "text": "患者ID 018 0181", "notes": "生成:空格", "value_start": 5, "value": "018 0181"}
+{"id": "PHYSICIAN_NAME-021", "category": "PHYSICIAN_NAME", "text": "医師 月岡 勘治", "notes": "生成", "value_start": 0, "value": "医師 月岡 勘治"}
+{"id": "PHYSICIAN_NAME-022", "category": "PHYSICIAN_NAME", "text": "医師 水無瀬 美津子", "notes": "生成", "value_start": 0, "value": "医師 水無瀬 美津子"}
+{"id": "PHYSICIAN_NAME-023", "category": "PHYSICIAN_NAME", "text": "医師 桐ヶ谷 陽菜", "notes": "生成", "value_start": 0, "value": "医師 桐ヶ谷 陽菜"}
+{"id": "PHYSICIAN_NAME-026", "category": "PHYSICIAN_NAME", "text": "医師 鷹取 悠真", "notes": "生成", "value_start": 0, "value": "医師 鷹取 悠真"}
+{"id": "PHYSICIAN_NAME-027", "category": "PHYSICIAN_NAME", "text": "医師 葦原 さと", "notes": "生成", "value_start": 0, "value": "医師 葦原 さと"}
+{"id": "PHYSICIAN_NAME-028", "category": "PHYSICIAN_NAME", "text": "医師 七瀬 義男", "notes": "生成", "value_start": 0, "value": "医師 七瀬 義男"}
+{"id": "PHYSICIAN_NAME-030", "category": "PHYSICIAN_NAME", "text": "医師 宮ノ崎 琥太郎", "notes": "生成", "value_start": 0, "value": "医師 宮ノ崎 琥太郎"}
+{"id": "DATE-039", "category": "DATE", "text": "１０３才", "notes": "生成 ≥90:全角才", "age_ge_90": true, "value_start": 0, "value": "１０３才"}
+{"id": "DATE-040", "category": "DATE", "text": "103yo", "notes": "生成 ≥90:yo", "age_ge_90": true, "value_start": 0, "value": "103yo"}
+{"id": "DATE-042", "category": "DATE", "text": "95歳4か月", "notes": "生成 ≥90:歳か月", "age_ge_90": true, "value_start": 0, "value": "95歳4か月"}
+{"id": "DATE-043", "category": "DATE", "text": "105才", "notes": "生成 ≥90:才", "age_ge_90": true, "value_start": 0, "value": "105才"}
+{"id": "DATE-044", "category": "DATE", "text": "１０４歳", "notes": "生成 ≥90:全角", "age_ge_90": true, "value_start": 0, "value": "１０４歳"}
+{"id": "DATE-045", "category": "DATE", "text": "年齢：103", "notes": "生成 ≥90:标签无单位", "age_ge_90": true, "value_start": 0, "value": "年齢：103"}
+{"id": "DATE-046", "category": "DATE", "text": "享年101", "notes": "生成 ≥90:享年", "age_ge_90": true, "value_start": 0, "value": "享年101"}
+{"id": "DATE-048", "category": "DATE", "text": "102 years old", "notes": "生成 ≥90:英文", "age_ge_90": true, "value_start": 0, "value": "102 years old"}
+{"id": "DATE-049", "category": "DATE", "text": "90代", "notes": "生成 ≥90:年代", "age_ge_90": true, "value_start": 0, "value": "90代"}
+{"id": "DATE-050", "category": "DATE", "text": "100歳代", "notes": "生成 ≥90:歳代", "age_ge_90": true, "value_start": 0, "value": "100歳代"}
+{"id": "DATE-051", "category": "DATE", "text": "103 y/o", "notes": "生成 ≥90:y/o", "age_ge_90": true, "value_start": 0, "value": "103 y/o"}
+{"id": "DATE-054", "category": "DATE", "text": "享年99", "notes": "生成 ≥90:享年", "age_ge_90": true, "value_start": 0, "value": "享年99"}
+{"id": "DATE-055", "category": "DATE", "text": "９７才", "notes": "生成 ≥90:全角才", "age_ge_90": true, "value_start": 0, "value": "９７才"}
+{"id": "DATE-056", "category": "DATE", "text": "104歳", "notes": "生成 ≥90:歳", "age_ge_90": true, "value_start": 0, "value": "104歳"}
+{"id": "DATE-057", "category": "DATE", "text": "９６才", "notes": "生成 ≥90:全角才", "age_ge_90": true, "value_start": 0, "value": "９６才"}
+{"id": "DATE-058", "category": "DATE", "text": "満99歳", "notes": "生成 ≥90:満", "age_ge_90": true, "value_start": 0, "value": "満99歳"}
+{"id": "DATE-059", "category": "DATE", "text": "98 y/o", "notes": "生成 ≥90:y/o", "age_ge_90": true, "value_start": 0, "value": "98 y/o"}
+{"id": "DATE-060", "category": "DATE", "text": "享年97", "notes": "生成 ≥90:享年", "age_ge_90": true, "value_start": 0, "value": "享年97"}
+{"id": "DATE-061", "category": "DATE", "text": "105\n歳", "notes": "生成 ≥90:换行拆分", "age_ge_90": true, "value_start": 0, "value": "105\n歳"}
+{"id": "DATE-062", "category": "DATE", "text": "100代", "notes": "生成 ≥90:年代", "age_ge_90": true, "value_start": 0, "value": "100代"}
+{"id": "DATE-064", "category": "DATE", "text": "94歳8か月", "notes": "生成 ≥90:歳か月", "age_ge_90": true, "value_start": 0, "value": "94歳8か月"}
+{"id": "DATE-066", "category": "DATE", "text": "91 y/o", "notes": "生成 ≥90:y/o", "age_ge_90": true, "value_start": 0, "value": "91 y/o"}
+{"id": "DATE-067", "category": "DATE", "text": "年齢：94", "notes": "生成 ≥90:标签无单位", "age_ge_90": true, "value_start": 0, "value": "年齢：94"}
+{"id": "DATE-068", "category": "DATE", "text": "享年90", "notes": "生成 ≥90:享年", "age_ge_90": true, "value_start": 0, "value": "享年90"}
+{"id": "DATE-070", "category": "DATE", "text": "102才", "notes": "生成 ≥90:才", "age_ge_90": true, "value_start": 0, "value": "102才"}
+{"id": "DATE-071", "category": "DATE", "text": "１０４才", "notes": "生成 ≥90:全角才", "age_ge_90": true, "value_start": 0, "value": "１０４才"}
+{"id": "DATE-073", "category": "DATE", "text": "94 y/o", "notes": "生成 ≥90:y/o", "age_ge_90": true, "value_start": 0, "value": "94 y/o"}
+{"id": "DATE-074", "category": "DATE", "text": "Age 97", "notes": "生成 ≥90:英文标签无单位", "age_ge_90": true, "value_start": 0, "value": "Age 97"}
+{"id": "DATE-076", "category": "DATE", "text": "90代後半", "notes": "生成 ≥90:年代后半", "age_ge_90": true, "value_start": 0, "value": "90代後半"}
+{"id": "DATE-078", "category": "DATE", "text": "96 years old", "notes": "生成 ≥90:英文", "age_ge_90": true, "value_start": 0, "value": "96 years old"}
+{"id": "DATE-080", "category": "DATE", "text": "91歳", "notes": "生成 ≥90:歳", "age_ge_90": true, "value_start": 0, "value": "91歳"}
+{"id": "DATE-081", "category": "DATE", "text": "92yo", "notes": "生成 ≥90:yo", "age_ge_90": true, "value_start": 0, "value": "92yo"}
+{"id": "DATE-083", "category": "DATE", "text": "97yo", "notes": "生成 ≥90:yo", "age_ge_90": true, "value_start": 0, "value": "97yo"}
+{"id": "DATE-084", "category": "DATE", "text": "96yo", "notes": "生成 ≥90:yo", "age_ge_90": true, "value_start": 0, "value": "96yo"}
+{"id": "DATE-086", "category": "DATE", "text": "104 y/o", "notes": "生成 ≥90:y/o", "age_ge_90": true, "value_start": 0, "value": "104 y/o"}
+{"id": "DATE-087", "category": "DATE", "text": "享年104", "notes": "生成 ≥90:享年", "age_ge_90": true, "value_start": 0, "value": "享年104"}
+{"id": "DATE-088", "category": "DATE", "text": "95才", "notes": "生成 ≥90:才", "age_ge_90": true, "value_start": 0, "value": "95才"}
+{"id": "DATE-090", "category": "DATE", "text": "101 years old", "notes": "生成 ≥90:英文", "age_ge_90": true, "value_start": 0, "value": "101 years old"}
+{"id": "DATE-091", "category": "DATE", "text": "１００才", "notes": "生成 ≥90:全角才", "age_ge_90": true, "value_start": 0, "value": "１００才"}
+{"id": "DATE-093", "category": "DATE", "text": "90\n歳", "notes": "生成 ≥90:换行拆分", "age_ge_90": true, "value_start": 0, "value": "90\n歳"}
+{"id": "DATE-094", "category": "DATE", "text": "年齢：91", "notes": "生成 ≥90:标签无单位", "age_ge_90": true, "value_start": 0, "value": "年齢：91"}
+{"id": "DATE-096", "category": "DATE", "text": "103 years old", "notes": "生成 ≥90:英文", "age_ge_90": true, "value_start": 0, "value": "103 years old"}
+{"id": "DATE-100", "category": "DATE", "text": "Age 95", "notes": "生成 ≥90:英文标签无单位", "age_ge_90": true, "value_start": 0, "value": "Age 95"}
+{"id": "DATE-101", "category": "DATE", "text": "Age 94", "notes": "生成 ≥90:英文标签无单位", "age_ge_90": true, "value_start": 0, "value": "Age 94"}
+{"id": "DATE-103", "category": "DATE", "text": "100\n歳", "notes": "生成 ≥90:换行拆分", "age_ge_90": true, "value_start": 0, "value": "100\n歳"}
+{"id": "DATE-104", "category": "DATE", "text": "93歳9か月", "notes": "生成 ≥90:歳か月", "age_ge_90": true, "value_start": 0, "value": "93歳9か月"}
+{"id": "DATE-107", "category": "DATE", "text": "Age 90", "notes": "生成 ≥90:英文标签无单位", "age_ge_90": true, "value_start": 0, "value": "Age 90"}
+{"id": "DATE-108", "category": "DATE", "text": "９０才", "notes": "生成 ≥90:全角才", "age_ge_90": true, "value_start": 0, "value": "９０才"}
+{"id": "DATE-109", "category": "DATE", "text": "95\n歳", "notes": "生成 ≥90:换行拆分", "age_ge_90": true, "value_start": 0, "value": "95\n歳"}
+{"id": "DATE-111", "category": "DATE", "text": "91\n歳", "notes": "生成 ≥90:换行拆分", "age_ge_90": true, "value_start": 0, "value": "91\n歳"}
+{"id": "DATE-112", "category": "DATE", "text": "90 y/o", "notes": "生成 ≥90:y/o", "age_ge_90": true, "value_start": 0, "value": "90 y/o"}
+{"id": "DATE-113", "category": "DATE", "text": "９１才", "notes": "生成 ≥90:全角才", "age_ge_90": true, "value_start": 0, "value": "９１才"}
+{"id": "DATE-115", "category": "DATE", "text": "昭和7年12月24日生", "notes": "生成 和暦生年(昭和7年=西暦1932，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "昭和7年12月24日生"}
+{"id": "DATE-116", "category": "DATE", "text": "明治44年生", "notes": "生成 和暦生年(明治44年=西暦1911，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "明治44年生"}
+{"id": "DATE-118", "category": "DATE", "text": "T2.8.23生", "notes": "生成 和暦生年(大正略写2年=西暦1913，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "T2.8.23生"}
+{"id": "DATE-119", "category": "DATE", "text": "T9.6.9生", "notes": "生成 和暦生年(大正略写9年=西暦1920，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "T9.6.9生"}
+{"id": "DATE-120", "category": "DATE", "text": "昭和2年11月7日生", "notes": "生成 和暦生年(昭和2年=西暦1927，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "昭和2年11月7日生"}
+{"id": "DATE-121", "category": "DATE", "text": "大正5年生", "notes": "生成 和暦生年(大正5年=西暦1916，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "大正5年生"}
+{"id": "DATE-123", "category": "DATE", "text": "大正2年生", "notes": "生成 和暦生年(大正2年=西暦1913，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "大正2年生"}
+{"id": "DATE-124", "category": "DATE", "text": "昭和4年8月13日生", "notes": "生成 和暦生年(昭和4年=西暦1929，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "昭和4年8月13日生"}
+{"id": "DATE-125", "category": "DATE", "text": "大正13年生", "notes": "生成 和暦生年(大正13年=西暦1924，2026年时≥90) age_by_birth", "age_ge_90": true, "value_start": 0, "value": "大正13年生"}
+{"id": "DATE-126", "category": "DATE", "text": "満89歳", "notes": "对照 <90", "age_ge_90": false, "value_start": 0, "value": "満89歳"}
+{"id": "DATE-128", "category": "DATE", "text": "89 y/o", "notes": "对照 <90", "age_ge_90": false, "value_start": 0, "value": "89 y/o"}
+{"id": "DATE-130", "category": "DATE", "text": "八十九歳", "notes": "对照 <90", "age_ge_90": false, "value_start": 0, "value": "八十九歳"}
+{"id": "DATE-131", "category": "DATE", "text": "80代", "notes": "对照 <90", "age_ge_90": false, "value_start": 0, "value": "80代"}
+{"id": "DATE-132", "category": "DATE", "text": "89歳11か月", "notes": "对照 <90", "age_ge_90": false, "value_start": 0, "value": "89歳11か月"}
+{"id": "DATE-133", "category": "DATE", "text": "昭和12年生", "notes": "对照 <90", "age_ge_90": false, "value_start": 0, "value": "昭和12年生"}
+{"id": "DATE-135", "category": "DATE", "text": "年齢：９０", "notes": "生成 ≥90:全角无单位", "age_ge_90": true, "value_start": 0, "value": "年齢：９０"}
+{"id": "DATE-136", "category": "DATE", "text": "満百歳", "notes": "生成 ≥90:汉数字百", "age_ge_90": true, "value_start": 0, "value": "満百歳"}
+{"id": "DATE-137", "category": "DATE", "text": "100歳超", "notes": "生成 ≥90:百岁超", "age_ge_90": true, "value_start": 0, "value": "100歳超"}

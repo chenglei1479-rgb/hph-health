@@ -1,0 +1,31 @@
+name: Japanese PHI dev eval
+
+on:
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phi-eval:
+    name: Japanese PHI dev eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Score the fictional Japanese PHI dev set
+        env:
+          EVAL_DATE: 2026-10-13
+        run: node scripts/eval-jp-phi.mjs

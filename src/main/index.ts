@@ -512,6 +512,8 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
       startupDiagnostics?.phase('electron-ready')
       await app.whenReady()
       app.setName(app.isPackaged ? APP_NAME : `${APP_NAME} (DEV)`)
+      const { installProductionPhiGate } = await import('./phi/production-gate')
+      installProductionPhiGate(join(app.getPath('userData'), 'phi-vault'))
       // Electron created its default menu before ready using the selected credential identity.
       // Rebuild standard roles after the display brand is known.
       const { Menu } = createRequire(import.meta.url)('electron') as typeof import('electron')
