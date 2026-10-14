@@ -72,11 +72,13 @@ jobs:
             .replaceAll('OpenScience-dev', 'MedResearchAgent-DEV')
             .replaceAll('OpenScience', 'MedResearchAgent')
             .replaceAll('.open-science', '.medresearch-agent')
+            .replace("const expected = join(configRoot, packaged ? 'MedResearchAgent' : 'MedResearchAgent-DEV')", "const expected = join(configRoot, packaged ? 'OpenScience' : 'OpenScience-DEV')")
             .replace('keeps a populated lowercase development root created by 0.31', 'keeps a populated former DRA development root')
           fs.writeFileSync(file, source)
           const rootFile = 'src/main/storage-root.test.ts'
           source = fs.readFileSync(rootFile, 'utf8')
             .replaceAll("'/mnt/data/open-science'", "'/mnt/data/medresearch-agent'")
+            .replaceAll("'/mnt/data/OPENSCIENCE'", "'/mnt/data/MEDRESEARCH-AGENT'")
             .replace("p('data', 'open-science')", "p('data', 'medresearch-agent')")
           fs.writeFileSync(rootFile, source)
           NODE
