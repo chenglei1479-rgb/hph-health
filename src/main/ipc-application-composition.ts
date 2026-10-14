@@ -40,6 +40,7 @@ import {
 } from './composition/specialists'
 import { composeStorageStartup } from './composition/storage-startup'
 import { composeUploadStorage } from './composition/upload-storage'
+import { registerVariableDefinitionIpc } from './variable-definition/ipc'
 
 import { app } from 'electron'
 
@@ -642,6 +643,9 @@ export const createApplicationModules = async (
       localFsService: managedFiles.localFsService,
       previewStateRepository: sessionPackages.previewStateRepository
     })
+  )
+  surfaceAdapters.push(
+    createElectronSurfaceAdapter('variable-definition', registerVariableDefinitionIpc)
   )
   // Compute IPC handlers are registered earlier (before the notebook RPC server) so computeService
   // can be injected into the RPC server for the computeCall route. See above.

@@ -428,6 +428,8 @@ export const WEB_INVOKE_CHANNELS = {
   'uploads.recoverDraft': 'uploads:recover-draft',
   'uploads.stageLocalFile': 'uploads:stage-local-file',
   'uploads.stageLocalPath': 'uploads:stage-local-path',
+  'variableDefinition.exportTemplate': 'variable-definition:export-template',
+  'variableDefinition.generate': 'variable-definition:generate',
   'window.close': 'window:close'
 } as const
 

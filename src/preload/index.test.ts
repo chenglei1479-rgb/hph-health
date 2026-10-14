@@ -229,6 +229,7 @@ const runtimeContractCapabilities = new Set([
   'permissions',
   'settings',
   'specialist',
+  'variable-definition',
   'handoff',
   'compute',
   'notebook',
@@ -259,6 +260,10 @@ const getApiCallable = (publicPath: string): ((...args: unknown[]) => unknown) =
 describe('preload bridge — public surface inventory', () => {
   it('pins every callable path exposed through window.api', () => {
     expect(collectFunctionPaths(api)).toEqual([
+      'account.checkNotebookAccess',
+      'account.getState',
+      'account.login',
+      'account.logout',
       'acp.cancel',
       'acp.compactSession',
       'acp.connect',
@@ -837,6 +842,8 @@ describe('preload bridge — public surface inventory', () => {
       'uploads.recoverDraft',
       'uploads.stageLocalFile',
       'uploads.stageLocalPath',
+      'variableDefinition.exportTemplate',
+      'variableDefinition.generate',
       'window.announceWindowFindAppearance',
       'window.announceWindowFindContentReady',
       'window.announceWindowFindReady',

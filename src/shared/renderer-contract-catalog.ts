@@ -31,6 +31,7 @@ import * as settingsPreferences from './renderer-contracts/settings-preferences'
 import * as specialist from './renderer-contracts/specialist'
 import * as storage from './renderer-contracts/storage'
 import * as update from './renderer-contracts/update'
+import * as variableDefinition from './renderer-contracts/variable-definition'
 import * as window from './renderer-contracts/window'
 
 // Explicit composition preserves registration order without a second API inventory.
@@ -133,6 +134,7 @@ export const RENDERER_API_CONTRACT = composeRendererApiContract(
   runtime.localModelsGetSnapshotContracts,
   update.updateOnProgressContracts,
   files.uploadsAbortTransferContracts,
+  variableDefinition.contracts,
   window.contracts
 )
 
@@ -192,6 +194,7 @@ const RENDERER_CAPABILITY_ORDER = Object.freeze([
   'project-files',
   'projects',
   'tags',
+  'variable-definition',
   'remote-access',
   'reviewer',
   'runtime',
