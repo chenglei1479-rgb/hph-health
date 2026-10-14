@@ -57,6 +57,7 @@ import { ProjectDeletionCleanupNotice } from '@/components/ProjectDeletionCleanu
 import { UpdateCapsule } from '@/components/UpdateCapsule'
 import { MedicalResearchLaunchpad, type MedicalResearchWorkflow } from './MedicalResearchLaunchpad'
 import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
+import { guardDeliverableOutboundText, isDeliverablePackage } from './deliverable-packages'
 import { sessionWaitReasonLabelKeys } from '@/lib/session-wait-reason-labels'
 import { APP } from '../../../../shared/app-config'
 import { earliestCurrentDelegatedAttemptStartedAt } from '../../../../shared/delegated-work-projection'
@@ -266,8 +267,11 @@ const HomePage = ({
           selection.workflow === 'academic-english'
             ? `\n\n${t('For Japanese-to-English biomedical writing, infer Methods, Results, or Discussion only from supplied context; ask if it is ambiguous. Preserve facts, study details, numbers, citations, uncertainty, and causal strength. Write idiomatic, section-appropriate academic English and explain key choices in the selected app language; show aligned Japanese and English when useful. Follow journal style only after checking current author instructions; otherwise label it general biomedical style. Never invent methods, results, claims, or references. Flag missing context and request researcher approval before finalizing.')}`
             : ''
-        const deliverablePrompt = selection.workflow.endsWith('-pack')
-          ? `\n\n${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: workflowNames[selection.workflow] })}\nPackage mode: ${selection.workflow}`
+        const deliverablePrompt = isDeliverablePackage(selection.workflow)
+          ? guardDeliverableOutboundText(
+              `\n\n${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: workflowNames[selection.workflow] })}\nPackage mode: ${selection.workflow}`,
+              project.id
+            )
           : ''
         const prompt = `${corePrompt}${noveltyPrompt}${analysisPrompt}${academicEnglishPrompt}${deliverablePrompt}`
         if (!startResearchConversation(project.id, prompt)) openProject(project.id, 'user')
@@ -648,8 +652,10 @@ const HomePage = ({
       name: theme.slice(0, PROJECT_NAME_MAX_LENGTH),
       description: templates[workflow].description,
       agentContext:
-        (workflow.endsWith('-pack')
-          ? `${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: templates[workflow].name })}\nPackage mode: ${workflow}\n\n`
+        (isDeliverablePackage(workflow)
+          ? `${guardDeliverableOutboundText(
+              `${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: templates[workflow].name })}\nPackage mode: ${workflow}`
+            )}\n\n`
           : '') +
         t(
           'Support academic medical research without diagnosing, recommending treatment, or replacing a clinician. Work one stage at a time and wait for the researcher’s explicit confirmation before advancing or taking external action; silence is not approval. For every material conclusion, show a traceable evidence record with verified PMID, DOI when available, journal, year, supporting excerpt or result, and a clickable source link. Distinguish evidence from interpretation and label unverified details. Preserve Answer → Evidence → Data → Code → Result by recording source evidence, anonymized input files and variables, cohort filters, exclusions, analysis code and version, methods, parameters, and actual outputs. Require confirmation of PICO before search planning, search strategy before retrieval, included studies before synthesis, study design and statistical plan before analysis, and the final manuscript before completion. Never invent citations, identifiers, data, statistics, results, approvals, or registrations. Do not reproduce identifiable patient information; preserve raw data and ask before modifying files. Treat all plans, analyses, and manuscripts as drafts for qualified human review. For Japan-related research, flag ethics review and study registration for confirmation against current institutional and official guidance.'

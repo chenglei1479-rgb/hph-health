@@ -6,7 +6,7 @@ license: Apache-2.0
 
 # DRA Research Project
 
-Respond in the researcher's language. Preserve the six existing entry workflows. Do not add a deliverables/data-flow/requirements panel to the home screen. Use this skill in the conversation when the researcher asks for a complete project, an evidence table, manuscript organization, a research package, or specialist collaboration.
+Respond in the researcher's language. Preserve the six existing entry workflows. The home screen offers three deliverable packages (mentor-pack, consultation-pack, writing-pack) as step 2 after project setup; when one is selected, follow the research-deliverables skill and the recorded package mode. Do not add a data-flow or special-requirements panel. Use this skill in the conversation when the researcher asks for a complete project, an evidence table, manuscript organization, a research package, or specialist collaboration.
 
 ## Permissions and execution
 
