@@ -86,15 +86,20 @@ const gated = async (options: {
   return { owner, openBrowser, authorization: () => authorization }
 }
 
-it('ships a versioned Japanese placeholder that discloses the foreign transfer', () => {
+it('ships the versioned lawyer draft, including its fill-in placeholders', () => {
   const shipped = readAccountConsent(['resources/account-consent.json'])
-  expect(shipped.version).toBe('2026-10-14.placeholder')
-  expect(shipped.title).toContain('仮文')
-  expect(shipped.body).toContain('シンガポール法人')
-  expect(shipped.body).toContain('Okta')
-  expect(shipped.body).toContain('米国には包括的な連邦プライバシー法がありません')
-  expect(shipped.body).toContain('講じる措置')
-  expect(shipped.acknowledgement).toContain('同意')
+  expect(shipped.version).toBe('2026-10-14.draft1')
+  expect(shipped.title).toBe('【外国にある第三者への個人データの提供に関する同意】')
+  expect(shipped.body).toContain('【運営会社名】')
+  expect(shipped.body).toContain('シンガポール共和国【住所】')
+  expect(shipped.body).toContain('代表者：【氏名】')
+  expect(shipped.body).toContain('Okta, Inc.（所在国：アメリカ合衆国）')
+  expect(shipped.body).toContain(
+    'アメリカ合衆国には、日本の個人情報保護法に相当する包括的な連邦法はなく'
+  )
+  expect(shipped.body).toContain('【ISO/IEC 27001 認証等、同社が講じている措置】')
+  expect(shipped.body).toContain('診療・研究データ（患者情報を含む）は Okta, Inc. に提供されません')
+  expect(shipped.acknowledgement).toBe('上記の内容を確認し、同意します。')
 })
 
 it('rejects an unsafe or empty consent version', () => {

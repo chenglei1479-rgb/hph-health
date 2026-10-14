@@ -103,9 +103,11 @@ it('is wired into electron-builder before the package is assembled', () => {
   expect(config).toContain('beforePack: build/assert-placeholder-brackets.cjs')
 })
 
-it('follows the shipped privacy notice, so unfinished placeholder brackets fail a packaged build', () => {
-  const text = readFileSync('docs/privacy/usage-notice.ja.md', 'utf8')
-  const unfinished = text.includes('【') || text.includes('】')
+it('follows the shipped notices, so unfinished placeholder brackets fail a packaged build', () => {
+  const unfinished = noticeFiles(process.cwd()).some((file) => {
+    const text = readFileSync(file, 'utf8')
+    return text.includes('【') || text.includes('】')
+  })
   if (unfinished) expect(() => assertPlaceholderBracketsAbsent(process.cwd())).toThrow(/【 or 】/)
   else expect(() => assertPlaceholderBracketsAbsent(process.cwd())).not.toThrow()
 })

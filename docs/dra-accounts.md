@@ -37,7 +37,7 @@ npm run dev
 
 ## 国外转移同意（APPI 第 28 条）
 
-首次注册或登录前必须勾选同意。说明文从版本化文件 `resources/account-consent.json` 读取，当前内容是法务确认前的日文假文。正式文案由法务替换该文件，并提高 `version`。已保存的版本与文件版本不一致时，下次登录会重新要求勾选。
+首次注册或登录前必须勾选同意。说明文从版本化文件 `resources/account-consent.json` 读取。当前版本是 `2026-10-14.draft1`，正文是律师草案；`【運営会社名】`、`【住所】`、`【氏名】` 和措施栏必须按原文保留，直到正式文案替换它们并提高 `version`。已保存的版本与文件版本不一致时，下次登录会重新要求勾选。`electron-builder` 在打包前执行 `beforePack`：文件里仍有 `【` 或 `】` 时，发布构建直接失败。开发运行和测试不执行这条检查。
 
 勾选结果写在配置目录的 `account-consent-record.json`，只包含 `version` 和 `acceptedAt`。同一版本再次登录沿用原来的时间戳。授权请求在 `/authorize` 上附加 `ext-consent_version` 和 `ext-consent_accepted_at`。说明正文不会放进 URL。桌面应用不调用 Auth0 Management API，也不保存管理令牌。租户需要一条 Post-Login Action，把这两个查询参数复制到用户的 `app_metadata`（`api.user.setAppMetadata`），才能记入 Auth0 用户资料。
 
