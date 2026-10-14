@@ -7454,6 +7454,18 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{shown}} von {{total}} Befunden werden angezeigt. Prüfen Sie den vollständigen Code unten.",
     "Current environment": "Aktuelle Umgebung",
     "Selected environment": "Ausgewählte Umgebung",
-    "Switching environments clears the current kernel's variables.": "Beim Wechsel der Umgebung werden die Variablen des aktuellen Kernels gelöscht."
+    "Switching environments clears the current kernel's variables.": "Beim Wechsel der Umgebung werden die Variablen des aktuellen Kernels gelöscht.",
+    "Citation verified": "Zitat geprüft",
+    "Citation mismatch": "Zitat weicht ab",
+    "Citation not found": "Zitat nicht gefunden",
+    "Citation unverified": "Zitat nicht geprüft",
+    "Citation checks": "Zitatprüfungen",
+    "Title does not match the publisher record.": "Der Titel stimmt nicht mit dem Verlagsdatensatz überein.",
+    "Author does not match the publisher record.": "Der Autor stimmt nicht mit dem Verlagsdatensatz überein.",
+    "Year does not match the publisher record.": "Das Jahr stimmt nicht mit dem Verlagsdatensatz überein.",
+    "Export is blocked because a cited PMID or DOI was not found.": "Der Export ist blockiert, weil eine zitierte PMID oder DOI nicht gefunden wurde.",
+    "Override reason": "Begründung der Ausnahme",
+    "Record why this export should continue. The reason is logged with the citation identifiers.": "Notieren Sie, warum dieser Export fortgesetzt werden soll. Der Grund wird zusammen mit den Zitierkennungen protokolliert.",
+    "Export with override": "Mit Ausnahme exportieren"
   }
 }

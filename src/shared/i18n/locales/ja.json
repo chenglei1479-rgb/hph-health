@@ -7294,6 +7294,18 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{total}} 件中 {{shown}} 件を表示しています。以下のコード全体を確認してください。",
     "Current environment": "現在の環境",
     "Selected environment": "選択した環境",
-    "Switching environments clears the current kernel's variables.": "環境を切り替えると、現在の Kernel の変数が消去されます。"
+    "Switching environments clears the current kernel's variables.": "環境を切り替えると、現在の Kernel の変数が消去されます。",
+    "Citation verified": "文献を確認済み",
+    "Citation mismatch": "文献が一致しません",
+    "Citation not found": "文献が見つかりません",
+    "Citation unverified": "文献は未確認",
+    "Citation checks": "文献チェック",
+    "Title does not match the publisher record.": "タイトルが出版社の記録と一致しません。",
+    "Author does not match the publisher record.": "著者が出版社の記録と一致しません。",
+    "Year does not match the publisher record.": "年が出版社の記録と一致しません。",
+    "Export is blocked because a cited PMID or DOI was not found.": "引用された PMID または DOI が見つからないため、書き出しはブロックされています。",
+    "Override reason": "例外の理由",
+    "Record why this export should continue. The reason is logged with the citation identifiers.": "この書き出しを続ける理由を記録してください。理由は文献識別子とともに記録されます。",
+    "Export with override": "例外付きで書き出す"
   }
 }

@@ -24,6 +24,7 @@ import {
   type ExportConversationRequest,
   type ExportConversationResult
 } from '../../../../shared/conversation-export'
+import { verifyCitations, type CitationCheck } from '../../../../shared/citation-verification'
 import { projectPresentedSessionActionability } from './session-wait-reason'
 
 type ConversationExportDialogProps = {
@@ -31,6 +32,7 @@ type ConversationExportDialogProps = {
   currentSession: ChatSession | undefined
   onClose: () => void
   onExport?: (request: ExportConversationRequest) => Promise<ExportConversationResult>
+  verifyCitations?: (text: string) => Promise<CitationCheck[]>
 }
 
 type ExportScope = 'entire' | 'selected'
@@ -55,7 +57,8 @@ const ConversationExportDialogContent = ({
   currentSession,
   open,
   onClose,
-  onExport
+  onExport,
+  verifyCitations: verify = verifyCitations
 }: ConversationExportDialogProps & { session: ChatSession; open: boolean }): React.JSX.Element => {
   const { t } = useTranslation()
   const formatDate = useDateTimeFormat()
@@ -64,6 +67,8 @@ const ConversationExportDialogContent = ({
   const [selectedPromptIds, setSelectedPromptIds] = useState<ReadonlySet<string>>(new Set())
   const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState<string>()
+  const [citationBlocked, setCitationBlocked] = useState(false)
+  const [overrideReason, setOverrideReason] = useState('')
   const turns = useMemo(() => createConversationExportTurns(session.messages), [session.messages])
   const conversationChanged = useMemo(() => {
     if (!currentSession) return true
@@ -82,6 +87,8 @@ const ConversationExportDialogContent = ({
     if (open) {
       setSelectedPromptIds(new Set())
       setError(undefined)
+      setCitationBlocked(false)
+      setOverrideReason('')
     }
   }
   const allSelected = turns.length > 0 && selectedCount === turns.length
@@ -90,7 +97,9 @@ const ConversationExportDialogContent = ({
     ? projectPresentedSessionActionability(currentSession).activity !== 'inactive'
     : true
   const noSelection = scope === 'selected' && selectedCount === 0
-  const disabled = unavailable || conversationChanged || noSelection || isExporting
+  const overrideTooShort = citationBlocked && overrideReason.trim().length < 3
+  const disabled =
+    unavailable || conversationChanged || noSelection || isExporting || overrideTooShort
   const toggleTurn = (promptMessageId: string): void => {
     setError(undefined)
     setSelectedPromptIds((current) => {
@@ -116,6 +125,13 @@ const ConversationExportDialogContent = ({
     setIsExporting(true)
     setError(undefined)
     try {
+      const checks = await verify(session.messages.map((message) => message.content).join('\n'))
+      const notFound = checks.some((check) => check.status === 'not-found')
+      if (notFound && overrideReason.trim().length < 3) {
+        setCitationBlocked(true)
+        setError(t('Export is blocked because a cited PMID or DOI was not found.'))
+        return
+      }
       const expectedContentHash = await hashConversationExportContent(session)
       await flushSessionPersistence()
       const result = await exporter({
@@ -127,17 +143,28 @@ const ConversationExportDialogContent = ({
           ? {
               selectedPromptMessageIds: validSelectedPromptIds
             }
-          : {})
+          : {}),
+        ...(notFound ? { citationOverrideReason: overrideReason.trim() } : {})
       })
       if (result.saved) onClose()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
+      const message = caught instanceof Error ? caught.message : String(caught)
+      setError(
+        message === 'Export blocked: citation not found'
+          ? t('Export is blocked because a cited PMID or DOI was not found.')
+          : message
+      )
+      if (message === 'Export blocked: citation not found') setCitationBlocked(true)
     } finally {
       setIsExporting(false)
     }
   }
 
-  const exportLabel = format === 'pdf' ? t('Export PDF') : t('Export Markdown')
+  const exportLabel = citationBlocked
+    ? t('Export with override')
+    : format === 'pdf'
+      ? t('Export PDF')
+      : t('Export Markdown')
 
   return (
     <Dialog.Root
@@ -358,6 +385,24 @@ const ConversationExportDialogContent = ({
                     : t('Only selected content will be exported.')}
                 </p>
               )}
+              {citationBlocked ? (
+                <label className="mt-3 grid gap-1 text-xs text-text-200">
+                  {t('Override reason')}
+                  <textarea
+                    value={overrideReason}
+                    onChange={(event) => setOverrideReason(event.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    className="rounded-lg border border-border-200 bg-bg-000 px-2 py-1.5 text-sm text-text-000"
+                    aria-label={t('Override reason')}
+                  />
+                  <span className="text-muted-foreground">
+                    {t(
+                      'Record why this export should continue. The reason is logged with the citation identifiers.'
+                    )}
+                  </span>
+                </label>
+              ) : null}
             </div>
             <div className="flex justify-end gap-3">
               <Button
@@ -406,7 +451,8 @@ const ConversationExportDialog = ({
   session,
   currentSession,
   onClose,
-  onExport
+  onExport,
+  verifyCitations: verify
 }: ConversationExportDialogProps): React.JSX.Element => {
   const retainedSession = useRetainedDialogValue(session)
   if (!retainedSession) return <></>
@@ -419,6 +465,7 @@ const ConversationExportDialog = ({
       open={Boolean(session)}
       onClose={onClose}
       onExport={onExport}
+      verifyCitations={verify}
     />
   )
 }

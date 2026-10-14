@@ -16,6 +16,11 @@ import {
 } from '../../shared/conversation-export'
 import { hasCurrentRunningDelegatedAttempt } from '../../shared/delegated-work-projection'
 import type { PersistedChatSession } from '../../shared/session-persistence'
+import {
+  citationExportDecision,
+  verifyCitations as verifyCitationText,
+  type CitationCheck
+} from '../../shared/citation-verification'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
 import { publishUserFile } from '../user-file-publisher'
 import { createLogger, diagnosticErrorFields } from '../logger'
@@ -63,6 +68,7 @@ type ConversationExportDependencies = {
   now(): number
   translate: NativeTranslator
   exportLimits: ConversationExportLimits
+  verifyCitations(text: string): Promise<CitationCheck[]>
 }
 
 type ConversationExportRequiredDependencies = Pick<
@@ -103,7 +109,11 @@ const assertExportConversationRequest = (
         selectedPromptMessageIds.some(
           (promptMessageId) => typeof promptMessageId !== 'string' || promptMessageId.length === 0
         ) ||
-        new Set(selectedPromptMessageIds).size !== selectedPromptMessageIds.length))
+        new Set(selectedPromptMessageIds).size !== selectedPromptMessageIds.length)) ||
+    (request.citationOverrideReason !== undefined &&
+      (typeof request.citationOverrideReason !== 'string' ||
+        request.citationOverrideReason.trim().length < 3 ||
+        request.citationOverrideReason.length > 500))
   ) {
     throw new Error('Invalid conversation export request.')
   }
@@ -134,7 +144,8 @@ const defaultDependencies: ConversationExportDefaultDependencies = {
   getTempPath: () => app.getPath('temp'),
   now: Date.now,
   translate: englishNativeTranslator,
-  exportLimits: DEFAULT_CONVERSATION_EXPORT_LIMITS
+  exportLimits: DEFAULT_CONVERSATION_EXPORT_LIMITS,
+  verifyCitations: (text) => verifyCitationText(text)
 }
 
 const printToPdfWithTimeout = (
@@ -229,6 +240,17 @@ const createConversationExportService = (
       deps.now(),
       request.selectedPromptMessageIds
     )
+    const citationDecision = citationExportDecision(
+      await deps.verifyCitations(document.messages.map((message) => message.markdown).join('\n\n')),
+      request.citationOverrideReason
+    )
+    if (!citationDecision.allow) throw new Error('Export blocked: citation not found')
+    if (citationDecision.override) {
+      log.info('citation export override', {
+        citationIds: citationDecision.override.ids,
+        reason: citationDecision.override.reason
+      })
+    }
     const extension = request.format === 'markdown' ? 'md' : 'pdf'
     const defaultPath = join(
       deps.getDownloadsPath(),

@@ -7292,6 +7292,18 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{total}}개 중 {{shown}}개를 표시합니다. 아래 전체 코드를 검토하세요.",
     "Current environment": "현재 환경",
     "Selected environment": "선택한 환경",
-    "Switching environments clears the current kernel's variables.": "환경을 전환하면 현재 커널의 변수가 지워집니다."
+    "Switching environments clears the current kernel's variables.": "환경을 전환하면 현재 커널의 변수가 지워집니다.",
+    "Citation verified": "인용 확인됨",
+    "Citation mismatch": "인용이 일치하지 않음",
+    "Citation not found": "인용을 찾을 수 없음",
+    "Citation unverified": "인용 미확인",
+    "Citation checks": "인용 확인",
+    "Title does not match the publisher record.": "제목이 출판사 기록과 일치하지 않습니다.",
+    "Author does not match the publisher record.": "저자가 출판사 기록과 일치하지 않습니다.",
+    "Year does not match the publisher record.": "연도가 출판사 기록과 일치하지 않습니다.",
+    "Export is blocked because a cited PMID or DOI was not found.": "인용된 PMID 또는 DOI를 찾을 수 없어 내보내기가 차단되었습니다.",
+    "Override reason": "예외 사유",
+    "Record why this export should continue. The reason is logged with the citation identifiers.": "이 내보내기를 계속하는 이유를 기록하세요. 이유는 인용 식별자와 함께 기록됩니다.",
+    "Export with override": "예외와 함께 내보내기"
   }
 }

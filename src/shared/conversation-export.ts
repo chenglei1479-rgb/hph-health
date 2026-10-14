@@ -18,6 +18,8 @@ export type ExportConversationRequest = {
   selectedPromptMessageIds?: string[]
   // Preview-based callers bind the export to the content the user reviewed.
   expectedContentHash?: string
+  // Logged with not-found citation identifiers when the user overrides the export block.
+  citationOverrideReason?: string
 }
 
 export type ExportConversationResult = {
