@@ -6997,6 +6997,7 @@
     "Loading account…": "アカウントを読み込み中…",
     "Account service configuration is invalid.": "アカウントサービスの設定が無効です。",
     "The account consent notice could not be loaded.": "アカウント同意の説明を読み込めませんでした。",
+    "The terms of use could not be loaded.": "利用規約を読み込めませんでした。",
     "Verify your email in the browser, then sign in again.": "ブラウザーでメールアドレスを確認してから、再度ログインしてください。",
     "This local research profile belongs to another account. Sign in with its owner account.": "このローカル研究プロファイルは別のアカウントに属しています。所有者のアカウントでログインしてください。",
     "Login timed out. Please try again.": "ログインがタイムアウトしました。再試行してください。",

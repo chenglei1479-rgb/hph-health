@@ -37,11 +37,11 @@ npm run dev
 
 ## 国外转移同意（APPI 第 28 条）
 
-首次注册或登录前必须勾选同意。说明文从版本化文件 `resources/account-consent.json` 读取。当前版本是 `2026-10-14.draft1`，正文是律师草案；`【運営会社名】`、`【住所】`、`【氏名】` 和措施栏必须按原文保留，直到正式文案替换它们并提高 `version`。已保存的版本与文件版本不一致时，下次登录会重新要求勾选。`electron-builder` 在打包前执行 `beforePack`：文件里仍有 `【` 或 `】` 时，发布构建直接失败。开发运行和测试不执行这条检查。
+首次注册或登录前必须勾选两份说明：国外转移同意，以及利用規約。同意文从 `resources/account-consent.json` 读取，当前版本是 `2026-10-14.draft1`，正文是律师草案；`【運営会社名】`、`【住所】`、`【氏名】` 和措施栏必须按原文保留。利用規約从 `resources/terms-of-use.json` 读取，当前版本是 `2026-10-14.placeholder`，正文是带 `【】` 的日文假文。正式文案替换文件并提高对应 `version`。已保存的版本与文件版本不一致时，下次登录只重新要求勾选变化的那一份。`electron-builder` 在打包前执行 `beforePack`：这两个文件任一仍有 `【` 或 `】` 时，发布构建直接失败。开发运行和测试不执行这条检查。
 
-勾选结果写在配置目录的 `account-consent-record.json`，只包含 `version` 和 `acceptedAt`。同一版本再次登录沿用原来的时间戳。授权请求在 `/authorize` 上附加 `ext-consent_version` 和 `ext-consent_accepted_at`。说明正文不会放进 URL。桌面应用不调用 Auth0 Management API，也不保存管理令牌。租户需要一条 Post-Login Action，把这两个查询参数复制到用户的 `app_metadata`（`api.user.setAppMetadata`），才能记入 Auth0 用户资料。
+勾选结果写在配置目录的 `account-consent-record.json`。同意字段是 `version` 和 `acceptedAt`，利用規約字段是 `termsVersion` 和 `termsAcceptedAt`。同一版本再次登录沿用原来的时间戳。授权请求在 `/authorize` 上附加 `ext-consent_version`、`ext-consent_accepted_at`、`ext-terms_version` 和 `ext-terms_accepted_at`。说明正文不会放进 URL。桌面应用不调用 Auth0 Management API，也不保存管理令牌。租户需要一条 Post-Login Action，把这四个查询参数复制到用户的 `app_metadata`（`api.user.setAppMetadata`），才能记入 Auth0 用户资料。
 
-账号已配置而说明文件缺失或损坏时，登录被拒绝。未配置账号的本地模式不要求这份同意。
+账号已配置而任一说明文件缺失或损坏时，登录被拒绝。未配置账号的本地模式不要求这两份同意。
 
 ## 本地数据与手机访问
 

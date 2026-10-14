@@ -5,7 +5,7 @@ import { loadBundledAccountConfig } from './deployment-config'
 import { createIdentityBinding } from './identity-binding'
 import { resolveConfigRoot } from '../storage-root'
 import { membershipFeatureForChannel } from '../../shared/membership'
-import { createAccountConsentStore, readAccountConsent } from './consent'
+import { createAccountConsentStore, readAccountConsent, readTermsOfUse } from './consent'
 import { createAccountSessionStore } from './session-store'
 import { protectedSafeStorage } from '../secure-storage'
 
@@ -24,7 +24,9 @@ export const getAccountOwner = (): AccountOwner => {
     const configurationError = loaded.configurationError
     const root = resolveConfigRoot()
     let consent: ReturnType<typeof readAccountConsent> | undefined
+    let terms: ReturnType<typeof readTermsOfUse> | undefined
     let consentError = false
+    let termsError = false
     if (config) {
       try {
         consent = readAccountConsent([
@@ -34,12 +36,22 @@ export const getAccountOwner = (): AccountOwner => {
       } catch {
         consentError = true
       }
+      try {
+        terms = readTermsOfUse([
+          join(process.resourcesPath, 'terms-of-use.json'),
+          join(app.getAppPath(), 'resources', 'terms-of-use.json')
+        ])
+      } catch {
+        termsError = true
+      }
     }
     owner = new AccountOwner({
       config,
       configurationError,
       consent,
       consentError,
+      terms,
+      termsError,
       consentStore: createAccountConsentStore(root),
       profile: process.env.DRA_ACTIVE_PROFILE,
       openBrowser: (url) => shell.openExternal(url),
@@ -52,7 +64,9 @@ export const getAccountOwner = (): AccountOwner => {
 
 export const isAccountAccessAllowed = (): boolean => {
   const state = getAccountOwner().snapshot()
-  return !state.required || (Boolean(state.user) && !state.consent?.required)
+  return (
+    !state.required || (Boolean(state.user) && !state.consent?.required && !state.terms?.required)
+  )
 }
 
 export const assertAccountChannelAccess = (channel: string): void => {

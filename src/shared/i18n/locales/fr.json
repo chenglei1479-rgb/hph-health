@@ -7325,6 +7325,7 @@
     "Loading account…": "Chargement du compte…",
     "Account service configuration is invalid.": "La configuration du service de compte est invalide.",
     "The account consent notice could not be loaded.": "Impossible de charger l’avis de consentement du compte.",
+    "The terms of use could not be loaded.": "Impossible de charger les conditions d’utilisation.",
     "Verify your email in the browser, then sign in again.": "Vérifiez votre adresse e-mail dans le navigateur, puis reconnectez-vous.",
     "This local research profile belongs to another account. Sign in with its owner account.": "Ce profil de recherche local appartient à un autre compte. Connectez-vous avec le compte du propriétaire.",
     "Login timed out. Please try again.": "La connexion a expiré. Veuillez réessayer.",

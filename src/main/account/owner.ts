@@ -35,6 +35,8 @@ type Dependencies = {
   configurationError?: boolean
   consent?: AccountConsentNotice
   consentError?: boolean
+  terms?: AccountConsentNotice
+  termsError?: boolean
   consentStore?: AccountConsentStore
   openBrowser: (url: string) => Promise<void>
   bindOwner: (identity: { issuer: string; subject: string }) => Promise<boolean>
@@ -255,9 +257,20 @@ export class AccountOwner {
   private readonly deps: Dependencies
 
   constructor(deps: Dependencies) {
-    // Ignore any tenant, session file, or configuration error so login cannot collect an account.
+    // A beta build skips login. Drop the tenant, session, and consent files so it
+    // cannot collect an account or open Auth0.
     this.deps = isDraPrerelease()
-      ? { ...deps, config: undefined, configurationError: false, sessionStore: undefined }
+      ? {
+          ...deps,
+          config: undefined,
+          configurationError: false,
+          sessionStore: undefined,
+          consent: undefined,
+          consentError: false,
+          terms: undefined,
+          termsError: false,
+          consentStore: undefined
+        }
       : deps
     this.now = this.deps.now ?? Date.now
     this.request = this.deps.fetch ?? fetch
@@ -291,44 +304,68 @@ export class AccountOwner {
         ? 'configuration'
         : this.deps.consentError
           ? 'consent'
-          : this.error,
-      consent: this.consentState()
+          : this.deps.termsError
+            ? 'terms'
+            : this.error,
+      consent: this.noticeState('consent'),
+      terms: this.noticeState('terms')
     }
   }
 
-  private consentState(): AccountState['consent'] {
-    if (!this.deps.config) return undefined
-    if (!this.deps.consent && !this.deps.consentError && !this.deps.consentStore) return undefined
-    if (this.deps.consentError || !this.deps.consent) return { required: true }
+  private noticesActive(): boolean {
+    return Boolean(
+      this.deps.consent ||
+      this.deps.consentError ||
+      this.deps.terms ||
+      this.deps.termsError ||
+      this.deps.consentStore
+    )
+  }
+
+  private noticeState(kind: 'consent' | 'terms'): AccountState['consent'] {
+    if (!this.deps.config || !this.noticesActive()) return undefined
+    const notice = kind === 'consent' ? this.deps.consent : this.deps.terms
+    const failed = kind === 'consent' ? this.deps.consentError : this.deps.termsError
+    if (failed || !notice) return { required: true }
     const stored = this.deps.consentStore?.read()
-    const current = stored?.version === this.deps.consent.version ? stored : undefined
+    const saved = kind === 'consent' ? stored?.consent : stored?.terms
+    const current = saved?.version === notice.version ? saved : undefined
     return {
       required: !current,
-      notice: this.deps.consent,
+      notice,
       acceptedAt: current?.acceptedAt
     }
   }
 
-  private acceptanceForLogin(
-    request: AccountLoginRequest
-  ): { version: string; acceptedAt: string } | undefined {
-    if (!this.deps.consent && !this.deps.consentError && !this.deps.consentStore) return undefined
+  private acceptanceForLogin(request: AccountLoginRequest):
+    | {
+        consent: { version: string; acceptedAt: string }
+        terms: { version: string; acceptedAt: string }
+      }
+    | undefined {
+    if (!this.noticesActive()) return undefined
     if (this.deps.consentError || !this.deps.consent || !this.deps.consentStore)
       throw new Error('Account consent is unavailable.')
+    if (this.deps.termsError || !this.deps.terms) throw new Error('Account terms are unavailable.')
     const stored = this.deps.consentStore.read()
-    if (stored?.version === this.deps.consent.version) return stored
-    if (request.consentAccepted !== true) throw new Error('Account consent is required.')
-    const record = {
-      version: this.deps.consent.version,
-      acceptedAt: new Date(this.now()).toISOString()
-    }
-    this.deps.consentStore.write(record)
-    return record
+    const consentCurrent =
+      stored?.consent?.version === this.deps.consent.version ? stored.consent : undefined
+    const termsCurrent =
+      stored?.terms?.version === this.deps.terms.version ? stored.terms : undefined
+    if (!consentCurrent && request.consentAccepted !== true)
+      throw new Error('Account consent is required.')
+    if (!termsCurrent && request.termsAccepted !== true)
+      throw new Error('Account terms are required.')
+    const acceptedAt = new Date(this.now()).toISOString()
+    const consent = consentCurrent ?? { version: this.deps.consent.version, acceptedAt }
+    const terms = termsCurrent ?? { version: this.deps.terms.version, acceptedAt }
+    if (!consentCurrent || !termsCurrent) this.deps.consentStore.write({ consent, terms })
+    return { consent, terms }
   }
 
   assertAccess(): void {
     const state = this.snapshot()
-    if (state.required && (!state.user || state.consent?.required))
+    if (state.required && (!state.user || state.consent?.required || state.terms?.required))
       throw new Error('DRA account login required.')
   }
 
@@ -403,12 +440,13 @@ export class AccountOwner {
       !request ||
       !this.snapshot().methods.includes(request.method) ||
       (request.signup !== undefined && typeof request.signup !== 'boolean') ||
-      (request.consentAccepted !== undefined && typeof request.consentAccepted !== 'boolean')
+      (request.consentAccepted !== undefined && typeof request.consentAccepted !== 'boolean') ||
+      (request.termsAccepted !== undefined && typeof request.termsAccepted !== 'boolean')
     ) {
       throw new Error('Account login method is unavailable.')
     }
     if (this.attempt) return this.snapshot()
-    const consent = this.acceptanceForLogin(request)
+    const acceptance = this.acceptanceForLogin(request)
     this.revision++
     this.error = undefined
     const attempt: Attempt = {
@@ -500,9 +538,11 @@ export class AccountOwner {
       if (request.method !== 'email') {
         url.searchParams.set('connection', config.connections[request.method]!)
       }
-      if (consent) {
-        url.searchParams.set('ext-consent_version', consent.version)
-        url.searchParams.set('ext-consent_accepted_at', consent.acceptedAt)
+      if (acceptance) {
+        url.searchParams.set('ext-consent_version', acceptance.consent.version)
+        url.searchParams.set('ext-consent_accepted_at', acceptance.consent.acceptedAt)
+        url.searchParams.set('ext-terms_version', acceptance.terms.version)
+        url.searchParams.set('ext-terms_accepted_at', acceptance.terms.acceptedAt)
       }
       await this.deps.openBrowser(url.href)
     } catch {

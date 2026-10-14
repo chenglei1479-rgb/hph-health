@@ -11,6 +11,7 @@ export type AccountLoginRequest = {
   method: AccountLoginMethod
   signup?: boolean
   consentAccepted?: boolean
+  termsAccepted?: boolean
 }
 export type NotebookAccessCheck = {
   checkedAt: number
@@ -27,6 +28,14 @@ export type AccountState = {
   user?: { subject: string; email?: string; name?: string }
   expiresAt?: number
   membership?: MembershipState
-  error?: 'configuration' | 'consent' | 'login' | 'timeout' | 'email-unverified' | 'different-owner'
+  error?:
+    | 'configuration'
+    | 'consent'
+    | 'terms'
+    | 'login'
+    | 'timeout'
+    | 'email-unverified'
+    | 'different-owner'
   consent?: { required: boolean; notice?: AccountConsentNotice; acceptedAt?: string }
+  terms?: { required: boolean; notice?: AccountConsentNotice; acceptedAt?: string }
 }
