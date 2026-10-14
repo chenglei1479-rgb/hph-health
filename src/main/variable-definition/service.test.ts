@@ -51,7 +51,8 @@ describe('variable definition template', () => {
     })
     expect(seen).toHaveLength(1)
     expect(seen[0]).not.toContain('山田太郎')
-    expect(seen[0]).toContain('[非公開]')
+    expect(seen[0]).toContain('[仮名化済み]')
+    expect(seen[0]).not.toContain('匿名化')
     expect(seen[0]).toContain('退院サマリー')
     expect(table.variables.map((variable) => variable.name)).toEqual([
       RESEARCH_ID_COLUMN_NAME,
@@ -77,7 +78,7 @@ describe('variable definition template', () => {
     })
     expect(JSON.stringify(table)).not.toContain('山田太郎')
     expect(table.variables.find((variable) => variable.name === '年齢')?.definition).toContain(
-      '[非公開]'
+      '[仮名化済み]'
     )
   })
 

@@ -96,5 +96,8 @@ describe('VariableDefinitionEntry', () => {
     expect(container.textContent).toContain('経過記録')
     expect(container.textContent).toContain('収集テンプレートから除きました')
     expect(container.textContent).toContain('交付パッケージが使えるようになったら')
+    expect(container.textContent).toContain('マスキングチェック')
+    expect(container.textContent).toContain('仮名化済み')
+    expect(container.textContent).not.toContain('匿名化')
   })
 })

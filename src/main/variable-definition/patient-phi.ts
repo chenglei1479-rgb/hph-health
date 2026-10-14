@@ -31,10 +31,13 @@ const spans = (text: string): Array<{ start: number; end: number }> => {
   return found.sort((left, right) => right.start - left.start)
 }
 
+/** Mark left in place of patient text. Japanese UI calls this 仮名化済み, never 匿名化. */
+export const PSEUDONYMIZED_MARK = '[仮名化済み]'
+
 export const redactPatientPhi = (text: string): string => {
   let next = text
   for (const span of spans(text)) {
-    next = `${next.slice(0, span.start)}[非公開]${next.slice(span.end)}`
+    next = `${next.slice(0, span.start)}${PSEUDONYMIZED_MARK}${next.slice(span.end)}`
   }
   return next
 }

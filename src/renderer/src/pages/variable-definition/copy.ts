@@ -16,6 +16,9 @@ export type VariableDefinitionCopy = {
   allowedRange: string
   empty: string
   warnings: string
+  maskingCheck: string
+  maskingCheckNote: string
+  pseudonymized: string
 }
 
 const ja: VariableDefinitionCopy = {
@@ -37,7 +40,11 @@ const ja: VariableDefinitionCopy = {
   type: '型',
   allowedRange: '許容範囲',
   empty: '研究計画を入力してください。',
-  warnings: '確認してください'
+  warnings: '確認してください',
+  maskingCheck: 'マスキングチェック',
+  maskingCheckNote:
+    '研究計画はマスキングチェックを通してからモデルに渡します。置き換えた箇所は仮名化済みです。',
+  pseudonymized: '仮名化済み'
 }
 
 const catalogs: Record<string, VariableDefinitionCopy> = {

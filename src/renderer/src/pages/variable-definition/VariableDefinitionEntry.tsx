@@ -92,6 +92,7 @@ export const VariableDefinitionEntry = (): React.JSX.Element => {
             <div>
               <h2 className="text-base font-medium">{copy.title}</h2>
               <p className="mt-1 text-muted-foreground">{copy.intro}</p>
+              <p className="mt-1 text-muted-foreground">{copy.maskingCheckNote}</p>
               <p className="mt-1 text-muted-foreground">{copy.separated}</p>
             </div>
             <button type="button" onClick={() => setOpen(false)}>
