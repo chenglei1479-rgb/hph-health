@@ -54,8 +54,10 @@ jobs:
           test "$(node -p 'process.arch')" = '${{ matrix.arch }}'
           test "$(node -p 'require("./package.json").version')" = 0.1.33-unified.1
           actool --version
+      - name: Use lockfile-compatible npm
+        run: npm install --global npm@10.9.8 --no-audit --no-fund
       - name: Install native dependencies
-        run: node scripts/ci/npm-ci.mjs
+        run: node scripts/ci/npm-ci.mjs --install-links
       - name: Typecheck
         run: npm run typecheck
       - name: Verify Home logo and three-line DRA brand
