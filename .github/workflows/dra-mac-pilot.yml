@@ -1,0 +1,148 @@
+name: DRA Mac pilot build and verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/dra-mac-pilot.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dra-mac-pilot-033
+  cancel-in-progress: false
+
+jobs:
+  mac:
+    name: Build and verify Mac ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-26
+            subdir: osx-arm64
+            engine: darwin-arm64
+          - arch: x64
+            runner: macos-26-intel
+            subdir: osx-64
+            engine: darwin.dylib
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '12.0'
+      NODE_OPTIONS: --max-old-space-size=8192
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+      ELECTRON_BUILDER_BINARIES_MIRROR: https://github.com/electron-userland/electron-builder-binaries/releases/download/
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 67d17d57ff56b6f48aa0a3231e8000903797b282
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Verify source identity and native runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 67d17d57ff56b6f48aa0a3231e8000903797b282
+          test "$(node -p 'process.platform')" = darwin
+          test "$(node -p 'process.arch')" = '${{ matrix.arch }}'
+          test "$(node -p 'require("./package.json").version')" = 0.1.33-unified.1
+          actool --version
+      - name: Install native dependencies
+        run: node scripts/ci/npm-ci.mjs
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Verify Home logo and three-line DRA brand
+        run: npx vitest run src/renderer/src/pages/home/HomePage.render.test.tsx -t 'keeps the logo and three-line DRA signature in the home header'
+      - name: Verify translations and native storage upgrades
+        run: >-
+          npx vitest run src/renderer/src/i18n/resources.test.ts
+          src/main/storage-root.test.ts src/main/storage/brand-location.test.ts
+          src/main/storage/data-location-identity.test.ts
+          src/main/settings/document-store.test.ts src/main/settings/repository.test.ts
+          --maxWorkers=1 --testTimeout=30000 --hookTimeout=30000
+      - name: Stage pinned micromamba and prune foreign Prisma engines
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/fetch-micromamba.mjs '${{ matrix.subdir }}' 'resources/bin/mac/${{ matrix.arch }}/micromamba'
+          'resources/bin/mac/${{ matrix.arch }}/micromamba' --version
+          found=0
+          for f in node_modules/.prisma/client/*query_engine-*; do
+            [ -e "$f" ] || continue
+            case "$f" in
+              *'${{ matrix.engine }}'*) found=1 ;;
+              *) rm -f "$f" ;;
+            esac
+          done
+          test "$found" = 1
+      - name: Verify on-demand notebook runtime availability
+        run: node scripts/verify-runtime-bundle.mjs '${{ matrix.subdir }}'
+      - name: Build desktop and web renderer
+        run: |
+          npm run build:e2e
+          npm run build:web
+      - name: Package ad-hoc signed research pilot
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never -c.dmg.sign=false -c.mac.notarize=false -c.electronDownload.mirror=https://github.com/electron/electron/releases/download/
+      - name: Adapt verification harness to DRA branding
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          const file = 'scripts/macos-package-smoke.mjs'
+          const source = fs.readFileSync(file, 'utf8')
+          const count = source.split('Deep Research Agent').length - 1
+          if (count !== 3) throw new Error('Unexpected upstream smoke harness')
+          fs.writeFileSync(file, source.replaceAll('Deep Research Agent', 'DRA'))
+          NODE
+      - name: Verify DMG and ZIP launches, native modules, migrations and reopen
+        run: node scripts/macos-package-smoke.mjs --artifact-dir dist
+      - name: Prepare downloads and auditable checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deliverables
+          for ext in dmg zip; do
+            cp "dist/deep-research-agent-0.1.33-unified.1-mac-${{ matrix.arch }}.$ext" "deliverables/DRA-0.1.33-unified.1-mac-${{ matrix.arch }}.$ext"
+          done
+          cp dist/database-migration-certification.json 'deliverables/database-migration-mac-${{ matrix.arch }}.json'
+          cd deliverables
+          shasum -a 256 *.dmg *.zip > 'SHA256-mac-${{ matrix.arch }}.txt'
+          printf '%s\n' 'source=67d17d57ff56b6f48aa0a3231e8000903797b282' 'version=0.1.33-unified.1' 'arch=${{ matrix.arch }}' 'signing=ad-hoc' 'notarized=false' 'gatekeeperAccepted=false' 'packageSmoke=passed' 'fullRegression=false' 'realDoctorAccepted=false' > 'verification-mac-${{ matrix.arch }}.txt'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dra-mac-${{ matrix.arch }}
+          path: deliverables/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish only after both Mac architectures pass
+    needs: mac
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dra-mac-*
+          path: deliverables
+          merge-multiple: true
+      - name: Verify release identity and upload without replacing existing assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view v0.1.33-unified.1 --json isPrerelease --jq .isPrerelease)" = true
+          cd deliverables
+          shasum -a 256 -c SHA256-mac-arm64.txt
+          shasum -a 256 -c SHA256-mac-x64.txt
+          gh release upload v0.1.33-unified.1 ./*
+
