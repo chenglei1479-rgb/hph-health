@@ -74,6 +74,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
   const [file, setFile] = useState<File | null>(null)
   const [context, setContext] = useState<SchemaModelContext | null>(null)
   const [blocked, setBlocked] = useState<string | null>(null)
+  const [identifierWarnings, setIdentifierWarnings] = useState<string[]>([])
   const [code, setCode] = useState(
     'import pandas as pd\ndf = pd.read_csv("table.csv")\nprint(df.shape)'
   )
@@ -111,9 +112,11 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       })
       if (!response.ok) {
         setContext(null)
+        setIdentifierWarnings([])
         setBlocked(response.message)
         return
       }
+      setIdentifierWarnings(response.identifierWarnings.map((warning) => warning.message))
       setContext(response.context)
       setTagged(response.tagged)
       setResult(null)
@@ -202,6 +205,13 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
           </button>
           {blocked ? (
             <pre className="whitespace-pre-wrap text-xs text-[#9a5046]">{blocked}</pre>
+          ) : null}
+          {identifierWarnings.length > 0 ? (
+            <ul aria-label={copy.identifierWarnings} className="space-y-1 text-xs text-[#9a5046]">
+              {identifierWarnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
           ) : null}
           {context ? (
             <div className="space-y-2">

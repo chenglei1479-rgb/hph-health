@@ -41,12 +41,19 @@ export type ImportTableRequest = {
   patientData?: boolean
 }
 
+export type IdentifierColumnWarning = {
+  column: string
+  category: string
+  message: string
+}
+
 export type ImportTableResponse =
   | {
       ok: true
       context: SchemaModelContext
       containsPatientData: boolean
       tagged: boolean
+      identifierWarnings: IdentifierColumnWarning[]
     }
   | {
       ok: false

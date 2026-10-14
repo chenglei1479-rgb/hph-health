@@ -19,6 +19,7 @@ import { importTableFile, phiScanText } from './import-table'
 import { isHospitalApproved } from './machine-approval'
 import { buildSchemaModelContext } from './model-context'
 import { createPatientDataTagStore } from './patient-data-tag'
+import { findDirectIdentifierColumns } from './identifier-columns'
 import { detectPatientPhiSpans, formatBlockedImport } from './patient-phi'
 import type { PythonCommand } from '../python-command'
 import { gateNotebookOutputs } from './release-model-text'
@@ -30,6 +31,7 @@ type StoredTable = {
   columns: SchemaModelContext['columns']
   rowCount: number
   categoricalValues: Record<string, string[]>
+  withheldColumns: string[]
 }
 
 export type SchemaNotebookService = {
@@ -87,15 +89,17 @@ export const createSchemaNotebookService = (options: {
     readFileSync(join(tableDir, `${tableId}.csv`), 'utf8')
 
   const contextFor = (stored: StoredTable): SchemaModelContext => {
+    const withheld = new Set(stored.withheldColumns ?? [])
     const allowed = new Set(optIns.list(stored.tableId).map((record) => record.column))
     const categoricalValues: Record<string, string[]> = {}
     for (const [column, values] of Object.entries(stored.categoricalValues)) {
-      if (allowed.has(column)) categoricalValues[column] = [...values]
+      if (withheld.has(column) || !allowed.has(column)) continue
+      categoricalValues[column] = [...values]
     }
     return buildSchemaModelContext({
       tableId: stored.tableId,
       rowCount: stored.rowCount,
-      columns: stored.columns,
+      columns: stored.columns.filter((column) => !withheld.has(column.name)),
       categoricalValues
     })
   }
@@ -109,7 +113,9 @@ export const createSchemaNotebookService = (options: {
         return { ok: false, blocked: true, message: formatBlockedImport(spans), spans }
       }
       const profile = profileTable(table)
-      const patient = request.patientData !== false || spans.length > 0
+      const identifierWarnings = findDirectIdentifierColumns(table.columns, table.rows)
+      const patient =
+        request.patientData !== false || spans.length > 0 || identifierWarnings.length > 0
       if (patient) tags.tag(projectId, 'imported patient table')
       const tableId = randomUUID()
       const categoricalValues: Record<string, string[]> = Object.fromEntries(
@@ -120,14 +126,16 @@ export const createSchemaNotebookService = (options: {
         tableId,
         columns: profile.columns,
         rowCount: profile.rowCount,
-        categoricalValues
+        categoricalValues,
+        withheldColumns: identifierWarnings.map((warning) => warning.column)
       }
       writeTable(tableId, tableToCsv(table), stored)
       return {
         ok: true,
         context: contextFor(stored),
         containsPatientData: patient,
-        tagged: tags.has(projectId)
+        tagged: tags.has(projectId),
+        identifierWarnings
       }
     },
     async optInCategorical(request) {
@@ -136,6 +144,9 @@ export const createSchemaNotebookService = (options: {
       const column = requireId(request.column, 'column')
       const stored = readStored(tableId)
       if (stored.projectId !== projectId) throw new Error('Table does not belong to this project.')
+      if ((stored.withheldColumns ?? []).includes(column)) {
+        throw new Error(`Column ${column} is a direct identifier and is not sent to the model.`)
+      }
       if (!stored.categoricalValues[column]) {
         throw new Error(`Column ${column} has no categorical value list.`)
       }

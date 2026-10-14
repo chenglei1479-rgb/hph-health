@@ -46,6 +46,11 @@ const RULES: Rule[] = [
     group: 1
   },
   {
+    category: 'ADDRESS',
+    pattern: /(?:住所|番地)\s*[:：]\s*([^\s,、]{2,80})/g,
+    group: 1
+  },
+  {
     category: 'DATE',
     pattern: /(?:生年月日|誕生日)\s*[:：]?\s*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?)/g,
     group: 1

@@ -24,6 +24,7 @@ export type SchemaNotebookCopy = {
   blocked: string
   tagged: string
   language: string
+  identifierWarnings: string
 }
 
 const ja: SchemaNotebookCopy = {
@@ -48,7 +49,8 @@ const ja: SchemaNotebookCopy = {
   modelView: 'モデルに渡す内容',
   blocked: 'この端末は病院の承認を受けていないため、個人情報を含むファイルは取り込めません。',
   tagged: 'このプロジェクトは患者データを含むため、印を外すことはできません。',
-  language: '言語'
+  language: '言語',
+  identifierWarnings: '直接識別子の列はモデルに渡しません'
 }
 
 const catalogs: Record<string, SchemaNotebookCopy> = {

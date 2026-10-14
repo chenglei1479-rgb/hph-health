@@ -211,6 +211,68 @@ describe('schema-only notebook', () => {
     expect(service.patientDataTags().map((tag) => tag.projectId)).toEqual(['study-1'])
   })
 
+  it('withholds direct-identifier column names and samples after scanning headers and values', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-id-'))
+    const service = serviceAt(root, {
+      directory: root,
+      approvalLogPath: join(root, 'approved.jsonl'),
+      machineApproved: () => true
+    })
+    const imported = await service.importTable({
+      projectId: 'study-1',
+      filename: 'patients.csv',
+      csvText: [
+        '研究用ID,カルテ番号,氏名,生年月日,住所,電話番号,マイナンバー,保険者番号,在院日数,連絡先,note',
+        'S-1,A12345,山田太郎,1980-01-02,東京都港区,090-1111-2222,123456789012,12345678,12,090-9999-8888,経過は安定'
+      ].join('\n'),
+      patientData: true
+    })
+    expect(imported.ok).toBe(true)
+    if (!imported.ok) return
+    expect(imported.context.columns.map((column) => column.name)).toEqual([
+      '研究用ID',
+      '在院日数',
+      'note'
+    ])
+    expect(imported.context.syntheticSampleRows.every((row) => row.length === 3)).toBe(true)
+    const payload = JSON.stringify(imported.context)
+    for (const hidden of [
+      'カルテ番号',
+      '氏名',
+      '生年月日',
+      '住所',
+      '電話番号',
+      'マイナンバー',
+      '保険者番号',
+      '連絡先',
+      '山田太郎',
+      'A12345',
+      '090-1111-2222'
+    ]) {
+      expect(payload).not.toContain(hidden)
+    }
+    expect(imported.identifierWarnings.map((warning) => warning.column)).toEqual([
+      'カルテ番号',
+      '氏名',
+      '生年月日',
+      '住所',
+      '電話番号',
+      'マイナンバー',
+      '保険者番号',
+      '連絡先'
+    ])
+    expect(
+      imported.identifierWarnings.every((warning) => warning.message.includes('モデルに渡しません'))
+    ).toBe(true)
+    await expect(
+      service.optInCategorical({
+        projectId: 'study-1',
+        tableId: imported.context.tableId,
+        column: '氏名'
+      })
+    ).rejects.toThrow(/not sent to the model/)
+  })
+
   it('blocks PHI import on a machine that is not hospital-approved and reports spans', async () => {
     const root = mkdtempSync(join(tmpdir(), 'schema-notebook-block-'))
     writeFileSync(
