@@ -8,6 +8,10 @@ export const buildVariableDefinitionPrompt = (researchPlan: string): string =>
     'coding はコード化です。例: 術後感染: あり=1/なし=0。',
     'type は integer, number, binary, categorical, date, text のいずれかです。',
     'allowedRange は許容範囲です。例: 0-120、または あり=1/なし=0。',
+    '先頭列の研究用IDはこちらで付けるので、出力に含めないでください。',
+    '氏名、カルテ番号、生年月日、住所、電話番号、マイナンバー、保険者番号、被保険者番号の列は作らないでください。',
+    '暦日ではなく、在院日数や退院〜再入院日数のように日数の列を優先してください。',
+    'どうしても暦日が必要なときだけ type を date にしてください。',
     '',
     '研究計画:',
     researchPlan

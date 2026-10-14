@@ -29,6 +29,14 @@ describe('VariableDefinitionEntry', () => {
           type: 'binary' as const,
           allowedRange: '0-1'
         }
+      ],
+      warnings: [
+        {
+          code: 'dropped-identifier' as const,
+          name: 'カルテ番号',
+          message:
+            '「カルテ番号」は直接識別子（カルテ番号）のため、収集テンプレートから除きました。'
+        }
       ]
     }))
     window.api = {
@@ -86,6 +94,7 @@ describe('VariableDefinitionEntry', () => {
       researchPlan: expect.stringContaining('退院サマリー')
     })
     expect(container.textContent).toContain('経過記録')
+    expect(container.textContent).toContain('収集テンプレートから除きました')
     expect(container.textContent).toContain('交付パッケージが使えるようになったら')
   })
 })

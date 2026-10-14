@@ -9,6 +9,20 @@ export const DEFINITION_SHEET_NAME = '定義'
 
 export const CANDIDATE_SHEET_NAME = '候補'
 
+export const NOTES_SHEET_NAME = '注意'
+
+/** First column of every collection template. It is not a chart number. */
+export const RESEARCH_ID_COLUMN_NAME = '研究用ID'
+
+/**
+ * Shown on the notes sheet. The research-ID to chart-number key stays in the
+ * hospital-designated location, and this workbook is still hospital personal data.
+ */
+export const COLLECTION_TEMPLATE_NOTES = [
+  '研究用IDとカルテ番号の対応表は、病院が指定した場所に別に保管してください。このファイルには入れないでください。',
+  'このファイルは病院にとって個人情報です。匿名データとして院外に持ち出してはいけません。'
+] as const
+
 export const VARIABLE_DEFINITION_TYPES = [
   'integer',
   'number',
@@ -29,9 +43,18 @@ export type VariableDefinition = {
   allowedRange: string
 }
 
+export type VariableDefinitionWarningCode = 'dropped-identifier' | 'raw-date'
+
+export type VariableDefinitionWarning = {
+  code: VariableDefinitionWarningCode
+  name: string
+  message: string
+}
+
 export type VariableDefinitionTable = {
   projectId: string
   variables: VariableDefinition[]
+  warnings: VariableDefinitionWarning[]
 }
 
 export type GenerateVariableDefinitionRequest = {

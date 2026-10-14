@@ -4,8 +4,11 @@ import type { VariableDefinition, VariableDefinitionType } from '../../shared/va
 import {
   CANDIDATE_SHEET_NAME,
   COLLECTION_SHEET_NAME,
-  DEFINITION_SHEET_NAME
+  COLLECTION_TEMPLATE_NOTES,
+  DEFINITION_SHEET_NAME,
+  NOTES_SHEET_NAME
 } from '../../shared/variable-definition'
+import { prepareVariableDefinitions } from './prepare-columns'
 
 const XML_ESCAPE: Record<string, string> = {
   '&': '&amp;',
@@ -186,7 +189,8 @@ const sheetFiles = (
   return zipSync(files)
 }
 
-export const buildCollectionTemplate = (variables: VariableDefinition[]): Uint8Array => {
+export const buildCollectionTemplate = (input: VariableDefinition[]): Uint8Array => {
+  const variables = prepareVariableDefinitions(input).variables
   if (variables.length === 0) throw new Error('変数定義がありません。')
   const candidates = new Map<string, string[]>()
   const validations = variables.map((variable) => validationFor(variable, candidates))
@@ -220,6 +224,10 @@ export const buildCollectionTemplate = (variables: VariableDefinition[]): Uint8A
           variable.allowedRange
         ])
       ]
+    },
+    {
+      name: NOTES_SHEET_NAME,
+      rows: [['注意'], ...COLLECTION_TEMPLATE_NOTES.map((note) => [note])]
     }
   ]
   if (candidateRows.length > 0) {

@@ -15,6 +15,7 @@ export type VariableDefinitionCopy = {
   type: string
   allowedRange: string
   empty: string
+  warnings: string
 }
 
 const ja: VariableDefinitionCopy = {
@@ -35,7 +36,8 @@ const ja: VariableDefinitionCopy = {
   coding: 'コーディング',
   type: '型',
   allowedRange: '許容範囲',
-  empty: '研究計画を入力してください。'
+  empty: '研究計画を入力してください。',
+  warnings: '確認してください'
 }
 
 const catalogs: Record<string, VariableDefinitionCopy> = {
@@ -59,7 +61,8 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     coding: 'Kodierung',
     type: 'Typ',
     allowedRange: 'Zulässiger Bereich',
-    empty: 'Geben Sie einen Forschungsplan ein.'
+    empty: 'Geben Sie einen Forschungsplan ein.',
+    warnings: 'Bitte prüfen'
   },
   es: {
     ...ja,
@@ -80,7 +83,8 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     coding: 'Codificación',
     type: 'Tipo',
     allowedRange: 'Rango permitido',
-    empty: 'Introduzca el plan de investigación.'
+    empty: 'Introduzca el plan de investigación.',
+    warnings: 'Revise lo siguiente'
   },
   fr: {
     ...ja,
@@ -101,7 +105,8 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     coding: 'Codage',
     type: 'Type',
     allowedRange: 'Plage autorisée',
-    empty: 'Saisissez le plan de recherche.'
+    empty: 'Saisissez le plan de recherche.',
+    warnings: 'À vérifier'
   },
   'zh-Hans': {
     ...ja,
@@ -121,7 +126,8 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     coding: '编码',
     type: '类型',
     allowedRange: '允许范围',
-    empty: '请输入研究计划。'
+    empty: '请输入研究计划。',
+    warnings: '请确认'
   },
   'zh-Hant': {
     ...ja,
@@ -141,7 +147,8 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     coding: '編碼',
     type: '類型',
     allowedRange: '允許範圍',
-    empty: '請輸入研究計畫。'
+    empty: '請輸入研究計畫。',
+    warnings: '請確認'
   },
   ko: {
     ...ja,
@@ -162,7 +169,8 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     coding: '코딩',
     type: '유형',
     allowedRange: '허용 범위',
-    empty: '연구 계획을 입력하십시오.'
+    empty: '연구 계획을 입력하십시오.',
+    warnings: '확인해 주십시오'
   },
   ru: {
     ...ja,
@@ -183,7 +191,8 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     coding: 'Кодирование',
     type: 'Тип',
     allowedRange: 'Допустимый диапазон',
-    empty: 'Введите план исследования.'
+    empty: 'Введите план исследования.',
+    warnings: 'Проверьте'
   }
 }
 

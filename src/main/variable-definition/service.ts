@@ -6,6 +6,7 @@ import type {
 import type { VariableDefinitionCompleter } from './model-client'
 import { buildVariableDefinitionPrompt } from './prompt'
 import { parseVariableDefinitions } from './parse'
+import { prepareVariableDefinitions } from './prepare-columns'
 import { releaseVariableDefinitionText } from './release-model-text'
 import { buildCollectionTemplate } from './xlsx-template'
 
@@ -29,7 +30,8 @@ export const createVariableDefinitionService = (options: {
     const releasedPlan = await releaseVariableDefinitionText(researchPlan, projectId)
     const raw = await options.complete(buildVariableDefinitionPrompt(releasedPlan))
     const releasedReply = await releaseVariableDefinitionText(raw, projectId)
-    return { projectId, variables: parseVariableDefinitions(releasedReply) }
+    const prepared = prepareVariableDefinitions(parseVariableDefinitions(releasedReply))
+    return { projectId, ...prepared }
   },
   exportTemplate(table) {
     requireText(table.projectId, 'projectId is required.')

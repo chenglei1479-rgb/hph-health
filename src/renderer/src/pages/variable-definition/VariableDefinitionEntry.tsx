@@ -140,6 +140,13 @@ export const VariableDefinitionEntry = (): React.JSX.Element => {
             </button>
           </div>
           {message ? <p role="alert">{message}</p> : null}
+          {table && table.warnings.length > 0 ? (
+            <ul aria-label={copy.warnings}>
+              {table.warnings.map((warning) => (
+                <li key={`${warning.code}:${warning.name}`}>{warning.message}</li>
+              ))}
+            </ul>
+          ) : null}
           {table ? (
             <table className="w-full border-collapse text-left">
               <thead>
