@@ -55,6 +55,11 @@ it('builds unsigned macOS dmg and Windows NSIS packages and publishes a prerelea
   const install = build?.steps?.find((step) => step.name === 'Install dependencies')
   expect(install?.run).toBe('node scripts/ci/npm-ci.mjs --install-links')
 
+  const buildApp = build?.steps?.find((step) => step.name === 'Build the app')
+  expect(buildApp?.env).toEqual({ NODE_OPTIONS: '--max-old-space-size=6144' })
+  expect(buildApp?.run).toContain('npm run build:web')
+  expect(buildApp?.run).toContain('npx electron-vite build')
+
   const packageStep = build?.steps?.find((step) => step.name === 'Package unsigned installers')
   expect(packageStep?.run).toContain('build/prerelease-electron-builder.cjs')
   expect(packageStep?.run).toContain('--${{ matrix.platform }}')
