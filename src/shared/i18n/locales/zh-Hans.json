@@ -7324,6 +7324,15 @@
     "Anonymous usage statistics are on.": "匿名使用情况统计已开启。",
     "Usage statistics are off.": "使用情况统计已关闭。",
     "Reset install id": "重置安装标识",
-    "Japanese privacy notice (placeholder until legal review)": "日语隐私声明（法律审核前的占位文件）"
+    "Japanese privacy notice (placeholder until legal review)": "日语隐私声明（法律审核前的占位文件）",
+    "External transmissions": "外部发送",
+    "These are the hosts this app may contact. The list is generated from the endpoint catalog.": "这些是此应用可以联系的主机。列表由端点目录生成。",
+    "Data sent": "发送的数据",
+    "Recipient": "接收方",
+    "Purpose": "目的",
+    "Required or optional": "必需或可选",
+    "Optional": "可选",
+    "User-configured model endpoint": "用户配置的模型端点",
+    "These official model hosts are examples. The app does not contact them until you configure that model.": "以下官方模型主机仅为示例。在您配置该模型之前，应用不会联系这些主机。"
   }
 }

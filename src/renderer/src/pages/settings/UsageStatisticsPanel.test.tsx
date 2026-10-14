@@ -59,5 +59,10 @@ describe('UsageStatisticsPanel', () => {
     ) as { installId: string }
     expect(next.installId).not.toBe(payload.installId)
     expect(next.installId).toBe(localStorage.getItem(USAGE_INSTALL_ID_STORAGE_KEY))
+    expect(container.textContent).toContain('External transmissions')
+    expect(container.textContent).toContain('dra-prod.jp.auth0.com')
+    expect(container.textContent).toContain('stats.REPLACE_ME')
+    expect(container.textContent).toContain('eutils.ncbi.nlm.nih.gov')
+    expect(container.textContent).toContain('api.crossref.org')
   })
 })

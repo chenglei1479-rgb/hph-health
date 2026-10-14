@@ -7652,6 +7652,15 @@
     "Anonymous usage statistics are on.": "Les statistiques d'utilisation anonymes sont activées.",
     "Usage statistics are off.": "Les statistiques d'utilisation sont désactivées.",
     "Reset install id": "Réinitialiser l'identifiant d'installation",
-    "Japanese privacy notice (placeholder until legal review)": "Notice de confidentialité en japonais (paramètre fictif en attendant la revue juridique)"
+    "Japanese privacy notice (placeholder until legal review)": "Notice de confidentialité en japonais (paramètre fictif en attendant la revue juridique)",
+    "External transmissions": "Transmissions externes",
+    "These are the hosts this app may contact. The list is generated from the endpoint catalog.": "Voici les hôtes que cette application peut contacter. La liste est générée à partir du catalogue de points de terminaison.",
+    "Data sent": "Données envoyées",
+    "Recipient": "Destinataire",
+    "Purpose": "Finalité",
+    "Required or optional": "Obligatoire ou facultatif",
+    "Optional": "Facultatif",
+    "User-configured model endpoint": "Point de terminaison de modèle configuré par l'utilisateur",
+    "These official model hosts are examples. The app does not contact them until you configure that model.": "Ces hôtes de modèles officiels sont des exemples. L'application ne les contacte pas tant que vous n'avez pas configuré ce modèle."
   }
 }

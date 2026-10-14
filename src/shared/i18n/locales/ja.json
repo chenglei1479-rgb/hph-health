@@ -7324,6 +7324,15 @@
     "Anonymous usage statistics are on.": "匿名の利用統計はオンです。",
     "Usage statistics are off.": "利用統計はオフです。",
     "Reset install id": "インストール ID をリセット",
-    "Japanese privacy notice (placeholder until legal review)": "日本語のプライバシー通知（法務確定前のプレースホルダー）"
+    "Japanese privacy notice (placeholder until legal review)": "日本語のプライバシー通知（法務確定前のプレースホルダー）",
+    "External transmissions": "外部送信",
+    "These are the hosts this app may contact. The list is generated from the endpoint catalog.": "このアプリが連絡してよいホストです。一覧はエンドポイントカタログから生成されます。",
+    "Data sent": "送信するデータ",
+    "Recipient": "送信先",
+    "Purpose": "目的",
+    "Required or optional": "必須または任意",
+    "Optional": "任意",
+    "User-configured model endpoint": "ユーザーが設定したモデルエンドポイント",
+    "These official model hosts are examples. The app does not contact them until you configure that model.": "次の公式モデルのホストは例です。そのモデルを設定するまで、アプリはこれらのホストへ送りません。"
   }
 }

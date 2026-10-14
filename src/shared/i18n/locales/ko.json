@@ -7322,6 +7322,15 @@
     "Anonymous usage statistics are on.": "익명 사용 통계가 켜져 있습니다.",
     "Usage statistics are off.": "사용 통계가 꺼져 있습니다.",
     "Reset install id": "설치 ID 재설정",
-    "Japanese privacy notice (placeholder until legal review)": "일본어 개인정보 고지 (법률 검토 전 자리 표시자)"
+    "Japanese privacy notice (placeholder until legal review)": "일본어 개인정보 고지 (법률 검토 전 자리 표시자)",
+    "External transmissions": "외부 전송",
+    "These are the hosts this app may contact. The list is generated from the endpoint catalog.": "이 앱이 접속할 수 있는 호스트입니다. 목록은 엔드포인트 카탈로그에서 생성됩니다.",
+    "Data sent": "전송하는 데이터",
+    "Recipient": "수신자",
+    "Purpose": "목적",
+    "Required or optional": "필수 또는 선택",
+    "Optional": "선택",
+    "User-configured model endpoint": "사용자가 설정한 모델 엔드포인트",
+    "These official model hosts are examples. The app does not contact them until you configure that model.": "다음 공식 모델 호스트는 예시입니다. 해당 모델을 설정하기 전에는 앱이 이 호스트에 접속하지 않습니다."
   }
 }

@@ -1,0 +1,36 @@
+{
+  "ownerPaths": [
+    "src/main/net/external-endpoint-guard.test.ts",
+    "src/main/net/external-endpoint-guard.ts",
+    "src/renderer/src/pages/settings/UsageStatisticsPanel.test.tsx",
+    "src/renderer/src/pages/settings/UsageStatisticsPanel.tsx",
+    "src/renderer/src/pages/settings/usage-statistics-preference.ts",
+    "src/shared/external-endpoint-docs.ts",
+    "src/shared/external-endpoints.test.ts",
+    "src/shared/external-endpoints.ts",
+    "src/shared/usage-statistics.test.ts",
+    "src/shared/usage-statistics.ts"
+  ],
+  "interfacePaths": [
+    "src/main/net/external-endpoint-guard.ts",
+    "src/shared/external-endpoint-docs.ts",
+    "src/shared/external-endpoints.ts",
+    "src/shared/usage-statistics.ts"
+  ],
+  "consumerModules": [],
+  "testFiles": {
+    "owner": [
+      "scripts/external-endpoint-coverage.test.ts",
+      "scripts/generate-external-endpoint-docs.test.ts",
+      "src/main/net/external-endpoint-guard.test.ts",
+      "src/renderer/src/pages/settings/UsageStatisticsPanel.test.tsx",
+      "src/shared/external-endpoints.test.ts",
+      "src/shared/usage-statistics.test.ts"
+    ],
+    "contract": [],
+    "consumer": []
+  },
+  "capabilityOverlays": ["main_runtime", "renderer_view"],
+  "fallbackCapability": "shared_contract",
+  "fullTestReason": "The outbound host guard sits on the shared network path, so a catalog change must run the complete suite and the generated-document check."
+}

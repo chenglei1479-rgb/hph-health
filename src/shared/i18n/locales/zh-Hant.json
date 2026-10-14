@@ -7324,6 +7324,15 @@
     "Anonymous usage statistics are on.": "匿名使用情況統計已開啟。",
     "Usage statistics are off.": "使用情況統計已關閉。",
     "Reset install id": "重設安裝標識",
-    "Japanese privacy notice (placeholder until legal review)": "日語隱私聲明（法律審核前的占位檔案）"
+    "Japanese privacy notice (placeholder until legal review)": "日語隱私聲明（法律審核前的占位檔案）",
+    "External transmissions": "外部傳送",
+    "These are the hosts this app may contact. The list is generated from the endpoint catalog.": "這些是此應用可以聯繫的主機。清單由端點目錄產生。",
+    "Data sent": "傳送的資料",
+    "Recipient": "接收方",
+    "Purpose": "目的",
+    "Required or optional": "必需或可選",
+    "Optional": "可選",
+    "User-configured model endpoint": "使用者設定的模型端點",
+    "These official model hosts are examples. The app does not contact them until you configure that model.": "以下官方模型主機僅為示例。在您設定該模型之前，應用不會聯繫這些主機。"
   }
 }

@@ -7791,6 +7791,15 @@
     "Anonymous usage statistics are on.": "Анонимная статистика использования включена.",
     "Usage statistics are off.": "Статистика использования выключена.",
     "Reset install id": "Сбросить идентификатор установки",
-    "Japanese privacy notice (placeholder until legal review)": "Японское уведомление о конфиденциальности (заполнитель до юридической проверки)"
+    "Japanese privacy notice (placeholder until legal review)": "Японское уведомление о конфиденциальности (заполнитель до юридической проверки)",
+    "External transmissions": "Внешние передачи",
+    "These are the hosts this app may contact. The list is generated from the endpoint catalog.": "Это хосты, с которыми это приложение может связаться. Список создаётся из каталога конечных точек.",
+    "Data sent": "Отправляемые данные",
+    "Recipient": "Получатель",
+    "Purpose": "Цель",
+    "Required or optional": "Обязательно или необязательно",
+    "Optional": "Необязательно",
+    "User-configured model endpoint": "Конечная точка модели, заданная пользователем",
+    "These official model hosts are examples. The app does not contact them until you configure that model.": "Эти официальные хосты моделей приведены как примеры. Приложение не обращается к ним, пока вы не настроите эту модель."
   }
 }

@@ -5,6 +5,10 @@ import { version as appVersion } from '../../../../../package.json'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import {
+  externalEndpointEntries,
+  userConfiguredModelEntry
+} from '../../../../shared/external-endpoints'
+import {
   USAGE_STATISTICS_ENDPOINT,
   isUsageStatisticsPlaceholder
 } from '../../../../shared/usage-statistics'
@@ -16,6 +20,64 @@ import {
   resetUsageInstallId,
   writeUsageOptIn
 } from './usage-statistics-preference'
+
+const ExternalTransmissionsSection = (): React.JSX.Element => {
+  const { t } = useTranslation()
+  const examples = userConfiguredModelEntry().exampleHosts ?? []
+  return (
+    <SettingsSection
+      title={t('External transmissions')}
+      description={t(
+        'These are the hosts this app may contact. The list is generated from the endpoint catalog.'
+      )}
+    >
+      <div className="overflow-x-auto" data-testid="external-transmissions">
+        <table className="w-full border-collapse text-left text-[12px] leading-5">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="px-2 py-1 font-medium">{t('Host')}</th>
+              <th className="px-2 py-1 font-medium">{t('Data sent')}</th>
+              <th className="px-2 py-1 font-medium">{t('Recipient')}</th>
+              <th className="px-2 py-1 font-medium">{t('Purpose')}</th>
+              <th className="px-2 py-1 font-medium">{t('Required or optional')}</th>
+              <th className="px-2 py-1 font-medium">{t('Default')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {externalEndpointEntries().map((entry) => (
+              <tr key={entry.id} className="border-b border-border align-top">
+                <td className="px-2 py-1 font-mono break-all">
+                  {entry.host ?? t('User-configured model endpoint')}
+                </td>
+                <td className="px-2 py-1">{entry.dataSentJa}</td>
+                <td className="px-2 py-1">{entry.recipientJa}</td>
+                <td className="px-2 py-1">{entry.purposeJa}</td>
+                <td className="px-2 py-1">
+                  {entry.requirement === 'required' ? t('Required') : t('Optional')}
+                </td>
+                <td className="px-2 py-1">{entry.defaultEnabled ? t('On') : t('Off')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {examples.length > 0 ? (
+        <div className="mt-3">
+          <p className="text-[13px] leading-5 text-muted-foreground">
+            {t(
+              'These official model hosts are examples. The app does not contact them until you configure that model.'
+            )}
+          </p>
+          <ul className="mt-2 font-mono text-[12px] leading-5">
+            {examples.map((host) => (
+              <li key={host}>{host}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </SettingsSection>
+  )
+}
 
 const UsageStatisticsPanel = (): React.JSX.Element => {
   const { t } = useTranslation()
@@ -79,6 +141,7 @@ const UsageStatisticsPanel = (): React.JSX.Element => {
           {t('Japanese privacy notice (placeholder until legal review)')}
         </p>
       </SettingsSection>
+      <ExternalTransmissionsSection />
     </div>
   )
 }
