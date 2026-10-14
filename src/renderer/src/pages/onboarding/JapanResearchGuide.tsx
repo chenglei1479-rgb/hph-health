@@ -1,6 +1,8 @@
 import { ClipboardCheck, ShieldCheck, UserRoundCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { CaseReportTrackWizard } from './CaseReportTrackWizard'
+
 const JapanResearchGuide = (): React.JSX.Element => {
   const { t } = useTranslation()
 
@@ -36,6 +38,7 @@ const JapanResearchGuide = (): React.JSX.Element => {
           <span>{t('Verify references, methods, and results yourself.')}</span>
         </li>
       </ul>
+      <CaseReportTrackWizard />
     </aside>
   )
 }

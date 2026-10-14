@@ -7294,6 +7294,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{total}} 件中 {{shown}} 件を表示しています。以下のコード全体を確認してください。",
     "Current environment": "現在の環境",
     "Selected environment": "選択した環境",
-    "Switching environments clears the current kernel's variables.": "環境を切り替えると、現在の Kernel の変数が消去されます。"
+    "Switching environments clears the current kernel's variables.": "環境を切り替えると、現在の Kernel の変数が消去されます。",
+    "Case report track": "症例報告",
+    "This optional case-report track can be skipped at every step.": "この症例報告の手順は、各ステップでスキップできます。",
+    "Describe the case without direct identifiers.": "直接識別子を含めずに症例を記述します。",
+    "Record the clinical course.": "臨床経過を記録します。",
+    "Note the discussion and literature.": "考察と文献をメモします。",
+    "Record consent and ethics review.": "同意と倫理審査を記録します。",
+    "Skip this step": "この手順をスキップ",
+    "Finish case report track": "症例報告を完了",
+    "Case report track saved": "症例報告の選択を保存しました",
+    "Skipped steps: {{steps}}": "スキップした手順: {{steps}}"
   }
 }

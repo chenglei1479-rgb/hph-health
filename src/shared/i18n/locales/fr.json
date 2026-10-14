@@ -7622,6 +7622,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{shown}} résultats sur {{total}} sont affichés. Vérifiez le code complet ci-dessous.",
     "Current environment": "Environnement actuel",
     "Selected environment": "Environnement sélectionné",
-    "Switching environments clears the current kernel's variables.": "Changer d’environnement efface les variables du noyau actuel."
+    "Switching environments clears the current kernel's variables.": "Changer d’environnement efface les variables du noyau actuel.",
+    "Case report track": "Parcours de cas clinique",
+    "This optional case-report track can be skipped at every step.": "Ce parcours optionnel de cas clinique peut être ignoré à chaque étape.",
+    "Describe the case without direct identifiers.": "Décrivez le cas sans identifiants directs.",
+    "Record the clinical course.": "Notez l'évolution clinique.",
+    "Note the discussion and literature.": "Notez la discussion et la littérature.",
+    "Record consent and ethics review.": "Notez le consentement et l'examen éthique.",
+    "Skip this step": "Ignorer cette étape",
+    "Finish case report track": "Terminer le parcours de cas clinique",
+    "Case report track saved": "Parcours de cas clinique enregistré",
+    "Skipped steps: {{steps}}": "Étapes ignorées\u00a0: {{steps}}"
   }
 }

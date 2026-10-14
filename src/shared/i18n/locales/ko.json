@@ -7292,6 +7292,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{total}}개 중 {{shown}}개를 표시합니다. 아래 전체 코드를 검토하세요.",
     "Current environment": "현재 환경",
     "Selected environment": "선택한 환경",
-    "Switching environments clears the current kernel's variables.": "환경을 전환하면 현재 커널의 변수가 지워집니다."
+    "Switching environments clears the current kernel's variables.": "환경을 전환하면 현재 커널의 변수가 지워집니다.",
+    "Case report track": "증례 보고 트랙",
+    "This optional case-report track can be skipped at every step.": "이 선택적 증례 보고 트랙은 모든 단계에서 건너뛸 수 있습니다.",
+    "Describe the case without direct identifiers.": "직접 식별자 없이 증례를 기술합니다.",
+    "Record the clinical course.": "임상 경과를 기록합니다.",
+    "Note the discussion and literature.": "고찰과 문헌을 메모합니다.",
+    "Record consent and ethics review.": "동의와 윤리 심의를 기록합니다.",
+    "Skip this step": "이 단계 건너뛰기",
+    "Finish case report track": "증례 보고 트랙 완료",
+    "Case report track saved": "증례 보고 트랙을 저장했습니다",
+    "Skipped steps: {{steps}}": "건너뛴 단계: {{steps}}"
   }
 }

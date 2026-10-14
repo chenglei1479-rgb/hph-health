@@ -7761,6 +7761,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "Показано {{shown}} из {{total}} результатов. Проверьте полный код ниже.",
     "Current environment": "Текущая среда",
     "Selected environment": "Выбранная среда",
-    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются."
+    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются.",
+    "Case report track": "Трек описания клинического случая",
+    "This optional case-report track can be skipped at every step.": "Этот необязательный трек описания клинического случая можно пропустить на каждом шаге.",
+    "Describe the case without direct identifiers.": "Опишите случай без прямых идентификаторов.",
+    "Record the clinical course.": "Зафиксируйте клиническое течение.",
+    "Note the discussion and literature.": "Отметьте обсуждение и литературу.",
+    "Record consent and ethics review.": "Зафиксируйте согласие и этическую экспертизу.",
+    "Skip this step": "Пропустить этот шаг",
+    "Finish case report track": "Завершить трек описания клинического случая",
+    "Case report track saved": "Трек описания клинического случая сохранён",
+    "Skipped steps: {{steps}}": "Пропущенные шаги: {{steps}}"
   }
 }
