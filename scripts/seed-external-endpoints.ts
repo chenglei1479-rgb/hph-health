@@ -85,7 +85,7 @@ const specials: Entry[] = [
     companyJa: '未定（プレースホルダー）',
     countryJa: '未定',
     recipientJa: recipient('未定（プレースホルダー）', '未定'),
-    purposeJa: '匿名の利用統計'
+    purposeJa: '利用状況統計（個人を特定しない）'
   }
 ]
 
@@ -195,7 +195,7 @@ const model: Entry = {
   defaultEnabled: false,
   disclosureNameJa: '利用者が設定した AI サービス',
   dataSentJa:
-    '表の構造、合成サンプル、脱識別チェック済みの出力。承認されたプロジェクトでは、脱識別済みの本文。法務レビュー前のプレースホルダーです。',
+    '表の構造、合成サンプル、マスキングチェック済みの出力。承認されたプロジェクトでは、仮名化済み本文。法務レビュー前のプレースホルダーです。',
   companyJa: '利用者が選んだ提供者',
   countryJa: '提供者ごとに異なる',
   recipientJa: '利用者が選んだ提供者（提供者ごとに異なる）。法務レビュー前のプレースホルダーです。',

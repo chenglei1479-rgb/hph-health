@@ -22,6 +22,7 @@
     "owner": [
       "scripts/external-endpoint-coverage.test.ts",
       "scripts/generate-external-endpoint-docs.test.ts",
+      "scripts/japanese-terminology.test.ts",
       "src/main/net/external-endpoint-guard.test.ts",
       "src/renderer/src/pages/settings/UsageStatisticsPanel.test.tsx",
       "src/shared/external-endpoints.test.ts",
