@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { SCHEMA_NOTEBOOK_LOCAL_FILENAME } from '../../../shared/schema-notebook'
-import { resolvePythonCommand, type PythonCommand } from '../python-command'
+import type { PythonCommand } from '../python-command'
+import { resolveSchemaNotebookPython } from './bundled-python'
 
 export type LocalRunResult = {
   stdout: string
@@ -97,18 +98,11 @@ export const executeLocalAnalysis = async (input: {
     const script = scriptFor(input.language, input.code)
     const scriptPath = join(directory, script.filename)
     await writeFile(scriptPath, script.source, { encoding: 'utf8', mode: 0o600 })
-    const command =
-      input.language === 'python'
-        ? await (input.resolvePython ?? resolvePythonCommand)()
-        : await (input.resolveR ?? defaultResolveR)()
-    if (!command) {
-      return {
-        stdout: '',
-        stderr: 'Rscript was not found in the local Notebook environment.',
-        exitCode: 127
-      }
+    const command = await resolveAnalysisCommand(input)
+    if ('message' in command) {
+      return { stdout: '', stderr: command.message, exitCode: 127 }
     }
-    const result = await run(command, scriptPath, directory, {
+    const result = await run(command.command, scriptPath, directory, {
       ...process.env,
       DRA_SCHEMA_TABLE: tablePath
     })
@@ -125,6 +119,19 @@ export const executeLocalAnalysis = async (input: {
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
+}
+
+const resolveAnalysisCommand = async (
+  input: Pick<Parameters<typeof executeLocalAnalysis>[0], 'language' | 'resolvePython' | 'resolveR'>
+): Promise<PythonCommand | { message: string }> => {
+  if (input.language === 'python') {
+    if (input.resolvePython) return input.resolvePython()
+    const resolved = await resolveSchemaNotebookPython()
+    if (!resolved.ok) return { message: resolved.message }
+    return resolved.command
+  }
+  const r = await (input.resolveR ?? defaultResolveR)()
+  return r ?? { message: 'Rscript was not found in the local Notebook environment.' }
 }
 
 const defaultResolveR = async (): Promise<PythonCommand | undefined> => {

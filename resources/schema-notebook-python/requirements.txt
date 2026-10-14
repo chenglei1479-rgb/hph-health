@@ -1,0 +1,9 @@
+# Offline prefix for the schema-only Notebook. Do not pip-install this at app startup.
+# Build steps and installer size: PACKAGING.md
+pandas
+numpy
+scipy
+statsmodels
+matplotlib
+openpyxl
+lifelines
