@@ -20,6 +20,7 @@ afterEach(async () => {
   if (root) await act(async () => root.unmount())
   host?.remove()
   vi.useRealTimers()
+  vi.unstubAllEnvs()
 })
 const render = async (account?: NonNullable<typeof window.api.account>): Promise<void> => {
   Object.defineProperty(window, 'api', { configurable: true, value: { account } })
@@ -76,6 +77,16 @@ it('unmounts the workspace when the main-process session expires', async () => {
     await vi.advanceTimersByTimeAsync(2100)
   })
   expect(host.querySelector('[data-testid="private-workspace"]')).toBeNull()
+})
+it('skips the login gate and does not request account state on a prerelease build', async () => {
+  vi.stubEnv('DRA_PRERELEASE', '1')
+  const getState = vi.fn()
+  await render({ getState, login: vi.fn(), logout: vi.fn() })
+  expect(getState).not.toHaveBeenCalled()
+  expect(host.querySelector('[data-testid="private-workspace"]')).not.toBeNull()
+  expect(host.textContent).not.toContain('Continue with email')
+  expect(host.textContent).not.toContain('Your DRA account')
+  vi.unstubAllEnvs()
 })
 it('allows paired-browser mode without a native API and keeps local mode usable before service setup', async () => {
   await render()
