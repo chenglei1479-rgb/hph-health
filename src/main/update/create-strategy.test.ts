@@ -107,7 +107,7 @@ describe('createUpdateStrategy', () => {
     spawnSync.mockReturnValue({
       status: 0,
       stdout: '',
-      stderr: 'Identifier=com.dra.desktop\nTeamIdentifier=87G9WFU9H3\n'
+      stderr: 'Identifier=com.dra-hph.desktop\nTeamIdentifier=87G9WFU9H3\n'
     })
   })
 
@@ -180,7 +180,7 @@ describe('createUpdateStrategy', () => {
     spawnSync.mockReturnValueOnce({
       status: 0,
       stdout: '',
-      stderr: 'Identifier=com.dra.desktop\nSignature=adhoc\nTeamIdentifier=not set\n'
+      stderr: 'Identifier=com.dra-hph.desktop\nSignature=adhoc\nTeamIdentifier=not set\n'
     })
 
     expect(createUpdateStrategy('darwin', { isPackaged: true, version: '1.2.3' })).toBeInstanceOf(
@@ -192,7 +192,7 @@ describe('createUpdateStrategy', () => {
     spawnSync.mockReturnValueOnce({
       status: 0,
       stdout: '',
-      stderr: 'Identifier=com.dra.desktop\nTeamIdentifier=OTHERTEAM1\n'
+      stderr: 'Identifier=com.dra-hph.desktop\nTeamIdentifier=OTHERTEAM1\n'
     })
 
     expect(createUpdateStrategy('darwin', { isPackaged: true, version: '1.2.3' })).toBeInstanceOf(

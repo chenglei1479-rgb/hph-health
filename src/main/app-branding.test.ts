@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 const projectRoot = resolve(__dirname, '../..')
 const displayName = 'DRA'
-const appId = 'com.dra.desktop'
+const appId = 'com.dra-hph.desktop'
 
 describe('app display branding', () => {
   it('uses the DRA display name in shell and workspace surfaces', () => {
@@ -37,9 +37,14 @@ describe('app display branding', () => {
   it('uses the stable app identifier for packaged and window integration metadata', () => {
     const mainSource = readFileSync(resolve(projectRoot, 'src/main/index.ts'), 'utf8')
     const builderSource = readFileSync(resolve(projectRoot, 'electron-builder.yml'), 'utf8')
+    const updateSource = readFileSync(
+      resolve(projectRoot, 'src/main/update/create-strategy.ts'),
+      'utf8'
+    )
 
     expect(mainSource).toContain(`const APP_USER_MODEL_ID = '${appId}'`)
     expect(builderSource).toContain(`appId: ${appId}`)
+    expect(updateSource).toContain(`const OFFICIAL_MAC_BUNDLE_ID = '${appId}'`)
   })
 
   it('opens tall enough to show the complete first-run environment summary', () => {
