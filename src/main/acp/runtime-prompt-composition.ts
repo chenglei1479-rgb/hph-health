@@ -396,6 +396,9 @@ const composeAcpRuntimePromptOwners = (
     },
     currentCwd: () => base.snapshotOwner.cwd,
     resolveProjectId: projectId,
+    ...(options.resolveProjectAgentContext
+      ? { resolveProjectAgentContext: options.resolveProjectAgentContext }
+      : {}),
     prepareContinuationReplay: host.reload.prepareContinuationReplay,
     disconnectForReload: host.reload.disconnect,
     resumeAfterReload: host.reload.resume,

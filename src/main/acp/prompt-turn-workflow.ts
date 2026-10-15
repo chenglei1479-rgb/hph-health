@@ -14,6 +14,7 @@ import {
 import type { AgentFramework } from '../agent-framework'
 import { createLogger, errorLogFields } from '../logger'
 import { DelegateMessagePreAcceptanceError } from '../delegation/execution-port'
+import { isMentorDiscussionPack } from '../../shared/deliverable-pack-policy'
 import { PLAN_FIRST_TURN_PROMPT_REMINDER } from '../session-plan/guidance'
 import type { ArtifactTurnHandle } from './artifact-turn-owner'
 import type { AcpBackendGenerationView } from './backend-generation-owner'
@@ -220,6 +221,7 @@ type AcpPromptTurnWorkflowOptions = Readonly<{
   finalization: AcpPromptTurnFinalization
   currentCwd: () => string
   resolveProjectId: (sessionId: string) => string
+  resolveProjectAgentContext?: (projectId: string) => Promise<string | undefined>
   prepareContinuationReplay: (
     request: AcpPromptRequest
   ) => Promise<AcpPromptRequest['resumeFallback']>
@@ -569,6 +571,15 @@ class AcpPromptTurnWorkflow {
       const promptBackend = env.backend()
       const framework = promptBackend.framework
       const cwd = promptSnapshot?.cwd ?? this.options.currentCwd()
+      let mentorPack =
+        isMentorDiscussionPack(promptSnapshot?.sessionSetupPromptPrefix) ||
+        isMentorDiscussionPack(readyPrepared.promptPrefix)
+      if (!mentorPack && this.options.resolveProjectAgentContext) {
+        const agentContext = await this.options.resolveProjectAgentContext(
+          this.options.resolveProjectId(sessionId)
+        )
+        mentorPack = isMentorDiscussionPack(agentContext)
+      }
       let providerContent = readyPrepared.content
       let resumeAccepted: (() => Promise<void>) | undefined
       let resumeDispatch: (() => Promise<void>) | undefined
@@ -581,6 +592,7 @@ class AcpPromptTurnWorkflow {
           session,
           content: providerContent,
           cwd,
+          ...(mentorPack ? { mentorPack: true } : {}),
           frameworkId: promptSnapshot?.frameworkId ?? framework.id,
           ...(!accumulatedFacts && readyPrepared.preDispatchModelCalls
             ? { preDispatchModelCalls: readyPrepared.preDispatchModelCalls }

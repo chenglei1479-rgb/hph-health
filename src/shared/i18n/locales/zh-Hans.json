@@ -145,11 +145,10 @@
     "DRA could not safely access existing encrypted data. Unlock the system credential store or restore the original key and profile, then restart. Existing credentials have not been replaced.": "DRA 无法安全访问现有加密数据。请解锁系统凭据存储，或恢复原始密钥和配置文件，然后重新启动。现有凭据未被替换。",
     "Return to the running tasks and stop their subagents before quitting DRA.": "请返回正在运行的任务并停止其子智能体，然后再退出 DRA。",
     "DRA is still moving your data.": "DRA 仍在迁移你的数据。",
-    "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "此会话研究包需要更新版本的 DRA。请更新 DRA 后重新导入。"
+    "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "此会话研究包需要更新版本的 DRA。请更新 DRA 后重新导入。",
+    "This mentor discussion pack does not send individual patient data. The message was not sent.": "此指导医师咨询资料不发送患者个体数据。消息未发送。"
   },
   "renderer": {
-    "Export statistician package": "导出统计资料包",
-    "Beta exports aggregate files that open without DRA. Raw data, Notebook rows, and chat history are not included.": "Beta 仅导出可在 DRA 之外打开的汇总文件。不包含原始数据、含逐行记录的 Notebook 输出和聊天记录。",
     "Statistical report": "统计报告",
     "Word": "Word",
     "Result tables": "结果表",
@@ -6980,12 +6979,9 @@
     "Academic English writing": "英文学术写作",
     "For a novelty check, draft Japanese and English search terms and exact queries for PubMed, Crossref, OpenAlex, and ClinicalTrials.gov. Ask the researcher to approve the search plan first. Search only available sources and record each source, query, date, result count, and limit. If a connector is unavailable, mark it as not searched. Provide the official jRCT search page (https://jrct.mhlw.go.jp/search?language=en) for manual checking; do not scrape it or claim it was searched automatically. After searching, deduplicate prior studies and map established or conflicting evidence, underrepresented populations or outcomes, method gaps, ongoing trials, and possible novelty opportunities. Link every finding to its source. Label novelty as tentative, explain coverage limits, and never infer that no prior work exists from zero results. Ask the researcher to validate the Research Gap Map and novelty claim.": "新颖性评估先拟定 PubMed、Crossref、OpenAlex 和 ClinicalTrials.gov 的日文、英文检索词及准确检索式，并先请研究者确认检索方案。只查询当前可用来源，记录来源、检索式、日期、结果数和限制；不可用的连接器标记为“未检索”。提供 jRCT 官方检索页（https://jrct.mhlw.go.jp/search?language=en）供人工核验，不要抓取或声称已自动查询。检索后去重并梳理已有或相互矛盾的证据、研究不足的人群或结局、方法学空白、进行中的试验及潜在新颖性机会。每项发现都附来源链接。新颖性仅作暂定判断，说明检索覆盖限制，不能因零结果就推断没有既往研究。请研究者核验 Research Gap Map 和新颖性主张。",
     "For Japanese-to-English biomedical writing, infer Methods, Results, or Discussion only from supplied context; ask if it is ambiguous. Preserve facts, study details, numbers, citations, uncertainty, and causal strength. Write idiomatic, section-appropriate academic English and explain key choices in the selected app language; show aligned Japanese and English when useful. Follow journal style only after checking current author instructions; otherwise label it general biomedical style. Never invent methods, results, claims, or references. Flag missing context and request researcher approval before finalizing.": "日文医学文本转为英文时不要逐字翻译。仅根据已提供的上下文判断属于 Methods、Results 还是 Discussion；若有歧义就先询问。准确保留事实、研究细节、数字、引用、不确定性和因果强度。使用符合段落语境的自然学术英语，并用应用当前选择的语言解释关键编辑取舍；必要时提供日英对照。只有核实期刊最新作者指南后才按其风格修改，否则标注为通用生物医学写作风格。不得编造方法、结果、主张或参考文献。标出缺失背景，并在定稿前请研究者确认。",
-    "Mentor discussion pack": "导师讨论包",
+    "Mentor discussion pack": "指导医师咨询资料",
     "Data audit and statistical consultation pack": "数据审计与统计咨询包",
-    "Conference abstract or English draft": "学会摘要或英文初稿",
-    "Input: research question and available evidence. Output: one-page brief, evidence table, study options, and questions for your mentor.": "输入：研究问题与已有证据。交付：一页简报、证据表、研究方案选项及导师讨论问题。",
-    "Input: anonymized dataset and variable definitions. Output: data audit, statistical plan, and consultation checklist; computed results require approved execution.": "输入：匿名化数据集与变量定义。交付：数据审计、统计计划及咨询清单；计算结果须经批准后实际执行。",
-    "Input: verified study facts, results, and submission requirements. Output: abstract or English draft, source map, and items requiring author review.": "输入：已核实的研究事实、结果及投稿要求。交付：摘要或英文初稿、来源对应表及作者待审事项。",
+    "Conference abstract or English draft": "学会摘要·英文草稿",
     "Not executed": "未执行",
     "Computed": "已计算",
     "Needs researcher review": "待研究者审核",
@@ -7357,6 +7353,19 @@
     "Enter an appid only if you use CiNii. Application is free.": "仅在使用 CiNii 时输入 appid。申请免费。",
     "CiNii appid": "CiNii appid",
     "Save CiNii appid": "保存 CiNii appid",
-    "Apply for a free NII appid.": "申请免费的 NII appid。"
+    "Apply for a free NII appid.": "申请免费的 NII appid。",
+    "Start from a step (literature, planning, analysis, and more)": "从步骤开始（文献、计划、分析等）",
+    "A short manuscript for a deadline, with checks for the ethics number and AI use.": "面向截止日期的短稿。会核对伦理编号和 AI 使用情况。",
+    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "此交付包的终点是学会摘要或短篇英文草稿。长论文请从「论文撰写」或「英文学术写作」继续。撰写前会核对伦理审查批准号。未填写时仅提醒，不会阻止撰写。",
+    "Audit results, a statistical plan, and a consultation list to hand to a statistician.": "审计结果、统计计划和咨询清单。交给统计老师。",
+    "If you only need to run the tables yourself, use Data analysis. This pack organizes the problem before a consultation. The approval number is checked before a patient table is used or writing begins. A missing number is only a reminder.": "如果只是自己跑表，请使用「数据分析」。此交付包用于先整理问题再咨询。使用患者表或开始撰写前会核对批准号。未填写时仅提醒。",
+    "A one-page brief for a mentor meeting, focused on study-design consultation.": "指导医师会议用的一页材料，专注研究设计咨询。",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "用于伦理审查前的开题沟通：研究问题、设计和下次要向指导医师确认的事项。不强制填写批准号。伦理通过后若要带着表咨询，请使用「数据审计与统计咨询包」。",
+    "This pack does not load patient data.": "此交付包不读取患者数据。",
+    "Do not paste individual patient data. Keep the consultation to the study design and a summary of aggregate results.": "请勿粘贴患者的个体数据。咨询请限于研究设计和汇总结果的摘要。",
+    "Aggregate statistics export": "汇总统计资料导出",
+    "Aggregated results only; source data is not included": "仅汇总结果，不含原始数据",
+    "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "不进行分析。只导出交给统计老师的汇总资料包。不含原始数据和聊天记录。",
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "此交付包不读取患者数据。不要索取患者表或个体行。咨询请限于研究设计和汇总结果的摘要。"
   }
 }

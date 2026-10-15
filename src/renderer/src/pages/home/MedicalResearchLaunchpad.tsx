@@ -2,8 +2,10 @@ import {
   ArrowUpRight,
   BookOpenCheck,
   ChartNoAxesCombined,
+  ChevronDown,
   ClipboardCheck,
   FilePenLine,
+  FileSpreadsheet,
   Languages,
   Search,
   ShieldCheck,
@@ -14,7 +16,11 @@ import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
-import { type DeliverablePackageId } from './deliverable-packages'
+import {
+  deliverableCardCopy,
+  HOME_DELIVERABLE_CARD_IDS,
+  type HomeDeliverableCardId
+} from './deliverable-packages'
 import { StatisticianReviewExportDialog } from './StatisticianReviewExportDialog'
 
 export type MedicalResearchWorkflow =
@@ -36,16 +42,15 @@ type WorkflowCard = {
   iconClassName: string
 }
 
-type DeliverableCard = {
-  id: DeliverablePackageId
-  title: string
-  description: string
-  icon: LucideIcon
-  iconClassName: string
-}
-
 type MedicalResearchLaunchpadProps = {
   onSelectWorkflow: (workflow: MedicalResearchWorkflow, theme: string) => void
+}
+
+const PACKAGE_ICONS: Record<HomeDeliverableCardId, { icon: LucideIcon; iconClassName: string }> = {
+  'writing-pack': { icon: FilePenLine, iconClassName: 'bg-[#edf0f7] text-[#58668a]' },
+  'consultation-pack': { icon: ClipboardCheck, iconClassName: 'bg-[#eef2e9] text-[#58744b]' },
+  'mentor-pack': { icon: BookOpenCheck, iconClassName: 'bg-[#f3edf1] text-[#78576e]' },
+  'statistician-export': { icon: FileSpreadsheet, iconClassName: 'bg-[#eef2e9] text-[#58744b]' }
 }
 
 const MedicalResearchLaunchpad = ({
@@ -54,38 +59,16 @@ const MedicalResearchLaunchpad = ({
   const { t } = useTranslation()
   const [researchTheme, setResearchTheme] = useState('')
   const [statisticianExportOpen, setStatisticianExportOpen] = useState(false)
+  const [stepsOpen, setStepsOpen] = useState(false)
   const exampleTheme = t(
     'I want to study the treatment effect of immune checkpoint inhibitors in patients with lung cancer.'
   )
-  const packages: DeliverableCard[] = [
-    {
-      id: 'mentor-pack',
-      title: t('Mentor discussion pack'),
-      description: t(
-        'Input: research question and available evidence. Output: one-page brief, evidence table, study options, and questions for your mentor.'
-      ),
-      icon: BookOpenCheck,
-      iconClassName: 'bg-[#f3edf1] text-[#78576e]'
-    },
-    {
-      id: 'consultation-pack',
-      title: t('Data audit and statistical consultation pack'),
-      description: t(
-        'Input: anonymized dataset and variable definitions. Output: data audit, statistical plan, and consultation checklist; computed results require approved execution.'
-      ),
-      icon: ClipboardCheck,
-      iconClassName: 'bg-[#eef2e9] text-[#58744b]'
-    },
-    {
-      id: 'writing-pack',
-      title: t('Conference abstract or English draft'),
-      description: t(
-        'Input: verified study facts, results, and submission requirements. Output: abstract or English draft, source map, and items requiring author review.'
-      ),
-      icon: FilePenLine,
-      iconClassName: 'bg-[#edf0f7] text-[#58668a]'
-    }
-  ]
+  const cardCopy = deliverableCardCopy(t)
+  const packages = HOME_DELIVERABLE_CARD_IDS.map((id) => ({
+    id,
+    ...cardCopy[id],
+    ...PACKAGE_ICONS[id]
+  }))
   const workflows: WorkflowCard[] = [
     {
       id: 'novelty',
@@ -136,6 +119,7 @@ const MedicalResearchLaunchpad = ({
       iconClassName: 'bg-[#edf0f7] text-[#58668a]'
     }
   ]
+  const themeReady = researchTheme.trim().length > 0
 
   return (
     <section className="mt-8 space-y-4" aria-label={t('Medical research workflows')}>
@@ -216,51 +200,74 @@ const MedicalResearchLaunchpad = ({
             )}
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          {packages.map(({ id, title, description, icon: Icon, iconClassName }) => (
-            <button
-              key={id}
-              type="button"
-              data-testid={`deliverable-package-${id}`}
-              disabled={!researchTheme.trim()}
-              onClick={() => onSelectWorkflow(id, researchTheme.trim())}
-              className="group flex min-h-[136px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-200/70 disabled:hover:bg-bg-000"
-            >
-              <span className="flex w-full items-start justify-between gap-3">
-                <span
-                  className={cn(
-                    'inline-flex size-9 items-center justify-center rounded-xl',
-                    iconClassName
-                  )}
-                >
-                  <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {packages.map(
+            ({
+              id,
+              title,
+              subtitle,
+              description,
+              hardRule,
+              inputNotice,
+              icon: Icon,
+              iconClassName
+            }) => (
+              <button
+                key={id}
+                type="button"
+                data-testid={
+                  id === 'statistician-export'
+                    ? 'export-statistician-package'
+                    : `deliverable-package-${id}`
+                }
+                data-deliverable-card={id}
+                disabled={!themeReady}
+                onClick={() => {
+                  if (id === 'statistician-export') {
+                    setStatisticianExportOpen(true)
+                    return
+                  }
+                  onSelectWorkflow(id, researchTheme.trim())
+                }}
+                className="group flex min-h-[168px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-200/70 disabled:hover:bg-bg-000"
+              >
+                <span className="flex w-full items-start justify-between gap-3">
+                  <span
+                    className={cn(
+                      'inline-flex size-9 items-center justify-center rounded-xl',
+                      iconClassName
+                    )}
+                  >
+                    <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                  </span>
+                  <ArrowUpRight
+                    className="mt-1 size-4 text-text-100 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#9c4d43]"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
                 </span>
-                <ArrowUpRight
-                  className="mt-1 size-4 text-text-100 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#9c4d43]"
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
-              </span>
-              <span className="mt-3 text-sm font-semibold text-text-000">{title}</span>
-              <span className="mt-1 text-xs leading-[1.45] text-text-300">{description}</span>
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border-200/70 bg-bg-000 px-4 py-3">
-          <p className="max-w-xl text-xs leading-5 text-text-300">
-            {t(
-              'Beta exports aggregate files that open without DRA. Raw data, Notebook rows, and chat history are not included.'
-            )}
-          </p>
-          <button
-            type="button"
-            data-testid="export-statistician-package"
-            disabled={!researchTheme.trim()}
-            onClick={() => setStatisticianExportOpen(true)}
-            className="cursor-pointer rounded-lg bg-[#58744b] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t('Export statistician package')}
-          </button>
+                <span className="mt-3 text-sm font-semibold text-text-000">{title}</span>
+                <span
+                  data-testid={`deliverable-subtitle-${id}`}
+                  className="mt-1 text-xs font-medium leading-[1.45] text-text-100"
+                >
+                  {subtitle}
+                </span>
+                <span className="mt-1 text-xs leading-[1.45] text-text-300">{description}</span>
+                {hardRule ? (
+                  <span
+                    data-testid="mentor-pack-hard-rule"
+                    className="mt-2 text-xs font-medium leading-[1.45] text-[#9a5046]"
+                  >
+                    {hardRule}
+                  </span>
+                ) : null}
+                {inputNotice ? (
+                  <span className="mt-1 text-xs leading-[1.45] text-[#9a5046]">{inputNotice}</span>
+                ) : null}
+              </button>
+            )
+          )}
         </div>
       </section>
       <StatisticianReviewExportDialog
@@ -269,47 +276,72 @@ const MedicalResearchLaunchpad = ({
         onClose={() => setStatisticianExportOpen(false)}
       />
 
-      <div className="flex items-end justify-between gap-3 px-1">
-        <div>
-          <h2 className="text-[17px] font-medium leading-6 text-text-000">
-            {t('Choose where to begin')}
-          </h2>
-          <p className="mt-0.5 text-xs text-text-300">
-            {t('Each stage pauses for researcher confirmation before the workflow continues.')}
-          </p>
-        </div>
+      <div className="px-1">
+        <button
+          type="button"
+          data-testid="start-from-step"
+          aria-expanded={stepsOpen}
+          aria-controls="research-step-entries"
+          onClick={() => setStepsOpen((open) => !open)}
+          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border-200/70 bg-bg-000 px-3.5 py-2.5 text-left text-sm font-medium text-text-000 shadow-card hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          <ChevronDown
+            className={cn(
+              'size-4 shrink-0 text-text-300 transition-transform',
+              stepsOpen && 'rotate-180'
+            )}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+          {t('Start from a step (literature, planning, analysis, and more)')}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {workflows.map(({ id, title, description, icon: Icon, iconClassName }) => (
-          <button
-            key={id}
-            type="button"
-            data-testid={`research-entry-${id}`}
-            disabled={!researchTheme.trim()}
-            onClick={() => onSelectWorkflow(id, researchTheme.trim())}
-            className="group flex min-h-[136px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-200/70 disabled:hover:bg-bg-000"
-          >
-            <span className="flex w-full items-start justify-between gap-3">
-              <span
-                className={cn(
-                  'inline-flex size-9 items-center justify-center rounded-xl',
-                  iconClassName
-                )}
+      {stepsOpen ? (
+        <div id="research-step-entries" data-testid="research-step-entries" className="space-y-3">
+          <div className="flex items-end justify-between gap-3 px-1">
+            <div>
+              <h2 className="text-[17px] font-medium leading-6 text-text-000">
+                {t('Choose where to begin')}
+              </h2>
+              <p className="mt-0.5 text-xs text-text-300">
+                {t('Each stage pauses for researcher confirmation before the workflow continues.')}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {workflows.map(({ id, title, description, icon: Icon, iconClassName }) => (
+              <button
+                key={id}
+                type="button"
+                data-testid={`research-entry-${id}`}
+                disabled={!themeReady}
+                onClick={() => onSelectWorkflow(id, researchTheme.trim())}
+                className="group flex min-h-[136px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-200/70 disabled:hover:bg-bg-000"
               >
-                <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
-              </span>
-              <ArrowUpRight
-                className="mt-1 size-4 text-text-100 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#9c4d43]"
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
-            </span>
-            <span className="mt-3 text-sm font-semibold text-text-000">{title}</span>
-            <span className="mt-1 text-xs leading-[1.45] text-text-300">{description}</span>
-          </button>
-        ))}
-      </div>
+                <span className="flex w-full items-start justify-between gap-3">
+                  <span
+                    className={cn(
+                      'inline-flex size-9 items-center justify-center rounded-xl',
+                      iconClassName
+                    )}
+                  >
+                    <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                  </span>
+                  <ArrowUpRight
+                    className="mt-1 size-4 text-text-100 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#9c4d43]"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                </span>
+                <span className="mt-3 text-sm font-semibold text-text-000">{title}</span>
+                <span className="mt-1 text-xs leading-[1.45] text-text-300">{description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex items-start gap-2.5 rounded-xl border border-[#e4ded2] bg-[#faf8f2] px-3.5 py-3 text-xs leading-5 text-[#635f56]">
         <ShieldCheck

@@ -448,6 +448,24 @@ const CONNECTOR_QUERY_KEYS = new Set([
 
 // Hard-refuse patient information in connector search text. Unlike model release, this does not
 // deidentify or wait for machine approval: the query is not sent.
+// Mentor discussion packs do not redact-and-send. Labeled patient spans block the
+// outbound message before releaseModelText runs. A whole-string name guess is the
+// same short-text heuristic the connector search ignores; it is not individual
+// patient data, and the global gate still reviews whatever remains.
+export function refuseMentorPackIndividualPatientData(texts: readonly string[]): void {
+  const spans = texts.flatMap((text) =>
+    patientSpans(text).filter((span) => !isWholeQueryNameGuess(text, span))
+  )
+  if (spans.length === 0) return
+  const translate = blockTranslator
+  throw new PhiGateError(
+    translate(
+      'This mentor discussion pack does not send individual patient data. The message was not sent.'
+    ),
+    spans
+  )
+}
+
 export function refusePatientQuery(text: string): void {
   const spans = patientSpans(text).filter((span) => !isWholeQueryNameGuess(text, span))
   if (spans.length === 0) return

@@ -147,11 +147,10 @@
     "DRA could not safely access existing encrypted data. Unlock the system credential store or restore the original key and profile, then restart. Existing credentials have not been replaced.": "DRA no ha podido acceder de forma segura a los datos cifrados existentes. Desbloquee el almacén de credenciales del sistema o restaure la clave y el perfil originales y, a continuación, reinicie. No se han reemplazado las credenciales existentes.",
     "Return to the running tasks and stop their subagents before quitting DRA.": "Regrese a las tareas en ejecución y detenga a sus subagentes antes de salir de DRA.",
     "DRA is still moving your data.": "DRA sigue trasladando sus datos.",
-    "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "Este paquete de sesión requiere una versión más reciente de DRA. Actualice DRA y vuelva a importarlo."
+    "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "Este paquete de sesión requiere una versión más reciente de DRA. Actualice DRA y vuelva a importarlo.",
+    "This mentor discussion pack does not send individual patient data. The message was not sent.": "Este material para consultar con el tutor no envía datos individuales de pacientes. El mensaje no se envió."
   },
   "renderer": {
-    "Export statistician package": "Exportar el paquete estadístico",
-    "Beta exports aggregate files that open without DRA. Raw data, Notebook rows, and chat history are not included.": "La beta exporta solo archivos agregados que se abren sin DRA. No se incluyen los datos sin procesar, las filas de Notebook ni el historial del chat.",
     "Statistical report": "Informe estadístico",
     "Word": "Word",
     "Result tables": "Tablas de resultados",
@@ -7311,9 +7310,6 @@
     "Mentor discussion pack": "Material para consultar con el tutor",
     "Data audit and statistical consultation pack": "Material de auditoría de datos y consulta estadística",
     "Conference abstract or English draft": "Resumen de congreso o borrador en inglés",
-    "Input: research question and available evidence. Output: one-page brief, evidence table, study options, and questions for your mentor.": "Entrada: pregunta de investigación y evidencia disponible. Entrega: síntesis de una página, tabla de evidencia, opciones de estudio y preguntas para el tutor.",
-    "Input: anonymized dataset and variable definitions. Output: data audit, statistical plan, and consultation checklist; computed results require approved execution.": "Entrada: datos anonimizados y definiciones de variables. Entrega: auditoría de datos, plan estadístico y lista para la consulta. Los resultados calculados requieren una ejecución autorizada.",
-    "Input: verified study facts, results, and submission requirements. Output: abstract or English draft, source map, and items requiring author review.": "Entrada: hechos y resultados verificados y normas de envío. Entrega: resumen o borrador en inglés, relación de fuentes y puntos de revisión para los autores.",
     "Not executed": "No ejecutado",
     "Computed": "Calculado",
     "Needs researcher review": "Pendiente de revisión del investigador",
@@ -7685,6 +7681,19 @@
     "Enter an appid only if you use CiNii. Application is free.": "Introduzca un appid solo si usa CiNii. La solicitud es gratuita.",
     "CiNii appid": "appid de CiNii",
     "Save CiNii appid": "Guardar el appid de CiNii",
-    "Apply for a free NII appid.": "Solicitar un appid de NII gratuito."
+    "Apply for a free NII appid.": "Solicitar un appid de NII gratuito.",
+    "Start from a step (literature, planning, analysis, and more)": "Empezar por un paso (literatura, planificación, análisis y más)",
+    "A short manuscript for a deadline, with checks for the ethics number and AI use.": "Un manuscrito breve para una fecha límite, con comprobación del número de ética y del uso de IA.",
+    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "Este paquete llega hasta un resumen de congreso o un borrador breve en inglés. Continúe un artículo largo desde la redacción del manuscrito o la redacción académica en inglés. Antes de escribir se comprueba el número de aprobación ética. Si falta, solo se muestra un recordatorio y no se bloquea la escritura.",
+    "Audit results, a statistical plan, and a consultation list to hand to a statistician.": "Resultados de la auditoría, un plan estadístico y una lista de consulta para entregar al estadístico.",
+    "If you only need to run the tables yourself, use Data analysis. This pack organizes the problem before a consultation. The approval number is checked before a patient table is used or writing begins. A missing number is only a reminder.": "Si solo necesita calcular las tablas, use Análisis de datos. Este paquete organiza el problema antes de una consulta. El número de aprobación se comprueba antes de usar una tabla de pacientes o de empezar a escribir. Si falta, solo se muestra un recordatorio.",
+    "A one-page brief for a mentor meeting, focused on study-design consultation.": "Una página para la reunión con el tutor, centrada en la consulta sobre el diseño del estudio.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "Para la conversación previa a la revisión ética: la pregunta de investigación, el diseño y lo que debe confirmar con el tutor. No se exige un número de aprobación. Tras la aprobación ética, use el material de auditoría de datos y consulta estadística si la conversación necesita una tabla.",
+    "This pack does not load patient data.": "Este paquete no carga datos de pacientes.",
+    "Do not paste individual patient data. Keep the consultation to the study design and a summary of aggregate results.": "No pegue datos individuales de pacientes. Limite la consulta al diseño del estudio y a un resumen de los resultados agregados.",
+    "Aggregate statistics export": "Exportación de estadísticas agregadas",
+    "Aggregated results only; source data is not included": "Solo resultados agregados; no se incluyen los datos de origen",
+    "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "No se ejecuta un análisis. Solo se exporta el paquete agregado para el estadístico. No se incluyen los datos de origen ni el historial del chat.",
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "Este paquete no carga datos de pacientes. No solicite tablas de pacientes ni filas individuales. Limite la consulta al diseño del estudio y a un resumen de los resultados agregados."
   }
 }

@@ -4,6 +4,8 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { initI18n } from '../../i18n'
+import { createInitialProjectState, useProjectStore } from '@/stores/project-store'
 import type { ImportTableResponse } from '../../../../shared/schema-notebook'
 import { SchemaNotebookEntry } from './SchemaNotebookEntry'
 
@@ -31,6 +33,7 @@ const importTable = vi.fn(async (): Promise<ImportTableResponse> => ({
 }))
 
 describe('SchemaNotebookEntry', () => {
+  initI18n('ja')
   let root: Root | null = null
   let container: HTMLDivElement | null = null
 
@@ -39,6 +42,7 @@ describe('SchemaNotebookEntry', () => {
     container?.remove()
     root = null
     container = null
+    useProjectStore.setState(createInitialProjectState())
     vi.unstubAllGlobals()
   })
 
@@ -286,5 +290,36 @@ describe('SchemaNotebookEntry', () => {
       expect.objectContaining({ column: 'diagnosis', projectId: 'study-1', tableId: 'table-1' })
     )
     expect(optInCategorical).not.toHaveBeenCalledWith(expect.objectContaining({ column: 'note' }))
+  })
+
+  it('does not offer a patient-table import on a mentor discussion pack', async () => {
+    useProjectStore.setState({
+      ...createInitialProjectState(),
+      isLoaded: true,
+      projects: [
+        {
+          id: 'study-1',
+          name: 'Mentor',
+          description: '',
+          agentContext: 'Package mode: mentor-pack',
+          isExample: false,
+          createdAt: 1,
+          updatedAt: 1
+        }
+      ]
+    })
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    expect(container.querySelector('[data-testid="mentor-pack-no-patient-table"]')).not.toBeNull()
+    expect(container.textContent).toContain('このパックは患者データを読み込みません。')
+    expect(container.textContent).toContain(
+      '患者の個別データを貼り付けないでください。相談は研究デザインと集計結果の要約にとどめてください。'
+    )
+    expect(container.textContent).not.toContain('患者表を分析')
+    expect(container.querySelector('input[type="file"]')).toBeNull()
   })
 })

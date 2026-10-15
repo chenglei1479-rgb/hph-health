@@ -136,11 +136,17 @@ const StatisticianReviewExportDialog = ({
           <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border-300/90 px-5 py-4">
             <div className="min-w-0">
               <Dialog.Title className="text-lg font-semibold text-text-000">
-                {t('Export statistician package')}
+                {t('Aggregate statistics export')}
               </Dialog.Title>
+              <p
+                data-testid="statistician-export-subtitle"
+                className="mt-1 text-sm font-medium text-text-000"
+              >
+                {t('Aggregated results only; source data is not included')}
+              </p>
               <Dialog.Description className="mt-1 text-sm text-muted-foreground">
                 {t(
-                  'Beta exports aggregate files that open without DRA. Raw data, Notebook rows, and chat history are not included.'
+                  'This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.'
                 )}
               </Dialog.Description>
             </div>

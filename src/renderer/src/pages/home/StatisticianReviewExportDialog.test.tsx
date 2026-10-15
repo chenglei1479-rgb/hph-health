@@ -65,6 +65,10 @@ it('exports only aggregate statistician files and keeps real counts', async () =
     expect(document.body.querySelector('[data-testid="export-chat"]')).toBeNull()
     expect(document.body.querySelectorAll('input[type="checkbox"]')).toHaveLength(0)
     expect(document.body.querySelector('input[type="file"]')).toBeNull()
+    expect(document.body.textContent).toContain(
+      'Aggregated results only; source data is not included'
+    )
+    expect(document.body.textContent).not.toContain('個体データ')
     expect(document.body.textContent).toContain('Statistical report')
     expect(document.body.textContent).toContain('Result tables')
     expect(document.body.textContent).toContain('Analysis script')
