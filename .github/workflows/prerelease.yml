@@ -37,7 +37,10 @@ jobs:
             platform: mac
             target: dmg
             arch: arm64
-          - os: macos-latest
+          # Build x64 on Intel. An arm64 runner cross-compiles the Electron shell, but
+          # node-gyp builds the credential probe for the host. That arm64 Mach-O makes
+          # the packaged Intel app stop at startup with initialization-probe-error.
+          - os: macos-15-intel
             label: macOS x64 dmg
             platform: mac
             target: dmg

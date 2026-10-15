@@ -30,10 +30,11 @@ it('clears only the quarantine attribute a right-click Open would remove', () =>
 })
 
 it('seeds completed onboarding and launches the packaged app in prerelease mode', () => {
-  expect(JSON.parse(smokeSettingsJson())).toEqual({
+  expect(JSON.parse(smokeSettingsJson('/Users/doctor/DRA Test/MedResearchAgent'))).toEqual({
     version: 2,
     providers: [],
-    onboardingCompletedAt: 1
+    onboardingCompletedAt: 1,
+    dataRoot: '/Users/doctor/DRA Test/MedResearchAgent'
   })
   const env = packagedSmokeEnv(
     { PATH: '/usr/bin', ELECTRON_RUN_AS_NODE: '1', DRA_PRERELEASE: '0' },

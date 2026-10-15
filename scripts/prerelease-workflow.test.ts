@@ -51,7 +51,7 @@ it('builds unsigned macOS dmg and Windows NSIS packages and publishes a prerelea
   const targets = build?.strategy?.matrix?.include ?? []
   expect(targets).toEqual([
     { os: 'macos-latest', label: 'macOS arm64 dmg', platform: 'mac', target: 'dmg', arch: 'arm64' },
-    { os: 'macos-latest', label: 'macOS x64 dmg', platform: 'mac', target: 'dmg', arch: 'x64' },
+    { os: 'macos-15-intel', label: 'macOS x64 dmg', platform: 'mac', target: 'dmg', arch: 'x64' },
     {
       os: 'windows-latest',
       label: 'Windows x64 NSIS',

@@ -1,7 +1,14 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
 import { spawn, spawnSync } from 'node:child_process'
-import { copyFileSync, createWriteStream, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import {
+  copyFileSync,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  writeFileSync
+} from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -14,9 +21,10 @@ export const WINDOWS_SMOKE_INSTALL_DIR = 'D:\\DRA Test\\medresearch-agent'
 export const WINDOWS_SMOKE_CONFIG_ROOT = 'D:\\DRA Test\\config root'
 export const WINDOWS_SMOKE_USER_DATA = 'D:\\DRA Test\\user data'
 export const WINDOWS_SMOKE_LOG_FILE = 'D:\\DRA Test\\startup.log'
+export const WINDOWS_SMOKE_DATA_ROOT = 'D:\\DRA Test\\MedResearchAgent'
 
-export const smokeSettingsJson = () =>
-  `${JSON.stringify({ version: 2, providers: [], onboardingCompletedAt: 1 })}\n`
+export const smokeSettingsJson = (dataRoot) =>
+  `${JSON.stringify({ version: 2, providers: [], onboardingCompletedAt: 1, dataRoot })}\n`
 
 // cmd /s /c strips one pair of surrounding quotes. /D= stays last and unquoted, spaces included.
 export const windowsSilentInstallCommand = (setupPath, installDir = WINDOWS_SMOKE_INSTALL_DIR) => {
@@ -94,9 +102,10 @@ const clearQuarantine = (target) => {
   }
 }
 
-const writeSmokeSettings = (configRoot) => {
+const writeSmokeSettings = (configRoot, dataRoot) => {
   mkdirSync(configRoot, { recursive: true })
-  writeFileSync(join(configRoot, 'settings.json'), smokeSettingsJson())
+  mkdirSync(dataRoot, { recursive: true })
+  writeFileSync(join(configRoot, 'settings.json'), smokeSettingsJson(dataRoot))
 }
 
 const mirrorLog = (source, target) => {
@@ -183,6 +192,7 @@ const macSmokePaths = () => {
   return {
     app: join(homedir(), 'Applications', 'DRA Test', 'DRA.app'),
     configRoot: join(root, 'config root'),
+    dataRoot: join(root, 'MedResearchAgent'),
     userData: join(root, 'user data'),
     logFile: join(root, 'startup.log'),
     stdoutPath: join(root, 'stdout.log'),
@@ -228,7 +238,7 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   clearQuarantine(paths.app)
   const binary = join(paths.app, 'Contents', 'MacOS', 'DRA')
   assertMacArchitecture(binary)
-  writeSmokeSettings(paths.configRoot)
+  writeSmokeSettings(paths.configRoot, paths.dataRoot)
   mkdirSync(paths.userData, { recursive: true })
   const child = launchPackagedApp(binary, packagedSmokeEnv(process.env, paths))
   return finish({
@@ -243,6 +253,14 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
 }
 
 const mapWindowsDrive = () => {
+  // GitHub-hosted Windows runners already mount D: (the work directory is D:\a\...).
+  // subst cannot replace that real volume and fails with "Invalid parameter - D:".
+  if (existsSync(`${WINDOWS_SMOKE_DRIVE}\\`)) {
+    process.stdout.write(
+      `${WINDOWS_SMOKE_DRIVE} is already mounted; installing under D:\\DRA Test.\n`
+    )
+    return
+  }
   const root = join(process.env.RUNNER_TEMP || tmpdir(), 'dra-smoke-root')
   mkdirSync(root, { recursive: true })
   spawnSync('subst', [WINDOWS_SMOKE_DRIVE, '/d'], { stdio: 'ignore' })
@@ -259,7 +277,7 @@ const runWindows = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   mapWindowsDrive()
   mkdirSync('D:\\DRA Test', { recursive: true })
   run('cmd.exe', windowsSilentInstallArgs(setup), { windowsVerbatimArguments: true })
-  writeSmokeSettings(WINDOWS_SMOKE_CONFIG_ROOT)
+  writeSmokeSettings(WINDOWS_SMOKE_CONFIG_ROOT, WINDOWS_SMOKE_DATA_ROOT)
   mkdirSync(WINDOWS_SMOKE_USER_DATA, { recursive: true })
   const child = launchPackagedApp(
     join(WINDOWS_SMOKE_INSTALL_DIR, 'medresearch-agent.exe'),
