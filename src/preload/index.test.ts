@@ -874,7 +874,9 @@ describe('preload bridge — public surface inventory', () => {
       'window.sendCloseConfirmResponse',
       'window.setZoomFactor',
       'window.showTitleBarMenu',
-      'window.updateTitleBar'
+      'window.updateTitleBar',
+      'writingSafeguards.getEthicsApproval',
+      'writingSafeguards.setEthicsApproval'
     ])
   })
 })

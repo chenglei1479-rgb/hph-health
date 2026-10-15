@@ -1,7 +1,19 @@
 import type { SchemaColumn, SchemaDtype } from '../../../shared/schema-notebook'
 
-// Samples are a pure function of the column name, dtype, and row index.
-// This module does not accept cell values, so it cannot copy a real row.
+// Synthetic samples are generated only from the column name, the column type,
+// and the row index.
+//
+// This module does not read cell values. `syntheticSampleRows` accepts columns
+// and a count. It has no parameter for real rows, so a sample cannot be copied
+// from or derived from a real row. The same column name, type, and row index
+// always produce the same placeholder.
+//
+// What reaches the model is documented in docs/external-endpoints.md. By
+// default that is column names, types, the row count, and these placeholders.
+// Identifier columns are dropped before that context is built. Real categorical
+// values are included only after the doctor opts in for that column, and a
+// column is categorical only when it has at most 12 distinct values. Notebook
+// execution output is returned to the model after the release gate.
 
 const hashText = (text: string): number => {
   let value = 2166136261

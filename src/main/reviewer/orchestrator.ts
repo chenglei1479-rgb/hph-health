@@ -18,6 +18,7 @@ import { buildHistoryPreamble } from '../../shared/history-preamble'
 import { runReviewAssessment } from './review-assessment-owner'
 import type { CorrectionResume } from './correction-resume'
 import { runReviewerFixLoop } from './reviewer-fix-loop-owner'
+import { isConclusionFlagCheck } from '../writing-safeguards/reviewer-hook'
 import type { AcpSessionAgentTarget } from '../../shared/acp'
 import type { SessionAuxiliaryTurnUsageRecord } from '../session-persistence/auxiliary-turn-usage'
 
@@ -196,9 +197,33 @@ const runReviewWithSession = async (
 
   // Step 5: Phase 3 fix loop. If there are warn/fail checks and a main session is provided,
   // drive the bounded re-review loop: inject → correction → re-review → resolution → repeat.
-  const hasWarnOrFail = (options.correctionResume?.openChecks ?? finalReview.checks).some(
-    (c) => c.status === 'warn' || c.status === 'fail'
+  // Conclusion flags stay on the review and are not sent back for rewriting.
+  const rewriteChecks = (options.correctionResume?.openChecks ?? finalReview.checks).filter(
+    (check) => (check.status === 'warn' || check.status === 'fail') && !isConclusionFlagCheck(check)
   )
+  const hasWarnOrFail = rewriteChecks.length > 0
+
+  if (
+    !hasWarnOrFail &&
+    finalReview.lifecycle === 'running' &&
+    finalReview.checks.some(isConclusionFlagCheck)
+  ) {
+    const completed = await runReviewMutation(runSessionMutation, () =>
+      reviewRepository.updateReview(finalReview.id, {
+        lifecycle: 'complete',
+        outcome: 'flagged',
+        errorMessage: null
+      })
+    )
+    const settled: ReviewWithChecks = {
+      ...finalReview,
+      lifecycle: completed.lifecycle,
+      outcome: 'flagged',
+      updatedAt: completed.updatedAt
+    }
+    onReviewUpdate?.(settled)
+    return settled
+  }
 
   if (mainSessionId && hasWarnOrFail) {
     onReviewUpdate?.(finalReview)
@@ -212,9 +237,7 @@ const runReviewWithSession = async (
         reviewedSession: options.correctionResume?.reviewedSession ?? session,
         resumeCorrection: options.correctionResume?.resumeCorrection,
         onAssessmentStarted: onStarted,
-        openChecks:
-          options.correctionResume?.openChecks ??
-          finalReview.checks.filter((c) => c.status === 'warn' || c.status === 'fail'),
+        openChecks: rewriteChecks,
         projectId,
         mainSessionId,
         getSession,

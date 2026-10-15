@@ -33,6 +33,7 @@ import * as specialist from './renderer-contracts/specialist'
 import * as storage from './renderer-contracts/storage'
 import * as update from './renderer-contracts/update'
 import * as variableDefinition from './renderer-contracts/variable-definition'
+import * as writingSafeguards from './renderer-contracts/writing-safeguards'
 import * as window from './renderer-contracts/window'
 
 // Explicit composition preserves registration order without a second API inventory.
@@ -139,6 +140,7 @@ export const RENDERER_API_CONTRACT = composeRendererApiContract(
   update.updateOnProgressContracts,
   files.uploadsAbortTransferContracts,
   variableDefinition.contracts,
+  writingSafeguards.contracts,
   window.contracts
 )
 

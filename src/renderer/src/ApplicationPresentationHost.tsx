@@ -26,6 +26,7 @@ import { WorkspaceAgentRuntimeProvider } from '@/lib/acp/useWorkspaceAgentRuntim
 import { WorkspaceComputeRecoveryBridge } from '@/lib/compute/WorkspaceComputeRecoveryBridge'
 import { HomePage } from '@/pages/home/HomePage'
 import { VariableDefinitionEntry } from '@/pages/variable-definition/VariableDefinitionEntry'
+import { WritingSafeguardsEntry } from '@/pages/writing-safeguards/WritingSafeguardsEntry'
 import type { SettingsPageHandle } from '@/pages/settings/SettingsPage'
 import { EnvStatusBanner } from '@/pages/workspace/EnvStatusBanner'
 import {
@@ -448,6 +449,7 @@ const ApplicationPresentationContent = ({
         />
       ) : null}
       <VariableDefinitionEntry />
+      <WritingSafeguardsEntry />
     </>
   )
 }

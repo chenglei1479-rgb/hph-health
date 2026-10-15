@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto'
 
 import type { ExportNotebookAllResult } from '../../shared/notebook'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
+import { confirmDeidentifiedExports } from '../writing-safeguards/export-confirm'
 
 export type SaveIpynbAllTarget = {
   kernel: 'python' | 'r'
@@ -161,6 +162,24 @@ export const saveIpynbAll = async (
         mkdtemp
       }
     } satisfies SaveIpynbAllDeps)
+
+  const allowed = await confirmDeidentifiedExports(
+    files.map((file) => ({ name: file.name, text: file.data })),
+    async (findings) => {
+      const { response } = await resolvedDeps.electron.dialog.showMessageBox({
+        type: 'warning',
+        title: '書き出しの確認',
+        message:
+          'カルテ番号、生年月日、または個別の患者値がありそうです。確認するまで書き出しません。',
+        detail: findings.map((finding) => [finding.label, finding.excerpt].join(' ')).join('\n'),
+        buttons: ['書き出しを中止', '確認して書き出す'],
+        defaultId: 0,
+        cancelId: 0
+      })
+      return response === 1
+    }
+  )
+  if (!allowed) return { saved: false }
 
   const { canceled, filePaths } = await resolvedDeps.electron.dialog.showOpenDialog({
     title: translate('Export notebooks by kernel'),

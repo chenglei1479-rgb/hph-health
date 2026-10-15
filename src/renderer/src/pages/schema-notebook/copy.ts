@@ -21,6 +21,7 @@ export type SchemaNotebookCopy = {
   run: string
   localResult: string
   modelView: string
+  smallCellNote: string
   maskingCheck: string
   maskingCheckNote: string
   pseudonymized: string
@@ -50,6 +51,8 @@ const ja: SchemaNotebookCopy = {
   run: '手元で実行',
   localResult: '手元の結果',
   modelView: 'モデルに渡す内容',
+  smallCellNote:
+    '10 未満のセルはプライバシー保護のため伏せています。手元の Notebook では実数が表示されます。',
   maskingCheck: 'マスキングチェック',
   maskingCheckNote:
     'モデルに返す文字列はマスキングチェックを通します。置き換えた箇所は仮名化済みです。',

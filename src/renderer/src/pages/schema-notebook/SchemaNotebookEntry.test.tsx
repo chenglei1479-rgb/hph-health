@@ -74,6 +74,10 @@ describe('SchemaNotebookEntry', () => {
     await act(async () => {
       open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
+    expect(container.textContent).toContain('モデルに渡す内容')
+    expect(container.textContent).toContain(
+      '10 未満のセルはプライバシー保護のため伏せています。手元の Notebook では実数が表示されます。'
+    )
     expect(container.textContent).toContain('マスキングチェック')
     expect(container.textContent).toContain('仮名化済み')
     expect(container.textContent).not.toContain('匿名化')
