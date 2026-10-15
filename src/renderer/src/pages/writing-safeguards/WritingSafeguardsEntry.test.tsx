@@ -4,6 +4,8 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { useLocaleStore } from '@/stores/locale-store'
+
 import { EthicsWritingNotice } from './EthicsWritingNotice'
 import { WritingSafeguardsEntry } from './WritingSafeguardsEntry'
 
@@ -26,6 +28,7 @@ describe('writing safeguards', () => {
   })
 
   const renderEntry = async (): Promise<HTMLDivElement> => {
+    useLocaleStore.setState({ preference: 'ja', locale: 'ja' })
     window.api = {
       projects: { list: projects },
       writingSafeguards: { getEthicsApproval, setEthicsApproval }

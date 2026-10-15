@@ -11,6 +11,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 import { AccountGate } from '@/components/AccountGate'
+import { useLocaleStore } from '@/stores/locale-store'
 import { VARIABLE_DEFINITION_MISSING_KEY_MESSAGE } from '../../../../shared/variable-definition'
 import { VariableDefinitionEntry } from './VariableDefinitionEntry'
 
@@ -27,6 +28,7 @@ afterEach(async () => {
 
 it('shows the variable-definition entry in a prerelease build without account or membership', async () => {
   vi.stubEnv('DRA_PRERELEASE', '1')
+  useLocaleStore.setState({ preference: 'ja', locale: 'ja' })
   const getState = vi.fn()
   Object.defineProperty(window, 'api', {
     configurable: true,

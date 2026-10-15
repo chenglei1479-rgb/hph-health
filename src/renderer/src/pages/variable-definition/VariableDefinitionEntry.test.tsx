@@ -4,6 +4,8 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { useLocaleStore } from '@/stores/locale-store'
+
 import { VariableDefinitionEntry } from './VariableDefinitionEntry'
 
 describe('VariableDefinitionEntry', () => {
@@ -18,6 +20,7 @@ describe('VariableDefinitionEntry', () => {
   })
 
   it('shows the separated Japanese entry and fills the plan from the project', async () => {
+    useLocaleStore.setState({ preference: 'ja', locale: 'ja' })
     const generate = vi.fn(async () => ({
       projectId: 'study-1',
       variables: [
