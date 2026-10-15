@@ -1,5 +1,6 @@
 import { copyForLocale } from '../../../../shared/copy-locale'
 import type { Locale } from '../../../../shared/locale'
+import { VARIABLE_DEFINITION_MISSING_KEY_MESSAGE } from '../../../../shared/variable-definition'
 
 export type VariableDefinitionCopy = {
   open: string
@@ -22,6 +23,10 @@ export type VariableDefinitionCopy = {
   maskingCheck: string
   maskingCheckNote: string
   pseudonymized: string
+  missingKey: string
+  droppedIdentifier: string
+  rawDate: string
+  identifierLabels: Record<string, string>
 }
 
 const ja: VariableDefinitionCopy = {
@@ -47,7 +52,22 @@ const ja: VariableDefinitionCopy = {
   maskingCheck: 'マスキングチェック',
   maskingCheckNote:
     '研究計画はマスキングチェックを通してからモデルに渡します。置き換えた箇所は仮名化済みです。',
-  pseudonymized: '仮名化済み'
+  pseudonymized: '仮名化済み',
+  missingKey: VARIABLE_DEFINITION_MISSING_KEY_MESSAGE,
+  droppedIdentifier:
+    '「{{name}}」は直接識別子（{{label}}）のため、収集テンプレートから除きました。',
+  rawDate:
+    '「{{name}}」は暦日です。在院日数や退院〜再入院日数のような日数の列を優先してください。どうしても暦日が必要な場合だけ残しています。',
+  identifierLabels: {
+    氏名: '氏名',
+    カルテ番号: 'カルテ番号',
+    生年月日: '生年月日',
+    住所: '住所',
+    電話: '電話',
+    マイナンバー: 'マイナンバー',
+    保険番号: '保険番号',
+    メール: 'メール'
+  }
 }
 
 const en: VariableDefinitionCopy = {
@@ -73,7 +93,23 @@ const en: VariableDefinitionCopy = {
   maskingCheck: 'Masking check',
   maskingCheckNote:
     'The research plan passes through the masking check before it is sent to the model. Replaced passages are marked as pseudonymized.',
-  pseudonymized: 'Pseudonymized'
+  pseudonymized: 'Pseudonymized',
+  missingKey:
+    'No API key is configured. Enter your own OpenAI or Azure key in the API key field in Settings.',
+  droppedIdentifier:
+    '“{{name}}” is a direct identifier ({{label}}) and was removed from the collection template.',
+  rawDate:
+    '“{{name}}” is a calendar date. Prefer a day-count column, such as length of stay or days from discharge to readmission. It is kept only when a calendar date is required.',
+  identifierLabels: {
+    氏名: 'name',
+    カルテ番号: 'chart number',
+    生年月日: 'date of birth',
+    住所: 'address',
+    電話: 'phone',
+    マイナンバー: 'individual number',
+    保険番号: 'insurance number',
+    メール: 'email'
+  }
 }
 
 const catalogs = {
@@ -103,7 +139,23 @@ const catalogs = {
     maskingCheck: 'Maskierungsprüfung',
     maskingCheckNote:
       'Der Forschungsplan durchläuft die Maskierungsprüfung, bevor er an das Modell geht. Ersetzte Stellen sind pseudonymisiert.',
-    pseudonymized: 'Pseudonymisiert'
+    pseudonymized: 'Pseudonymisiert',
+    missingKey:
+      'Es ist kein API-Schlüssel hinterlegt. Tragen Sie Ihren eigenen OpenAI- oder Azure-Schlüssel im Feld für den API-Schlüssel unter Einstellungen ein.',
+    droppedIdentifier:
+      '„{{name}}“ ist ein direktes Identifikationsmerkmal ({{label}}) und wurde aus der Erfassungsvorlage entfernt.',
+    rawDate:
+      '„{{name}}“ ist ein Kalenderdatum. Bevorzugen Sie eine Tageszählung, etwa die Verweildauer oder die Tage von der Entlassung bis zur Wiederaufnahme. Das Datum bleibt nur, wenn ein Kalenderdatum erforderlich ist.',
+    identifierLabels: {
+      氏名: 'Name',
+      カルテ番号: 'Aktennummer',
+      生年月日: 'Geburtsdatum',
+      住所: 'Adresse',
+      電話: 'Telefon',
+      マイナンバー: 'Personennummer',
+      保険番号: 'Versicherungsnummer',
+      メール: 'E-Mail'
+    }
   },
   es: {
     ...ja,
@@ -129,7 +181,23 @@ const catalogs = {
     maskingCheck: 'Comprobación de enmascaramiento',
     maskingCheckNote:
       'El plan de investigación pasa por la comprobación de enmascaramiento antes de enviarse al modelo. Los fragmentos sustituidos quedan seudonimizados.',
-    pseudonymized: 'Seudonimizado'
+    pseudonymized: 'Seudonimizado',
+    missingKey:
+      'No hay una clave de API configurada. Introduzca su propia clave de OpenAI o Azure en el campo de clave de API de Configuración.',
+    droppedIdentifier:
+      '«{{name}}» es un identificador directo ({{label}}) y se ha quitado de la plantilla de recogida.',
+    rawDate:
+      '«{{name}}» es una fecha de calendario. Prefiera una columna de días, como la estancia o los días desde el alta hasta el reingreso. Se conserva solo cuando la fecha de calendario es necesaria.',
+    identifierLabels: {
+      氏名: 'nombre',
+      カルテ番号: 'número de historia',
+      生年月日: 'fecha de nacimiento',
+      住所: 'dirección',
+      電話: 'teléfono',
+      マイナンバー: 'número personal',
+      保険番号: 'número de seguro',
+      メール: 'correo'
+    }
   },
   fr: {
     ...ja,
@@ -155,7 +223,23 @@ const catalogs = {
     maskingCheck: 'Contrôle de masquage',
     maskingCheckNote:
       'Le plan de recherche passe par le contrôle de masquage avant d’être transmis au modèle. Les passages remplacés sont pseudonymisés.',
-    pseudonymized: 'Pseudonymisé'
+    pseudonymized: 'Pseudonymisé',
+    missingKey:
+      'Aucune clé d’API n’est configurée. Saisissez votre propre clé OpenAI ou Azure dans le champ de clé d’API des paramètres.',
+    droppedIdentifier:
+      '« {{name}} » est un identifiant direct ({{label}}) et a été retiré du modèle de recueil.',
+    rawDate:
+      '« {{name}} » est une date calendaire. Préférez une colonne en jours, comme la durée de séjour ou les jours entre la sortie et la réadmission. Elle n’est conservée que si une date calendaire est nécessaire.',
+    identifierLabels: {
+      氏名: 'nom',
+      カルテ番号: 'numéro de dossier',
+      生年月日: 'date de naissance',
+      住所: 'adresse',
+      電話: 'téléphone',
+      マイナンバー: 'numéro personnel',
+      保険番号: 'numéro d’assurance',
+      メール: 'e-mail'
+    }
   },
   'zh-Hans': {
     ...ja,
@@ -179,7 +263,21 @@ const catalogs = {
     warnings: '请确认',
     maskingCheck: '脱敏检查',
     maskingCheckNote: '研究计划会先经过脱敏检查，再交给模型。被替换的位置标记为已假名化。',
-    pseudonymized: '已假名化'
+    pseudonymized: '已假名化',
+    missingKey: '尚未设置 API 密钥。请在设置的 API 密钥栏中填入您自己的 OpenAI 或 Azure 密钥。',
+    droppedIdentifier: '「{{name}}」是直接标识符（{{label}}），已从采集模板中移除。',
+    rawDate:
+      '「{{name}}」是日历日期。请优先使用住院天数或出院至再入院天数这类天数列。仅在确实需要日历日期时才保留。',
+    identifierLabels: {
+      氏名: '姓名',
+      カルテ番号: '病历号',
+      生年月日: '出生日期',
+      住所: '地址',
+      電話: '电话',
+      マイナンバー: '个人编号',
+      保険番号: '保险号',
+      メール: '电子邮箱'
+    }
   },
   'zh-Hant': {
     ...ja,
@@ -203,7 +301,21 @@ const catalogs = {
     warnings: '請確認',
     maskingCheck: '遮罩檢查',
     maskingCheckNote: '研究計畫會先經過遮罩檢查，再交給模型。被替換的位置標記為已假名化。',
-    pseudonymized: '已假名化'
+    pseudonymized: '已假名化',
+    missingKey: '尚未設定 API 金鑰。請在設定的 API 金鑰欄中填入您自己的 OpenAI 或 Azure 金鑰。',
+    droppedIdentifier: '「{{name}}」是直接識別符（{{label}}），已從蒐集範本中移除。',
+    rawDate:
+      '「{{name}}」是日曆日期。請優先使用住院天數或出院至再入院天數這類天數列。僅在確實需要日曆日期時才保留。',
+    identifierLabels: {
+      氏名: '姓名',
+      カルテ番号: '病歷號',
+      生年月日: '出生日期',
+      住所: '地址',
+      電話: '電話',
+      マイナンバー: '個人編號',
+      保険番号: '保險號',
+      メール: '電子郵件'
+    }
   },
   ko: {
     ...ja,
@@ -229,7 +341,22 @@ const catalogs = {
     maskingCheck: '마스킹 검사',
     maskingCheckNote:
       '연구 계획은 마스킹 검사를 거친 뒤 모델에 전달합니다. 바뀐 부분은 가명 처리되었습니다.',
-    pseudonymized: '가명 처리됨'
+    pseudonymized: '가명 처리됨',
+    missingKey:
+      'API 키가 설정되어 있지 않습니다. 설정의 API 키 칸에 본인의 OpenAI 또는 Azure 키를 입력하십시오.',
+    droppedIdentifier: '‘{{name}}’은(는) 직접 식별자({{label}})이므로 수집 서식에서 제외했습니다.',
+    rawDate:
+      '‘{{name}}’은(는) 달력 날짜입니다. 재원 일수나 퇴원 후 재입원까지의 일수처럼 일수 열을 우선하십시오. 달력 날짜가 꼭 필요할 때만 남깁니다.',
+    identifierLabels: {
+      氏名: '성명',
+      カルテ番号: '차트 번호',
+      生年月日: '생년월일',
+      住所: '주소',
+      電話: '전화',
+      マイナンバー: '개인 번호',
+      保険番号: '보험 번호',
+      メール: '이메일'
+    }
   },
   ru: {
     ...ja,
@@ -255,9 +382,57 @@ const catalogs = {
     maskingCheck: 'Проверка маскирования',
     maskingCheckNote:
       'План исследования проходит проверку маскирования, прежде чем попасть в модель. Заменённые фрагменты псевдонимизированы.',
-    pseudonymized: 'Псевдонимизировано'
+    pseudonymized: 'Псевдонимизировано',
+    missingKey:
+      'Ключ API не задан. Введите собственный ключ OpenAI или Azure в поле ключа API в настройках.',
+    droppedIdentifier:
+      '«{{name}}» — прямой идентификатор ({{label}}), поэтому столбец удалён из шаблона сбора.',
+    rawDate:
+      '«{{name}}» — календарная дата. Предпочтительнее столбец с числом дней, например длительность пребывания или дни от выписки до повторной госпитализации. Дата сохраняется только если календарная дата необходима.',
+    identifierLabels: {
+      氏名: 'имя',
+      カルテ番号: 'номер карты',
+      生年月日: 'дата рождения',
+      住所: 'адрес',
+      電話: 'телефон',
+      マイナンバー: 'личный номер',
+      保険番号: 'номер страховки',
+      メール: 'электронная почта'
+    }
   }
 } satisfies Record<Locale, VariableDefinitionCopy>
 
 export const variableDefinitionCopy = (language?: string): VariableDefinitionCopy =>
   copyForLocale(catalogs, language)
+
+const DROPPED_IDENTIFIER = /^「(.+)」は直接識別子（(.+)）のため、収集テンプレートから除きました。$/
+
+const fill = (template: string, values: Record<string, string>): string =>
+  Object.entries(values).reduce(
+    (text, [key, value]) => text.replaceAll(`{{${key}}}`, value),
+    template
+  )
+
+export const variableDefinitionPanelMessage = (
+  language: string | undefined,
+  message: string
+): string =>
+  message === VARIABLE_DEFINITION_MISSING_KEY_MESSAGE
+    ? variableDefinitionCopy(language).missingKey
+    : message
+
+export const variableDefinitionWarningText = (
+  language: string | undefined,
+  warning: { code: string; name: string; message: string }
+): string => {
+  const copy = variableDefinitionCopy(language)
+  if (warning.code === 'dropped-identifier') {
+    const match = DROPPED_IDENTIFIER.exec(warning.message)
+    const name = match?.[1] ?? warning.name
+    const rawLabel = match?.[2] ?? ''
+    const label = (rawLabel && copy.identifierLabels[rawLabel]) || rawLabel
+    return fill(copy.droppedIdentifier, { name, label })
+  }
+  if (warning.code === 'raw-date') return fill(copy.rawDate, { name: warning.name })
+  return warning.message
+}

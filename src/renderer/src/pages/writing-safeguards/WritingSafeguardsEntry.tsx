@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useLocaleStore } from '@/stores/locale-store'
 
@@ -49,27 +49,32 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
   const [projects, setProjects] = useState<Project[]>([])
   const [projectId, setProjectId] = useState('')
   const [approvalNumber, setApprovalNumber] = useState('')
-  const [saved, setSaved] = useState('')
+  const [saved, setSaved] = useState(false)
   const [started, setStarted] = useState(false)
   const [showReminder, setShowReminder] = useState(false)
-  const [usages, setUsages] = useState<AiUsageRecord[]>(defaultAiUsageRecords)
+  const [usageEdits, setUsageEdits] = useState<AiUsageRecord[] | null>(null)
+  const usages = useMemo(() => usageEdits ?? defaultAiUsageRecords(locale), [locale, usageEdits])
   const [includeCoi, setIncludeCoi] = useState(false)
   const [draft, setDraft] = useState(
-    () => buildAiUsageDeclaration({ usages: defaultAiUsageRecords() }).draft
+    () =>
+      buildAiUsageDeclaration({
+        usages: defaultAiUsageRecords(locale),
+        language: locale
+      }).draft
   )
   const [draftEdited, setDraftEdited] = useState(false)
   const [manuscript, setManuscript] = useState('')
   const [files, setFiles] = useState<Array<{ name: string; text: string }>>([])
   const [findings, setFindings] = useState<ExportFinding[]>([])
   const [confirmed, setConfirmed] = useState(false)
-  const [exported, setExported] = useState('')
+  const [exported, setExported] = useState(false)
 
   useEffect(() => {
     if (draftEdited) return
     // The disclosure draft is derived from the usage rows unless the doctor has edited it.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDraft(buildAiUsageDeclaration({ usages, includeCoi }).draft)
-  }, [draftEdited, includeCoi, usages])
+    setDraft(buildAiUsageDeclaration({ usages, includeCoi, language: locale }).draft)
+  }, [draftEdited, includeCoi, locale, usages])
 
   const openDialog = (): void => {
     setOpen(true)
@@ -81,7 +86,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
 
   const chooseProject = (id: string): void => {
     setProjectId(id)
-    setSaved('')
+    setSaved(false)
     if (!id || !window.api.writingSafeguards) {
       setApprovalNumber('')
       return
@@ -98,9 +103,9 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
       .setEthicsApproval({ projectId, approvalNumber })
       .then((record) => {
         setApprovalNumber(record.approvalNumber)
-        setSaved(copy.ethicsSaved)
+        setSaved(true)
       })
-      .catch(() => setSaved(''))
+      .catch(() => setSaved(false))
   }
 
   const beginWriting = (): void => {
@@ -111,25 +116,28 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
   const reminder = showReminder ? ethicsWritingReminder(undefined, locale).message : ''
 
   const updateUsage = (index: number, patch: Partial<AiUsageRecord>): void => {
-    setUsages((current) =>
-      current.map((usage, usageIndex) => (usageIndex === index ? { ...usage, ...patch } : usage))
-    )
+    setUsageEdits((current) => {
+      const base = current ?? defaultAiUsageRecords(locale)
+      return base.map((usage, usageIndex) =>
+        usageIndex === index ? { ...usage, ...patch } : usage
+      )
+    })
   }
 
   const rebuild = (): void => {
     setDraftEdited(false)
-    setDraft(buildAiUsageDeclaration({ usages, includeCoi }).draft)
+    setDraft(buildAiUsageDeclaration({ usages, includeCoi, language: locale }).draft)
   }
 
   const showFindings = (next: ExportFinding[]): boolean => {
     if (next.length === 0 || confirmed) return false
     setFindings(next)
-    setExported('')
+    setExported(false)
     return true
   }
 
   const exportManuscript = (): void => {
-    const text = `${manuscript.trim()}\n\n${applyCoiChoice(draft, includeCoi)}`
+    const text = `${manuscript.trim()}\n\n${applyCoiChoice(draft, includeCoi, locale)}`
     const release = releaseExport({ name: 'manuscript.md', text, confirmed })
     if (!release.ok) {
       showFindings(release.findings)
@@ -137,7 +145,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
     }
     downloadText('manuscript.md', text)
     setFindings([])
-    setExported(copy.exported)
+    setExported(true)
   }
 
   const exportFiles = (): void => {
@@ -148,7 +156,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
     }
     for (const file of files) downloadText(file.name, file.text)
     setFindings([])
-    setExported(copy.exported)
+    setExported(true)
   }
 
   return (
@@ -203,7 +211,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
               {copy.beginWriting}
             </button>
           </div>
-          {saved ? <p role="status">{saved}</p> : null}
+          {saved ? <p role="status">{copy.ethicsSaved}</p> : null}
           {started ? <p role="status">{copy.writingStarted}</p> : null}
           {reminder ? (
             <p role="status" data-ethics-writing-reminder>
@@ -230,7 +238,15 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
               />
             </div>
           ))}
-          <button type="button" onClick={() => setUsages((current) => [...current, emptyUsage()])}>
+          <button
+            type="button"
+            onClick={() =>
+              setUsageEdits((current) => [
+                ...(current ?? defaultAiUsageRecords(locale)),
+                emptyUsage()
+              ])
+            }
+          >
             {copy.addUsage}
           </button>
           <label className="flex items-start gap-2">
@@ -311,7 +327,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
               {copy.exportFiles}
             </button>
           </div>
-          {exported ? <p role="status">{exported}</p> : null}
+          {exported ? <p role="status">{copy.exported}</p> : null}
         </div>
       ) : null}
     </div>

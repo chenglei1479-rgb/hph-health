@@ -4,7 +4,11 @@ import { useLocaleStore } from '@/stores/locale-store'
 
 import type { Project } from '../../../../shared/projects'
 import type { VariableDefinitionTable } from '../../../../shared/variable-definition'
-import { variableDefinitionCopy } from './copy'
+import {
+  variableDefinitionCopy,
+  variableDefinitionPanelMessage,
+  variableDefinitionWarningText
+} from './copy'
 
 const planFromProject = (project: Project): string =>
   [project.name, project.description, project.agentContext]
@@ -59,7 +63,11 @@ export const VariableDefinitionEntry = (): React.JSX.Element => {
       .then((next) => setTable(next))
       .catch((error: unknown) => {
         setTable(null)
-        setMessage(error instanceof Error ? error.message : copy.empty)
+        setMessage(
+          error instanceof Error
+            ? variableDefinitionPanelMessage(locale, error.message)
+            : copy.empty
+        )
       })
       .finally(() => setBusy(false))
   }
@@ -71,7 +79,11 @@ export const VariableDefinitionEntry = (): React.JSX.Element => {
       .exportTemplate({ table })
       .then((file) => downloadWorkbook(file.filename, file.xlsxBase64))
       .catch((error: unknown) => {
-        setMessage(error instanceof Error ? error.message : copy.empty)
+        setMessage(
+          error instanceof Error
+            ? variableDefinitionPanelMessage(locale, error.message)
+            : copy.empty
+        )
       })
       .finally(() => setBusy(false))
   }
@@ -147,7 +159,9 @@ export const VariableDefinitionEntry = (): React.JSX.Element => {
           {table && table.warnings.length > 0 ? (
             <ul aria-label={copy.warnings}>
               {table.warnings.map((warning) => (
-                <li key={`${warning.code}:${warning.name}`}>{warning.message}</li>
+                <li key={`${warning.code}:${warning.name}`}>
+                  {variableDefinitionWarningText(locale, warning)}
+                </li>
               ))}
             </ul>
           ) : null}
