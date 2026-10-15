@@ -26,6 +26,16 @@ export const WINDOWS_SMOKE_DATA_ROOT = 'D:\\DRA Test\\MedResearchAgent'
 export const smokeSettingsJson = (dataRoot) =>
   `${JSON.stringify({ version: 2, providers: [], onboardingCompletedAt: 1, dataRoot })}\n`
 
+// The first launch asks for a hospital approval number and waits until that window closes.
+// A decline is the same record the app writes when the window is dismissed, and it leaves the
+// PHI gate closed. The smoke does not approve the machine.
+export const declinedMachineApprovalLine = () =>
+  `${JSON.stringify({
+    at: '2026-10-15T00:00:00.000Z',
+    approved: false,
+    approvalNumber: null
+  })}\n`
+
 // cmd /s /c strips one pair of surrounding quotes. /D= stays last and unquoted, spaces included.
 export const windowsSilentInstallCommand = (setupPath, installDir = WINDOWS_SMOKE_INSTALL_DIR) => {
   if (!setupPath) throw new Error('NSIS setup path is required.')
@@ -108,6 +118,26 @@ const writeSmokeSettings = (configRoot, dataRoot) => {
   writeFileSync(join(configRoot, 'settings.json'), smokeSettingsJson(dataRoot))
 }
 
+const seedDeclinedMachineApproval = (userData) => {
+  const file = join(userData, 'phi-vault', 'machine-approval.jsonl')
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(file, declinedMachineApprovalLine(), { mode: 0o600 })
+}
+
+const mirrorAppLogs = (userData, workspaceLogs) => {
+  const logs = join(userData, 'logs')
+  if (!existsSync(logs)) return
+  const target = join(workspaceLogs, 'app-logs')
+  mkdirSync(target, { recursive: true })
+  for (const name of readdirSync(logs)) {
+    try {
+      copyFileSync(join(logs, name), join(target, name))
+    } catch {
+      // Rotated logs can be directories. The main log is a file.
+    }
+  }
+}
+
 const mirrorLog = (source, target) => {
   try {
     copyFileSync(source, target)
@@ -163,7 +193,8 @@ const finish = async ({
   stderrPath,
   timeoutMs,
   workspaceLogs,
-  label
+  label,
+  userData
 }) => {
   mkdirSync(workspaceLogs, { recursive: true })
   if (child.stdout) child.stdout.pipe(createWriteStream(stdoutPath))
@@ -181,6 +212,7 @@ const finish = async ({
     mirrorLog(logFile, join(workspaceLogs, 'startup.log'))
     mirrorLog(stdoutPath, join(workspaceLogs, 'stdout.log'))
     mirrorLog(stderrPath, join(workspaceLogs, 'stderr.log'))
+    if (userData) mirrorAppLogs(userData, workspaceLogs)
   }
   writeFileSync(join(workspaceLogs, 'result.txt'), `${label}\n${result.reason}\n${result.detail}`)
   publishSummary(label, result)
@@ -240,6 +272,7 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   assertMacArchitecture(binary)
   writeSmokeSettings(paths.configRoot, paths.dataRoot)
   mkdirSync(paths.userData, { recursive: true })
+  seedDeclinedMachineApproval(paths.userData)
   const child = launchPackagedApp(binary, packagedSmokeEnv(process.env, paths))
   return finish({
     child,
@@ -248,7 +281,8 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
     stderrPath: paths.stderrPath,
     timeoutMs,
     workspaceLogs,
-    label
+    label,
+    userData: paths.userData
   })
 }
 
@@ -279,6 +313,7 @@ const runWindows = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   run('cmd.exe', windowsSilentInstallArgs(setup), { windowsVerbatimArguments: true })
   writeSmokeSettings(WINDOWS_SMOKE_CONFIG_ROOT, WINDOWS_SMOKE_DATA_ROOT)
   mkdirSync(WINDOWS_SMOKE_USER_DATA, { recursive: true })
+  seedDeclinedMachineApproval(WINDOWS_SMOKE_USER_DATA)
   const child = launchPackagedApp(
     join(WINDOWS_SMOKE_INSTALL_DIR, 'medresearch-agent.exe'),
     packagedSmokeEnv(process.env, {
@@ -294,7 +329,8 @@ const runWindows = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
     stderrPath: 'D:\\DRA Test\\stderr.log',
     timeoutMs,
     workspaceLogs,
-    label
+    label,
+    userData: WINDOWS_SMOKE_USER_DATA
   })
 }
 

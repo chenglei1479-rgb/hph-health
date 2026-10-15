@@ -2,6 +2,7 @@ import { expect, it } from 'vitest'
 
 import {
   WINDOWS_SMOKE_INSTALL_DIR,
+  declinedMachineApprovalLine,
   macQuarantineClearCommand,
   packagedSmokeEnv,
   smokeSettingsJson,
@@ -49,4 +50,11 @@ it('seeds completed onboarding and launches the packaged app in prerelease mode'
   expect(env.PATH).toBe('/usr/bin')
   expect(env.OPEN_SCIENCE_CONFIG_ROOT).toContain('config root')
   expect(env.DRA_STARTUP_LOG_FILE).toContain('startup.log')
+})
+
+it('records a declined hospital approval so the PHI gate stays closed', () => {
+  const record = JSON.parse(declinedMachineApprovalLine())
+  expect(record.approved).toBe(false)
+  expect(record.approvalNumber).toBeNull()
+  expect(record.at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/)
 })
