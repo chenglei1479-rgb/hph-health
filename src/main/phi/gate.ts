@@ -427,6 +427,63 @@ export async function guardProviderBody(
   }
 }
 
+export const CONNECTOR_PATIENT_QUERY_MESSAGE =
+  '検索語に患者情報が含まれているため、送信しませんでした。患者情報を除いてやり直してください。 This search was not sent because it appears to contain patient information. Remove the patient information and try again.'
+
+const CONNECTOR_QUERY_KEYS = new Set([
+  'query',
+  'q',
+  'term',
+  'terms',
+  'keyword',
+  'keywords',
+  'search',
+  'phenotype',
+  'article',
+  'author',
+  'material',
+  'text',
+  'file_name'
+])
+
+// Hard-refuse patient information in connector search text. Unlike model release, this does not
+// deidentify or wait for machine approval: the query is not sent.
+export function refusePatientQuery(text: string): void {
+  const spans = patientSpans(text).filter((span) => !isWholeQueryNameGuess(text, span))
+  if (spans.length === 0) return
+  throw new PhiGateError(CONNECTOR_PATIENT_QUERY_MESSAGE, spans)
+}
+
+// detectPhi treats an entire short Japanese string as a personal name. Disease and literature
+// queries are that shape, so a connector search ignores only that whole-string guess. Labeled
+// names and structured identifiers still refuse the request.
+function isWholeQueryNameGuess(text: string, span: PhiBlockedSpan): boolean {
+  if (span.category !== 'PERSON_NAME') return false
+  const trimmed = text.trim()
+  if (span.text !== trimmed) return false
+  return !/患者|氏名|さん|Pt:|キーパーソン|長男|長女|娘の/.test(text)
+}
+
+export function refuseConnectorQueryArgs(args: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(args)) {
+    if (!CONNECTOR_QUERY_KEYS.has(key) || typeof value !== 'string') continue
+    refusePatientQuery(value)
+  }
+}
+
+export function refuseConnectorQueryUrl(url: string): void {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return
+  }
+  for (const [key, value] of parsed.searchParams) {
+    if (!CONNECTOR_QUERY_KEYS.has(key)) continue
+    refusePatientQuery(value)
+  }
+}
+
 function walkRelease(value: unknown, projectId: string, tokens: PhiReplacement[]): unknown {
   if (typeof value === 'string') {
     const result = gate.release(value, projectId)

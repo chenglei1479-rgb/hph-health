@@ -4,6 +4,7 @@ export type ConnectorCredentials = {
   ncbiEmail?: string
   ncbiApiKey?: string
   openAlexApiKey?: string
+  ciniiAppId?: string
 }
 
 export type ToolContext = {

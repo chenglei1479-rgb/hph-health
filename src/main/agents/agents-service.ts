@@ -12,6 +12,7 @@
 //    instructions, connector args, credentials, headers, environment values, or tokens.
 //  - The SpecialistService and catalog services remain authoritative; nothing is copied here.
 
+import { CONNECTOR_SEARCH_PHI_HINT } from '../../shared/connector-compliance'
 import { CONNECTOR_CATALOG, type ConnectorMeta } from '../connectors/catalog'
 import {
   hasUsableCustomMcpCredentials,
@@ -431,7 +432,7 @@ export const projectConnectorsFromStored = (
     source: 'bundled',
     tools: getConnectorTools(meta.id).map((tool) => ({
       id: tool.id,
-      description: tool.description
+      description: `${tool.description}\n${CONNECTOR_SEARCH_PHI_HINT}`
     }))
   }))
 

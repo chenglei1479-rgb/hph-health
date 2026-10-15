@@ -708,13 +708,23 @@ export function ConnectorsPanel({
           </SelectContent>
         </Select>
         <TagFilter resourceType="catalog.connector" value={tagFilter} onChange={setTagFilter} />
-        <SettingsSearchInput
-          aria-label={t('Search connectors')}
-          containerClassName="min-w-48 flex-1"
-          placeholder={t('Search connectors…')}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <SettingsSearchInput
+            aria-label={t('Search connectors')}
+            aria-describedby="connectors-search-phi-hint"
+            containerClassName="min-w-48 w-full"
+            placeholder={t('Search connectors…')}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <p
+            id="connectors-search-phi-hint"
+            className="mt-1 text-xs text-muted-foreground"
+            lang="ja"
+          >
+            {t('Do not enter patient information in search terms.', { lng: 'ja' })}
+          </p>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">

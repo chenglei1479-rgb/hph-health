@@ -143,6 +143,8 @@ export const OPEN_SCIENCE_DOMAIN_GROUPS: readonly OpenScienceDomainGroup[] = Obj
       'www.bindingdb.org',
       'r12.finngen.fi',
       'pheweb.jp',
+      'humandbs.dbcls.jp',
+      'jenger.riken.jp',
       'api.genome.ucsc.edu',
       'unibind.uio.no'
     ]
@@ -158,7 +160,8 @@ export const OPEN_SCIENCE_DOMAIN_GROUPS: readonly OpenScienceDomainGroup[] = Obj
       'search.foldseek.com',
       'rcsb.org',
       '*.rcsb.org',
-      '*.proteinatlas.org'
+      '*.proteinatlas.org',
+      'pdc.cancer.gov'
     ]
   },
   {
@@ -171,7 +174,9 @@ export const OPEN_SCIENCE_DOMAIN_GROUPS: readonly OpenScienceDomainGroup[] = Obj
       'doi.org',
       'api.openalex.org',
       'arxiv.org',
-      '*.arxiv.org'
+      '*.arxiv.org',
+      'cir.nii.ac.jp',
+      'api.jstage.jst.go.jp'
     ]
   },
   {

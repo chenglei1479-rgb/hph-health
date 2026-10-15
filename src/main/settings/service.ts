@@ -69,6 +69,7 @@ import type {
   SetConnectorAutoAllowRequest,
   SetConnectorEnabledRequest,
   SetNcbiCredentialsRequest,
+  SetCiniiAppIdRequest,
   SetOpenAlexCredentialRequest,
   ValidateOpenAlexCredentialRequest,
   OpenAlexCredentialValidation,
@@ -1770,6 +1771,10 @@ class SettingsService {
   // Sets or clears the shared contact email and NCBI API key (encrypted at rest), returning state.
   async setNcbiCredentials(request: SetNcbiCredentialsRequest): Promise<ConnectorsSnapshot> {
     return this.connectors.setNcbiCredentials(request)
+  }
+
+  async setCiniiAppId(request: SetCiniiAppIdRequest): Promise<ConnectorsSnapshot> {
+    return this.connectors.setCiniiAppId(request)
   }
 
   async setOpenAlexCredential(request: SetOpenAlexCredentialRequest): Promise<ConnectorsSnapshot> {

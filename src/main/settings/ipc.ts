@@ -44,6 +44,7 @@ import {
   type UpdateDeviceCredentialRequest,
   type SetConnectorAutoAllowRequest,
   type SetConnectorEnabledRequest,
+  type SetCiniiAppIdRequest,
   type SetNcbiCredentialsRequest,
   type SetOpenAlexCredentialRequest,
   type ValidateOpenAlexCredentialRequest,
@@ -563,6 +564,9 @@ const registerSettingsIpcHandlers = ({
   )
   ipcMainHandle('settings:set-tool-permission', (_event, request: SetToolPermissionRequest) =>
     workflows.connectors.setToolPermission(request)
+  )
+  ipcMainHandle('settings:set-cinii-app-id', (_event, request: SetCiniiAppIdRequest) =>
+    workflows.connectors.setCiniiAppId(request)
   )
   ipcMainHandle('settings:set-ncbi-credentials', (_event, request: SetNcbiCredentialsRequest) =>
     workflows.connectors.setNcbiCredentials(request)

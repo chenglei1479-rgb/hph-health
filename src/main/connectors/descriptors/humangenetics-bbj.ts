@@ -24,14 +24,39 @@ function descendants(node: Node, tag: string): Node[] {
   ]
 }
 
+const CONTROLLED_ACCESS = /制限あり|Controlled-access|controlled[- ]access/i
+const UNRESTRICTED_ACCESS = /制限なし|Unrestricted-access|unrestricted[- ]access/i
+
+export const NBDC_CONTROLLED_ACCESS_MESSAGE =
+  'NBDC controlled-access data is refused. Only datasets marked 制限なし / Unrestricted-access are allowed.'
+
+export function isUnrestrictedDataset(text: string): boolean {
+  return UNRESTRICTED_ACCESS.test(text) && !CONTROLLED_ACCESS.test(text)
+}
+
+export function assertUnrestrictedAccess(text: string): void {
+  if (CONTROLLED_ACCESS.test(text) || /\/controlled(?:\/|$)/i.test(text)) {
+    throw new Error(NBDC_CONTROLLED_ACCESS_MESSAGE)
+  }
+}
+
 // Do not interpret controlled-access genotype rows as downloadable summary statistics.
-export function summaryLinks(html: string, source: keyof typeof SOURCES) {
+// HTTPS for jenger.riken.jp did not complete a TLS handshake on 2026-10-15, so the catalogue stays on http.
+export function summaryLinks(
+  html: string,
+  source: keyof typeof SOURCES
+): Array<{ title: string; url: string; accession: string | null; access: string }> {
   const root = parse(html)
   const rows: Array<{ title: string; url: string; accession: string | null; access: string }> = []
   const seen = new Set<string>()
+  let sawControlled = false
   for (const row of descendants(root, 'tr')) {
     const title = content(row)
-    if (source === 'nbdc' && (!/Unrestricted-access/i.test(title) || !/GWAS|summary/i.test(title)))
+    if (source === 'nbdc' && CONTROLLED_ACCESS.test(title)) {
+      sawControlled = true
+      continue
+    }
+    if (source === 'nbdc' && (!isUnrestrictedDataset(title) || !/GWAS|summary/i.test(title)))
       continue
     for (const anchor of descendants(row, 'a')) {
       if (!('attrs' in anchor)) continue
@@ -58,14 +83,18 @@ export function summaryLinks(html: string, source: keyof typeof SOURCES) {
         url: url.href,
         accession: content(anchor).match(/NHA\d+/)?.[0] ?? null,
         access:
-          source === 'nbdc' ? 'Unrestricted-access; review dataset terms' : 'Review JENGER terms'
+          source === 'nbdc'
+            ? '制限なし / Unrestricted-access; review dataset terms'
+            : 'Review JENGER terms'
       })
     }
   }
-  if (!rows.length)
+  if (!rows.length) {
+    if (source === 'nbdc' && sawControlled) throw new Error(NBDC_CONTROLLED_ACCESS_MESSAGE)
     throw new Error(
       `${source}: no summary-statistic links parsed; upstream layout or access may have changed`
     )
+  }
   return rows
 }
 
@@ -92,6 +121,7 @@ export const HUMANGENETICS_BBJ_TOOLS: ToolDescriptor[] = [
     run: async (ctx, args) => {
       const source = args.source as keyof typeof SOURCES
       if (!Object.hasOwn(SOURCES, source)) throw new Error('source must be nbdc or jenger')
+      if (source === 'nbdc') assertUnrestrictedAccess(String(args.query ?? ''))
       const html = await ctx.fetchText(SOURCES[source], 'text/html')
       const query = String(args.query ?? '').toLowerCase()
       const rows = summaryLinks(html, source).filter((row) =>

@@ -7787,6 +7787,11 @@
     "Developed based on AIPOCH Open-Science.": "Разработано на основе AIPOCH Open-Science.",
     "Project license (LICENSE)": "Лицензия проекта (LICENSE)",
     "Notices (NOTICE)": "Уведомления (NOTICE)",
-    "Third-party notices": "Уведомления о сторонних компонентах"
+    "Third-party notices": "Уведомления о сторонних компонентах",
+    "Do not enter patient information in search terms.": "Не вводите сведения о пациентах в поисковые запросы.",
+    "Enter an appid only if you use CiNii. Application is free.": "Введите appid, только если вы используете CiNii. Заявка бесплатна.",
+    "CiNii appid": "appid CiNii",
+    "Save CiNii appid": "Сохранить appid CiNii",
+    "Apply for a free NII appid.": "Подать заявку на бесплатный appid NII."
   }
 }

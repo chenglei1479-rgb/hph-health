@@ -357,6 +357,7 @@ describe('Settings backend ownership architecture', () => {
       'setAgentFramework',
       'setAgentRouting',
       'setAppIconVariant',
+      'setCiniiAppId',
       'setClaudeInfo',
       'setClosePreference',
       'setCodeBuddyInfo',
@@ -502,7 +503,7 @@ describe('Settings backend ownership architecture', () => {
         setComputeBookmarks setConnectorAutoAllow setConnectorEnabled
         setConversationSkillImportEnabled setCustomServerAuthenticator setCustomServerEnabled
         setDataRoot setDefaultPermissionProfile setDeviceCredentialAuthenticator setEnvironmentEnabled setInstallAuthorized
-        setCustomServerRuntimeProjectionProvider setNcbiCredentials setNetworkProxy setNotebookNetwork setNotificationsEnabled
+        setCustomServerRuntimeProjectionProvider setCiniiAppId setNcbiCredentials setNetworkProxy setNotebookNetwork setNotificationsEnabled
         setOpenAlexCredential setPackageMirror setProjectFilesFilter setReasoningEffort setReviewerModel setSessionDetailsModel setShowNotificationContent setSkillDeletionGuard setSkillEnabled setSkillsEnabled setSubagentModel setVisionModel
         setToolPermission skillNudgeNamesForIds skillsNeedingForceLoad startSkillMarketplaceBatch stopSkillMarketplaceBatch uninstallClaude uninstallCodeBuddy uninstallCodex
         uninstallOpencode updateCustomServer updateDeviceCredential updateSkill upsertProvider useWsl2Bash validateOpenAlexCredential validateProvider waitXaiOAuthLogin withHostSkillRead

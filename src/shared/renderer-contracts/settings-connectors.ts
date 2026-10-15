@@ -13,6 +13,7 @@ import type {
   SetConnectorEnabledRequest,
   SetConnectorAutoAllowRequest,
   SetToolPermissionRequest,
+  SetCiniiAppIdRequest,
   SetNcbiCredentialsRequest,
   SetOpenAlexCredentialRequest,
   ValidateOpenAlexCredentialRequest,
@@ -192,6 +193,12 @@ export const settingsSetCustomServerEnabledContracts = {
   'settings.setCustomServerEnabled': callable<
     (request: SetCustomServerEnabledRequest) => Promise<ConnectorsSnapshot>
   >()('settings', ['settings:set-custom-server-enabled', LOCAL])
+} as const
+
+export const settingsSetCiniiAppIdContracts = {
+  'settings.setCiniiAppId': callable<
+    (request: SetCiniiAppIdRequest) => Promise<ConnectorsSnapshot>
+  >()('settings', ['settings:set-cinii-app-id'])
 } as const
 
 export const settingsSetNcbiCredentialsContracts = {

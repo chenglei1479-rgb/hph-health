@@ -1,3 +1,4 @@
+import { NII_APPID_APPLICATION_URL } from '../../../../shared/connector-compliance'
 import { connectorDescription, connectorToolDescription } from './connector-copy'
 import { ErrorNotice } from '@/components/error-notice'
 import { ArrowUpRight, ChevronRight } from 'lucide-react'
@@ -11,6 +12,7 @@ import type {
 import { useSettingsStore } from '@/stores/settings-store'
 import { usePermissionGrantsStore } from '@/stores/permission-grants-store'
 import { useSpecialistStore } from '@/stores/specialist-store'
+import { ExternalTextLink } from '@/components/ExternalTextLink'
 import { Button } from '@/components/ui/button'
 import { ConnectorGlyph } from './connector-icons'
 import { SettingsLoadNotice, SettingsToggle } from './SettingsLayout'
@@ -42,6 +44,58 @@ const DetailRow = ({
 // Detail view for one bundled connector: header (name + Featured badge + enable toggle + description),
 // a "Skip approvals" row, the per-tool permission list, and connector metadata under "Details". The
 // breadcrumb and back control live in the settings header, not here.
+const CiniiAppIdField = (): React.JSX.Element => {
+  const { t } = useTranslation()
+  const stored = useSettingsStore((state) => state.ciniiAppId)
+  const save = useSettingsStore((state) => state.setCiniiAppId)
+  const [draft, setDraft] = useState<string | null>(null)
+  const [error, setError] = useState<string>()
+  const value = draft ?? stored ?? ''
+
+  return (
+    <form
+      className="mt-4 max-w-xl"
+      onSubmit={(event) => {
+        event.preventDefault()
+        setError(undefined)
+        void save({ appId: value })
+          .then(() => setDraft(null))
+          .catch(() => {
+            setError(t('Could not save this setting. The previous value was restored.'))
+          })
+      }}
+    >
+      <label className="text-sm font-medium text-foreground" htmlFor="cinii-appid">
+        {t('CiNii appid')}
+      </label>
+      <p className="mt-1 text-xs text-muted-foreground" lang="ja">
+        {t('Enter an appid only if you use CiNii. Application is free.', { lng: 'ja' })}
+      </p>
+      <ExternalTextLink href={NII_APPID_APPLICATION_URL} className="mt-1 text-xs">
+        {t('Apply for a free NII appid.')}
+      </ExternalTextLink>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input
+          id="cinii-appid"
+          value={value}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => setDraft(event.target.value)}
+          className="min-w-48 flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-primary"
+        />
+        <Button type="submit" size="sm">
+          {t('Save CiNii appid')}
+        </Button>
+      </div>
+      {error ? (
+        <p className="mt-2 text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </form>
+  )
+}
+
 const ConnectorDetailView = ({
   id,
   onOpenSpecialist,
@@ -187,6 +241,8 @@ const ConnectorDetailView = ({
           {connectorDescription(detail, t)}
         </p>
       ) : null}
+
+      {id === 'japan-research' ? <CiniiAppIdField /> : null}
 
       {id === 'literature' && onManageCredentials ? (
         <Button

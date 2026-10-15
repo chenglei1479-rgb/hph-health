@@ -346,6 +346,7 @@ export const WEB_INVOKE_CHANNELS = {
   'settings.setActiveProvider': 'settings:set-active-provider',
   'settings.setAgentFramework': 'settings:set-agent-framework',
   'settings.setAppIconVariant': 'settings:set-app-icon-variant',
+  'settings.setCiniiAppId': 'settings:set-cinii-app-id',
   'settings.setClosePreference': 'settings:set-close-preference',
   'settings.setConnectorAutoAllow': 'settings:set-connector-auto-allow',
   'settings.setConnectorEnabled': 'settings:set-connector-enabled',

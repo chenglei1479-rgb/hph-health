@@ -1,3 +1,4 @@
+import { CONNECTOR_SEARCH_PHI_HINT } from '../../shared/connector-compliance'
 import { CONNECTOR_CATALOG } from './catalog'
 import { getConnectorTools } from './registry'
 
@@ -104,7 +105,7 @@ export function renderSkillDoc(connectorId: string): string {
     )
     .join('\n')
   return (
-    `${header}\n> This connector is rate-limited at the upstream API.\n\n` +
+    `${header}\n> This connector is rate-limited at the upstream API.\n\n${CONNECTOR_SEARCH_PHI_HINT}\n\n` +
     `${SKILL_CONVENTIONS}\n\n## Tools\n\n${methods}`
   )
 }

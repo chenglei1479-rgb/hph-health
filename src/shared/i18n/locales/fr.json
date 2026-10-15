@@ -7648,6 +7648,11 @@
     "Developed based on AIPOCH Open-Science.": "Développé à partir d'AIPOCH Open-Science.",
     "Project license (LICENSE)": "Licence du projet (LICENSE)",
     "Notices (NOTICE)": "Mentions (NOTICE)",
-    "Third-party notices": "Mentions des tiers"
+    "Third-party notices": "Mentions des tiers",
+    "Do not enter patient information in search terms.": "N'indiquez pas d'informations sur les patients dans les termes de recherche.",
+    "Enter an appid only if you use CiNii. Application is free.": "Saisissez une appid seulement si vous utilisez CiNii. La demande est gratuite.",
+    "CiNii appid": "appid CiNii",
+    "Save CiNii appid": "Enregistrer l'appid CiNii",
+    "Apply for a free NII appid.": "Demander une appid NII gratuite."
   }
 }

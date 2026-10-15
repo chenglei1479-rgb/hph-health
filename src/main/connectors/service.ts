@@ -1017,7 +1017,8 @@ export class ConnectorService {
     return {
       ncbiEmail: c?.contactEmail,
       ncbiApiKey: this.deps.resolveApiKey(c?.ncbiApiKeyRef),
-      openAlexApiKey: this.deps.resolveApiKey(c?.openAlexApiKeyRef)
+      openAlexApiKey: this.deps.resolveApiKey(c?.openAlexApiKeyRef),
+      ciniiAppId: c?.ciniiAppId
     }
   }
 }
