@@ -7314,6 +7314,12 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "目前顯示 {{total}} 項發現中的 {{shown}} 項。請審查下方完整程式碼。",
     "Current environment": "目前環境",
     "Selected environment": "所選環境",
-    "Switching environments clears the current kernel's variables.": "切換環境會清除目前核心中的變數。"
+    "Switching environments clears the current kernel's variables.": "切換環境會清除目前核心中的變數。",
+    "Licenses": "授權",
+    "Read the project license, notices, and third-party notices.": "查看專案授權、聲明和第三方聲明。",
+    "Developed based on AIPOCH Open-Science.": "基於 AIPOCH Open-Science 開發。",
+    "Project license (LICENSE)": "專案授權（LICENSE）",
+    "Notices (NOTICE)": "聲明（NOTICE）",
+    "Third-party notices": "第三方聲明"
   }
 }

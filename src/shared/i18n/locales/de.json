@@ -7474,6 +7474,12 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "{{shown}} von {{total}} Befunden werden angezeigt. Prüfen Sie den vollständigen Code unten.",
     "Current environment": "Aktuelle Umgebung",
     "Selected environment": "Ausgewählte Umgebung",
-    "Switching environments clears the current kernel's variables.": "Beim Wechsel der Umgebung werden die Variablen des aktuellen Kernels gelöscht."
+    "Switching environments clears the current kernel's variables.": "Beim Wechsel der Umgebung werden die Variablen des aktuellen Kernels gelöscht.",
+    "Licenses": "Lizenzen",
+    "Read the project license, notices, and third-party notices.": "Lesen Sie die Projektlizenz, die Hinweise und die Hinweise zu Drittanbietern.",
+    "Developed based on AIPOCH Open-Science.": "Entwickelt auf Basis von AIPOCH Open-Science.",
+    "Project license (LICENSE)": "Projektlizenz (LICENSE)",
+    "Notices (NOTICE)": "Hinweise (NOTICE)",
+    "Third-party notices": "Hinweise zu Drittanbietern"
   }
 }

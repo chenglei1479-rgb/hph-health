@@ -53,6 +53,15 @@ function assertPlaceholderBracketsAbsent(projectDir, relativeFiles, env = proces
 /** @param {import('electron-builder').BeforePackContext} context */
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function beforePack(context) {
+  const { spawnSync } = require('node:child_process')
+  const generated = spawnSync(
+    process.execPath,
+    [path.join(context.packager.projectDir, 'scripts', 'generate-third-party-notices.mjs')],
+    { cwd: context.packager.projectDir, stdio: 'inherit' }
+  )
+  if (generated.status !== 0) {
+    throw new Error('Failed to generate THIRD_PARTY_NOTICES.txt before packaging.')
+  }
   assertPlaceholderBracketsAbsent(context.packager.projectDir)
 }
 
