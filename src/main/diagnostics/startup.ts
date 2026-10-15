@@ -1,4 +1,5 @@
 import { createLogger, flushLogs, initLogger, type Logger } from '../logger'
+import { installExternalEndpointGuard } from '../net/external-endpoint-guard'
 import {
   flushDiagnosticsWithTimeout,
   type DiagnosticFlush,
@@ -33,6 +34,7 @@ export const initializeApplicationDiagnostics = (
     ...(metadata.runId === undefined ? {} : { runId: metadata.runId }),
     ...(metadata.mirrorToConsole === undefined ? {} : { mirrorToConsole: metadata.mirrorToConsole })
   })
+  installExternalEndpointGuard()
   const log = createLogger('main')
   const operation = startDiagnosticOperation(log, {
     operation: 'application-startup',

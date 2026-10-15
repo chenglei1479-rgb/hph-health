@@ -1354,7 +1354,7 @@ describe('SettingsPage layout', () => {
     expect(nav?.textContent).toContain('System')
     expect(nav?.textContent).not.toContain('Remote access')
     const navItems = navScroll?.querySelectorAll('li') ?? []
-    expect(navItems).toHaveLength(17)
+    expect(navItems).toHaveLength(18)
     expect(navItems[0]?.textContent).toContain('General')
     expect(navItems[1]?.textContent).toContain('Model')
     expect(navItems[2]?.textContent).toContain('Agent')
@@ -1372,6 +1372,7 @@ describe('SettingsPage layout', () => {
     expect(navItems[14]?.textContent).toContain('Compute')
     expect(navItems[15]?.textContent).toContain('Usage')
     expect(navItems[16]?.textContent).toContain('Archived')
+    expect(navItems[17]?.textContent).toContain('Usage statistics')
     expect(navFooter?.textContent).toContain('Feedback')
     const modelNavButton = navButton('Model')
     const agentNavButton = navButton('Agent')

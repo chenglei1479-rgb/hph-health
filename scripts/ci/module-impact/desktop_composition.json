@@ -669,6 +669,7 @@
       "src/main/managed-file-versions/service.integration.test.ts",
       "src/main/memory/service.test.ts",
       "src/main/net/network-info.test.ts",
+      "src/main/net/external-endpoint-guard.test.ts",
       "src/main/notebook/application-commands.test.ts",
       "src/main/notebook/application.test.ts",
       "src/main/notebook/bundle-local.test.ts",

@@ -49,7 +49,7 @@ export const NotebookRecoveryNotice = ({
       {recovery.corruptJournal ? (
         <p>
           {t(
-            'The operation journal is unreadable. Keep it for diagnosis; automatic recovery cannot determine which environments are safe.'
+            'The operation journal is unreadable. Keep it for investigation; automatic recovery cannot determine which environments are safe.'
           )}
         </p>
       ) : null}

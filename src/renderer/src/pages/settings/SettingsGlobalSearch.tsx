@@ -168,6 +168,12 @@ const SETTINGS_SEARCH_INDEX: ReadonlyArray<SettingsSearchEntry> = [
     panel: 'general',
     labelKey: 'Command line tool',
     keywords: 'cli install path shell'
+  },
+  {
+    id: 'usage-statistics.payload',
+    panel: 'usage-statistics',
+    labelKey: 'Anonymous usage statistics',
+    keywords: 'privacy telemetry opt in'
   }
 ]
 
