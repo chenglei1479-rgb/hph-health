@@ -7314,6 +7314,12 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "当前显示 {{total}} 项发现中的 {{shown}} 项。请审查下方完整代码。",
     "Current environment": "当前环境",
     "Selected environment": "所选环境",
-    "Switching environments clears the current kernel's variables.": "切换环境会清除当前内核中的变量。"
+    "Switching environments clears the current kernel's variables.": "切换环境会清除当前内核中的变量。",
+    "Licenses": "许可证",
+    "Read the project license, notices, and third-party notices.": "查看项目许可证、声明和第三方声明。",
+    "Developed based on AIPOCH Open-Science.": "基于 AIPOCH Open-Science 开发。",
+    "Project license (LICENSE)": "项目许可证（LICENSE）",
+    "Notices (NOTICE)": "声明（NOTICE）",
+    "Third-party notices": "第三方声明"
   }
 }

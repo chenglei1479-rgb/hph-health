@@ -114,9 +114,13 @@ asarUnpack:
 # The micromamba binary is added per-platform below (mac/win/linux extraResources), not here, so
 # the two extraResources lists don't collide.
 extraResources:
-  # Keep the project license readable outside app.asar on every platform.
+  # Keep the project license and notices readable outside app.asar on every platform.
   - from: LICENSE
     to: LICENSE.txt
+  - from: NOTICE
+    to: NOTICE
+  - from: THIRD_PARTY_NOTICES.txt
+    to: THIRD_PARTY_NOTICES.txt
   # Keep the copied third-party provider icon paths' MIT notice readable in every packaged app.
   - from: src/renderer/src/assets/provider-icons/LobeHub-icons-LICENSE
     to: LobeHub-icons-LICENSE

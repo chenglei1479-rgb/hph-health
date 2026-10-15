@@ -7781,6 +7781,12 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "Показано {{shown}} из {{total}} результатов. Проверьте полный код ниже.",
     "Current environment": "Текущая среда",
     "Selected environment": "Выбранная среда",
-    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются."
+    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются.",
+    "Licenses": "Лицензии",
+    "Read the project license, notices, and third-party notices.": "Просмотрите лицензию проекта, уведомления и уведомления о сторонних компонентах.",
+    "Developed based on AIPOCH Open-Science.": "Разработано на основе AIPOCH Open-Science.",
+    "Project license (LICENSE)": "Лицензия проекта (LICENSE)",
+    "Notices (NOTICE)": "Уведомления (NOTICE)",
+    "Third-party notices": "Уведомления о сторонних компонентах"
   }
 }

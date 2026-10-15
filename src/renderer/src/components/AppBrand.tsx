@@ -7,20 +7,25 @@ import { AppLogo } from './AppLogo'
 type AppBrandProps = {
   className?: string
   showLogo?: boolean
+  productName?: string
 }
 
 // Keep the English brand signature consistent with the website in every locale.
-export const AppBrand = ({ className, showLogo = true }: AppBrandProps): React.JSX.Element => {
+export const AppBrand = ({
+  className,
+  showLogo = true,
+  productName = APP.brand.name
+}: AppBrandProps): React.JSX.Element => {
   const { t } = useTranslation()
 
   return (
     <span
       className={cn('dra-app-brand', className)}
-      aria-label={`${APP.brand.name} ${t('AI Research Infrastructure for Medicine')}`}
+      aria-label={`${productName} ${t('AI Research Infrastructure for Medicine')}`}
     >
       {showLogo ? <AppLogo className="dra-app-brand-logo" /> : null}
       <span className="dra-app-brand-name" aria-hidden="true">
-        {APP.brand.name}
+        {productName}
       </span>
       <span className="dra-app-brand-tagline" lang="en" aria-hidden="true">
         {APP.brand.taglineLines.map((line) => (

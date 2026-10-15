@@ -7,7 +7,19 @@ import { InlineNotice } from '@/components/ui/inline-notice'
  * contrast: pass (semantic Settings tokens) · slop: pass
  */
 import { CircleHelp, Download, FileText, RefreshCw, Scale } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import licenseText from '../../../../../LICENSE?raw'
+import noticeText from '../../../../../NOTICE?raw'
+import thirdPartyNoticesText from '../../../../../THIRD_PARTY_NOTICES.txt?raw'
+import * as Dialog from '@/components/ui/dialog'
+import {
+  dialogDescriptionClassName,
+  dialogOverlayClassName,
+  dialogPanelClassName,
+  dialogTitleClassName
+} from '@/components/ui/dialog-chrome'
 
 import { license as licenseId } from '../../../../../package.json'
 import { AppLogo } from '@/components/AppLogo'
@@ -44,6 +56,7 @@ const AppVersionSection = ({
   previewState = 'default'
 }: AppVersionSectionProps): React.JSX.Element => {
   const { t } = useTranslation()
+  const [licensesOpen, setLicensesOpen] = useState(false)
   const appInfo = useUpdateStore((state) => state.appInfo)
   const status = useUpdateStore((state) => state.status)
   const check = useUpdateStore((state) => state.check)
@@ -103,6 +116,9 @@ const AppVersionSection = ({
                 <span className="text-xs text-muted-foreground tabular-nums">v{version}</span>
               </p>
               <p className="mt-0.5 text-xs font-normal text-muted-foreground">{APP.copyright}</p>
+              <p className="mt-0.5 text-xs font-normal text-muted-foreground" lang="ja">
+                {t('Developed based on AIPOCH Open-Science.', { lng: 'ja' })}
+              </p>
               {statusLine ? (
                 prerelease || (!status.error && status.state !== 'error') ? (
                   <p className="mt-1 text-xs text-muted-foreground" role="status">
@@ -207,7 +223,56 @@ const AppVersionSection = ({
             </span>
           </span>
         </ExternalTextLink>
+        <button
+          type="button"
+          aria-label={t('Licenses')}
+          className={`${resourceLinkClassName} text-left`}
+          onClick={() => setLicensesOpen(true)}
+        >
+          <Scale className={resourceIconClassName} aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <span className={resourceTitleClassName}>{t('Licenses')}</span>
+            <span className={resourceDescriptionClassName}>
+              {t('Read the project license, notices, and third-party notices.')}
+            </span>
+          </span>
+        </button>
       </div>
+      <Dialog.Root open={licensesOpen} onOpenChange={setLicensesOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className={dialogOverlayClassName} />
+          <Dialog.Content
+            className={dialogPanelClassName('flex w-[min(40rem,calc(100vw-2rem))] flex-col')}
+            aria-describedby={undefined}
+          >
+            <Dialog.Title className={dialogTitleClassName}>{t('Licenses')}</Dialog.Title>
+            <Dialog.Description className={dialogDescriptionClassName}>
+              {t('Read the project license, notices, and third-party notices.')}
+            </Dialog.Description>
+            <p className="mt-3 text-sm" lang="ja">
+              {t('Developed based on AIPOCH Open-Science.', { lng: 'ja' })}
+            </p>
+            <section className="mt-4 min-w-0">
+              <h3 className="text-sm font-medium">{t('Project license (LICENSE)')}</h3>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-3 text-xs leading-5 text-foreground">
+                {licenseText}
+              </pre>
+            </section>
+            <section className="mt-4 min-w-0">
+              <h3 className="text-sm font-medium">{t('Notices (NOTICE)')}</h3>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-3 text-xs leading-5 text-foreground">
+                {noticeText}
+              </pre>
+            </section>
+            <section className="mt-4 min-w-0">
+              <h3 className="text-sm font-medium">{t('Third-party notices')}</h3>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-3 text-xs leading-5 text-foreground">
+                {thirdPartyNoticesText}
+              </pre>
+            </section>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </SettingsSection>
   )
 }

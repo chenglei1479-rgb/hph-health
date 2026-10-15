@@ -5,7 +5,10 @@ This software is based on AIPOCH Open-Science.
 
 Upstream portions of this work remain Copyright 2026 AIPOCH and are licensed
 under the Apache License, Version 2.0. The full license text is in LICENSE.
-Third-party components retain their own license notices.
+Files in this distribution were modified from AIPOCH Open-Science v0.36.0
+(Apache-2.0). The changes are recorded in the git history.
+Third-party components retain their own license notices. See
+THIRD_PARTY_NOTICES.txt.
 
 Marketplace, CDN, and package-registry endpoints that still use the upstream
 AIPOCH host names are unchanged integration points, not a claim of DRA

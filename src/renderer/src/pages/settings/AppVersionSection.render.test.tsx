@@ -85,6 +85,26 @@ describe('AppVersionSection', () => {
     expect(container.textContent).toContain('v0.2.0')
     expect(container.textContent).toContain('© 2026 DRA')
     expect(container.textContent).toContain('Based on AIPOCH Open-Science')
+    expect(container.textContent).toContain('AIPOCH Open-Science をベースに開発')
+    expect(container.querySelector('img[alt*="AIPOCH"]')).toBeNull()
+  })
+
+  it('shows LICENSE, NOTICE, and third-party notices without an AIPOCH logo', () => {
+    act(() => root.render(<AppVersionSection />))
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (element) => element.getAttribute('aria-label') === 'Licenses'
+    )
+    expect(open).toBeDefined()
+    act(() => open?.click())
+    const dialog = document.body.textContent ?? ''
+    expect(dialog).toContain('Project license (LICENSE)')
+    expect(dialog).toContain('Notices (NOTICE)')
+    expect(dialog).toContain('Third-party notices')
+    expect(dialog).toContain('Apache License')
+    expect(dialog).toContain('modified from AIPOCH Open-Science v0.36.0')
+    expect(dialog).toContain('THIRD-PARTY NOTICES')
+    expect(dialog).toContain('AIPOCH Open-Science をベースに開発')
+    expect(document.body.querySelector('img[alt*="AIPOCH"], img[src*="aipoch"]')).toBeNull()
   })
 
   it('links help and release history to the canonical external resources', () => {
@@ -163,11 +183,16 @@ describe('AppVersionSection', () => {
       root.render(<AppVersionSection />)
     })
 
-    expect(container.querySelector('img')?.getAttribute('src')).toBe('logo.png')
+    const sources = (): string[] =>
+      Array.from(container.querySelectorAll('img')).map((img) => img.getAttribute('src') ?? '')
+    expect(sources()).toEqual(['logo.png', 'logo-dark.png'])
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
 
     act(() => useThemeStore.getState().setPreference('dark'))
 
-    expect(container.querySelector('img')?.getAttribute('src')).toBe('logo-dark.png')
+    expect(sources()).toEqual(['logo.png', 'logo-dark.png'])
+    expect(container.querySelector('img[src="logo-dark.png"]')?.className).toContain('dark:block')
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
   it('switches the About logo when System follows an OS appearance change', () => {
@@ -188,12 +213,16 @@ describe('AppVersionSection', () => {
       useThemeStore.getState().setPreference('system')
       root.render(<AppVersionSection />)
     })
-    expect(container.querySelector('img')?.getAttribute('src')).toBe('logo.png')
+    expect(
+      Array.from(container.querySelectorAll('img')).map((img) => img.getAttribute('src'))
+    ).toEqual(['logo.png', 'logo-dark.png'])
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
 
     act(() => systemListener?.({ matches: true }))
 
     expect(useThemeStore.getState().preference).toBe('system')
-    expect(container.querySelector('img')?.getAttribute('src')).toBe('logo-dark.png')
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(container.querySelector('img[src="logo-dark.png"]')?.className).toContain('dark:block')
   })
 
   it('keeps the full update error available and routes retry to the existing owner', () => {

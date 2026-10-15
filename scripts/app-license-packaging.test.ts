@@ -28,10 +28,35 @@ it.each(['mac', 'win', 'linux'] as const)(
       const licenses = matchers?.filter(
         (matcher: { from: string }) => matcher.from === join(root, 'LICENSE')
       )
+      const notices = matchers?.filter(
+        (matcher: { from: string }) => matcher.from === join(root, 'NOTICE')
+      )
+      const thirdParty = matchers?.filter(
+        (matcher: { from: string }) => matcher.from === join(root, 'THIRD_PARTY_NOTICES.txt')
+      )
       expect(licenses).toHaveLength(1)
+      expect(notices).toHaveLength(1)
+      expect(thirdParty).toHaveLength(1)
       await copyFiles(licenses)
+      await copyFiles(notices)
+      await copyFiles(thirdParty)
       expect(await readFile(join(destination, 'LICENSE.txt'), 'utf8')).toBe(
         await readFile(join(root, 'LICENSE'), 'utf8')
+      )
+      expect(await readFile(join(destination, 'NOTICE'), 'utf8')).toBe(
+        await readFile(join(root, 'NOTICE'), 'utf8')
+      )
+      const thirdPartyText = await readFile(join(destination, 'THIRD_PARTY_NOTICES.txt'), 'utf8')
+      expect(thirdPartyText).toContain('CPython')
+      expect(thirdPartyText).toContain('pandas')
+      expect(thirdPartyText).toContain('numpy')
+      expect(thirdPartyText).toContain('scipy')
+      expect(thirdPartyText).toContain('statsmodels')
+      expect(thirdPartyText).toContain('matplotlib')
+      expect(thirdPartyText).toContain('openpyxl')
+      expect(thirdPartyText).toContain('lifelines')
+      expect(await readFile(join(destination, 'NOTICE'), 'utf8')).toContain(
+        'modified from AIPOCH Open-Science v0.36.0'
       )
     } finally {
       await rm(destination, { recursive: true, force: true })
