@@ -74,6 +74,15 @@ const setup = (): {
   }
 }
 describe('source guest security', () => {
+  it('does not touch a destroyed host when the owner window closes', () => {
+    const { owner, host } = setup()
+    host.isDestroyed = () => true
+    host.removeListener = () => {
+      throw new TypeError('Object has been destroyed')
+    }
+    expect(() => owner.emit('closed')).not.toThrow()
+  })
+
   it.each([
     { src: 'file:///private' },
     { src: 'http://example.com' },

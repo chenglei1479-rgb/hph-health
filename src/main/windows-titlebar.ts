@@ -107,7 +107,17 @@ export const registerWindowsTitleBarIpc = ({
           settled = true
           pending.delete(window)
           window.removeListener('closed', onClosed)
-          window.webContents.removeListener('did-start-navigation', onNavigation)
+          // Closing the window destroys it before this menu settles. The webContents getter
+          // then throws on both Windows and macOS.
+          if (!window.isDestroyed()) {
+            try {
+              window.webContents.removeListener('did-start-navigation', onNavigation)
+            } catch (error) {
+              if (!(error instanceof TypeError) || !/has been destroyed/i.test(error.message)) {
+                throw error
+              }
+            }
+          }
           if (error) reject(error)
           else resolve(command)
         }

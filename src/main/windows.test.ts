@@ -102,7 +102,7 @@ class FakeBrowserWindow {
   loadFileMock = vi.fn(() => loadRendererDocument())
   sendMock = vi.fn()
   showMock = vi.fn()
-  webContentsHandlers = new Map<string, WebContentsHandler>()
+  webContentsHandlers = new Map<string, WebContentsHandler[]>()
   handlers = new Map<string, Array<(event: CloseEvent) => void>>()
   hidden = false
   destroyed = false
@@ -125,12 +125,19 @@ class FakeBrowserWindow {
       windowOpenHandler = handler
     },
     on: (event: string, handler: WebContentsHandler): void => {
-      this.webContentsHandlers.set(event, handler)
+      const handlers = this.webContentsHandlers.get(event) ?? []
+      handlers.push(handler)
+      this.webContentsHandlers.set(event, handlers)
     },
     removeListener: (event: string, handler: WebContentsHandler): void => {
-      if (this.webContentsHandlers.get(event) === handler) this.webContentsHandlers.delete(event)
+      const handlers = this.webContentsHandlers.get(event)
+      if (!handlers) return
+      const remaining = handlers.filter((candidate) => candidate !== handler)
+      if (remaining.length === 0) this.webContentsHandlers.delete(event)
+      else this.webContentsHandlers.set(event, remaining)
     },
     send: (...args: unknown[]): void => this.sendMock(...args),
+    isDestroyed: (): boolean => this.destroyed,
     getZoomFactor: (): number => 1,
     getURL: (): string => 'file:///app/index.html',
     mainFrame: this.mainFrame,
@@ -336,7 +343,7 @@ describe('window presentation', () => {
   it('forwards trusted preview frame context menus only while the window is alive', async () => {
     createMainWindow()
     const window = lastWindow!
-    const contextMenuHandler = window.webContentsHandlers.get('context-menu')
+    const contextMenuHandlers = window.webContentsHandlers.get('context-menu') ?? []
     const frame = {
       url: 'open-science-preview://resource-1/report.html',
       parent: window.mainFrame,
@@ -345,16 +352,18 @@ describe('window presentation', () => {
       executeJavaScript: async () => false
     }
 
-    contextMenuHandler?.(
-      {},
-      {
-        x: 12,
-        y: 24,
-        frame,
-        isEditable: false,
-        formControlType: 'none'
-      }
-    )
+    for (const contextMenuHandler of contextMenuHandlers) {
+      contextMenuHandler(
+        {},
+        {
+          x: 12,
+          y: 24,
+          frame,
+          isEditable: false,
+          formControlType: 'none'
+        }
+      )
+    }
 
     await vi.waitFor(() =>
       expect(window.sendMock).toHaveBeenCalledWith(PREVIEW_CONTEXT_MENU_REQUESTED_CHANNEL, {
@@ -369,6 +378,40 @@ describe('window presentation', () => {
     }
     expect(window.webContentsHandlers.has('context-menu')).toBe(false)
   })
+
+  it.each(['win32', 'darwin'] as const)(
+    'does not read webContents after destroy on %s',
+    (platform) => {
+      const descriptor = Object.getOwnPropertyDescriptor(process, 'platform')
+      Object.defineProperty(process, 'platform', { configurable: true, value: platform })
+      try {
+        createMainWindow()
+        const window = lastWindow!
+        window.destroyed = true
+        Object.defineProperty(window, 'webContents', {
+          configurable: true,
+          get() {
+            throw new TypeError('Object has been destroyed')
+          }
+        })
+        findOverlayMock.destroy.mockClear()
+
+        expect(() => {
+          for (const handler of window.handlers.get('closed') ?? []) {
+            handler({ preventDefault: vi.fn(), defaultPrevented: false })
+          }
+          for (const eventName of ['enter-full-screen', 'leave-full-screen'] as const) {
+            for (const handler of window.handlers.get(eventName) ?? []) {
+              handler({ preventDefault: vi.fn(), defaultPrevented: false })
+            }
+          }
+        }).not.toThrow()
+        expect(findOverlayMock.destroy).toHaveBeenCalledOnce()
+      } finally {
+        if (descriptor) Object.defineProperty(process, 'platform', descriptor)
+      }
+    }
+  )
 })
 
 describe('window navigation policy', () => {
@@ -582,9 +625,9 @@ describe('close chord interception', () => {
     event: string,
     ...args: unknown[]
   ): void => {
-    const handler = window.webContentsHandlers.get(event)
-    expect(handler).toBeDefined()
-    handler!(...args)
+    const handlers = window.webContentsHandlers.get(event) ?? []
+    expect(handlers.length).toBeGreaterThan(0)
+    for (const handler of handlers) handler(...args)
   }
 
   // A top-level document swap (reload or new URL): main frame, real document change.
@@ -592,9 +635,9 @@ describe('close chord interception', () => {
 
   const fireInput = (window: FakeBrowserWindow, input: KeyChordInput): (() => void) => {
     const preventDefault = vi.fn()
-    const handler = window.webContentsHandlers.get('before-input-event')
-    expect(handler).toBeDefined()
-    handler!({ preventDefault }, input)
+    const handlers = window.webContentsHandlers.get('before-input-event') ?? []
+    expect(handlers).toHaveLength(1)
+    handlers[0]!({ preventDefault }, input)
     return preventDefault
   }
 
@@ -1463,9 +1506,9 @@ it.each([0, 1])('requires explicit discard to override an unsaved page unload: %
   const window = lastWindow!
   const event = { preventDefault: vi.fn() }
   showMessageBoxSyncMock.mockReturnValueOnce(choice)
-  const handler = window.webContentsHandlers.get('will-prevent-unload')
-  expect(handler).toBeDefined()
-  handler!(event)
+  const handlers = window.webContentsHandlers.get('will-prevent-unload') ?? []
+  expect(handlers).toHaveLength(1)
+  handlers[0]!(event)
   expect(showMessageBoxSyncMock).toHaveBeenCalledWith(
     window,
     expect.objectContaining({ defaultId: 0, cancelId: 0 })

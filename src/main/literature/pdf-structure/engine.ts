@@ -4,7 +4,6 @@ import { readFile, readdir } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import sharp from 'sharp'
 import { PDF_TABLE_MODEL_REVISIONS } from '../../local-models/catalog'
 import { registerOwnedPosixProcessGroup, terminateProcessTree } from '../../process-tree'
 import type { PdfStructureEngine } from './owner'
@@ -17,6 +16,9 @@ export const createPdfStructureEngine = (resources: string): PdfStructureEngine 
       .update('candidate-pdf-engine-v1')
       .update(JSON.stringify(PDF_TABLE_MODEL_REVISIONS[0]))
     const require = createRequire(pathToFileURL(join(resources, 'host.mjs')))
+    // Load sharp only when a PDF fingerprint is requested. Its native binding throws at import
+    // time when the packaged library cannot be opened, and that import used to abort startup.
+    const { default: sharp } = await import('sharp')
     hash.update(JSON.stringify(sharp.versions))
     for (const dependency of ['pdfjs-dist', '@napi-rs/canvas']) {
       hash.update(dependency).update(await readFile(require.resolve(`${dependency}/package.json`)))

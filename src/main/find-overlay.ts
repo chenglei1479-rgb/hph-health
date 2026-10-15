@@ -103,9 +103,16 @@ export const createFindOverlayManager = (deps: FindOverlayDeps): FindOverlayMana
     view = null
     loadPromise = null
     if (!disposedView) return
-    unregisterFindOverlayOwner(disposedView.webContents)
-    if (!deps.mainWindow.isDestroyed()) deps.mainWindow.contentView.removeChildView(disposedView)
-    if (!disposedView.webContents.isDestroyed()) disposedView.webContents.close()
+    try {
+      const contents = disposedView.webContents
+      unregisterFindOverlayOwner(contents)
+      if (!deps.mainWindow.isDestroyed()) deps.mainWindow.contentView.removeChildView(disposedView)
+      if (typeof contents.isDestroyed !== 'function' || !contents.isDestroyed()) contents.close()
+    } catch (error) {
+      // Destroying the parent window can destroy the overlay view first. The getter then throws
+      // on Windows and macOS alike.
+      if (!(error instanceof Error) || !/has been destroyed/i.test(error.message)) throw error
+    }
   }
 
   const backgroundFor = (appearance: WindowFindAppearance): string =>
@@ -127,14 +134,42 @@ export const createFindOverlayManager = (deps: FindOverlayDeps): FindOverlayMana
     if (!opened) return
     opened = false
     // macOS can still draw a zero-sized WebContentsView at the window origin.
-    view?.setVisible(false)
-    view?.setBounds(ZERO_BOUNDS)
-    const clearSearch = view && resolveFindOverlayOwner(view.webContents)?.clearSearch
+    try {
+      view?.setVisible(false)
+      view?.setBounds(ZERO_BOUNDS)
+    } catch (error) {
+      if (!(error instanceof Error) || !/has been destroyed/i.test(error.message)) throw error
+    }
+    // Fakes used in unit tests omit isDestroyed; a missing method means the contents are still alive.
+    // The getter itself throws after destroy() on Windows and macOS, which is the startup-rollback case.
+    const contentsAlive = (contents: object): boolean => {
+      const check = (contents as { isDestroyed?: unknown }).isDestroyed
+      return typeof check !== 'function' || check.call(contents) !== true
+    }
+    let mainContents: OverlayMainWindow['webContents'] | undefined
+    let overlayContents: OverlayWebContents | undefined
+    try {
+      if (!deps.mainWindow.isDestroyed()) {
+        const contents = deps.mainWindow.webContents
+        if (contentsAlive(contents)) mainContents = contents
+      }
+    } catch (error) {
+      if (!(error instanceof Error) || !/has been destroyed/i.test(error.message)) throw error
+    }
+    try {
+      if (view) {
+        const contents = view.webContents
+        if (contentsAlive(contents)) overlayContents = contents
+      }
+    } catch (error) {
+      if (!(error instanceof Error) || !/has been destroyed/i.test(error.message)) throw error
+    }
+    const clearSearch = overlayContents && resolveFindOverlayOwner(overlayContents)?.clearSearch
     if (clearSearch) clearSearch()
-    else deps.mainWindow.webContents.stopFindInPage('clearSelection')
-    deps.mainWindow.webContents.send(WINDOW_FIND_HIDE_CHANNEL)
-    const focusSource = view && resolveFindOverlayOwner(view.webContents)?.focusSource
-    if (!focusSource || !focusSource()) deps.mainWindow.webContents.focus()
+    else mainContents?.stopFindInPage('clearSelection')
+    mainContents?.send(WINDOW_FIND_HIDE_CHANNEL)
+    const focusSource = overlayContents && resolveFindOverlayOwner(overlayContents)?.focusSource
+    if (!focusSource || !focusSource()) mainContents?.focus()
   }
 
   const appearancesEqual = (left: WindowFindAppearance, right: WindowFindAppearance): boolean =>

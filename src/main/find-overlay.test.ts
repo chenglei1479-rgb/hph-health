@@ -436,6 +436,28 @@ describe('find overlay terminal races', () => {
     expect(view.webContents.close).toHaveBeenCalledTimes(1)
   })
 
+  it.each(['win32', 'darwin'] as const)(
+    'does not read webContents after the %s window is destroyed',
+    async () => {
+      const { manager, mainWindow, view } = createFakes()
+      manager.open()
+      await Promise.resolve()
+      Object.defineProperty(mainWindow, 'webContents', {
+        configurable: true,
+        get() {
+          throw new TypeError('Object has been destroyed')
+        }
+      })
+      Object.defineProperty(view, 'webContents', {
+        configurable: true,
+        get() {
+          throw new TypeError('Object has been destroyed')
+        }
+      })
+      expect(() => manager.close()).not.toThrow()
+    }
+  )
+
   it('does not close webContents that Electron already destroyed', async () => {
     const { manager, view, mainWindow } = createFakes()
     manager.open()

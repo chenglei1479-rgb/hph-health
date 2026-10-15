@@ -214,7 +214,14 @@ const configureMainWindow = (window: BrowserWindow, opts: MainWindowCloseOptions
   mainWindowCloseOptions.set(window, opts)
 }
 
+const destroyedObject = (error: unknown): boolean =>
+  error instanceof TypeError && /has been destroyed/i.test(error.message)
+
+// `BrowserWindow.webContents` throws once `destroy()` has emitted `closed`. Capture the
+// WebContents while the window is alive and ignore a later destroyed-object error. Windows and
+// macOS both emit `closed` from `destroy()`, including startup rollback.
 const installNativeEditContextMenu = (window: BrowserWindow): (() => void) => {
+  const contents = window.webContents
   const listener = (event: Electron.Event, params: Electron.ContextMenuParams): void => {
     const items: MenuItemConstructorOptions[] = []
     if (params.isEditable) {
@@ -237,8 +244,14 @@ const installNativeEditContextMenu = (window: BrowserWindow): (() => void) => {
     event.preventDefault()
     Menu.buildFromTemplate(items).popup({ window })
   }
-  window.webContents.on('context-menu', listener)
-  return () => window.webContents.removeListener('context-menu', listener)
+  contents.on('context-menu', listener)
+  return () => {
+    try {
+      if (!contents.isDestroyed()) contents.removeListener('context-menu', listener)
+    } catch (error) {
+      if (!destroyedObject(error)) throw error
+    }
+  }
 }
 
 const createMainWindow = (
@@ -262,12 +275,16 @@ const createMainWindow = (
   // The renderer owns the Windows menu row. Keep Alt from revealing a second native menu bar.
   if (process.platform === 'win32') {
     window.removeMenu()
-    window.on('enter-full-screen', () =>
-      window.webContents.send('window:full-screen-changed', true)
-    )
-    window.on('leave-full-screen', () =>
-      window.webContents.send('window:full-screen-changed', false)
-    )
+    const sendFullScreen = (fullScreen: boolean): void => {
+      if (window.isDestroyed()) return
+      try {
+        window.webContents.send('window:full-screen-changed', fullScreen)
+      } catch (error) {
+        if (!destroyedObject(error)) throw error
+      }
+    }
+    window.on('enter-full-screen', () => sendFullScreen(true))
+    window.on('leave-full-screen', () => sendFullScreen(false))
   }
   mainWindows.add(window)
   const unregisterNativeEditContextMenu = installNativeEditContextMenu(window)
@@ -530,14 +547,28 @@ const createMainWindow = (
     clearRendererHangState()
   })
   window.on('closed', () => {
-    unregisterNativeEditContextMenu()
-    ipcMain.removeListener(CLOSE_ACTIVE_PANE_READY_CHANNEL, onListenerReady)
-    ipcMain.removeListener(CLOSE_ACTIVE_PANE_UNREADY_CHANNEL, onListenerGone)
-    ipcMain.removeListener(WINDOW_FIND_READY_CHANNEL, onWindowFindReady)
-    ipcMain.removeListener(WINDOW_FIND_UNREADY_CHANNEL, onWindowFindGone)
-    ipcMain.removeListener(WINDOW_FIND_CONTENT_READY_CHANNEL, onWindowFindContentReady)
-    ipcMain.removeListener(WINDOW_FIND_APPEARANCE_CHANGED_CHANNEL, onWindowFindAppearanceChanged)
-    findOverlay.destroy()
+    // Electron delivers this listener from native code. A throw here becomes the uncaught
+    // "Object has been destroyed" dialog and hides the startup error that asked for rollback.
+    for (const cleanup of [
+      unregisterNativeEditContextMenu,
+      () => ipcMain.removeListener(CLOSE_ACTIVE_PANE_READY_CHANNEL, onListenerReady),
+      () => ipcMain.removeListener(CLOSE_ACTIVE_PANE_UNREADY_CHANNEL, onListenerGone),
+      () => ipcMain.removeListener(WINDOW_FIND_READY_CHANNEL, onWindowFindReady),
+      () => ipcMain.removeListener(WINDOW_FIND_UNREADY_CHANNEL, onWindowFindGone),
+      () => ipcMain.removeListener(WINDOW_FIND_CONTENT_READY_CHANNEL, onWindowFindContentReady),
+      () =>
+        ipcMain.removeListener(
+          WINDOW_FIND_APPEARANCE_CHANGED_CHANNEL,
+          onWindowFindAppearanceChanged
+        ),
+      () => findOverlay.destroy()
+    ]) {
+      try {
+        cleanup()
+      } catch (error) {
+        log.warn('window cleanup failed', diagnosticErrorFields(error))
+      }
+    }
   })
 
   // The whole-window find bar lives in its own WebContentsView overlay, so its own query text is never

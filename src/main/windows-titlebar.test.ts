@@ -198,6 +198,24 @@ describe('Windows title bar native adapter', () => {
     dismiss()
     await second
   })
+  it('does not read webContents when the window is destroyed while a menu is open', async () => {
+    const { event, window } = install()
+    const closed: Array<() => void> = []
+    window.once = ((name: string, handler: () => void) => {
+      if (name === 'closed') closed.push(handler)
+    }) as typeof window.once
+    const selected = show(event)
+    window.isDestroyed = () => true
+    Object.defineProperty(window, 'webContents', {
+      configurable: true,
+      get() {
+        throw new TypeError('Object has been destroyed')
+      }
+    })
+    expect(closed).toHaveLength(1)
+    expect(() => closed[0]?.()).not.toThrow()
+    await expect(selected).resolves.toBeNull()
+  })
   it('releases popup state after a native menu construction error', async () => {
     const { event } = install()
     mocks.build.mockImplementationOnce(() => {
