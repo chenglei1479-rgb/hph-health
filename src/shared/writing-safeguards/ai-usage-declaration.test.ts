@@ -5,6 +5,7 @@ import {
   buildAiUsageDeclaration,
   COI_SENTENCE_EN,
   COI_SENTENCE_JA,
+  COI_SENTENCE_ZH_HANS,
   defaultAiUsageRecords
 } from './ai-usage-declaration'
 
@@ -36,6 +37,32 @@ describe('AI usage declaration', () => {
     expect(declaration.draft).toContain(COI_SENTENCE_EN)
     expect(declaration.draft).toContain('モデル名は記録されていない')
     expect(declaration.english).toContain('the model name was not recorded')
+  })
+
+  it('follows the selected language and does not put Japanese into Chinese or English', () => {
+    const simplified = buildAiUsageDeclaration({
+      usages: defaultAiUsageRecords('zh-Hans'),
+      includeCoi: true,
+      language: 'zh-CN'
+    })
+    expect(simplified.draft).toContain('在准备文稿时')
+    expect(simplified.draft).toContain('文献检索与整理')
+    expect(simplified.draft).toContain(COI_SENTENCE_ZH_HANS)
+    expect(simplified.draft).toContain(COI_SENTENCE_EN)
+    expect(simplified.draft).not.toContain('原稿の作成にあたり')
+    expect(simplified.draft).not.toContain(COI_SENTENCE_JA)
+    expect(defaultAiUsageRecords('zh-Hans')[0]?.feature).toBe('文献检索与整理')
+
+    const english = buildAiUsageDeclaration({
+      usages: defaultAiUsageRecords('en'),
+      includeCoi: true,
+      language: 'en'
+    })
+    expect(english.draft).toContain('During preparation of this manuscript')
+    expect(english.draft).toContain(COI_SENTENCE_EN)
+    expect(english.draft).not.toContain('原稿の作成にあたり')
+    expect(english.draft).not.toContain(COI_SENTENCE_JA)
+    expect(english.japanese).toBe('')
   })
 
   it('keeps an edited draft and still applies the conflict checkbox', () => {

@@ -31,6 +31,7 @@ import {
   type ProviderFormValue
 } from '../settings/provider-form-value'
 import { describeValidation, localizeProviderResourceMessage } from '../settings/validation-message'
+import { SampleAbstractDialog } from '../home/SampleAbstractDialog'
 
 const isBrowserSignInProvider = (type: ProviderFormValue['type']): boolean =>
   type === 'codex-isolated' ||
@@ -101,6 +102,7 @@ const ProviderStep = ({
   const cancelXaiOAuthLogin = useSettingsStore((state) => state.cancelXaiOAuthLogin)
 
   const [isSaving, setIsSaving] = useState(false)
+  const [sampleOpen, setSampleOpen] = useState(false)
   const mounted = useRef(false)
   useEffect(() => {
     mounted.current = true
@@ -463,6 +465,14 @@ const ProviderStep = ({
               )}
             </p>
           ) : null}
+          <button
+            type="button"
+            data-testid="open-fictional-sample"
+            className="mt-4 text-left text-sm font-medium text-primary underline-offset-2 hover:underline"
+            onClick={() => setSampleOpen(true)}
+          >
+            {t('Open the fictional sample. No model call and no API key.')}
+          </button>
           {validationMessage ? (
             <p
               className={`mt-4 text-sm ${validationOk ? 'text-primary' : 'text-destructive'}`}
@@ -528,6 +538,7 @@ const ProviderStep = ({
           </span>
         </Button>
       </CardFooter>
+      <SampleAbstractDialog open={sampleOpen} onClose={() => setSampleOpen(false)} />
       <ClaudeIsolatedSignInModal
         open={isClaudeSignInOpen}
         onOpenChange={setIsClaudeSignInOpen}

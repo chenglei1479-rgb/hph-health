@@ -7366,6 +7366,22 @@
     "Aggregate statistics export": "汇总统计资料导出",
     "Aggregated results only; source data is not included": "仅汇总结果，不含原始数据",
     "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "不进行分析。只导出交给统计老师的汇总资料包。不含原始数据和聊天记录。",
-    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "此交付包不读取患者数据。不要索取患者表或个体行。咨询请限于研究设计和汇总结果的摘要。"
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "此交付包不读取患者数据。不要索取患者表或个体行。咨询请限于研究设计和汇总结果的摘要。",
+    "Not available in this version": "尚未提供",
+    "Ethics application documents": "伦理申请材料",
+    "Slides and poster": "幻灯片与海报",
+    "Pack deliveries on this device": "此设备上的交付次数",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "已完成的交付次数只留在这台电脑上。可抄到纸质记录。不会上传。",
+    "Deliveries completed": "已完成的交付",
+    "Packs used": "使用过的交付包",
+    "No pack deliveries yet.": "还没有交付。",
+    "Copy counts": "复制次数",
+    "Counts copied.": "已复制次数。",
+    "Open this step": "打开此步骤",
+    "This destination is not in the app yet.": "此去向尚未纳入本应用。",
+    "Fictional sample abstract": "虚构样本学会摘要",
+    "Open the fictional sample. No model call and no API key.": "打开虚构样本。不调用模型，也不需要 API 密钥。",
+    "Save this sample": "保存此样本",
+    "Sample saved on this device.": "已保存在此设备。"
   }
 }

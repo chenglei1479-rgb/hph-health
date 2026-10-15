@@ -21,6 +21,10 @@ import {
   HOME_DELIVERABLE_CARD_IDS,
   type HomeDeliverableCardId
 } from './deliverable-packages'
+import { nextStepAfter } from '../../../../shared/deliverable-next-step'
+import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-delivery-ledger'
+import { PackNextStepCard } from './PackNextStepCard'
+import { SampleAbstractDialog } from './SampleAbstractDialog'
 import { StatisticianReviewExportDialog } from './StatisticianReviewExportDialog'
 
 export type MedicalResearchWorkflow =
@@ -59,7 +63,9 @@ const MedicalResearchLaunchpad = ({
   const { t } = useTranslation()
   const [researchTheme, setResearchTheme] = useState('')
   const [statisticianExportOpen, setStatisticianExportOpen] = useState(false)
+  const [sampleOpen, setSampleOpen] = useState(false)
   const [stepsOpen, setStepsOpen] = useState(false)
+  const deliveryLedger = usePackDeliveryLedger()
   const exampleTheme = t(
     'I want to study the treatment effect of immune checkpoint inhibitors in patients with lung cancer.'
   )
@@ -269,7 +275,35 @@ const MedicalResearchLaunchpad = ({
             )
           )}
         </div>
+        <div className="px-1">
+          <button
+            type="button"
+            data-testid="open-fictional-sample"
+            onClick={() => setSampleOpen(true)}
+            className="inline-flex cursor-pointer items-center rounded-xl border border-[#d5dfdc] bg-white px-3.5 py-2.5 text-left text-sm font-medium text-[#20343a] shadow-card hover:border-[#adc0bf]"
+          >
+            <span className="block">
+              <span className="block">{t('Fictional sample abstract')}</span>
+              <span className="mt-0.5 block text-xs font-normal text-[#5a6b6c]">
+                {t('Open the fictional sample. No model call and no API key.')}
+              </span>
+            </span>
+          </button>
+        </div>
+        {deliveryLedger.lastCompletionId && !deliveryLedger.homeCardDismissed ? (
+          <PackNextStepCard
+            completionId={deliveryLedger.lastCompletionId}
+            continueDisabled={!themeReady}
+            onDismiss={dismissPackDeliveryHomeCard}
+            onContinue={() => {
+              const step = nextStepAfter(deliveryLedger.lastCompletionId!)
+              if (!step || step.kind !== 'available' || !themeReady) return
+              onSelectWorkflow(step.id, researchTheme.trim())
+            }}
+          />
+        ) : null}
       </section>
+      <SampleAbstractDialog open={sampleOpen} onClose={() => setSampleOpen(false)} />
       <StatisticianReviewExportDialog
         open={statisticianExportOpen}
         projectId="consultation-pack"

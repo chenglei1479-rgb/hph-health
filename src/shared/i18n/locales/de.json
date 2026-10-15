@@ -7526,6 +7526,22 @@
     "Aggregate statistics export": "Export aggregierter Statistiken",
     "Aggregated results only; source data is not included": "Nur aggregierte Ergebnisse; Quelldaten sind nicht enthalten",
     "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "Es wird keine Analyse ausgeführt. Es wird nur das aggregierte Paket für die statistische Beratung exportiert. Quelldaten und Chatverlauf sind nicht enthalten.",
-    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "Dieses Paket lädt keine Patientendaten. Fordern Sie keine Patiententabellen oder Einzelzeilen an. Beschränken Sie die Beratung auf das Studiendesign und eine Zusammenfassung aggregierter Ergebnisse."
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "Dieses Paket lädt keine Patientendaten. Fordern Sie keine Patiententabellen oder Einzelzeilen an. Beschränken Sie die Beratung auf das Studiendesign und eine Zusammenfassung aggregierter Ergebnisse.",
+    "Not available in this version": "In dieser Version nicht verfügbar",
+    "Ethics application documents": "Unterlagen für den Ethikantrag",
+    "Slides and poster": "Folien und Poster",
+    "Pack deliveries on this device": "Paketabgaben auf diesem Gerät",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "Die Zahl abgeschlossener Paketabgaben bleibt auf diesem Computer. Sie können sie in ein Papierprotokoll übertragen. Es wird nichts hochgeladen.",
+    "Deliveries completed": "Abgeschlossene Abgaben",
+    "Packs used": "Verwendete Pakete",
+    "No pack deliveries yet.": "Noch keine Paketabgabe.",
+    "Copy counts": "Zahlen kopieren",
+    "Counts copied.": "Zahlen kopiert.",
+    "Open this step": "Diesen Schritt öffnen",
+    "This destination is not in the app yet.": "Dieses Ziel ist in dieser App nicht enthalten.",
+    "Fictional sample abstract": "Fiktives Beispielabstract",
+    "Open the fictional sample. No model call and no API key.": "Fiktives Beispiel öffnen. Kein Modellaufruf und kein API-Schlüssel.",
+    "Save this sample": "Dieses Beispiel sichern",
+    "Sample saved on this device.": "Auf diesem Gerät gesichert."
   }
 }

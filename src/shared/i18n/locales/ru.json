@@ -7833,6 +7833,22 @@
     "Aggregate statistics export": "Экспорт агрегированной статистики",
     "Aggregated results only; source data is not included": "Только агрегированные результаты; исходные данные не включены",
     "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "Анализ не выполняется. Экспортируется только агрегированный пакет для статистика. Исходные данные и история чата не включаются.",
-    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "Этот пакет не загружает данные пациентов. Не запрашивайте таблицы пациентов или отдельные строки. Ограничьте консультацию дизайном исследования и сводкой агрегированных результатов."
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "Этот пакет не загружает данные пациентов. Не запрашивайте таблицы пациентов или отдельные строки. Ограничьте консультацию дизайном исследования и сводкой агрегированных результатов.",
+    "Not available in this version": "В этой версии нет",
+    "Ethics application documents": "Документы заявки в этический комитет",
+    "Slides and poster": "Слайды и постер",
+    "Pack deliveries on this device": "Сдачи пакетов на этом устройстве",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "Число завершённых сдач пакетов остаётся только на этом компьютере. Его можно переписать в бумажный журнал. Ничего не отправляется.",
+    "Deliveries completed": "Завершённые сдачи",
+    "Packs used": "Использованные пакеты",
+    "No pack deliveries yet.": "Сдач пакетов пока нет.",
+    "Copy counts": "Копировать числа",
+    "Counts copied.": "Числа скопированы.",
+    "Open this step": "Открыть этот шаг",
+    "This destination is not in the app yet.": "Этого назначения в приложении нет.",
+    "Fictional sample abstract": "Вымышленный образец тезисов",
+    "Open the fictional sample. No model call and no API key.": "Открыть вымышленный образец. Без вызова модели и без ключа API.",
+    "Save this sample": "Сохранить этот образец",
+    "Sample saved on this device.": "Сохранено на этом устройстве."
   }
 }

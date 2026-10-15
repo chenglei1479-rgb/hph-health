@@ -7366,6 +7366,22 @@
     "Aggregate statistics export": "匯總統計資料匯出",
     "Aggregated results only; source data is not included": "僅匯總結果，不含原始資料",
     "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "不進行分析。只匯出交給統計老師的匯總資料包。不含原始資料和聊天記錄。",
-    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "此交付包不讀取患者資料。不要索取患者表或個體列。諮詢請限於研究設計和匯總結果的摘要。"
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "此交付包不讀取患者資料。不要索取患者表或個體列。諮詢請限於研究設計和匯總結果的摘要。",
+    "Not available in this version": "尚未提供",
+    "Ethics application documents": "倫理申請文件",
+    "Slides and poster": "投影片與海報",
+    "Pack deliveries on this device": "此裝置上的交付次數",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "已完成的交付次數只留在這台電腦上。可抄到紙本紀錄。不會上傳。",
+    "Deliveries completed": "已完成的交付",
+    "Packs used": "使用過的交付包",
+    "No pack deliveries yet.": "還沒有交付。",
+    "Copy counts": "複製次數",
+    "Counts copied.": "已複製次數。",
+    "Open this step": "開啟此步驟",
+    "This destination is not in the app yet.": "此去向尚未納入本應用。",
+    "Fictional sample abstract": "虛構樣本學會摘要",
+    "Open the fictional sample. No model call and no API key.": "開啟虛構樣本。不呼叫模型，也不需要 API 金鑰。",
+    "Save this sample": "儲存此樣本",
+    "Sample saved on this device.": "已儲存在此裝置。"
   }
 }

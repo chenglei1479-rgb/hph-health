@@ -45,6 +45,7 @@ import type {
 import { AppVersionSection } from './AppVersionSection'
 import { MachineApprovalSection } from './MachineApprovalSection'
 import { AppIconSection } from './AppIconSection'
+import { PackDeliveryCounters } from './PackDeliveryCounters'
 import { SettingsRow, SettingsSection, SettingsToggle } from './SettingsLayout'
 
 // Community entry links share a compact button style so the row reads as one group of project links.
@@ -323,6 +324,8 @@ const GeneralPanel = (): React.JSX.Element => {
           <LanguageSelect />
         </SettingsRow>
       </SettingsSection>
+
+      <PackDeliveryCounters />
 
       {window.api.platform === 'win32' && window.api.window?.onCloseConfirmRequest ? (
         <SettingsSection

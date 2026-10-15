@@ -12,6 +12,7 @@ import {
   dialogOverlayClassName,
   dialogPanelClassName
 } from '@/components/ui/dialog-chrome'
+import { recordPackDelivery } from './pack-delivery-ledger'
 import {
   parseResultTableTsv,
   parseVariableDefinitionTsv,
@@ -110,6 +111,7 @@ const StatisticianReviewExportDialog = ({
           data: bytesFromBase64(file.base64)
         })
       }
+      recordPackDelivery('statistician-export', `export:${crypto.randomUUID()}`)
       setStatus(t('Statistician package exported.'))
     } catch {
       setStatus(t('Export failed.'))
