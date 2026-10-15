@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import {
+  consultationPackExportPrompt,
   DELIVERABLE_PACKAGE_IDS,
   guardDeliverableOutboundText,
   isDeliverablePackage
@@ -22,4 +23,8 @@ it('routes deliverable text through the PHI gate hook without sending it', () =>
   const home = readFileSync(new URL('./HomePage.tsx', import.meta.url), 'utf8')
   expect(home).toContain('guardDeliverableOutboundText(')
   expect(guardDeliverableOutboundText('draft package', 'project-1')).toBe('draft package')
+  const instruction = consultationPackExportPrompt((key) => key)
+  expect(instruction).toContain('Do not export raw data')
+  expect(instruction).toContain('no masking under 10')
+  expect(instruction).not.toContain('include the chat history')
 })

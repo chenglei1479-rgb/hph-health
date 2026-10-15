@@ -43,6 +43,15 @@ it('shows deliverable packages as step 2 after project setup and keeps the six r
     await act(async () => packages[0]!.click())
     await act(async () => entries[1]!.click())
     expect(select.mock.calls.map(([workflow]) => workflow)).toEqual(['mentor-pack', 'evidence'])
+    const exportPackage = host.querySelector<HTMLButtonElement>(
+      '[data-testid="export-statistician-package"]'
+    )
+    expect(exportPackage?.disabled).toBe(false)
+    expect(host.querySelector('[data-testid="export-raw-data"]')).toBeNull()
+    expect(host.querySelector('[data-testid="export-notebook"]')).toBeNull()
+    expect(host.querySelector('[data-testid="export-chat"]')).toBeNull()
+    await act(async () => exportPackage?.click())
+    expect(select).toHaveBeenCalledTimes(2)
     expect(select.mock.calls[0][1].length).toBeGreaterThan(0)
   } finally {
     await act(async () => root.unmount())

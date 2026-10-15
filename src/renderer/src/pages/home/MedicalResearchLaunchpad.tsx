@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
 import { type DeliverablePackageId } from './deliverable-packages'
+import { StatisticianReviewExportDialog } from './StatisticianReviewExportDialog'
 
 export type MedicalResearchWorkflow =
   | 'mentor-pack'
@@ -52,6 +53,7 @@ const MedicalResearchLaunchpad = ({
 }: MedicalResearchLaunchpadProps): React.JSX.Element => {
   const { t } = useTranslation()
   const [researchTheme, setResearchTheme] = useState('')
+  const [statisticianExportOpen, setStatisticianExportOpen] = useState(false)
   const exampleTheme = t(
     'I want to study the treatment effect of immune checkpoint inhibitors in patients with lung cancer.'
   )
@@ -244,7 +246,28 @@ const MedicalResearchLaunchpad = ({
             </button>
           ))}
         </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border-200/70 bg-bg-000 px-4 py-3">
+          <p className="max-w-xl text-xs leading-5 text-text-300">
+            {t(
+              'Beta exports aggregate files that open without DRA. Raw data, Notebook rows, and chat history are not included.'
+            )}
+          </p>
+          <button
+            type="button"
+            data-testid="export-statistician-package"
+            disabled={!researchTheme.trim()}
+            onClick={() => setStatisticianExportOpen(true)}
+            className="cursor-pointer rounded-lg bg-[#58744b] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t('Export statistician package')}
+          </button>
+        </div>
       </section>
+      <StatisticianReviewExportDialog
+        open={statisticianExportOpen}
+        projectId="consultation-pack"
+        onClose={() => setStatisticianExportOpen(false)}
+      />
 
       <div className="flex items-end justify-between gap-3 px-1">
         <div>

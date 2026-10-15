@@ -40,6 +40,7 @@ import {
 } from './composition/specialists'
 import { composeStorageStartup } from './composition/storage-startup'
 import { composeUploadStorage } from './composition/upload-storage'
+import { registerStatisticianReviewIpc } from './statistician-review/ipc'
 import { registerVariableDefinitionIpc } from './variable-definition/ipc'
 import { registerWritingSafeguardsIpc } from './writing-safeguards/ipc'
 import { defaultVariableDefinitionCompleter } from './variable-definition/model-client'
@@ -660,6 +661,9 @@ export const createApplicationModules = async (
   surfaceAdapters.push(
     createElectronSurfaceAdapter('writing-safeguards', () => {
       registerWritingSafeguardsIpc(join(app.getPath('userData'), 'writing-safeguards'))
+    }),
+    createElectronSurfaceAdapter('statistician-review', () => {
+      registerStatisticianReviewIpc(translate)
     }),
     createElectronSurfaceAdapter('variable-definition', () => {
       registerVariableDefinitionIpc(

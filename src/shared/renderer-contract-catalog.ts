@@ -32,6 +32,7 @@ import * as settingsPreferences from './renderer-contracts/settings-preferences'
 import * as specialist from './renderer-contracts/specialist'
 import * as storage from './renderer-contracts/storage'
 import * as update from './renderer-contracts/update'
+import * as statisticianReview from './renderer-contracts/statistician-review'
 import * as variableDefinition from './renderer-contracts/variable-definition'
 import * as writingSafeguards from './renderer-contracts/writing-safeguards'
 import * as window from './renderer-contracts/window'
@@ -141,6 +142,7 @@ export const RENDERER_API_CONTRACT = composeRendererApiContract(
   files.uploadsAbortTransferContracts,
   variableDefinition.contracts,
   writingSafeguards.contracts,
+  statisticianReview.contracts,
   window.contracts
 )
 
@@ -202,6 +204,7 @@ const RENDERER_CAPABILITY_ORDER = Object.freeze([
   'projects',
   'tags',
   'variable-definition',
+  'statistician-review',
   'remote-access',
   'reviewer',
   'runtime',

@@ -57,7 +57,11 @@ import { ProjectDeletionCleanupNotice } from '@/components/ProjectDeletionCleanu
 import { UpdateCapsule } from '@/components/UpdateCapsule'
 import { MedicalResearchLaunchpad, type MedicalResearchWorkflow } from './MedicalResearchLaunchpad'
 import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
-import { guardDeliverableOutboundText, isDeliverablePackage } from './deliverable-packages'
+import {
+  consultationPackExportPrompt,
+  guardDeliverableOutboundText,
+  isDeliverablePackage
+} from './deliverable-packages'
 import { sessionWaitReasonLabelKeys } from '@/lib/session-wait-reason-labels'
 import { APP } from '../../../../shared/app-config'
 import { earliestCurrentDelegatedAttemptStartedAt } from '../../../../shared/delegated-work-projection'
@@ -269,7 +273,7 @@ const HomePage = ({
             : ''
         const deliverablePrompt = isDeliverablePackage(selection.workflow)
           ? guardDeliverableOutboundText(
-              `\n\n${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: workflowNames[selection.workflow] })}\nPackage mode: ${selection.workflow}`,
+              `\n\n${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: workflowNames[selection.workflow] })}\nPackage mode: ${selection.workflow}${selection.workflow === 'consultation-pack' ? `\n${consultationPackExportPrompt(t)}` : ''}`,
               project.id
             )
           : ''
@@ -654,7 +658,7 @@ const HomePage = ({
       agentContext:
         (isDeliverablePackage(workflow)
           ? `${guardDeliverableOutboundText(
-              `${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: templates[workflow].name })}\nPackage mode: ${workflow}`
+              `${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: templates[workflow].name })}\nPackage mode: ${workflow}${workflow === 'consultation-pack' ? `\n${consultationPackExportPrompt(t)}` : ''}`
             )}\n\n`
           : '') +
         t(

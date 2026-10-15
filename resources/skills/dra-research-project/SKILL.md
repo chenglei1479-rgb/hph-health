@@ -6,7 +6,7 @@ license: Apache-2.0
 
 # DRA Research Project
 
-Respond in the researcher's language. Preserve the six existing entry workflows. The home screen offers three deliverable packages (mentor-pack, consultation-pack, writing-pack) as step 2 after project setup; when one is selected, follow the research-deliverables skill and the recorded package mode. Do not add a data-flow or special-requirements panel. Use this skill in the conversation when the researcher asks for a complete project, an evidence table, manuscript organization, a research package, or specialist collaboration.
+Respond in the researcher's language. Preserve the six existing entry workflows. The home screen offers three deliverable packages (mentor-pack, consultation-pack, writing-pack) as step 2 after project setup; when one is selected, follow the research-deliverables skill and the recorded package mode. For consultation-pack, the beta export is aggregate files only: a statistical report (Word or PDF), result tables (Excel, real counts, no masking under 10), a runnable R or Python script, and the variable definition table and execution log as PDF. Do not export raw data, individual Notebook rows, or chat history, and do not offer those options. Do not add a data-flow or special-requirements panel. Use this skill in the conversation when the researcher asks for a complete project, an evidence table, manuscript organization, a research package, or specialist collaboration.
 
 ## Permissions and execution
 

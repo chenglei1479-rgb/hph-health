@@ -24,3 +24,8 @@ export const guardDeliverableOutboundText = (text: string, projectId?: string): 
   void projectId
   return text
 }
+
+export const consultationPackExportPrompt = (t: (key: string) => string): string =>
+  t(
+    'Beta statistician export writes only a statistical report as Word or PDF, result tables as Excel with real counts and no masking under 10, a runnable R or Python script, and the variable definition table and execution log as PDF. Do not export raw data, Notebook outputs that contain individual rows, or chat history, and do not offer those options. A doctor confirms the de-identification check before export.'
+  )

@@ -39,6 +39,18 @@ Fixed outputs:
 
 An audit/consultation pack can be ready for review with an unexecuted statistical plan. Do not label the study or analysis complete. A computed status requires a successful terminal Run and accessible numeric output; preserve failed or uncertain Runs and input versions.
 
+### Beta export
+
+The statistician review package that leaves DRA is aggregate only, in files that open without DRA:
+
+1. Statistical report: `.docx` or `.pdf`.
+2. Result tables: `.xlsx` with the real counts and no masking under 10. The audience is the internal research team.
+3. Runnable analysis script: `.R` or `.py`.
+4. Variable definition table: `.pdf`.
+5. Execution log: `.pdf`.
+
+Do not export raw data, Notebook outputs that contain individual rows, or chat history. Do not offer those choices. Before any file is written, scan for hardcoded chart numbers (カルテ番号), birth dates, and individual patient values in the script and the report. A doctor must confirm the de-identified package. If confirmation is dismissed, export nothing.
+
 ## writing-pack: conference abstract or English draft
 
 Required: choose conference abstract or English manuscript sections; supplied verified study design/methods/results, target venue and length/structure if known. Ask once which format is wanted. Target requirements must be supplied or checked against available official instructions; otherwise use general format and label venue requirements unverified. English is the target draft language; explain review notes in the user's language.

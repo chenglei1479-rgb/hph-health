@@ -397,6 +397,7 @@ export const WEB_INVOKE_CHANNELS = {
   'specialist.setEnabled': 'specialist:set-enabled',
   'specialist.setSessionSpecialist': 'specialist:set-session-specialist',
   'specialist.update': 'specialist:update',
+  'statisticianReview.exportPackage': 'statistician-review:export-package',
   'storage.acceptMissingDataRoot': 'storage:accept-missing-data-root',
   'storage.ackDataRootHandoffFlush': 'storage:ack-data-root-handoff-flush',
   'storage.cancelMigrate': 'storage:cancel-migrate',
