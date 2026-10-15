@@ -17,6 +17,7 @@ export type SchemaNotebookCopy = {
   synthetic: string
   categorical: string
   categoricalNote: string
+  rowBlockNote: string
   code: string
   run: string
   localResult: string
@@ -46,7 +47,10 @@ const ja: SchemaNotebookCopy = {
   rows: '行数',
   synthetic: '合成サンプル（実データから作っていません）',
   categorical: 'この列のカテゴリ値をモデルに渡す',
-  categoricalNote: '既定では渡しません。渡すと記録されます。',
+  categoricalNote:
+    '既定では渡しません。渡すと記録されます。自由記述の列は選べません。12種類を超える列は選べますが、多いものから12種類だけ送り、残りは「他 N 種類は省略」と示します。',
+  rowBlockNote:
+    '個々の患者の行（.head()、.tail()、.sample()、1人分の値、行ごとの表示）はモデルに渡しません。',
   code: 'PythonまたはRのコード',
   run: '手元で実行',
   localResult: '手元の結果',

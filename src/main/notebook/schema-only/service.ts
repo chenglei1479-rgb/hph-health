@@ -14,6 +14,7 @@ import type {
   SchemaModelContext
 } from '../../../shared/schema-notebook'
 import { createCategoricalOptInLog } from './categorical-opt-in'
+import { releaseCategoricalValuesForModel } from './categorical-release'
 import { executeLocalAnalysis, type CommandRunner } from './local-execute'
 import { importTableFile, phiScanText } from './import-table'
 import { isHospitalApproved } from './machine-approval'
@@ -37,7 +38,7 @@ type StoredTable = {
 export type SchemaNotebookService = {
   importTable: (request: ImportTableRequest) => Promise<ImportTableResponse>
   optInCategorical: (request: CategoricalOptInRequest) => Promise<SchemaModelContext>
-  modelContext: (projectId: string, tableId: string) => SchemaModelContext
+  modelContext: (projectId: string, tableId: string) => Promise<SchemaModelContext>
   execute: (request: ExecuteAnalysisRequest) => Promise<ExecuteAnalysisResponse>
   patientDataTags: () => PatientDataTag[]
 }
@@ -88,13 +89,13 @@ export const createSchemaNotebookService = (options: {
   const readCsv = (tableId: string): string =>
     readFileSync(join(tableDir, `${tableId}.csv`), 'utf8')
 
-  const contextFor = (stored: StoredTable): SchemaModelContext => {
+  const contextFor = async (stored: StoredTable): Promise<SchemaModelContext> => {
     const withheld = new Set(stored.withheldColumns ?? [])
     const allowed = new Set(optIns.list(stored.tableId).map((record) => record.column))
     const categoricalValues: Record<string, string[]> = {}
     for (const [column, values] of Object.entries(stored.categoricalValues)) {
       if (withheld.has(column) || !allowed.has(column)) continue
-      categoricalValues[column] = [...values]
+      categoricalValues[column] = await releaseCategoricalValuesForModel(values, stored.projectId)
     }
     return buildSchemaModelContext({
       tableId: stored.tableId,
@@ -132,7 +133,7 @@ export const createSchemaNotebookService = (options: {
       writeTable(tableId, tableToCsv(table), stored)
       return {
         ok: true,
-        context: contextFor(stored),
+        context: await contextFor(stored),
         containsPatientData: patient,
         tagged: tags.has(projectId),
         identifierWarnings
@@ -147,6 +148,10 @@ export const createSchemaNotebookService = (options: {
       if ((stored.withheldColumns ?? []).includes(column)) {
         throw new Error(`Column ${column} is a direct identifier and is not sent to the model.`)
       }
+      const meta = stored.columns.find((item) => item.name === column)
+      if (meta?.dtype === 'text') {
+        throw new Error('自由記述の列はモデルに渡せません。')
+      }
       if (!stored.categoricalValues[column]) {
         throw new Error(`Column ${column} has no categorical value list.`)
       }
@@ -158,7 +163,7 @@ export const createSchemaNotebookService = (options: {
       })
       return contextFor(stored)
     },
-    modelContext(projectId, tableId) {
+    async modelContext(projectId, tableId) {
       const stored = readStored(requireId(tableId, 'tableId'))
       if (stored.projectId !== requireId(projectId, 'projectId')) {
         throw new Error('Table does not belong to this project.')
@@ -187,6 +192,8 @@ export const createSchemaNotebookService = (options: {
         localRun.exitCode !== 0 || localRun.stderr.trim().length > 0
           ? localRun.stderr || localRun.stdout
           : undefined
+      // Local stdout stays on the machine. Only this copy is eligible for a model,
+      // and only after the row refusal and the provider PHI gate.
       const forModel = await gateNotebookOutputs(
         {
           ...(error === undefined ? {} : { error }),

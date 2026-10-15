@@ -181,6 +181,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                 <span className="font-medium text-[#20343a]">{copy.modelView}</span>{' '}
                 {copy.smallCellNote}
               </p>
+              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.rowBlockNote}</p>
               <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.maskingCheckNote}</p>
             </div>
             <button type="button" onClick={() => setOpen(false)}>
@@ -233,6 +234,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                       <label className="flex items-center gap-1 text-xs">
                         <input
                           type="checkbox"
+                          data-categorical-opt-in={column.name}
                           checked={Boolean(context.categoricalValues?.[column.name])}
                           onChange={() => void optIn(column.name)}
                         />

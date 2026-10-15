@@ -4,9 +4,12 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { installMachineApproval } from '../../phi/gate'
 import type { PythonCommand } from '../python-command'
 import { createPatientDataTagStore } from './patient-data-tag'
 import { redactPatientPhi } from './patient-phi'
+import { PATIENT_ROW_BLOCK_MESSAGE } from './patient-row-output'
+import { PHI_OUTPUT_BLOCK_MESSAGE } from './notebook-phi-release'
 import { gateNotebookOutputs, installNotebookModelTextReleaser } from './release-model-text'
 import { suppressSmallAggregateText } from './small-cell'
 import { createSchemaNotebookService, type SchemaNotebookService } from './service'
@@ -45,6 +48,7 @@ const serviceAt = (
 
 afterEach(() => {
   installNotebookModelTextReleaser(null)
+  installMachineApproval(null)
 })
 
 describe('schema-only notebook', () => {
@@ -344,5 +348,156 @@ describe('schema-only notebook', () => {
     if (!allowed.ok) return
     expect(allowed.context.columns.map((column) => column.name)).toEqual(['age', 'note'])
     expect(allowed.tagged).toBe(true)
+  })
+
+  it('blocks .head()-like patient rows before they are returned to the model', async () => {
+    const seen: string[] = []
+    installNotebookModelTextReleaser(async (text) => {
+      seen.push(text)
+      return text
+    })
+    const stdout = [
+      '   age sex note',
+      '0   17 男性 SECRET-9918',
+      '1   40 女性 患者氏名：山田太郎'
+    ].join('\n')
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-head-'))
+    const service = serviceAt(root, {
+      directory: root,
+      approvalLogPath: join(root, 'approved.jsonl'),
+      machineApproved: () => true,
+      resolvePython: async () => python,
+      run: async () => ({ stdout, stderr: '', code: 0 })
+    })
+    const imported = await service.importTable({
+      projectId: 'study-1',
+      filename: 'patients.csv',
+      csvText: csv
+    })
+    if (!imported.ok) throw new Error('import failed')
+    const executed = await service.execute({
+      projectId: 'study-1',
+      tableId: imported.context.tableId,
+      language: 'python',
+      code: 'print(df.head())'
+    })
+    expect(executed.local.stdout).toContain('SECRET-9918')
+    expect(executed.local.stdout).toContain('山田太郎')
+    expect(executed.forModel.stdout).toBe(PATIENT_ROW_BLOCK_MESSAGE)
+    expect(executed.forModel.head).toBe(PATIENT_ROW_BLOCK_MESSAGE)
+    expect(JSON.stringify(executed.forModel)).not.toContain('SECRET-9918')
+    expect(JSON.stringify(executed.forModel)).not.toContain('山田太郎')
+    expect(executed.forModel.stdout).toContain('.head()')
+    expect(seen).toEqual([])
+  })
+
+  it('refuses free-text opt-in and sends only the 12 most frequent categorical values', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-card-'))
+    const service = serviceAt(root, {
+      directory: root,
+      approvalLogPath: join(root, 'approved.jsonl'),
+      machineApproved: () => true
+    })
+    const lines = ['diagnosis,note']
+    for (let index = 1; index <= 15; index += 1) {
+      const label = `dx${String(index).padStart(2, '0')}`
+      const repeats = 20 - index
+      for (let copy = 0; copy < repeats; copy += 1) {
+        lines.push(
+          `${label},経過は安定していますが、本日の所見を自由記述として残します。次回確認。`
+        )
+      }
+    }
+    const imported = await service.importTable({
+      projectId: 'study-1',
+      filename: 'patients.csv',
+      csvText: lines.join('\n')
+    })
+    if (!imported.ok) throw new Error('import failed')
+    expect(imported.context.columns.find((column) => column.name === 'note')?.dtype).toBe('text')
+    expect(imported.context.columns.find((column) => column.name === 'diagnosis')?.dtype).toBe(
+      'categorical'
+    )
+    await expect(
+      service.optInCategorical({
+        projectId: 'study-1',
+        tableId: imported.context.tableId,
+        column: 'note'
+      })
+    ).rejects.toThrow(/自由記述/)
+    const opted = await service.optInCategorical({
+      projectId: 'study-1',
+      tableId: imported.context.tableId,
+      column: 'diagnosis',
+      actor: 'researcher'
+    })
+    const sent = opted.categoricalValues?.diagnosis ?? []
+    expect(sent.slice(0, 12)).toEqual(
+      Array.from({ length: 12 }, (_item, index) => `dx${String(index + 1).padStart(2, '0')}`)
+    )
+    expect(sent).toContain('他 3 種類は省略')
+    expect(sent).not.toContain('dx13')
+    expect(sent).not.toContain('dx15')
+    expect(JSON.stringify(opted)).not.toContain('自由記述として')
+  })
+
+  it('applies the PHI gate to aggregate output and to opted-in categorical values', async () => {
+    installMachineApproval(() => true)
+    const gated = await gateNotebookOutputs(
+      { stdout: 'n=4\n連絡は山田太郎さんです。mean=12.5', table: 'sex,n\n男性,20\n女性,30' },
+      'study-1'
+    )
+    expect(gated.stdout).not.toContain('山田太郎')
+    expect(gated.stdout).toContain('mean=12.5')
+    expect(gated.stdout).toContain('n=<10')
+    expect(gated.stdout).toMatch(/\[患者\d+\]/)
+    expect(gated.table).toContain('男性')
+    expect(gated.table).toContain('20')
+
+    installMachineApproval(null)
+    const refused = await gateNotebookOutputs(
+      { stdout: 'n=20\n連絡は山田太郎さんです。' },
+      'study-1'
+    )
+    expect(refused.stdout).toBe(PHI_OUTPUT_BLOCK_MESSAGE)
+    expect(refused.stdout).not.toContain('山田太郎')
+
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-phi-opt-'))
+    const service = serviceAt(root, {
+      directory: root,
+      approvalLogPath: join(root, 'approved.jsonl'),
+      machineApproved: () => true
+    })
+    const imported = await service.importTable({
+      projectId: 'study-1',
+      filename: 'wards.csv',
+      csvText: [
+        'label,n',
+        '山田太郎さん,1',
+        '山田太郎さん,1',
+        '山田太郎さん,1',
+        '東病棟,1',
+        '東病棟,1',
+        '東病棟,1',
+        '西病棟,1',
+        '西病棟,1',
+        '西病棟,1'
+      ].join('\n')
+    })
+    if (!imported.ok) throw new Error('import failed')
+    expect(imported.context.columns.find((column) => column.name === 'label')?.dtype).toBe(
+      'categorical'
+    )
+    installMachineApproval(() => true)
+    const opted = await service.optInCategorical({
+      projectId: 'study-1',
+      tableId: imported.context.tableId,
+      column: 'label'
+    })
+    const values = opted.categoricalValues?.label ?? []
+    expect(values.join('\n')).not.toContain('山田太郎')
+    expect(values).toContain('東病棟')
+    expect(values).toContain('西病棟')
+    expect(values.join('\n')).toMatch(/\[患者\d+\]/)
   })
 })
