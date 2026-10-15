@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { useLocaleStore } from '@/stores/locale-store'
+
 import type { Project } from '../../../../shared/projects'
 import {
   applyCoiChoice,
@@ -13,7 +15,7 @@ import {
   releaseExportSet,
   type ExportFinding
 } from '../../../../shared/writing-safeguards/export-deidentify'
-import { writingSafeguardsCopy } from './copy'
+import { writingSafeguardsCopy, type WritingSafeguardsCopy } from './copy'
 
 const downloadText = (filename: string, text: string): void => {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
@@ -34,15 +36,22 @@ const readExportFile = (file: File): Promise<{ name: string; text: string }> =>
 
 const emptyUsage = (): AiUsageRecord => ({ feature: '', model: '', purpose: '' })
 
+const findingLabel = (copy: WritingSafeguardsCopy, kind: ExportFinding['kind']): string => {
+  if (kind === 'karte-number') return copy.findingKarte
+  if (kind === 'birth-date') return copy.findingBirth
+  return copy.findingValue
+}
+
 export const WritingSafeguardsEntry = (): React.JSX.Element => {
-  const copy = writingSafeguardsCopy('ja')
+  const locale = useLocaleStore((state) => state.locale)
+  const copy = writingSafeguardsCopy(locale)
   const [open, setOpen] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   const [projectId, setProjectId] = useState('')
   const [approvalNumber, setApprovalNumber] = useState('')
   const [saved, setSaved] = useState('')
-  const [reminder, setReminder] = useState('')
   const [started, setStarted] = useState(false)
+  const [showReminder, setShowReminder] = useState(false)
   const [usages, setUsages] = useState<AiUsageRecord[]>(defaultAiUsageRecords)
   const [includeCoi, setIncludeCoi] = useState(false)
   const [draft, setDraft] = useState(
@@ -57,6 +66,8 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
 
   useEffect(() => {
     if (draftEdited) return
+    // The disclosure draft is derived from the usage rows unless the doctor has edited it.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(buildAiUsageDeclaration({ usages, includeCoi }).draft)
   }, [draftEdited, includeCoi, usages])
 
@@ -93,10 +104,11 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
   }
 
   const beginWriting = (): void => {
-    const notice = ethicsWritingReminder(approvalNumber)
-    setReminder(notice.show ? notice.message : '')
+    setShowReminder(ethicsWritingReminder(approvalNumber, locale).show)
     setStarted(true)
   }
+
+  const reminder = showReminder ? ethicsWritingReminder(undefined, locale).message : ''
 
   const updateUsage = (index: number, patch: Partial<AiUsageRecord>): void => {
     setUsages((current) =>
@@ -277,7 +289,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
               <ul>
                 {findings.map((finding) => (
                   <li key={`${finding.kind}:${finding.name}:${finding.excerpt}`}>
-                    {[finding.label, finding.excerpt].join(' ')}
+                    {[findingLabel(copy, finding.kind), finding.excerpt].join(' ')}
                   </li>
                 ))}
               </ul>

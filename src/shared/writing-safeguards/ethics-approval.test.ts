@@ -8,13 +8,21 @@ import {
 
 describe('ethics approval reminder', () => {
   it('reminds without blocking when the project number is empty', () => {
-    expect(ethicsWritingReminder('')).toEqual({
+    expect(ethicsWritingReminder('', 'ja')).toEqual({
       blocking: false,
       show: true,
       message: ETHICS_WRITING_REMINDER
     })
-    expect(ethicsWritingReminder('   ').show).toBe(true)
-    expect(ethicsWritingReminder(undefined).blocking).toBe(false)
+    expect(ethicsWritingReminder('   ', 'ja').show).toBe(true)
+    expect(ethicsWritingReminder(undefined, 'ja').blocking).toBe(false)
+    expect(ethicsWritingReminder('', 'zh-CN').message).toContain('伦理审查批准号')
+    expect(ethicsWritingReminder('', 'zh-Hans').message).toBe(
+      ethicsWritingReminder('', 'zh-CN').message
+    )
+    expect(ethicsWritingReminder('').message).toBe(ethicsWritingReminder('', 'en').message)
+    expect(ethicsWritingReminder('', 'pt-BR').message).toBe(ethicsWritingReminder('', 'en').message)
+    expect(ethicsWritingReminder('', 'en').message).not.toBe(ETHICS_WRITING_REMINDER)
+    expect(ethicsWritingReminder('', 'zh-CN').blocking).toBe(false)
   })
 
   it('stays quiet once a number is recorded', () => {

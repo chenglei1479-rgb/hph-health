@@ -1,0 +1,166 @@
+// @vitest-environment jsdom
+
+import { act } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { afterEach, describe, expect, it } from 'vitest'
+
+import { useLocaleStore } from '@/stores/locale-store'
+import { variableDefinitionCopy } from '@/pages/variable-definition/copy'
+import { VariableDefinitionEntry } from '@/pages/variable-definition/VariableDefinitionEntry'
+import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
+import { writingSafeguardsCopy } from '@/pages/writing-safeguards/copy'
+import { WritingSafeguardsEntry } from '@/pages/writing-safeguards/WritingSafeguardsEntry'
+import { resolveLocaleFromTags, type Locale } from '../../../../shared/locale'
+import { prereleaseBannerText } from '../../../../shared/prerelease'
+import {
+  ETHICS_WRITING_REMINDER,
+  ethicsWritingReminder
+} from '../../../../shared/writing-safeguards/ethics-approval'
+
+const JAPANESE_CORNERS = [
+  '変数定義表',
+  '執筆時の確認',
+  'マスキングチェック',
+  '倫理審査の承認番号が未入力です'
+]
+
+describe('home shell locale', () => {
+  let root: Root | null = null
+  let container: HTMLDivElement | null = null
+
+  afterEach(() => {
+    act(() => root?.unmount())
+    container?.remove()
+    root = null
+    container = null
+    useLocaleStore.setState({ preference: 'en', locale: 'en' })
+  })
+
+  it('resolves zh-CN to Simplified Chinese and falls back to English', () => {
+    expect(resolveLocaleFromTags(['zh-CN'])).toBe('zh-Hans')
+    expect(variableDefinitionCopy('zh-CN').open).toBe('变量定义表')
+    expect(writingSafeguardsCopy('zh-CN').open).toBe('撰写时的确认')
+    expect(variableDefinitionCopy('zh-CN').maskingCheck).toBe('脱敏检查')
+    expect(variableDefinitionCopy('zh-CN').maskingCheckNote).toContain('已假名化')
+    expect(variableDefinitionCopy('zh-CN').maskingCheckNote).not.toContain('マスキングチェック')
+    expect(ethicsWritingReminder('', 'zh-CN').message).toContain('尚未填写伦理审查批准号')
+    expect(ethicsWritingReminder('', 'zh-CN').blocking).toBe(false)
+    expect(prereleaseBannerText('zh-CN')).toBe('内部测试版：请仅使用虚构数据')
+
+    expect(variableDefinitionCopy('zh-CN')).toEqual(variableDefinitionCopy('zh-Hans'))
+    expect(writingSafeguardsCopy('ja').open).toBe('執筆時の確認')
+    expect(variableDefinitionCopy('ja').maskingCheck).toBe('マスキングチェック')
+    expect(ethicsWritingReminder('', 'ja').message).toBe(ETHICS_WRITING_REMINDER)
+    expect(prereleaseBannerText('ja')).toContain('架空データのみ')
+
+    for (const locale of ['en', 'de', 'es', 'fr', 'ko', 'ru', 'zh-Hans', 'zh-Hant'] as const) {
+      expect(variableDefinitionCopy(locale).open).not.toBe('変数定義表')
+      expect(writingSafeguardsCopy(locale).open).not.toBe('執筆時の確認')
+      expect(variableDefinitionCopy(locale).maskingCheckNote).not.toContain('マスキングチェック')
+      expect(ethicsWritingReminder('', locale).message).not.toBe(ETHICS_WRITING_REMINDER)
+      expect(ethicsWritingReminder('', locale).blocking).toBe(false)
+      expect(prereleaseBannerText(locale)).not.toContain('架空データのみ')
+    }
+
+    expect(variableDefinitionCopy('pt-BR').open).toBe(variableDefinitionCopy('en').open)
+    expect(writingSafeguardsCopy('pt-BR').open).toBe('Checks while writing')
+    expect(ethicsWritingReminder('', 'pt-BR').message).toBe(ethicsWritingReminder('', 'en').message)
+    expect(prereleaseBannerText('pt-BR')).toBe(prereleaseBannerText('en'))
+    expect(writingSafeguardsCopy('pt-BR').open).not.toBe('執筆時の確認')
+  })
+
+  it('shows Chinese corner labels when the UI locale is zh-CN, then follows the switcher', async () => {
+    const simplified: Locale = resolveLocaleFromTags(['zh-CN'])
+    useLocaleStore.setState({ preference: simplified, locale: simplified })
+    window.api = {
+      projects: { list: async () => [] },
+      writingSafeguards: {
+        getEthicsApproval: async () => ({ approvalNumber: '' }),
+        setEthicsApproval: async (request: { approvalNumber: string }) => ({
+          approvalNumber: request.approvalNumber
+        })
+      }
+    } as unknown as Window['api']
+
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(
+        <>
+          <VariableDefinitionEntry />
+          <WritingSafeguardsEntry />
+          <EthicsWritingNotice open approvalNumber="" />
+        </>
+      )
+    })
+
+    expect(container.textContent).toContain('变量定义表')
+    expect(container.textContent).toContain('撰写时的确认')
+    expect(container.textContent).toContain('尚未填写伦理审查批准号')
+    for (const japanese of JAPANESE_CORNERS) {
+      expect(container.textContent).not.toContain(japanese)
+    }
+
+    const openVariable = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === '变量定义表'
+    )
+    expect(openVariable).toBeTruthy()
+    await act(async () => {
+      openVariable?.click()
+    })
+    expect(container.textContent).toContain('脱敏检查')
+    expect(container.textContent).toContain('已假名化')
+    expect(container.textContent).not.toContain('仮名化済み')
+
+    const openWriting = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === '撰写时的确认'
+    )
+    expect(openWriting).toBeTruthy()
+    await act(async () => {
+      openWriting?.click()
+    })
+    const begin = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === '开始撰写'
+    )
+    expect(begin).toBeTruthy()
+    expect(begin?.hasAttribute('disabled')).toBe(false)
+    await act(async () => {
+      begin?.click()
+    })
+    const reminders = [...container.querySelectorAll('[data-ethics-writing-reminder]')]
+    expect(reminders.length).toBeGreaterThan(0)
+    for (const reminder of reminders) {
+      expect(reminder.textContent).toContain('可以继续撰写')
+      expect(reminder.textContent).not.toContain('執筆は続けられます')
+    }
+
+    await act(async () => {
+      useLocaleStore.setState({ preference: 'ja', locale: 'ja' })
+    })
+    expect(container.textContent).toContain('変数定義表')
+    expect(container.textContent).toContain('執筆時の確認')
+    expect(container.textContent).toContain('マスキングチェック')
+    expect(container.textContent).toContain('仮名化済み')
+    expect(container.textContent).toContain('倫理審査の承認番号が未入力です')
+
+    await act(async () => {
+      useLocaleStore.setState({ preference: 'en', locale: 'en' })
+    })
+    expect(container.textContent).toContain('Variable definition table')
+    expect(container.textContent).toContain('Checks while writing')
+    expect(container.textContent).toContain('passes through the masking check')
+    expect(container.textContent).toContain('marked as pseudonymized')
+    expect(container.textContent).toContain('The ethics approval number is missing')
+    expect(container.textContent).not.toContain('変数定義表')
+    expect(container.textContent).not.toContain('執筆時の確認')
+
+    await act(async () => {
+      useLocaleStore.setState({ preference: 'fr', locale: 'fr' })
+    })
+    expect(container.textContent).toContain('Table de variables')
+    expect(container.textContent).toContain('Vérifications pendant la rédaction')
+    expect(container.textContent).not.toContain('Variable definition table')
+    expect(container.textContent).not.toContain('変数定義表')
+  })
+})

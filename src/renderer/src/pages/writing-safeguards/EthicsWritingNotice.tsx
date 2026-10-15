@@ -1,3 +1,5 @@
+import { useLocaleStore } from '@/stores/locale-store'
+
 import { ethicsWritingReminder } from '../../../../shared/writing-safeguards/ethics-approval'
 import { writingSafeguardsCopy } from './copy'
 
@@ -8,8 +10,9 @@ export const EthicsWritingNotice = ({
   open: boolean
   approvalNumber?: string
 }): React.JSX.Element | null => {
-  const copy = writingSafeguardsCopy('ja')
-  const reminder = ethicsWritingReminder(approvalNumber)
+  const locale = useLocaleStore((state) => state.locale)
+  const copy = writingSafeguardsCopy(locale)
+  const reminder = ethicsWritingReminder(approvalNumber, locale)
   if (!open || !reminder.show) return null
   return (
     <p

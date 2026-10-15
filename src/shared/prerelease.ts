@@ -1,7 +1,26 @@
+import { copyForLocale } from './copy-locale'
+import type { Locale } from './locale'
+
 declare const __DRA_PRERELEASE__: boolean | undefined
 
-// Fixed wording for the internal beta. It is not localized: every locale shows this sentence.
+// Japanese wording for the ja locale. Other locales use prereleaseBannerText.
+// The warning stays on every prerelease build; only the sentence follows the UI language.
 export const PRERELEASE_BANNER_TEXT = '内部テスト版：架空データのみ使用してください'
+
+const PRERELEASE_BANNER_TEXT_BY_LOCALE = {
+  en: 'Internal test build: use fictional data only',
+  'zh-Hans': '内部测试版：请仅使用虚构数据',
+  'zh-Hant': '內部測試版：請僅使用虛構資料',
+  ja: PRERELEASE_BANNER_TEXT,
+  ko: '내부 테스트판: 가상 데이터만 사용하십시오',
+  fr: 'Version de test interne : utilisez uniquement des données fictives',
+  ru: 'Внутренняя тестовая версия: используйте только вымышленные данные',
+  de: 'Interne Testversion: Bitte nur fiktive Daten verwenden',
+  es: 'Versión de prueba interna: utilice solo datos ficticios'
+} satisfies Record<Locale, string>
+
+export const prereleaseBannerText = (language?: string): string =>
+  copyForLocale(PRERELEASE_BANNER_TEXT_BY_LOCALE, language)
 
 // Shown beside the provider key and before the first model call. Fixed Japanese on every locale.
 export const PRERELEASE_DATA_DESTINATION_NOTICE =

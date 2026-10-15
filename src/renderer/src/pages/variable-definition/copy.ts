@@ -1,3 +1,6 @@
+import { copyForLocale } from '../../../../shared/copy-locale'
+import type { Locale } from '../../../../shared/locale'
+
 export type VariableDefinitionCopy = {
   open: string
   close: string
@@ -47,8 +50,35 @@ const ja: VariableDefinitionCopy = {
   pseudonymized: '仮名化済み'
 }
 
-const catalogs: Record<string, VariableDefinitionCopy> = {
+const en: VariableDefinitionCopy = {
+  open: 'Variable definition table',
+  close: 'Close',
+  title: 'Variable definition and collection template',
+  intro:
+    'Build a variable definition table from the research plan. Patient tables are not used. The header row of the exported Excel file matches the column names the local Notebook imports.',
+  separated:
+    'When delivery packages are available, you can also open this from there. Until then, use this entry.',
+  project: 'Project',
+  plan: 'Research plan',
+  generate: 'Generate variable definitions',
+  exportTemplate: 'Export collection template',
+  name: 'Variable name',
+  definition: 'Definition',
+  recordType: 'Record used for judgment',
+  coding: 'Coding',
+  type: 'Type',
+  allowedRange: 'Allowed range',
+  empty: 'Enter a research plan.',
+  warnings: 'Please review',
+  maskingCheck: 'Masking check',
+  maskingCheckNote:
+    'The research plan passes through the masking check before it is sent to the model. Replaced passages are marked as pseudonymized.',
+  pseudonymized: 'Pseudonymized'
+}
+
+const catalogs = {
   ja,
+  en,
   de: {
     ...ja,
     open: 'Variablendefinition',
@@ -69,7 +99,11 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     type: 'Typ',
     allowedRange: 'Zulässiger Bereich',
     empty: 'Geben Sie einen Forschungsplan ein.',
-    warnings: 'Bitte prüfen'
+    warnings: 'Bitte prüfen',
+    maskingCheck: 'Maskierungsprüfung',
+    maskingCheckNote:
+      'Der Forschungsplan durchläuft die Maskierungsprüfung, bevor er an das Modell geht. Ersetzte Stellen sind pseudonymisiert.',
+    pseudonymized: 'Pseudonymisiert'
   },
   es: {
     ...ja,
@@ -91,7 +125,11 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     type: 'Tipo',
     allowedRange: 'Rango permitido',
     empty: 'Introduzca el plan de investigación.',
-    warnings: 'Revise lo siguiente'
+    warnings: 'Revise lo siguiente',
+    maskingCheck: 'Comprobación de enmascaramiento',
+    maskingCheckNote:
+      'El plan de investigación pasa por la comprobación de enmascaramiento antes de enviarse al modelo. Los fragmentos sustituidos quedan seudonimizados.',
+    pseudonymized: 'Seudonimizado'
   },
   fr: {
     ...ja,
@@ -113,7 +151,11 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     type: 'Type',
     allowedRange: 'Plage autorisée',
     empty: 'Saisissez le plan de recherche.',
-    warnings: 'À vérifier'
+    warnings: 'À vérifier',
+    maskingCheck: 'Contrôle de masquage',
+    maskingCheckNote:
+      'Le plan de recherche passe par le contrôle de masquage avant d’être transmis au modèle. Les passages remplacés sont pseudonymisés.',
+    pseudonymized: 'Pseudonymisé'
   },
   'zh-Hans': {
     ...ja,
@@ -134,7 +176,10 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     type: '类型',
     allowedRange: '允许范围',
     empty: '请输入研究计划。',
-    warnings: '请确认'
+    warnings: '请确认',
+    maskingCheck: '脱敏检查',
+    maskingCheckNote: '研究计划会先经过脱敏检查，再交给模型。被替换的位置标记为已假名化。',
+    pseudonymized: '已假名化'
   },
   'zh-Hant': {
     ...ja,
@@ -155,7 +200,10 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     type: '類型',
     allowedRange: '允許範圍',
     empty: '請輸入研究計畫。',
-    warnings: '請確認'
+    warnings: '請確認',
+    maskingCheck: '遮罩檢查',
+    maskingCheckNote: '研究計畫會先經過遮罩檢查，再交給模型。被替換的位置標記為已假名化。',
+    pseudonymized: '已假名化'
   },
   ko: {
     ...ja,
@@ -177,7 +225,11 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     type: '유형',
     allowedRange: '허용 범위',
     empty: '연구 계획을 입력하십시오.',
-    warnings: '확인해 주십시오'
+    warnings: '확인해 주십시오',
+    maskingCheck: '마스킹 검사',
+    maskingCheckNote:
+      '연구 계획은 마스킹 검사를 거친 뒤 모델에 전달합니다. 바뀐 부분은 가명 처리되었습니다.',
+    pseudonymized: '가명 처리됨'
   },
   ru: {
     ...ja,
@@ -199,9 +251,13 @@ const catalogs: Record<string, VariableDefinitionCopy> = {
     type: 'Тип',
     allowedRange: 'Допустимый диапазон',
     empty: 'Введите план исследования.',
-    warnings: 'Проверьте'
+    warnings: 'Проверьте',
+    maskingCheck: 'Проверка маскирования',
+    maskingCheckNote:
+      'План исследования проходит проверку маскирования, прежде чем попасть в модель. Заменённые фрагменты псевдонимизированы.',
+    pseudonymized: 'Псевдонимизировано'
   }
-}
+} satisfies Record<Locale, VariableDefinitionCopy>
 
-export const variableDefinitionCopy = (language = 'ja'): VariableDefinitionCopy =>
-  catalogs[language] ?? ja
+export const variableDefinitionCopy = (language?: string): VariableDefinitionCopy =>
+  copyForLocale(catalogs, language)

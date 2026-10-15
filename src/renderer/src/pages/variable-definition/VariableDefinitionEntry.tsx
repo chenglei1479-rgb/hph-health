@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import { useLocaleStore } from '@/stores/locale-store'
+
 import type { Project } from '../../../../shared/projects'
 import type { VariableDefinitionTable } from '../../../../shared/variable-definition'
 import { variableDefinitionCopy } from './copy'
@@ -25,7 +27,8 @@ const downloadWorkbook = (filename: string, xlsxBase64: string): void => {
 }
 
 export const VariableDefinitionEntry = (): React.JSX.Element => {
-  const copy = variableDefinitionCopy('ja')
+  const locale = useLocaleStore((state) => state.locale)
+  const copy = variableDefinitionCopy(locale)
   const [open, setOpen] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   const [projectId, setProjectId] = useState('')
