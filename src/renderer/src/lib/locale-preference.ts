@@ -10,7 +10,6 @@
 // preferred language list for native surfaces.
 
 import {
-  DEFAULT_LANGUAGE_PREFERENCE,
   htmlLang,
   isLanguagePreference,
   resolveLocale,
@@ -43,15 +42,19 @@ export const getStoredPreference = (): LanguagePreference | undefined => {
   }
 }
 
-// The effective preference: the explicit stored choice, else 'system' (auto-detect) on first run.
+// A device that has never stored a choice paints Japanese. An explicit stored `system` still follows
+// the host language list, so a ja locale keeps Japanese and every other stored choice stays pinned.
+export const NEW_INSTALL_LANGUAGE_PREFERENCE: LanguagePreference = 'ja'
+
+// The effective preference: the explicit stored choice, else Japanese on a new install.
 export const resolvePreference = (): LanguagePreference =>
-  getStoredPreference() ?? DEFAULT_LANGUAGE_PREFERENCE
+  getStoredPreference() ?? NEW_INSTALL_LANGUAGE_PREFERENCE
 
 // Resolves a preference to the locale to paint, detecting from the host when it is 'system'.
 export const resolveLocalePreference = (preference: LanguagePreference): Locale =>
   resolveLocale(preference, systemLanguageTags())
 
-// The locale to paint on first load, resolving the stored (or default 'system') preference.
+// The locale to paint on first load. Missing storage resolves to Japanese; stored `system` detects.
 export const resolveInitialLocale = (): Locale => resolveLocalePreference(resolvePreference())
 
 // Reflects the locale onto <html lang>, which assistive tech and the browser's line-breaking both

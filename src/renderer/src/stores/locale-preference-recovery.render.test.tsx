@@ -191,14 +191,14 @@ describe('G02 browser locale storage synchronization', () => {
         )
       })
 
-      const preference = value === 'ja' ? 'ja' : 'system'
-      const locale = value === 'ja' ? 'ja' : 'fr'
+      const preference = value === 'system' ? 'system' : 'ja'
+      const locale = value === 'system' ? 'fr' : 'ja'
       expect.soft(useLocaleStore.getState()).toMatchObject({ preference, locale })
       expect.soft(document.documentElement.lang).toBe(locale)
       expect.soft(i18next.language).toBe(locale)
       expect
         .soft(view.getByRole('combobox').textContent)
-        .toBe(value === 'ja' ? '日本語' : 'Langue du système')
+        .toBe(value === 'system' ? 'Langue du système' : '日本語')
       expect(write).not.toHaveBeenCalled()
     }
   )
@@ -243,7 +243,7 @@ describe('locale synchronization lifecycle', () => {
     stop = startLocalePreferenceSync()
     localStorage.clear()
     emit(null, localStorage)
-    expect(useLocaleStore.getState().preference).toBe('system')
+    expect(useLocaleStore.getState().preference).toBe('ja')
   })
 
   it('ignores a startup response after its subscription is stopped', async () => {

@@ -6,6 +6,7 @@ import {
   getStoredPreference,
   LANGUAGE_STORAGE_KEY,
   persistPreference,
+  NEW_INSTALL_LANGUAGE_PREFERENCE,
   resolveInitialLocale,
   resolvePreference,
   systemLanguageTags
@@ -44,9 +45,10 @@ describe('systemLanguageTags', () => {
 })
 
 describe('stored preference', () => {
-  it('is undefined before the user picks one', () => {
+  it('is undefined before the user picks one and then paints Japanese', () => {
     expect(getStoredPreference()).toBeUndefined()
-    expect(resolvePreference()).toBe('system')
+    expect(NEW_INSTALL_LANGUAGE_PREFERENCE).toBe('ja')
+    expect(resolvePreference()).toBe('ja')
   })
 
   it('round-trips a persisted choice', () => {
@@ -59,7 +61,7 @@ describe('stored preference', () => {
     // A downgrade, a hand-edited value, or a locale we later dropped support for.
     localStorage.setItem(LANGUAGE_STORAGE_KEY, 'zh-CN')
     expect(getStoredPreference()).toBeUndefined()
-    expect(resolvePreference()).toBe('system')
+    expect(resolvePreference()).toBe('ja')
   })
 
   it('survives storage that throws', () => {
@@ -76,38 +78,54 @@ describe('stored preference', () => {
 })
 
 describe('resolveInitialLocale', () => {
-  it('detects from the device when no choice is stored', () => {
-    stubLanguages(['ja', 'zh-TW', 'en'])
+  it('uses Japanese for a new install even when the device is not Japanese', () => {
+    stubLanguages(['en-US'])
+    expect(resolveInitialLocale()).toBe('ja')
+    stubLanguages(['ko-KR', 'en'])
+    expect(resolveInitialLocale()).toBe('ja')
+    stubLanguages(['it-IT', 'vi-VN'])
     expect(resolveInitialLocale()).toBe('ja')
   })
 
-  it('detects Korean from the device when no choice is stored', () => {
+  it('keeps Japanese for a ja device locale when detection is selected', () => {
+    stubLanguages(['ja-JP', 'en-US'])
+    persistPreference('system')
+    expect(resolveInitialLocale()).toBe('ja')
+  })
+
+  it('detects Korean from the device when detection is selected', () => {
     stubLanguages(['ko-KR', 'ja', 'en'])
+    persistPreference('system')
     expect(resolveInitialLocale()).toBe('ko')
   })
 
-  it('detects Russian from the device when no choice is stored', () => {
+  it('detects Russian from the device when detection is selected', () => {
     stubLanguages(['ru-RU', 'ja', 'en'])
+    persistPreference('system')
     expect(resolveInitialLocale()).toBe('ru')
   })
 
   it('detects German regional tags from the device', () => {
     stubLanguages(['de-AT', 'en'])
+    persistPreference('system')
     expect(resolveInitialLocale()).toBe('de')
   })
 
-  it('falls back to English when the device language is unsupported', () => {
+  it('falls back to English when the selected device language is unsupported', () => {
     stubLanguages(['it-IT', 'vi-VN'])
+    persistPreference('system')
     expect(resolveInitialLocale()).toBe('en')
   })
 
   it('detects French regional tags from the device', () => {
     stubLanguages(['fr-CA', 'en'])
+    persistPreference('system')
     expect(resolveInitialLocale()).toBe('fr')
   })
 
   it('detects Spanish regional tags from the device', () => {
     stubLanguages(['es-MX', 'en'])
+    persistPreference('system')
     expect(resolveInitialLocale()).toBe('es')
   })
 

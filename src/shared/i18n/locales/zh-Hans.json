@@ -7314,6 +7314,16 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "当前显示 {{total}} 项发现中的 {{shown}} 项。请审查下方完整代码。",
     "Current environment": "当前环境",
     "Selected environment": "所选环境",
-    "Switching environments clears the current kernel's variables.": "切换环境会清除当前内核中的变量。"
+    "Switching environments clears the current kernel's variables.": "切换环境会清除当前内核中的变量。",
+    "Case report track": "病例报告流程",
+    "This optional case-report track can be skipped at every step.": "这个可选的病例报告流程可以在每一步跳过。",
+    "Describe the case without direct identifiers.": "描述病例时不要包含直接标识符。",
+    "Record the clinical course.": "记录临床过程。",
+    "Note the discussion and literature.": "记下讨论和文献。",
+    "Record consent and ethics review.": "记录同意和伦理审查。",
+    "Skip this step": "跳过此步骤",
+    "Finish case report track": "完成病例报告流程",
+    "Case report track saved": "已保存病例报告流程",
+    "Skipped steps: {{steps}}": "已跳过的步骤：{{steps}}"
   }
 }
