@@ -84,4 +84,24 @@ describe('usage statistics payload', () => {
     ).resolves.toBe('sent')
     expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body))).toEqual(payload)
   })
+
+  it('stays off on a prerelease build even when opt-in is on', async () => {
+    vi.stubEnv('DRA_PRERELEASE', '1')
+    const fetchImpl = vi.fn()
+    const payload = buildUsageStatisticsPayload({
+      installId,
+      appVersion: '0.1.33-unified.1',
+      os: 'darwin',
+      events: [{ name: 'feature_used', count: 1, feature: 'settings' }]
+    })
+    await expect(
+      sendUsageStatistics(payload, {
+        optIn: true,
+        endpoint: 'https://stats.example.com/dra/usage',
+        fetchImpl
+      })
+    ).resolves.toBe('opt-out')
+    expect(fetchImpl).not.toHaveBeenCalled()
+    vi.unstubAllEnvs()
+  })
 })

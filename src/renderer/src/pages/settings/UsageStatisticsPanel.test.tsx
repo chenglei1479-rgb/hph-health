@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { initI18n } from '@/i18n'
 import { UsageStatisticsPanel } from './UsageStatisticsPanel'
 import {
   USAGE_INSTALL_ID_STORAGE_KEY,
-  USAGE_OPT_IN_STORAGE_KEY
+  USAGE_OPT_IN_STORAGE_KEY,
+  writeUsageOptIn
 } from './usage-statistics-preference'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -68,5 +69,20 @@ describe('UsageStatisticsPanel', () => {
     expect(container.textContent).toContain('マスキングチェック済みの出力')
     expect(container.textContent).toContain('仮名化済み本文')
     expect(container.textContent).toContain('利用者が選んだ提供者')
+  })
+
+  it('keeps usage statistics off on a prerelease build', async () => {
+    vi.stubEnv('DRA_PRERELEASE', '1')
+    localStorage.setItem(USAGE_OPT_IN_STORAGE_KEY, 'on')
+    await act(async () => root.render(<UsageStatisticsPanel />))
+    const toggle = container.querySelector<HTMLButtonElement>(
+      '[aria-label="Send anonymous usage statistics"]'
+    )
+    expect(toggle?.getAttribute('aria-checked')).toBe('false')
+    expect(toggle?.disabled).toBe(true)
+    expect(container.textContent).toContain('Usage statistics are off.')
+    writeUsageOptIn(true)
+    expect(localStorage.getItem(USAGE_OPT_IN_STORAGE_KEY)).toBe('off')
+    vi.unstubAllEnvs()
   })
 })

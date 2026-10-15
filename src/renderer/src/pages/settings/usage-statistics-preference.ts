@@ -1,3 +1,4 @@
+import { usageStatisticsAllowed } from '../../../../shared/prerelease'
 import {
   buildUsageStatisticsPayload,
   type UsageStatisticsPayload
@@ -9,6 +10,7 @@ export const USAGE_INSTALL_ID_STORAGE_KEY = 'dra-usage-install-id'
 const INSTALL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export const readUsageOptIn = (): boolean => {
+  if (!usageStatisticsAllowed()) return false
   try {
     return localStorage.getItem(USAGE_OPT_IN_STORAGE_KEY) === 'on'
   } catch {
@@ -17,8 +19,9 @@ export const readUsageOptIn = (): boolean => {
 }
 
 export const writeUsageOptIn = (optIn: boolean): void => {
+  const stored = usageStatisticsAllowed() && optIn ? 'on' : 'off'
   try {
-    localStorage.setItem(USAGE_OPT_IN_STORAGE_KEY, optIn ? 'on' : 'off')
+    localStorage.setItem(USAGE_OPT_IN_STORAGE_KEY, stored)
   } catch {
     // The choice still applies for this session when storage is unavailable.
   }

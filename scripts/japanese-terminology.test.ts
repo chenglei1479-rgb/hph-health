@@ -140,6 +140,9 @@ describe('Japanese terminology', () => {
     const root = process.cwd()
     const hits = hitsInFiles(UI_STRING_FILES, (file) => readFileSync(join(root, file), 'utf8'))
     expect(hits).toEqual([])
+    for (const file of UI_STRING_FILES) {
+      expect(readFileSync(join(root, file), 'utf8')).not.toContain('匿名')
+    }
   })
 
   it('describes the product as 研究支援', () => {

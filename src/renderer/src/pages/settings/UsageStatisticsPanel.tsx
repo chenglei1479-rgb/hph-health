@@ -8,6 +8,7 @@ import {
   externalEndpointEntries,
   userConfiguredModelEntry
 } from '../../../../shared/external-endpoints'
+import { usageStatisticsAllowed } from '../../../../shared/prerelease'
 import {
   USAGE_STATISTICS_ENDPOINT,
   isUsageStatisticsPlaceholder
@@ -81,6 +82,7 @@ const ExternalTransmissionsSection = (): React.JSX.Element => {
 
 const UsageStatisticsPanel = (): React.JSX.Element => {
   const { t } = useTranslation()
+  const allowed = usageStatisticsAllowed()
   const [optIn, setOptIn] = useState(() => readUsageOptIn())
   const [installId, setInstallId] = useState(() => readOrCreateUsageInstallId())
   const placeholder = isUsageStatisticsPlaceholder(USAGE_STATISTICS_ENDPOINT)
@@ -99,9 +101,11 @@ const UsageStatisticsPanel = (): React.JSX.Element => {
         )}
         action={
           <Switch
-            checked={optIn}
+            checked={allowed && optIn}
+            disabled={!allowed}
             aria-label={t('Send anonymous usage statistics')}
             onCheckedChange={(checked) => {
+              if (!allowed) return
               writeUsageOptIn(checked)
               setOptIn(checked)
             }}

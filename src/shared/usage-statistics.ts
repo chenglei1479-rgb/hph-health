@@ -1,6 +1,8 @@
-// Anonymous usage statistics. The payload is an allowlist: event names and counts, app version,
+import { usageStatisticsAllowed } from './prerelease'
+
+// Opt-in usage statistics. The payload is an allowlist: event names and counts, app version,
 // a coarse operating system, and a random install id. Prompts, paths, file names, and model output
-// cannot be represented by this schema.
+// cannot be represented by this schema. Prerelease builds force this off.
 
 export const USAGE_STATISTICS_ENDPOINT = 'https://stats.REPLACE_ME/dra/usage'
 
@@ -129,7 +131,7 @@ export const sendUsageStatistics = async (
   payload: UsageStatisticsPayload,
   options: { optIn: boolean; endpoint?: string; fetchImpl?: typeof fetch }
 ): Promise<'sent' | 'opt-out' | 'placeholder'> => {
-  if (!options.optIn) return 'opt-out'
+  if (!options.optIn || !usageStatisticsAllowed()) return 'opt-out'
   const endpoint = options.endpoint ?? USAGE_STATISTICS_ENDPOINT
   if (isUsageStatisticsPlaceholder(endpoint)) return 'placeholder'
   if (!payloadRespectsAllowlist(payload)) throw new Error('Usage payload left the allowlist.')
