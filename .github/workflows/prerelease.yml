@@ -1,9 +1,11 @@
 name: Unsigned internal beta
 
-# Tag pushes such as v0.1.33-beta.1, or a manual run with the same tag shape.
+# Tag pushes such as v0.1.33-beta.1, a manual run with the same tag shape, or a pull request.
 # Packages are unsigned. macOS keeps the existing ad-hoc signature so Gatekeeper does not
 # report a damaged bundle; there is no Developer ID signature and no notarization.
+# Pull requests run the same package and launch smoke, and do not publish.
 on:
+  pull_request:
   push:
     tags:
       - 'v*-beta*'
@@ -18,8 +20,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: prerelease-${{ github.ref }}-${{ inputs.tag }}
-  cancel-in-progress: false
+  group: prerelease-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.tag }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -80,6 +82,10 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           INPUT_TAG: ${{ inputs.tag }}
         run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "Pull request smoke keeps the package.json version and does not publish."
+            exit 0
+          fi
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             TAG="$INPUT_TAG"
           else
@@ -132,9 +138,63 @@ jobs:
             dist/*-setup.exe
           if-no-files-found: error
 
+  smoke:
+    name: Launch smoke ${{ matrix.label }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows x64
+            artifact: dra-x64-win
+          # macos-14 is the Apple silicon image requested for this smoke. It retires on
+          # 2026-11-02; until then it is the arm64 runner that matches the beta dmg.
+          - os: macos-14
+            label: macOS arm64
+            artifact: dra-arm64-mac
+          # macos-13, the previous free Intel image, was removed in December 2025.
+          # macos-15-intel is the GitHub-hosted x64 runner that replaced it.
+          - os: macos-15-intel
+            label: macOS x64
+            artifact: dra-x64-mac
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Download the installer
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ${{ matrix.artifact }}
+          path: packaged
+
+      - name: Launch the packaged app and wait for home
+        shell: bash
+        env:
+          SMOKE_PLATFORM_LABEL: ${{ matrix.label }}
+        run: node scripts/ci/packaged-startup-smoke.mjs --artifact-dir packaged --timeout-ms 240000
+
+      - name: Upload the startup log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: startup-log-${{ matrix.artifact }}
+          path: startup-logs/**
+          if-no-files-found: warn
+
   release:
     name: Publish prerelease
-    needs: build
+    needs: [build, smoke]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

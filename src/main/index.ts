@@ -2,6 +2,7 @@ import { PackageFileOpenRelay, packagePathsFromArgv } from './session-package/fi
 import { configureCredentialStore, getCredentialStore } from './settings/credential-store-mode'
 import { configureAccountProfile } from './account/profile-bootstrap'
 import { installMainPrereleaseLockdown } from './prerelease/lockdown'
+import { recordPackagedStartupFailure } from './startup-ready-marker'
 import {
   selectStartupCredentialIdentity,
   prepareCredentialValidation
@@ -217,6 +218,8 @@ if (shouldRunArtifactMcpServer) {
         const message = credentialRecoveryMessage(error, app.getPreferredSystemLanguages())
         // A headless launch (web service, packaged smoke) has no one to dismiss a modal; a
         // blocking box hangs an unattended run instead of failing it, so recovery goes to stderr.
+        // The smoke log is written first so a blocking box cannot hide the failure from CI.
+        recordPackagedStartupFailure(message)
         if (parseWebModeOptions(process.argv).headless)
           process.stderr.write(`${APP_NAME}: ${message}\n`)
         else dialog.showErrorBox(APP_NAME, message)
@@ -228,7 +231,9 @@ if (shouldRunArtifactMcpServer) {
     // Location/configuration failures happen before file diagnostics and the renderer. Present
     // recovery before awaiting diagnostics; neither message wording nor a working file sink gates it.
     if (preparingLocations) {
-      dialog.showErrorBox(APP_NAME, error instanceof Error ? error.message : String(error))
+      const message = error instanceof Error ? error.message : String(error)
+      recordPackagedStartupFailure(message)
+      dialog.showErrorBox(APP_NAME, message)
     }
     if (!electronInitializationStarted) {
       // Preflight failures must not yield to OSCrypt initialization, even for a configuration error.
@@ -243,6 +248,7 @@ if (shouldRunArtifactMcpServer) {
       const message = detail
         ? `${APP_NAME} could not finish starting.\n\n${detail}`
         : `${APP_NAME} could not finish starting.`
+      recordPackagedStartupFailure(message)
       if (parseWebModeOptions(process.argv).headless) process.stderr.write(`${message}\n`)
       else dialog.showErrorBox(APP_NAME, message)
     }
@@ -354,6 +360,7 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
       credentialRecoveryPresented = true
       const message = credentialRecoveryMessage(error, app.getPreferredSystemLanguages())
       // Same headless rule as the pre-ready recovery path: never block an unattended launch.
+      recordPackagedStartupFailure(message)
       if (webMode.headless) process.stderr.write(`${APP_NAME}: ${message}\n`)
       else dialog.showErrorBox(APP_NAME, message)
     }

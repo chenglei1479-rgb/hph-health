@@ -27,6 +27,7 @@ import {
   type PreviewContextMenuWebContents
 } from './preview-context-menu'
 import { englishNativeTranslator, type NativeTranslator } from './locale/main-process-messages'
+import { watchPackagedHomeReady } from './startup-ready-marker'
 import {
   CLOSE_ACTIVE_PANE_CHANNEL,
   CLOSE_ACTIVE_PANE_READY_CHANNEL,
@@ -696,6 +697,7 @@ const createMainWindow = (
   }
 
   observeRendererLoad(true)
+  watchPackagedHomeReady(window)
   return window
 }
 

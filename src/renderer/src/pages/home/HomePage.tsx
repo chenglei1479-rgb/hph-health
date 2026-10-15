@@ -189,6 +189,10 @@ const HomePage = ({
   onOpenGlobalSearch
 }: HomePageProps): React.JSX.Element => {
   const { t } = useTranslation()
+  // Packaged launch smoke reads this after the home screen mounts. It is not visible copy.
+  useEffect(() => {
+    document.documentElement.dataset.draHomeReady = '1'
+  }, [])
   const projects = useProjectStore((state) => state.projects)
   const isProjectsLoaded = useProjectStore((state) => state.isLoaded)
   const loadError = useProjectStore((state) => state.loadError)
