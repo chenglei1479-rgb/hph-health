@@ -574,6 +574,33 @@ describe('production application command wiring', () => {
     expect(readSource('src/main/tasks/task-runner.ts')).not.toContain('applicationCommands')
   })
 
+  it('shares one owner between Electron IPC and the local command inventory', () => {
+    const source = readSource('src/main/ipc-application-composition.ts')
+    expect(occurrences(source, 'createSchemaNotebookService(')).toBe(1)
+    expect(occurrences(source, 'createWritingSafeguardsCommandOwner(')).toBe(1)
+    expect(occurrences(source, 'createStatisticianReviewCommandOwner(')).toBe(1)
+    expect(occurrences(source, 'createVariableDefinitionService(')).toBe(1)
+    const registration = between(source, 'const schemaNotebook =', 'await composeBackendLifecycle')
+    expect(registration).toContain('registerSchemaNotebookIpc(')
+    expect(registration).toContain('schemaNotebook')
+    expect(registration).toContain('registerWritingSafeguardsIpc(writingSafeguards)')
+    expect(registration).toContain('registerStatisticianReviewIpc(statisticianReview)')
+    expect(registration).toContain('registerVariableDefinitionIpc(variableDefinition)')
+    for (const name of [
+      'schemaNotebook,',
+      'writingSafeguards,',
+      'statisticianReview,',
+      'variableDefinition'
+    ]) {
+      expect(registration).toContain(name)
+    }
+    expect(readSource('src/main/statistician-review/application-commands.ts')).toContain(
+      'confirm: createStatisticianExportConfirmer(translate)'
+    )
+    expect(readSource('src/main/phi/production-gate.ts')).toContain('installProductionPhiGate')
+    expect(readSource('src/main/prerelease/lockdown.ts')).toContain('installMainPrereleaseLockdown')
+  })
+
   it('keeps Web and Task direct dispatch independent from Electron IPC capture machinery', () => {
     expect(ipcRegistrySource).not.toContain('WebIpcSender')
     expect(ipcRegistrySource).not.toContain('webHandlers')

@@ -24,9 +24,15 @@ vi.mock('./application-command-router', async (importOriginal) => {
 })
 
 import { RENDERER_CONTRACT_CATALOG } from '../shared/renderer-contract-catalog'
+import { isDraPrerelease } from '../shared/prerelease'
 import type { Project } from '../shared/projects'
+import { prepareVisibleStartupRuntime } from './app-startup'
 import {
+  applicationCommandDeclaredNames,
+  applicationCommandInventoryProblems,
   createApplicationCommandComposition,
+  ELECTRON_NATIVE_COMMAND_NAMES,
+  TASK_NATIVE_COMMAND_NAMES,
   type ApplicationCommandCompositionDependencies
 } from './application-command-composition'
 import {
@@ -865,5 +871,245 @@ describe('TB-01 remote preview admission', () => {
       composition.dispose()
       await rm(directory, { recursive: true, force: true })
     }
+  })
+})
+
+const LOCAL_CATALOG_COMMANDS = [
+  'schema-notebook:execute',
+  'schema-notebook:import-table',
+  'schema-notebook:model-context',
+  'schema-notebook:opt-in-categorical',
+  'schema-notebook:patient-data-tags',
+  'statistician-review:export-package',
+  'variable-definition:export-template',
+  'variable-definition:generate',
+  'writing-safeguards:get-ethics-approval',
+  'writing-safeguards:set-ethics-approval'
+] as const
+
+describe.each(['win32', 'darwin'] as const)('packaged command inventory on %s', (platform) => {
+  it.each([undefined, '1'] as const)(
+    'agrees in both directions when DRA_PRERELEASE is %s',
+    (prerelease) => {
+      const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform')
+      const previousPrerelease = process.env.DRA_PRERELEASE
+      Object.defineProperty(process, 'platform', { configurable: true, value: platform })
+      if (prerelease === undefined) delete process.env.DRA_PRERELEASE
+      else process.env.DRA_PRERELEASE = prerelease
+      try {
+        expect(process.platform).toBe(platform)
+        expect(isDraPrerelease()).toBe(prerelease === '1')
+
+        const declared = applicationCommandDeclaredNames()
+        const localWeb = expectedLocalWebCommands()
+        const declaredNames = new Set(declared)
+        const localWebNames = new Set(localWeb)
+        const nativeNames = new Set([
+          ...ELECTRON_NATIVE_COMMAND_NAMES,
+          ...TASK_NATIVE_COMMAND_NAMES
+        ])
+        expect(localWeb.filter((name) => !declaredNames.has(name))).toEqual([])
+        expect(
+          declared.filter((name) => !localWebNames.has(name) && !nativeNames.has(name))
+        ).toEqual([])
+        expect([...nativeNames].filter((name) => !declaredNames.has(name)).sort()).toEqual([])
+        expect(applicationCommandInventoryProblems()).toEqual([])
+
+        const composition = createApplicationCommandComposition(dependencies())
+        try {
+          expect(composition.localWeb.commandNames()).toEqual(localWeb)
+          for (const name of LOCAL_CATALOG_COMMANDS) {
+            expect(composition.electron.commandNames()).not.toContain(name)
+            expect(composition.task.commandNames()).not.toContain(name)
+            expect(composition.remoteWeb.rejectedCommandNames()).toContain(name)
+          }
+        } finally {
+          composition.dispose()
+        }
+      } finally {
+        if (platformDescriptor) Object.defineProperty(process, 'platform', platformDescriptor)
+        if (previousPrerelease === undefined) delete process.env.DRA_PRERELEASE
+        else process.env.DRA_PRERELEASE = previousPrerelease
+      }
+    }
+  )
+})
+
+describe('local catalog commands', () => {
+  it('dispatches every previously missing command locally and rejects it before remote dispatch', async () => {
+    const schemaNotebook = {
+      execute: vi.fn(async (request: unknown) => ({ executed: request })),
+      importTable: vi.fn(async (request: unknown) => ({ imported: request })),
+      modelContext: vi.fn(async (projectId: string, tableId: string) => ({ projectId, tableId })),
+      optInCategorical: vi.fn(async (request: unknown) => ({ opted: request })),
+      patientDataTags: vi.fn(() => [{ id: 'tag' }])
+    }
+    const writingSafeguards = {
+      getEthicsApproval: vi.fn((request: { projectId?: string } | undefined) => ({
+        approvalNumber: `stored:${request?.projectId ?? ''}`
+      })),
+      setEthicsApproval: vi.fn((request: { approvalNumber?: string } | undefined) => ({
+        approvalNumber: request?.approvalNumber ?? ''
+      }))
+    }
+    const statisticianReview = {
+      exportPackage: vi.fn(async (request: unknown) => ({ ok: true as const, request }))
+    }
+    const variableDefinition = {
+      generate: vi.fn(async (request: { projectId: string }) => ({
+        projectId: request.projectId,
+        variables: []
+      })),
+      exportTemplate: vi.fn((table: { projectId: string }) => ({
+        filename: 't.xlsx',
+        xlsxBase64: 'eA==',
+        table
+      }))
+    }
+    const composition = createApplicationCommandComposition({
+      ...dependencies(),
+      schemaNotebook,
+      writingSafeguards,
+      statisticianReview,
+      variableDefinition
+    } as unknown as ApplicationCommandCompositionDependencies)
+    const owners = [
+      schemaNotebook.execute,
+      schemaNotebook.importTable,
+      schemaNotebook.modelContext,
+      schemaNotebook.optInCategorical,
+      schemaNotebook.patientDataTags,
+      writingSafeguards.getEthicsApproval,
+      writingSafeguards.setEthicsApproval,
+      statisticianReview.exportPackage,
+      variableDefinition.generate,
+      variableDefinition.exportTemplate
+    ]
+    try {
+      const analysis = { projectId: 'project-1', tableId: 'table-1' }
+      await expect(
+        composition.localWeb.invoke('schema-notebook:execute', {
+          ...invocation(),
+          args: [analysis]
+        })
+      ).resolves.toEqual({ executed: analysis })
+      await expect(
+        composition.localWeb.invoke('schema-notebook:import-table', {
+          ...invocation(),
+          args: [{ projectId: 'project-1', filename: 'table.csv' }]
+        })
+      ).resolves.toEqual({ imported: { projectId: 'project-1', filename: 'table.csv' } })
+      await expect(
+        composition.localWeb.invoke('schema-notebook:model-context', {
+          ...invocation(),
+          args: [{ projectId: 'project-1', tableId: 'table-1' }]
+        })
+      ).resolves.toEqual({ projectId: 'project-1', tableId: 'table-1' })
+      await expect(
+        composition.localWeb.invoke('schema-notebook:opt-in-categorical', {
+          ...invocation(),
+          args: [{ projectId: 'project-1', tableId: 'table-1', column: 'site' }]
+        })
+      ).resolves.toEqual({
+        opted: { projectId: 'project-1', tableId: 'table-1', column: 'site' }
+      })
+      await expect(
+        composition.localWeb.invoke('schema-notebook:patient-data-tags', invocation())
+      ).resolves.toEqual([{ id: 'tag' }])
+      await expect(
+        composition.localWeb.invoke('writing-safeguards:get-ethics-approval', {
+          ...invocation(),
+          args: [{ projectId: 'project-1' }]
+        })
+      ).resolves.toEqual({ approvalNumber: 'stored:project-1' })
+      await expect(
+        composition.localWeb.invoke('writing-safeguards:set-ethics-approval', {
+          ...invocation(),
+          args: [{ projectId: 'project-1', approvalNumber: 'IRB-1' }]
+        })
+      ).resolves.toEqual({ approvalNumber: 'IRB-1' })
+      await expect(
+        composition.localWeb.invoke('statistician-review:export-package', {
+          ...invocation(),
+          args: [{ projectId: 'project-1' }]
+        })
+      ).resolves.toEqual({ ok: true, request: { projectId: 'project-1' } })
+      await expect(
+        composition.localWeb.invoke('variable-definition:generate', {
+          ...invocation(),
+          args: [{ projectId: 'project-1', researchPlan: 'plan' }]
+        })
+      ).resolves.toEqual({ projectId: 'project-1', variables: [] })
+      const table = { projectId: 'project-1', variables: [] }
+      await expect(
+        composition.localWeb.invoke('variable-definition:export-template', {
+          ...invocation(),
+          args: [{ table }]
+        })
+      ).resolves.toMatchObject({ filename: 't.xlsx' })
+      expect(variableDefinition.exportTemplate).toHaveBeenCalledWith(table)
+      expect(schemaNotebook.modelContext).toHaveBeenCalledWith('project-1', 'table-1')
+
+      for (const spy of owners) spy.mockClear()
+      for (const name of LOCAL_CATALOG_COMMANDS) {
+        await expect(composition.remoteWeb.invoke(name, invocation('remote'))).rejects.toThrow(
+          `Application command is rejected before dispatch: ${name}`
+        )
+        await expect(
+          composition.localWeb.invoke(name, {
+            ...invocation('remote'),
+            args: [{ projectId: 'project-1', tableId: 'table-1', table, code: '' }]
+          })
+        ).rejects.toThrow(`Channel only available from the local app: ${name}`)
+      }
+      for (const spy of owners) expect(spy).not.toHaveBeenCalled()
+    } finally {
+      composition.dispose()
+    }
+  })
+
+  it('reaches the home runtime without destroying the startup window when the inventory agrees', async () => {
+    const destroy = vi.fn()
+    const shell = { destroy }
+    const home = { surface: 'home' }
+    const runtime = await prepareVisibleStartupRuntime({
+      prepareShell: async () => shell,
+      verifyDatabase: async () => undefined,
+      loadApplicationModules: async () => {
+        expect(applicationCommandInventoryProblems()).toEqual([])
+        const composition = createApplicationCommandComposition(dependencies())
+        expect(composition.localWeb.commandNames()).toContain('schema-notebook:execute')
+        composition.dispose()
+        return { commandsReady: true }
+      },
+      composeRuntime: async (current, modules) => {
+        expect(current).toBe(shell)
+        expect(modules).toEqual({ commandsReady: true })
+        return home
+      },
+      rollbackShell: (failed) => {
+        failed.destroy()
+      }
+    })
+
+    expect(runtime).toBe(home)
+    expect(destroy).not.toHaveBeenCalled()
+  })
+
+  it('destroys the startup window when a catalog command is missing from the installed inventory', async () => {
+    const destroy = vi.fn()
+    installInstrumentedRouterFactory([], { skipRegisteredGroup: 'schema-notebook' })
+    await expect(
+      prepareVisibleStartupRuntime({
+        prepareShell: async () => ({ destroy }),
+        verifyDatabase: async () => undefined,
+        loadApplicationModules: async () => createApplicationCommandComposition(dependencies()),
+        composeRuntime: async () => ({ surface: 'home' }),
+        rollbackShell: (shell) => {
+          shell.destroy()
+        }
+      })
+    ).rejects.toThrow('declared commands are not installed: schema-notebook:')
+    expect(destroy).toHaveBeenCalledOnce()
   })
 })

@@ -106,6 +106,26 @@ import {
   registerSessionReplayCommands,
   type SessionReplayCommandOwner
 } from './session-replay/application-commands'
+import {
+  registerSchemaNotebookApplicationCommands,
+  schemaNotebookApplicationCommandGroup
+} from './notebook/schema-only/application-commands'
+import type { SchemaNotebookService } from './notebook/schema-only/service'
+import {
+  registerStatisticianReviewApplicationCommands,
+  statisticianReviewApplicationCommandGroup,
+  type StatisticianReviewCommandOwner
+} from './statistician-review/application-commands'
+import {
+  registerVariableDefinitionApplicationCommands,
+  variableDefinitionApplicationCommandGroup
+} from './variable-definition/application-commands'
+import type { VariableDefinitionService } from './variable-definition/service'
+import {
+  registerWritingSafeguardsApplicationCommands,
+  writingSafeguardsApplicationCommandGroup,
+  type WritingSafeguardsCommandOwner
+} from './writing-safeguards/application-commands'
 
 type AnyApplicationCommand = ApplicationCommand<string, readonly unknown[], unknown>
 type AnyApplicationCommandGroup = ApplicationCommandGroup<string, readonly AnyApplicationCommand[]>
@@ -151,6 +171,10 @@ type ApplicationCommandCompositionDependencies = Readonly<{
   pdfAnnotations: PdfAnnotationCommandOwner
   dataContent: DataContentApplicationCommandDependencies
   host: Omit<HostApplicationCommandDependencies, 'remoteAccess'>
+  schemaNotebook: SchemaNotebookService
+  writingSafeguards: WritingSafeguardsCommandOwner
+  statisticianReview: StatisticianReviewCommandOwner
+  variableDefinition: VariableDefinitionService
 }>
 
 type ApplicationCommandComposition = Readonly<{
@@ -275,6 +299,18 @@ const createApplicationCommandModules = (
     defineApplicationCommandModule([runtimeApplicationCommandGroup], (registrar) =>
       registerRuntimeApplicationCommands(registrar, dependencies.notebookRuntime)
     ),
+    defineApplicationCommandModule([schemaNotebookApplicationCommandGroup], (registrar) =>
+      registerSchemaNotebookApplicationCommands(registrar, dependencies.schemaNotebook)
+    ),
+    defineApplicationCommandModule([writingSafeguardsApplicationCommandGroup], (registrar) =>
+      registerWritingSafeguardsApplicationCommands(registrar, dependencies.writingSafeguards)
+    ),
+    defineApplicationCommandModule([statisticianReviewApplicationCommandGroup], (registrar) =>
+      registerStatisticianReviewApplicationCommands(registrar, dependencies.statisticianReview)
+    ),
+    defineApplicationCommandModule([variableDefinitionApplicationCommandGroup], (registrar) =>
+      registerVariableDefinitionApplicationCommands(registrar, dependencies.variableDefinition)
+    ),
     defineApplicationCommandModule([settingsCoreApplicationCommandGroup], (registrar) =>
       registerCoreSettingsApplicationCommands(registrar, dependencies.settingsCore)
     ),
@@ -363,23 +399,25 @@ const createRemoteAccessSlot = (): Readonly<{
   })
 }
 
-const certifyInventory = (
+const inventoryFromGroups = (
   groups: readonly AnyApplicationCommandGroup[]
 ): Readonly<{
+  problems: readonly string[]
   commands: ReadonlyMap<string, AnyApplicationCommand>
   electronNames: readonly string[]
   localWebNames: readonly string[]
   remoteWebNames: readonly string[]
   remoteRejectedNames: readonly string[]
 }> => {
+  const problems: string[] = []
   const groupNames = new Set<string>()
   const commands = new Map<string, AnyApplicationCommand>()
   for (const group of groups) {
-    if (groupNames.has(group.name)) failInventory(`duplicate group ${group.name}`)
-    groupNames.add(group.name)
+    if (groupNames.has(group.name)) problems.push(`duplicate group ${group.name}`)
+    else groupNames.add(group.name)
     for (const command of group.commands) {
-      if (commands.has(command.name)) failInventory(`duplicate command ${command.name}`)
-      commands.set(command.name, command as AnyApplicationCommand)
+      if (commands.has(command.name)) problems.push(`duplicate command ${command.name}`)
+      else commands.set(command.name, command as AnyApplicationCommand)
     }
   }
   const localWebNames = collectCatalogCommands(({ localWeb }) => localWeb === 'web-rpc')
@@ -396,31 +434,38 @@ const certifyInventory = (
     [TASK_COMMAND_NAMES, 'Task commands']
   ] as const
   for (const [names, label] of surfaceInventories) {
-    if (new Set(names).size !== names.length) failInventory(`${label} contains duplicate names`)
+    if (new Set(names).size !== names.length) problems.push(`${label} contains duplicate names`)
     for (const name of names) {
-      if (!commands.has(name)) failInventory(`${label} contains unknown command ${name}`)
+      if (!commands.has(name)) problems.push(`${label} contains unknown command ${name}`)
     }
   }
   for (const name of electronNames) {
-    if (!commands.get(name)?.contract) {
-      failInventory(`validated Electron command has no runtime codec: ${name}`)
+    if (commands.has(name) && !commands.get(name)?.contract) {
+      problems.push(`validated Electron command has no runtime codec: ${name}`)
     }
   }
 
   const nonWebNames = [...commands.keys()].filter((name) => !localWebNames.includes(name)).sort()
-  const nativeCommandNames = [...ELECTRON_NATIVE_COMMAND_NAMES, ...TASK_NATIVE_COMMAND_NAMES]
-  if (nonWebNames.join('\n') !== nativeCommandNames.sort().join('\n')) {
-    failInventory(`unexpected native commands ${nonWebNames.join(', ')}`)
+  const nativeCommandNames = [...ELECTRON_NATIVE_COMMAND_NAMES, ...TASK_NATIVE_COMMAND_NAMES].sort()
+  const nativeNames = new Set(nativeCommandNames)
+  const unexpectedNative = nonWebNames.filter((name) => !nativeNames.has(name))
+  const missingNative = nativeCommandNames.filter((name) => !nonWebNames.includes(name))
+  if (unexpectedNative.length > 0) {
+    problems.push(`unexpected native commands ${unexpectedNative.join(', ')}`)
+  }
+  if (missingNative.length > 0) {
+    problems.push(`missing native commands ${missingNative.join(', ')}`)
   }
   const remotePartition = new Set([...remoteWebNames, ...remoteRejectedNames])
   if (
     remotePartition.size !== localWebNames.length ||
     localWebNames.some((name) => !remotePartition.has(name))
   ) {
-    failInventory('remote dispatch and rejection inventories do not partition local Web')
+    problems.push('remote dispatch and rejection inventories do not partition local Web')
   }
 
   return Object.freeze({
+    problems: Object.freeze([...problems]),
     commands,
     electronNames,
     localWebNames,
@@ -428,6 +473,34 @@ const certifyInventory = (
     remoteRejectedNames
   })
 }
+
+const certifyInventory = (
+  groups: readonly AnyApplicationCommandGroup[]
+): Readonly<{
+  commands: ReadonlyMap<string, AnyApplicationCommand>
+  electronNames: readonly string[]
+  localWebNames: readonly string[]
+  remoteWebNames: readonly string[]
+  remoteRejectedNames: readonly string[]
+}> => {
+  const inventory = inventoryFromGroups(groups)
+  if (inventory.problems.length > 0) failInventory(inventory.problems.join('; '))
+  return inventory
+}
+
+const applicationCommandGroups = (): readonly AnyApplicationCommandGroup[] =>
+  createApplicationCommandModules(
+    {} as ApplicationCommandCompositionDependencies,
+    {} as RemoteAccessOwner
+  ).flatMap(({ groups }) => groups)
+
+const applicationCommandDeclaredNames = (): readonly string[] =>
+  applicationCommandGroups()
+    .flatMap((group) => group.commands.map((command) => command.name))
+    .sort()
+
+const applicationCommandInventoryProblems = (): readonly string[] =>
+  inventoryFromGroups(applicationCommandGroups()).problems
 
 const certifyInstalledInventory = (
   declaredCommands: ReadonlyMap<string, AnyApplicationCommand>,
@@ -556,7 +629,13 @@ const createApplicationCommandComposition = (
   })
 }
 
-export { createApplicationCommandComposition }
+export {
+  applicationCommandDeclaredNames,
+  applicationCommandInventoryProblems,
+  createApplicationCommandComposition,
+  ELECTRON_NATIVE_COMMAND_NAMES,
+  TASK_NATIVE_COMMAND_NAMES
+}
 export type {
   ApplicationCommandByNameDispatcher,
   ApplicationCommandComposition,
