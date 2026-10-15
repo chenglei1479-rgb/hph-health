@@ -23,9 +23,13 @@ export const EXPORT_FINDING_LABEL: Record<ExportFindingKind, string> = {
 const KARTE =
   /(?:カルテ(?:番号|No\.?|ID)?|患者(?:番号|ID)|チャート番号|chart\s*(?:number|no\.?)|MRN|PID|karte(?:_?no|_?id)?)\s*[=:：]?\s*["']?([A-Za-z]{0,4}-?\d{4,})/i
 const BIRTH =
-  /(?:生年月日|誕生日|生年月|date of birth|birth\s*date|birthdate|\bDOB\b)\s*[=:：]?\s*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|(?:令和|平成|昭和)\d{1,2}年\d{1,2}月\d{1,2}日)/i
+  /(?:生年月日|誕生日|生年月|date of birth|birth(?:_date|\s*date|date)|birthday|\bDOB\b)\s*[=:：]?\s*["']?(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|(?:令和|平成|昭和)\d{1,2}年\d{1,2}月\d{1,2}日)/i
 const CLINICAL =
   /(?:HbA1c|CRP|血圧|収縮期|拡張期|身長|体重|体温|AST|ALT|Cre|eGFR|WBC|\bHb\b|Plt|SBP|DBP|BMI|血糖|白血球|ヘモグロビン)\s*[=:：はが]?\s*\d+(?:\.\d+)?/i
+const SENTENCE =
+  /(?:患者|症例|patient|subject)\s*(?:番号|id|ID|No\.?)?\s*[:：]?\s*[0-9A-Za-z-]{4,}[^\n]{0,80}?(?<![A-Za-z])\d+(?:\.\d+)?(?![A-Za-z])/i
+const FRAME =
+  /(?:data\.frame|tibble|pd\.DataFrame)\s*\([^)\n]*?(?:karte|カルテ|patient_id|chart_no|生年月日|birth_date)[^)\n]*\)/i
 const ID_HEADER = /カルテ|患者ID|患者番号|チャート|MRN|karte/i
 const BIRTH_HEADER = /生年月日|誕生日|date of birth|birthdate|\bDOB\b/i
 const CLINICAL_HEADER =
@@ -130,6 +134,10 @@ const inspectLines = (name: string, text: string, findings: ExportFinding[]): vo
     if (birth) {
       pushFinding(findings, { name, kind: 'birth-date', excerpt: birth[0] })
     }
+    const sentence = SENTENCE.exec(line)
+    if (sentence) {
+      pushFinding(findings, { name, kind: 'individual-patient-value', excerpt: sentence[0] })
+    }
     const alreadyIndividual = findings.some(
       (finding) => finding.kind === 'individual-patient-value' && finding.name === name
     )
@@ -148,6 +156,107 @@ const inspectLines = (name: string, text: string, findings: ExportFinding[]): vo
   if (inline) {
     pushFinding(findings, { name, kind: 'individual-patient-value', excerpt: inline[0] })
   }
+}
+
+export type ExportMatch = {
+  kind: ExportFindingKind
+  start: number
+  end: number
+}
+
+const lineOffsets = (text: string): Array<{ start: number; line: string }> => {
+  const lines: Array<{ start: number; line: string }> = []
+  let start = 0
+  for (const line of text.split('\n')) {
+    lines.push({ start, line })
+    start += line.length + 1
+  }
+  return lines
+}
+
+const pushMatch = (
+  matches: ExportMatch[],
+  kind: ExportFindingKind,
+  start: number,
+  end: number
+): void => {
+  if (end <= start) return
+  if (matches.some((match) => match.kind === kind && match.start === start && match.end === end)) {
+    return
+  }
+  matches.push({ kind, start, end })
+}
+
+const captureAt = (lineStart: number, match: RegExpExecArray, value: string): [number, number] => {
+  const offset = match.index + match[0].lastIndexOf(value)
+  return [lineStart + offset, lineStart + offset + value.length]
+}
+
+// Replacement spans for the same karte, birth-date, and individual-value findings.
+// Multi-line windows stay in inspectExportFile and are not returned here.
+export const locateExportMatches = (file: { name: string; text: string }): ExportMatch[] => {
+  const matches: ExportMatch[] = []
+  for (const { start, line } of lineOffsets(file.text)) {
+    const karte = KARTE.exec(line)
+    if (karte?.[1] != null) pushMatch(matches, 'karte-number', ...captureAt(start, karte, karte[1]))
+    const birth = BIRTH.exec(line)
+    if (birth?.[1] != null) pushMatch(matches, 'birth-date', ...captureAt(start, birth, birth[1]))
+    const sentence = SENTENCE.exec(line)
+    if (sentence?.index != null) {
+      pushMatch(
+        matches,
+        'individual-patient-value',
+        start + sentence.index,
+        start + sentence.index + sentence[0].length
+      )
+    } else if (KARTE.test(line) && CLINICAL.test(line)) {
+      pushMatch(matches, 'individual-patient-value', start, start + line.length)
+    }
+    const frame = FRAME.exec(line)
+    if (frame?.index != null && /\d/.test(frame[0])) {
+      pushMatch(
+        matches,
+        'individual-patient-value',
+        start + frame.index,
+        start + frame.index + frame[0].length
+      )
+    }
+  }
+  const rows = lineOffsets(file.text).filter(({ line }) => line.trim().length > 0)
+  if (rows.length >= 2) {
+    const delimiter =
+      file.name.toLowerCase().endsWith('.tsv') || rows[0]?.line.includes('\t') ? '\t' : ','
+    if (rows[0]?.line.includes(delimiter)) {
+      const header = splitCells(rows[0]?.line ?? '', delimiter)
+      const idIndex = header.findIndex((cell) => ID_HEADER.test(cell))
+      const birthIndex = header.findIndex((cell) => BIRTH_HEADER.test(cell))
+      const clinicalIndexes = header.flatMap((cell, index) =>
+        CLINICAL_HEADER.test(cell) ? [index] : []
+      )
+      for (const row of rows.slice(1, 8)) {
+        const cells = splitCells(row.line, delimiter)
+        const identifier = idIndex >= 0 ? (cells[idIndex] ?? '') : ''
+        const clinical = clinicalIndexes.some((index) => /\d/.test(cells[index] ?? ''))
+        if (identifier && clinical) {
+          pushMatch(matches, 'individual-patient-value', row.start, row.start + row.line.length)
+          continue
+        }
+        if (idIndex >= 0 && /\d{4,}/.test(cells[idIndex] ?? '')) {
+          const value = cells[idIndex] ?? ''
+          const at = row.line.indexOf(value)
+          if (at >= 0)
+            pushMatch(matches, 'karte-number', row.start + at, row.start + at + value.length)
+        }
+        if (birthIndex >= 0 && /\d{4}[-/年]/.test(cells[birthIndex] ?? '')) {
+          const value = cells[birthIndex] ?? ''
+          const at = row.line.indexOf(value)
+          if (at >= 0)
+            pushMatch(matches, 'birth-date', row.start + at, row.start + at + value.length)
+        }
+      }
+    }
+  }
+  return matches
 }
 
 export const inspectExportFile = (file: { name: string; text: string }): ExportFinding[] => {

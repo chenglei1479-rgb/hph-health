@@ -14,6 +14,8 @@ import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
+import { type DeliverablePackageId } from './deliverable-packages'
+import { StatisticianReviewExportDialog } from './StatisticianReviewExportDialog'
 
 export type MedicalResearchWorkflow =
   | 'mentor-pack'
@@ -34,6 +36,14 @@ type WorkflowCard = {
   iconClassName: string
 }
 
+type DeliverableCard = {
+  id: DeliverablePackageId
+  title: string
+  description: string
+  icon: LucideIcon
+  iconClassName: string
+}
+
 type MedicalResearchLaunchpadProps = {
   onSelectWorkflow: (workflow: MedicalResearchWorkflow, theme: string) => void
 }
@@ -43,9 +53,39 @@ const MedicalResearchLaunchpad = ({
 }: MedicalResearchLaunchpadProps): React.JSX.Element => {
   const { t } = useTranslation()
   const [researchTheme, setResearchTheme] = useState('')
+  const [statisticianExportOpen, setStatisticianExportOpen] = useState(false)
   const exampleTheme = t(
     'I want to study the treatment effect of immune checkpoint inhibitors in patients with lung cancer.'
   )
+  const packages: DeliverableCard[] = [
+    {
+      id: 'mentor-pack',
+      title: t('Mentor discussion pack'),
+      description: t(
+        'Input: research question and available evidence. Output: one-page brief, evidence table, study options, and questions for your mentor.'
+      ),
+      icon: BookOpenCheck,
+      iconClassName: 'bg-[#f3edf1] text-[#78576e]'
+    },
+    {
+      id: 'consultation-pack',
+      title: t('Data audit and statistical consultation pack'),
+      description: t(
+        'Input: anonymized dataset and variable definitions. Output: data audit, statistical plan, and consultation checklist; computed results require approved execution.'
+      ),
+      icon: ClipboardCheck,
+      iconClassName: 'bg-[#eef2e9] text-[#58744b]'
+    },
+    {
+      id: 'writing-pack',
+      title: t('Conference abstract or English draft'),
+      description: t(
+        'Input: verified study facts, results, and submission requirements. Output: abstract or English draft, source map, and items requiring author review.'
+      ),
+      icon: FilePenLine,
+      iconClassName: 'bg-[#edf0f7] text-[#58668a]'
+    }
+  ]
   const workflows: WorkflowCard[] = [
     {
       id: 'novelty',
@@ -100,7 +140,15 @@ const MedicalResearchLaunchpad = ({
   return (
     <section className="mt-8 space-y-4" aria-label={t('Medical research workflows')}>
       <div className="relative isolate overflow-hidden rounded-[26px] border border-[#ddd9cf] bg-[linear-gradient(120deg,#f8f7f1_0%,#f1f5f3_58%,#edf2f2_100%)] px-5 py-6 shadow-card sm:px-8 sm:py-7">
-        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#536970]">
+        <p
+          data-testid="entry-step-1"
+          className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#536970]"
+        >
+          <span>{t('Step 1')}</span>
+          <span aria-hidden="true"> · </span>
+          <span>{t('Project setup')}</span>
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#536970]">
           <span>{t('Medical research workspace')}</span>
           <span className="size-1 rounded-full bg-[#bf5145]" aria-hidden="true" />
           <span className="tracking-[0.08em] text-[#9a5046]">{t('Research use only')}</span>
@@ -148,6 +196,79 @@ const MedicalResearchLaunchpad = ({
         </p>
       </div>
 
+      <section
+        data-testid="entry-step-2"
+        aria-label={t('Deliverable package')}
+        className="space-y-3"
+      >
+        <div className="px-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#536970]">
+            <span>{t('Step 2')}</span>
+            <span aria-hidden="true"> · </span>
+            <span>{t('Deliverable package')}</span>
+          </p>
+          <h2 className="mt-1 text-[17px] font-medium leading-6 text-text-000">
+            {t('Choose a deliverable')}
+          </h2>
+          <p className="mt-0.5 text-xs text-text-300">
+            {t(
+              'Select the package to prepare after the project is set up. The draft stays editable until you send it.'
+            )}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {packages.map(({ id, title, description, icon: Icon, iconClassName }) => (
+            <button
+              key={id}
+              type="button"
+              data-testid={`deliverable-package-${id}`}
+              disabled={!researchTheme.trim()}
+              onClick={() => onSelectWorkflow(id, researchTheme.trim())}
+              className="group flex min-h-[136px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-200/70 disabled:hover:bg-bg-000"
+            >
+              <span className="flex w-full items-start justify-between gap-3">
+                <span
+                  className={cn(
+                    'inline-flex size-9 items-center justify-center rounded-xl',
+                    iconClassName
+                  )}
+                >
+                  <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                </span>
+                <ArrowUpRight
+                  className="mt-1 size-4 text-text-100 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#9c4d43]"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              </span>
+              <span className="mt-3 text-sm font-semibold text-text-000">{title}</span>
+              <span className="mt-1 text-xs leading-[1.45] text-text-300">{description}</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border-200/70 bg-bg-000 px-4 py-3">
+          <p className="max-w-xl text-xs leading-5 text-text-300">
+            {t(
+              'Beta exports aggregate files that open without DRA. Raw data, Notebook rows, and chat history are not included.'
+            )}
+          </p>
+          <button
+            type="button"
+            data-testid="export-statistician-package"
+            disabled={!researchTheme.trim()}
+            onClick={() => setStatisticianExportOpen(true)}
+            className="cursor-pointer rounded-lg bg-[#58744b] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t('Export statistician package')}
+          </button>
+        </div>
+      </section>
+      <StatisticianReviewExportDialog
+        open={statisticianExportOpen}
+        projectId="consultation-pack"
+        onClose={() => setStatisticianExportOpen(false)}
+      />
+
       <div className="flex items-end justify-between gap-3 px-1">
         <div>
           <h2 className="text-[17px] font-medium leading-6 text-text-000">
@@ -164,6 +285,7 @@ const MedicalResearchLaunchpad = ({
           <button
             key={id}
             type="button"
+            data-testid={`research-entry-${id}`}
             disabled={!researchTheme.trim()}
             onClick={() => onSelectWorkflow(id, researchTheme.trim())}
             className="group flex min-h-[136px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-200/70 disabled:hover:bg-bg-000"
