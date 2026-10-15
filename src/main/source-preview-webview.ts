@@ -335,10 +335,22 @@ export const installSourcePreviewWebviews = (window: BrowserWindow): void => {
   host.on('did-attach-webview', didAttach)
   host.on('focus', hostFocus)
   window.on('closed', () => {
-    for (const cleanup of cleanups.values()) cleanup()
+    for (const cleanup of cleanups.values()) {
+      try {
+        cleanup()
+      } catch {
+        // A guest destroyed with the window has nothing left to detach.
+      }
+    }
     activeSources.delete(host)
-    host.removeListener('will-attach-webview', willAttach)
-    host.removeListener('did-attach-webview', didAttach)
-    host.removeListener('focus', hostFocus)
+    try {
+      if (!host.isDestroyed()) {
+        host.removeListener('will-attach-webview', willAttach)
+        host.removeListener('did-attach-webview', didAttach)
+        host.removeListener('focus', hostFocus)
+      }
+    } catch {
+      // `webContents` methods throw after the host window has been destroyed.
+    }
   })
 }

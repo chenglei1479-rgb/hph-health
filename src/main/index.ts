@@ -235,6 +235,17 @@ if (shouldRunArtifactMcpServer) {
       app.exit(1)
       return
     }
+    // A failure after the window exists used to die inside rollback's destroyed-window listener,
+    // so the dialog showed "Object has been destroyed" instead of this error. Headless launches
+    // must not block on a modal.
+    if (!preparingLocations) {
+      const detail = error instanceof Error ? error.message.trim() : String(error).trim()
+      const message = detail
+        ? `${APP_NAME} could not finish starting.\n\n${detail}`
+        : `${APP_NAME} could not finish starting.`
+      if (parseWebModeOptions(process.argv).headless) process.stderr.write(`${message}\n`)
+      else dialog.showErrorBox(APP_NAME, message)
+    }
     await reportApplicationStartupFailure({
       operation: startupDiagnostics,
       error,

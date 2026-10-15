@@ -89,8 +89,15 @@ export const resolveSchemaNotebookPython = async (
     (async (command: PythonCommand) =>
       (await probeInterpreterVersion(command.command, command.baseArgs, { platform })) !==
       undefined)
+  // Packaged apps put the prefix next to app.asar. A relative walk out of the bundle breaks
+  // when the chunk depth changes, and on macOS it depends on a case-insensitive volume.
+  const resourcesPath =
+    deps.resourcesPath ??
+    (typeof process.resourcesPath === 'string' && process.resourcesPath.length > 0
+      ? process.resourcesPath
+      : undefined)
   const roots = [
-    ...(deps.resourcesPath ? [join(deps.resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR)] : []),
+    ...(resourcesPath ? [join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR)] : []),
     ...(deps.devRoots ?? schemaNotebookPythonDevRoots())
   ]
   for (const root of roots) {
@@ -102,7 +109,7 @@ export const resolveSchemaNotebookPython = async (
   const system = await (deps.findSystemPython ?? (() => findPythonCommand({ platform })))()
   if (system) return { ok: true, command: system, source: 'system' }
   const expected = bundledPythonExecutable(
-    join(deps.resourcesPath ?? '<resources>', SCHEMA_NOTEBOOK_PYTHON_DIR),
+    join(resourcesPath ?? '<resources>', SCHEMA_NOTEBOOK_PYTHON_DIR),
     platform,
     arch
   )

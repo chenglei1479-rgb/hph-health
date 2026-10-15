@@ -459,6 +459,11 @@ it('reports the original startup failure when shell IPC cleanup throws', async (
   expect(fixture.startupFailure).toHaveBeenCalledWith(
     expect.objectContaining({ error: fixture.failure })
   )
+  expect(fixture.electron.dialog.showErrorBox).not.toHaveBeenCalled()
+  expect(stderrWrite).toHaveBeenCalledWith(
+    expect.stringContaining('DRA could not finish starting.')
+  )
+  expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining(fixture.failure.message))
 })
 
 it.each([
@@ -512,6 +517,13 @@ it.each([
   expect(fixture.electron.app.exit).toHaveBeenCalledWith(1)
   expect(fixture.startupFailure).toHaveBeenCalledWith(
     expect.objectContaining({ error: fixture.failure })
+  )
+  expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
+    'DRA',
+    expect.stringContaining(fixture.failure.message)
+  )
+  expect(fixture.electron.dialog.showErrorBox.mock.calls[0]?.[1]).toContain(
+    'DRA could not finish starting.'
   )
 })
 

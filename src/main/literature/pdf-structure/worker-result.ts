@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import { lstat, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import sharp from 'sharp'
 import { z } from 'zod'
 import { readFileWithinLimit } from '../../storage/durable-json-file'
 import {
@@ -214,6 +213,7 @@ export const readWorkerResult = async (
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 4 * 1024 ** 2)
         throw new Error('Invalid PDF worker thumbnail.')
       const bytes = await readFile(path)
+      const { default: sharp } = await import('sharp')
       const image = await sharp(bytes, { limitInputPixels: 2400 * 2400 }).metadata()
       if (
         !image.width ||
