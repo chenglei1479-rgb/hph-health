@@ -1,4 +1,6 @@
 import type { GatedNotebookOutput } from '../../../shared/schema-notebook'
+import { PHI_OUTPUT_BLOCK_MESSAGE, releaseTextThroughPhiGate } from './notebook-phi-release'
+import { notebookOutputContainsPatientRows, PATIENT_ROW_BLOCK_MESSAGE } from './patient-row-output'
 import { redactPatientPhi } from './patient-phi'
 import { suppressSmallAggregateText } from './small-cell'
 
@@ -7,28 +9,33 @@ export type NotebookModelTextReleaser = (
   projectId: string
 ) => Promise<string> | string
 
-let releaser: NotebookModelTextReleaser = (text) => redactPatientPhi(text)
+const releaseThroughPhiGate: NotebookModelTextReleaser = async (text, projectId) => {
+  const redacted = redactPatientPhi(text)
+  return releaseTextThroughPhiGate(redacted, projectId, PHI_OUTPUT_BLOCK_MESSAGE)
+}
+
+let releaser: NotebookModelTextReleaser = releaseThroughPhiGate
 
 /**
  * Install the outbound releaser used before Notebook text can reach a model.
- * Tests use this to observe the gate. Production keeps the local redactor
- * until PR #7 is merged.
+ * Tests use this to observe the gate. Production local-redacts, then runs
+ * `guardProviderBody` (detectPhi / releaseModelText) for anything still marked
+ * as patient PHI. Row-level output is refused before either step.
  */
 export const installNotebookModelTextReleaser = (next: NotebookModelTextReleaser | null): void => {
-  releaser = next ?? ((text) => redactPatientPhi(text))
+  releaser = next ?? releaseThroughPhiGate
 }
 
 /**
- * TODO(phi-gate): PR #7 (https://github.com/chenglei1479-rgb/hph-health/pull/7)
- * adds `releaseModelText` and the `gate` object in `src/main/phi/gate.ts`.
- * Replace the body of `releaser` with `(text, projectId) => releaseModelText(text, projectId)`
- * once that file is on main. Do not import `src/main/phi/gate` until then.
- * Small-count suppression stays here, after the gate returns.
+ * Local redaction turns known labeled patient marks into `[仮名化済み]`.
+ * The provider gate then scans the same string. Small-count suppression stays
+ * after the gate, and only for text that was not refused.
  */
 export const releaseNotebookModelText = async (
   text: string,
   projectId: string
 ): Promise<string> => {
+  if (notebookOutputContainsPatientRows(text)) return PATIENT_ROW_BLOCK_MESSAGE
   const released = await releaser(text, projectId)
   if (typeof released !== 'string') {
     throw new Error('Notebook output was not released to the model.')

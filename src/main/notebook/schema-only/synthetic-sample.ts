@@ -11,9 +11,11 @@ import type { SchemaColumn, SchemaDtype } from '../../../shared/schema-notebook'
 // What reaches the model is documented in docs/external-endpoints.md. By
 // default that is column names, types, the row count, and these placeholders.
 // Identifier columns are dropped before that context is built. Real categorical
-// values are included only after the doctor opts in for that column, and a
-// column is categorical only when it has at most 12 distinct values. Notebook
-// execution output is returned to the model after the release gate.
+// values are included only after the doctor opts in for that column. Free-text
+// columns cannot be opted in. A categorical column with more than 12 distinct
+// values stays eligible, and only the 12 most frequent values are released.
+// Notebook execution output reaches the model only after the PHI gate, and
+// individual patient rows are refused.
 
 const hashText = (text: string): number => {
   let value = 2166136261

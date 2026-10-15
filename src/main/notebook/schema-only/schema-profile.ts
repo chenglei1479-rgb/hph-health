@@ -1,4 +1,5 @@
 import type { SchemaColumn, SchemaDtype } from '../../../shared/schema-notebook'
+import { isOptInCategorical, rankCategoricalValues } from './categorical-release'
 
 export type LocalTable = {
   columns: string[]
@@ -32,8 +33,7 @@ const dtypeFor = (values: string[]): SchemaDtype => {
   ) {
     return 'binary'
   }
-  const ratio = distinct.length / present.length
-  if (distinct.length <= 12 && ratio <= 0.5) return 'categorical'
+  if (isOptInCategorical(present)) return 'categorical'
   return 'text'
 }
 
@@ -46,10 +46,10 @@ export const profileTable = (table: LocalTable): TableProfile => {
   const categoricalValues = new Map<string, readonly string[]>()
   columns.forEach((column, index) => {
     if (column.dtype !== 'categorical' && column.dtype !== 'binary') return
-    const values = uniqueValues(
-      table.rows.map((row) => (row[index] ?? '').trim()).filter((value) => value.length > 0)
+    categoricalValues.set(
+      column.name,
+      rankCategoricalValues(table.rows.map((row) => row[index] ?? ''))
     )
-    categoricalValues.set(column.name, values)
   })
   return { columns, rowCount: table.rows.length, categoricalValues }
 }
