@@ -145,11 +145,10 @@
     "DRA could not safely access existing encrypted data. Unlock the system credential store or restore the original key and profile, then restart. Existing credentials have not been replaced.": "DRA は既存の暗号化データに安全にアクセスできませんでした。システムの認証情報ストレージのロックを解除するか、元の鍵とプロファイルを復元してから再起動してください。既存の認証情報は置き換えられていません。",
     "Return to the running tasks and stop their subagents before quitting DRA.": "実行中のタスクに戻ってサブエージェントを停止してから、DRA を終了してください。",
     "DRA is still moving your data.": "DRA はまだデータを移動しています。",
-    "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "このセッションパッケージには、より新しいバージョンの DRA が必要です。DRA を更新してから、もう一度インポートしてください。"
+    "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "このセッションパッケージには、より新しいバージョンの DRA が必要です。DRA を更新してから、もう一度インポートしてください。",
+    "This mentor discussion pack does not send individual patient data. The message was not sent.": "このパックは患者データを読み込みません。個別の患者データを検出したため、送信しませんでした。"
   },
   "renderer": {
-    "Export statistician package": "統計資料を書き出す",
-    "Beta exports aggregate files that open without DRA. Raw data, Notebook rows, and chat history are not included.": "ベータ版で書き出せるのは、DRA なしで開ける集計ファイルだけです。生データ、個別の行を含む Notebook 出力、チャット履歴は含みません。",
     "Statistical report": "統計レポート",
     "Word": "Word",
     "Result tables": "結果表",
@@ -6980,12 +6979,9 @@
     "Academic English writing": "英文学術論文の執筆",
     "For a novelty check, draft Japanese and English search terms and exact queries for PubMed, Crossref, OpenAlex, and ClinicalTrials.gov. Ask the researcher to approve the search plan first. Search only available sources and record each source, query, date, result count, and limit. If a connector is unavailable, mark it as not searched. Provide the official jRCT search page (https://jrct.mhlw.go.jp/search?language=en) for manual checking; do not scrape it or claim it was searched automatically. After searching, deduplicate prior studies and map established or conflicting evidence, underrepresented populations or outcomes, method gaps, ongoing trials, and possible novelty opportunities. Link every finding to its source. Label novelty as tentative, explain coverage limits, and never infer that no prior work exists from zero results. Ask the researcher to validate the Research Gap Map and novelty claim.": "新規性評価では、PubMed、Crossref、OpenAlex、ClinicalTrials.govの日本語・英語の検索語と正確な検索式を作成してください。まず研究者に検索計画の承認を求めてください。利用可能な情報源だけを検索し、情報源、検索式、日付、件数、取得上の制限を記録してください。利用できないコネクタは未検索と明記してください。jRCT公式検索ページ（https://jrct.mhlw.go.jp/search?language=en）は手動確認用に提示し、自動スクレイピングや検索済みとの主張は避けてください。重複を除き、確立または相反するエビデンス、研究が不足する集団・アウトカム、方法論上の課題、進行中の試験、新規性の可能性を整理してください。各知見に出典リンクを付けてください。新規性は暫定評価とし、検索範囲の限界を説明してください。検索結果がゼロでも先行研究がないと結論づけてはいけません。Research Gap Mapと新規性の主張を研究者に検証してもらってください。",
     "For Japanese-to-English biomedical writing, infer Methods, Results, or Discussion only from supplied context; ask if it is ambiguous. Preserve facts, study details, numbers, citations, uncertainty, and causal strength. Write idiomatic, section-appropriate academic English and explain key choices in the selected app language; show aligned Japanese and English when useful. Follow journal style only after checking current author instructions; otherwise label it general biomedical style. Never invent methods, results, claims, or references. Flag missing context and request researcher approval before finalizing.": "日本語から英語への医学論文執筆では逐語訳を避けてください。提供された文脈に基づいてMethods、Results、Discussionを判断し、曖昧な場合は確認してください。事実、研究の詳細、数値、引用、不確実性、因果関係の強さを保持してください。節に合った自然な学術英語を作成し、重要な編集判断を選択中のアプリ言語で説明してください。必要に応じて日英対照で示してください。ジャーナル規定は最新の投稿要項を確認した場合のみ適用し、それ以外は一般的な医学英語と明記してください。方法、結果、主張、文献を捏造しないでください。文脈不足を示し、最終化前に研究者の確認を求めてください。",
-    "Mentor discussion pack": "指導医との研究相談資料",
+    "Mentor discussion pack": "指導医相談資料",
     "Data audit and statistical consultation pack": "データ監査・統計相談資料",
-    "Conference abstract or English draft": "学会抄録または英文草稿",
-    "Input: research question and available evidence. Output: one-page brief, evidence table, study options, and questions for your mentor.": "入力：研究課題と既存のエビデンス。成果物：1ページの概要、エビデンス表、研究計画の選択肢、指導医への相談事項。",
-    "Input: anonymized dataset and variable definitions. Output: data audit, statistical plan, and consultation checklist; computed results require approved execution.": "入力：仮名化済みデータと変数の定義。成果物：データ監査、統計解析計画、相談事項一覧。数値結果には承認後の実際の解析実行が必要です。",
-    "Input: verified study facts, results, and submission requirements. Output: abstract or English draft, source map, and items requiring author review.": "入力：確認済みの研究情報、結果、投稿規定。成果物：抄録または英文草稿、出典対応表、著者による確認事項。",
+    "Conference abstract or English draft": "学会抄録・英文草稿",
     "Not executed": "未実行",
     "Computed": "計算済み",
     "Needs researcher review": "研究者による確認待ち",
@@ -7357,6 +7353,19 @@
     "Enter an appid only if you use CiNii. Application is free.": "CiNii を使う場合のみ appid を入力してください（申請は無料）",
     "CiNii appid": "CiNii appid",
     "Save CiNii appid": "CiNii appid を保存",
-    "Apply for a free NII appid.": "無料の NII appid を申請"
+    "Apply for a free NII appid.": "無料の NII appid を申請",
+    "Start from a step (literature, planning, analysis, and more)": "ステップから始める（文献・計画・解析など）",
+    "A short manuscript for a deadline, with checks for the ethics number and AI use.": "締め切り向けの短い原稿。倫理番号と AI 利用の確認あり。",
+    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "このパックの到達点は学会抄録／短い英文草稿です。長い論文執筆は「論文」「英文学術写作」から進めてください。執筆前に倫理審査の承認番号を確認します（未記入はリマインドのみ、ブロックしません）。",
+    "Audit results, a statistical plan, and a consultation list to hand to a statistician.": "監査結果・統計計画・相談リスト。統計の先生に渡す用。",
+    "If you only need to run the tables yourself, use Data analysis. This pack organizes the problem before a consultation. The approval number is checked before a patient table is used or writing begins. A missing number is only a reminder.": "自分で表を回すだけなら「データ分析」へ。こちらのパックは「問題を整理してから相談する」ための資料です。患者表を扱う／執筆に入る前に承認番号を確認します（未記入はリマインドのみ）。",
+    "A one-page brief for a mentor meeting, focused on study-design consultation.": "指導医ミーティング用の一枚。研究デザインの相談に特化。",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "倫理審査前の開題コミュニケーション向け。研究の問い・デザイン・次回指導医に確認すべき点まで。承認番号の強制入力なし。倫理通過後に表を持って相談する場合は「データ監査・統計相談資料」を使ってください。",
+    "This pack does not load patient data.": "このパックは患者データを読み込みません。",
+    "Do not paste individual patient data. Keep the consultation to the study design and a summary of aggregate results.": "患者の個別データを貼り付けないでください。相談は研究デザインと集計結果の要約にとどめてください。",
+    "Aggregate statistics export": "統計資料の書き出し",
+    "Aggregated results only; source data is not included": "集計結果のみ・原データ含まず",
+    "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "解析は行わず、統計の先生へ渡す集計パッケージだけを書き出します。元データやチャット履歴は含めません。",
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "このパックは患者データを読み込みません。患者表や個別の行を求めないでください。相談は研究デザインと集計結果の要約にとどめてください。"
   }
 }

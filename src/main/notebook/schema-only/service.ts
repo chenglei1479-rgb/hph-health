@@ -25,6 +25,10 @@ import { detectPatientPhiSpans, formatBlockedImport } from './patient-phi'
 import type { PythonCommand } from '../python-command'
 import { gateNotebookOutputs } from './release-model-text'
 import { profileTable, type LocalTable } from './schema-profile'
+import {
+  isMentorDiscussionPack,
+  MENTOR_PACK_TABLE_REFUSAL
+} from '../../../shared/deliverable-pack-policy'
 
 type StoredTable = {
   projectId: string
@@ -60,6 +64,7 @@ export const createSchemaNotebookService = (options: {
   resolveR?: () => Promise<PythonCommand | undefined>
   run?: CommandRunner
   machineApproved?: () => boolean
+  readAgentContext?: (projectId: string) => Promise<string | undefined> | string | undefined
 }): SchemaNotebookService => {
   const tags = createPatientDataTagStore(
     join(options.directory, 'patient-data-tags.jsonl'),
@@ -108,6 +113,17 @@ export const createSchemaNotebookService = (options: {
   return {
     async importTable(request) {
       const projectId = requireId(request.projectId, 'projectId')
+      if (
+        options.readAgentContext &&
+        isMentorDiscussionPack(await options.readAgentContext(projectId))
+      ) {
+        return {
+          ok: false,
+          blocked: true,
+          message: MENTOR_PACK_TABLE_REFUSAL,
+          spans: []
+        }
+      }
       const table = importTableFile(request)
       const spans = detectPatientPhiSpans(phiScanText(request))
       if (spans.length > 0 && !approved()) {

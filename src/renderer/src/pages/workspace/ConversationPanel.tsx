@@ -116,6 +116,7 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { useSpecialistStore } from '@/stores/specialist-store'
 import { ConnectorCredentialControls } from '@/pages/settings/ConnectorCredentialDialog'
 
+import { MentorPackComposerNotice } from '@/pages/home/MentorPackComposerNotice'
 import { ComposerEditor } from './composer/ComposerEditor'
 import { FileTypeIcon } from './file-type-icon'
 import { FOCUS_COMPOSER_EVENT } from './composer-focus-events'
@@ -2171,6 +2172,7 @@ const ConversationPanel = ({
                           fileMentionDrop.props.onDropCapture(event)
                         }}
                       >
+                        <MentorPackComposerNotice sessionProjectId={activeSession?.projectId} />
                         {annotationDrop.over ? (
                           <div className="rounded-md border border-primary px-2 py-1 text-xs text-text-200">
                             {t('Add to main conversation')}

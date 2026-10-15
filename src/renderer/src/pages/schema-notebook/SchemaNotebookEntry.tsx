@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
+import { useProjectStore } from '@/stores/project-store'
+import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
+import {
+  isConsultationPack,
+  isMentorDiscussionPack
+} from '../../../../shared/deliverable-pack-policy'
 import type {
   ExecuteAnalysisResponse,
   ImportTableResponse,
   SchemaModelContext
 } from '../../../../shared/schema-notebook'
+import { deliverableCardCopy } from '../home/deliverable-packages'
 import { schemaNotebookCopy } from './copy'
 
 type SchemaNotebookApi = {
@@ -67,7 +75,17 @@ export const PatientDataBadge = (): React.JSX.Element => {
 }
 
 export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React.JSX.Element => {
+  const { t } = useTranslation()
   const copy = schemaNotebookCopy('ja')
+  const agentContext = useProjectStore(
+    (state) => state.projects.find((project) => project.id === projectId)?.agentContext
+  )
+  const mentorPack = isMentorDiscussionPack(agentContext)
+  const consultationPack = isConsultationPack(agentContext)
+  const [approvalNumber, setApprovalNumber] = useState('')
+  const [approvalProjectId, setApprovalProjectId] = useState<string | null>(null)
+  const shownApprovalNumber =
+    consultationPack && approvalProjectId === projectId ? approvalNumber : ''
   const [open, setOpen] = useState(false)
   const [tagged, setTagged] = useState(false)
   const [patientData, setPatientData] = useState(true)
@@ -81,6 +99,26 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
   const [language, setLanguage] = useState<'python' | 'r'>('python')
   const [result, setResult] = useState<ExecuteAnalysisResponse | null>(null)
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!consultationPack || !window.api?.writingSafeguards) return
+    let cancelled = false
+    void window.api.writingSafeguards
+      .getEthicsApproval({ projectId })
+      .then((record) => {
+        if (cancelled) return
+        setApprovalNumber(record.approvalNumber)
+        setApprovalProjectId(projectId)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setApprovalNumber('')
+        setApprovalProjectId(projectId)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [consultationPack, projectId])
 
   useEffect(() => {
     const notebook = api()
@@ -154,8 +192,22 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     }
   }
 
+  if (mentorPack) {
+    const mentorCopy = deliverableCardCopy(t)['mentor-pack']
+    return (
+      <div
+        data-testid="mentor-pack-no-patient-table"
+        className="mt-2 space-y-1 rounded-lg border border-[#e4ded2] bg-[#faf8f2] px-3 py-2 text-xs leading-5 text-[#635f56]"
+      >
+        <p className="font-medium text-[#9a5046]">{mentorCopy.hardRule}</p>
+        <p>{mentorCopy.inputNotice}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="mt-2 space-y-2">
+      <EthicsWritingNotice open={consultationPack} approvalNumber={shownApprovalNumber} />
       <div className="flex flex-wrap items-center gap-2">
         {tagged ? <PatientDataBadge /> : null}
         {tagged ? <span className="sr-only">{copy.tagged}</span> : null}

@@ -148,11 +148,10 @@
     "DRA could not safely access existing encrypted data. Unlock the system credential store or restore the original key and profile, then restart. Existing credentials have not been replaced.": "DRA не удалось безопасно получить доступ к существующим зашифрованным данным. Разблокируйте системное хранилище учётных данных или восстановите исходный ключ и профиль, затем перезапустите приложение. Существующие учётные данные не были заменены.",
     "Return to the running tasks and stop their subagents before quitting DRA.": "Вернитесь к выполняющимся задачам и остановите их субагентов перед выходом из DRA.",
     "DRA is still moving your data.": "DRA всё ещё переносит ваши данные.",
-    "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "Для этого пакета сессии требуется более новая версия DRA. Обновите DRA и повторите импорт."
+    "This Session package requires a newer version of DRA. Update DRA, then try importing it again.": "Для этого пакета сессии требуется более новая версия DRA. Обновите DRA и повторите импорт.",
+    "This mentor discussion pack does not send individual patient data. The message was not sent.": "Эти материалы для обсуждения с научным руководителем не отправляют индивидуальные данные пациентов. Сообщение не отправлено."
   },
   "renderer": {
-    "Export statistician package": "Экспортировать статистический пакет",
-    "Beta exports aggregate files that open without DRA. Raw data, Notebook rows, and chat history are not included.": "Бета-версия экспортирует только агрегированные файлы, которые открываются без DRA. Исходные данные, строки Notebook и история чата не включаются.",
     "Statistical report": "Статистический отчет",
     "Word": "Word",
     "Result tables": "Таблицы результатов",
@@ -7450,9 +7449,6 @@
     "Mentor discussion pack": "Материалы для обсуждения с научным руководителем",
     "Data audit and statistical consultation pack": "Материалы аудита данных и статистической консультации",
     "Conference abstract or English draft": "Тезисы для конференции или черновик на английском",
-    "Input: research question and available evidence. Output: one-page brief, evidence table, study options, and questions for your mentor.": "Входные данные: исследовательский вопрос и доступные доказательства. Результат: одностраничное резюме, таблица доказательств, варианты исследования и вопросы руководителю.",
-    "Input: anonymized dataset and variable definitions. Output: data audit, statistical plan, and consultation checklist; computed results require approved execution.": "Входные данные: обезличенный набор данных и определения переменных. Результат: аудит данных, статистический план и вопросы для консультации. Расчётные результаты требуют утверждённого выполнения анализа.",
-    "Input: verified study facts, results, and submission requirements. Output: abstract or English draft, source map, and items requiring author review.": "Входные данные: проверенные факты и результаты исследования, требования к подаче. Результат: тезисы или английский черновик, сопоставление с источниками и вопросы для авторской проверки.",
     "Not executed": "Не выполнено",
     "Computed": "Рассчитано",
     "Needs researcher review": "Ожидает проверки исследователя",
@@ -7824,6 +7820,19 @@
     "Enter an appid only if you use CiNii. Application is free.": "Введите appid, только если вы используете CiNii. Заявка бесплатна.",
     "CiNii appid": "appid CiNii",
     "Save CiNii appid": "Сохранить appid CiNii",
-    "Apply for a free NII appid.": "Подать заявку на бесплатный appid NII."
+    "Apply for a free NII appid.": "Подать заявку на бесплатный appid NII.",
+    "Start from a step (literature, planning, analysis, and more)": "Начать с шага (литература, планирование, анализ и другое)",
+    "A short manuscript for a deadline, with checks for the ethics number and AI use.": "Короткий текст к сроку, с проверкой номера этического одобрения и использования ИИ.",
+    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "Этот пакет заканчивается тезисами конференции или коротким английским черновиком. Длинную статью продолжайте из «Написание рукописи» или «Академическое письмо на английском». Перед написанием проверяется номер этического утверждения. Если номер не указан, это только напоминание и не блокирует написание.",
+    "Audit results, a statistical plan, and a consultation list to hand to a statistician.": "Результаты аудита, статистический план и список вопросов для статистика.",
+    "If you only need to run the tables yourself, use Data analysis. This pack organizes the problem before a consultation. The approval number is checked before a patient table is used or writing begins. A missing number is only a reminder.": "Если нужно только самостоятельно посчитать таблицы, откройте «Анализ данных». Этот пакет упорядочивает задачу перед консультацией. Номер утверждения проверяется до использования таблицы пациентов или начала написания. Если номер не указан, это только напоминание.",
+    "A one-page brief for a mentor meeting, focused on study-design consultation.": "Одна страница к встрече с научным руководителем, с акцентом на консультацию по дизайну исследования.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "Для обсуждения до этической экспертизы: вопрос исследования, дизайн и что подтвердить у научного руководителя в следующий раз. Номер утверждения не обязателен. После этического утверждения, если для обсуждения нужна таблица, используйте материалы аудита данных и статистической консультации.",
+    "This pack does not load patient data.": "Этот пакет не загружает данные пациентов.",
+    "Do not paste individual patient data. Keep the consultation to the study design and a summary of aggregate results.": "Не вставляйте индивидуальные данные пациентов. Ограничьте консультацию дизайном исследования и сводкой агрегированных результатов.",
+    "Aggregate statistics export": "Экспорт агрегированной статистики",
+    "Aggregated results only; source data is not included": "Только агрегированные результаты; исходные данные не включены",
+    "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "Анализ не выполняется. Экспортируется только агрегированный пакет для статистика. Исходные данные и история чата не включаются.",
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "Этот пакет не загружает данные пациентов. Не запрашивайте таблицы пациентов или отдельные строки. Ограничьте консультацию дизайном исследования и сводкой агрегированных результатов."
   }
 }

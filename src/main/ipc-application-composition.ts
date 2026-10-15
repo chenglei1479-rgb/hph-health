@@ -645,7 +645,9 @@ export const createApplicationModules = async (
   const schemaNotebookDirectory = join(app.getPath('userData'), 'schema-notebook')
   const schemaNotebook = createSchemaNotebookService({
     directory: schemaNotebookDirectory,
-    approvalLogPath: join(app.getPath('userData'), 'phi-vault', 'machine-approval.jsonl')
+    approvalLogPath: join(app.getPath('userData'), 'phi-vault', 'machine-approval.jsonl'),
+    readAgentContext: async (projectId) =>
+      (await sessionPackages.projectRepository.get(projectId))?.agentContext
   })
   surfaceAdapters.push(
     ...createCoreElectronSurfaces({

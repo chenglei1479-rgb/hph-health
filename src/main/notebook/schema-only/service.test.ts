@@ -12,6 +12,7 @@ import { PATIENT_ROW_BLOCK_MESSAGE } from './patient-row-output'
 import { PHI_OUTPUT_BLOCK_MESSAGE } from './notebook-phi-release'
 import { gateNotebookOutputs, installNotebookModelTextReleaser } from './release-model-text'
 import { suppressSmallAggregateText } from './small-cell'
+import { MENTOR_PACK_MODE_LINE } from '../../../shared/deliverable-pack-policy'
 import { createSchemaNotebookService, type SchemaNotebookService } from './service'
 import { buildXlsx } from './xlsx-table'
 
@@ -52,6 +53,24 @@ afterEach(() => {
 })
 
 describe('schema-only notebook', () => {
+  it('does not load a patient table into a mentor discussion pack', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-mentor-'))
+    const service = serviceAt(root, {
+      directory: root,
+      approvalLogPath: join(root, 'missing-approval.jsonl'),
+      readAgentContext: async () => `Research design only.\n${MENTOR_PACK_MODE_LINE}`
+    })
+    const blocked = await service.importTable({
+      projectId: 'mentor-study',
+      filename: 'patients.csv',
+      csvText: 'age\n40\n41\n'
+    })
+    expect(blocked.ok).toBe(false)
+    if (blocked.ok) return
+    expect(blocked.message).toBe('This pack does not load patient data.')
+    expect(blocked.spans).toEqual([])
+  })
+
   it('sends synthetic samples that contain no real cell values', async () => {
     const root = mkdtempSync(join(tmpdir(), 'schema-notebook-'))
     const service = serviceAt(root, {

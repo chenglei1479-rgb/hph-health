@@ -746,4 +746,30 @@ describe('AcpProviderPromptExecutor', () => {
     expect(fixture.probe.observe).toHaveBeenCalledOnce()
     expect(fixture.probe.finalize).toHaveBeenCalledWith({ response })
   })
+
+  it('blocks a mentor-pack message when the PHI gate finds individual patient data', async () => {
+    const fixture = setup()
+    await expect(
+      fixture.executor.execute({
+        ...fixture.input,
+        mentorPack: true,
+        content: '患者：山田 太郎'
+      })
+    ).rejects.toThrow(/individual patient data|was not sent/)
+    expect(fixture.session.prompt).not.toHaveBeenCalled()
+  })
+
+  it('sends a mentor-pack design summary after the PHI gate finds no patient data', async () => {
+    const response: PromptResponse = { stopReason: 'end_turn' }
+    const fixture = setup([stop(response)])
+    await expect(
+      fixture.executor.execute({
+        ...fixture.input,
+        mentorPack: true,
+        content:
+          '単施設の後ろ向き観察として、主要評価は再入院です。比較対照と選択基準は研究デザインの相談にとどめ、個別の行は含めません。次回の面談で確認する点を整理します。追加の確認点もあります。'
+      })
+    ).resolves.toMatchObject({ kind: 'stopped' })
+    expect(fixture.session.prompt).toHaveBeenCalledOnce()
+  })
 })

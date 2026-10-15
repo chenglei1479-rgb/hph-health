@@ -59,8 +59,11 @@ import { MedicalResearchLaunchpad, type MedicalResearchWorkflow } from './Medica
 import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
 import {
   consultationPackExportPrompt,
+  deliverableCardCopy,
   guardDeliverableOutboundText,
-  isDeliverablePackage
+  isDeliverablePackage,
+  mentorPackAgentInstruction,
+  workflowRemindsEthicsApproval
 } from './deliverable-packages'
 import { sessionWaitReasonLabelKeys } from '@/lib/session-wait-reason-labels'
 import { APP } from '../../../../shared/app-config'
@@ -275,9 +278,11 @@ const HomePage = ({
           selection.workflow === 'academic-english'
             ? `\n\n${t('For Japanese-to-English biomedical writing, infer Methods, Results, or Discussion only from supplied context; ask if it is ambiguous. Preserve facts, study details, numbers, citations, uncertainty, and causal strength. Write idiomatic, section-appropriate academic English and explain key choices in the selected app language; show aligned Japanese and English when useful. Follow journal style only after checking current author instructions; otherwise label it general biomedical style. Never invent methods, results, claims, or references. Flag missing context and request researcher approval before finalizing.')}`
             : ''
+        const mentorBoundary =
+          selection.workflow === 'mentor-pack' ? `\n${mentorPackAgentInstruction(t)}` : ''
         const deliverablePrompt = isDeliverablePackage(selection.workflow)
           ? guardDeliverableOutboundText(
-              `\n\n${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: workflowNames[selection.workflow] })}\nPackage mode: ${selection.workflow}${selection.workflow === 'consultation-pack' ? `\n${consultationPackExportPrompt(t)}` : ''}`,
+              `\n\n${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: workflowNames[selection.workflow] })}\nPackage mode: ${selection.workflow}${mentorBoundary}${selection.workflow === 'consultation-pack' ? `\n${consultationPackExportPrompt(t)}` : ''}`,
               project.id
             )
           : ''
@@ -598,31 +603,20 @@ const HomePage = ({
   }
 
   const selectMedicalWorkflow = (workflow: MedicalResearchWorkflow, theme: string): void => {
-    if (
-      workflow === 'manuscript' ||
-      workflow === 'writing-pack' ||
-      workflow === 'academic-english'
-    ) {
-      setEthicsReminderOpen(true)
-    }
+    setEthicsReminderOpen(workflowRemindsEthicsApproval(workflow))
+    const packCopy = deliverableCardCopy(t)
     const templates: Record<MedicalResearchWorkflow, { name: string; description: string }> = {
       'mentor-pack': {
-        name: t('Mentor discussion pack'),
-        description: t(
-          'Input: research question and available evidence. Output: one-page brief, evidence table, study options, and questions for your mentor.'
-        )
+        name: packCopy['mentor-pack'].title,
+        description: packCopy['mentor-pack'].description
       },
       'consultation-pack': {
-        name: t('Data audit and statistical consultation pack'),
-        description: t(
-          'Input: anonymized dataset and variable definitions. Output: data audit, statistical plan, and consultation checklist; computed results require approved execution.'
-        )
+        name: packCopy['consultation-pack'].title,
+        description: packCopy['consultation-pack'].description
       },
       'writing-pack': {
-        name: t('Conference abstract or English draft'),
-        description: t(
-          'Input: verified study facts, results, and submission requirements. Output: abstract or English draft, source map, and items requiring author review.'
-        )
+        name: packCopy['writing-pack'].title,
+        description: packCopy['writing-pack'].description
       },
       novelty: {
         name: t('Research novelty check'),
@@ -662,7 +656,7 @@ const HomePage = ({
       agentContext:
         (isDeliverablePackage(workflow)
           ? `${guardDeliverableOutboundText(
-              `${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: templates[workflow].name })}\nPackage mode: ${workflow}${workflow === 'consultation-pack' ? `\n${consultationPackExportPrompt(t)}` : ''}`
+              `${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: templates[workflow].name })}\nPackage mode: ${workflow}${workflow === 'mentor-pack' ? `\n${mentorPackAgentInstruction(t)}` : ''}${workflow === 'consultation-pack' ? `\n${consultationPackExportPrompt(t)}` : ''}`
             )}\n\n`
           : '') +
         t(

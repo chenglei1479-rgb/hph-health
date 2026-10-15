@@ -20,7 +20,11 @@ import type {
   AcpProviderTurnProbe,
   AcpProviderTurnResult
 } from './provider-turn-adapter'
-import { releasePromptContent, restoreModelValue } from '../phi/gate'
+import {
+  refuseMentorPackIndividualPatientData,
+  releasePromptContent,
+  restoreModelValue
+} from '../phi/gate'
 
 type ProviderPromptObservationStage = 'accepted' | 'begin' | 'cancel' | 'finalize' | 'observe'
 
@@ -37,6 +41,7 @@ type ProviderPromptExecutionInput = Readonly<{
   routeNotification: (notification: SessionNotification) => void
   reportBestEffortFailure?: (stage: ProviderPromptObservationStage, error: unknown) => void
   preDispatchModelCalls?: readonly AcpProviderModelCallUsage[]
+  mentorPack?: boolean
 }>
 
 type AcpProviderPromptExecutorOptions = Readonly<{
@@ -68,6 +73,17 @@ const NOOP_PROBE: AcpProviderTurnProbe = Object.freeze({
   finalize: () => EMPTY_FACTS,
   cancel: () => undefined
 })
+
+const promptTexts = (content: ProviderPromptExecutionInput['content']): string[] => {
+  if (typeof content === 'string') return [content]
+  const texts: string[] = []
+  for (const block of content) {
+    if (block && typeof block === 'object' && 'text' in block && typeof block.text === 'string') {
+      texts.push(block.text)
+    }
+  }
+  return texts
+}
 
 const reportBestEffort = (
   report: ProviderPromptExecutionInput['reportBestEffortFailure'],
@@ -259,6 +275,9 @@ class AcpProviderPromptExecutor {
 
       let promptRequest: Promise<unknown>
       try {
+        if (input.mentorPack) {
+          refuseMentorPackIndividualPatientData(promptTexts(input.content))
+        }
         const content = await releasePromptContent(input.content, input.cwd)
         promptRequest = input.session.prompt(content)
         input.onDispatched?.()
