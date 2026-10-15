@@ -7314,6 +7314,18 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "当前显示 {{total}} 项发现中的 {{shown}} 项。请审查下方完整代码。",
     "Current environment": "当前环境",
     "Selected environment": "所选环境",
-    "Switching environments clears the current kernel's variables.": "切换环境会清除当前内核中的变量。"
+    "Switching environments clears the current kernel's variables.": "切换环境会清除当前内核中的变量。",
+    "Citation verified": "引文已核实",
+    "Citation mismatch": "引文不一致",
+    "Citation not found": "未找到引文",
+    "Citation unverified": "引文未核实",
+    "Citation checks": "引文检查",
+    "Title does not match the publisher record.": "标题与出版记录不一致。",
+    "Author does not match the publisher record.": "作者与出版记录不一致。",
+    "Year does not match the publisher record.": "年份与出版记录不一致。",
+    "Export is blocked because a cited PMID or DOI was not found.": "因未找到所引用的 PMID 或 DOI，导出已被阻止。",
+    "Override reason": "例外原因",
+    "Record why this export should continue. The reason is logged with the citation identifiers.": "请记录为何仍要导出。该原因会与引文标识一起写入日志。",
+    "Export with override": "带例外导出"
   }
 }

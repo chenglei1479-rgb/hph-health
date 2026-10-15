@@ -7781,6 +7781,18 @@
     "Showing {{shown}} of {{total}} findings. Review the full code below.": "Показано {{shown}} из {{total}} результатов. Проверьте полный код ниже.",
     "Current environment": "Текущая среда",
     "Selected environment": "Выбранная среда",
-    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются."
+    "Switching environments clears the current kernel's variables.": "При переключении среды переменные текущего ядра удаляются.",
+    "Citation verified": "Цитата проверена",
+    "Citation mismatch": "Цитата не совпадает",
+    "Citation not found": "Цитата не найдена",
+    "Citation unverified": "Цитата не проверена",
+    "Citation checks": "Проверки цитат",
+    "Title does not match the publisher record.": "Название не совпадает с записью издателя.",
+    "Author does not match the publisher record.": "Автор не совпадает с записью издателя.",
+    "Year does not match the publisher record.": "Год не совпадает с записью издателя.",
+    "Export is blocked because a cited PMID or DOI was not found.": "Экспорт заблокирован, потому что указанный PMID или DOI не найден.",
+    "Override reason": "Причина исключения",
+    "Record why this export should continue. The reason is logged with the citation identifiers.": "Запишите, почему экспорт следует продолжить. Причина сохраняется вместе с идентификаторами цитат.",
+    "Export with override": "Экспортировать с исключением"
   }
 }

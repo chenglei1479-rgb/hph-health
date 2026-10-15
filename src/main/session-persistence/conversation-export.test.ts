@@ -684,6 +684,34 @@ describe('conversation export service', () => {
     ).rejects.toThrow('Invalid conversation export request.')
     expect(showSaveDialog).not.toHaveBeenCalled()
   })
+
+  it('blocks export when a cited PMID is not found unless the user records a reason', async () => {
+    loadSession.mockResolvedValue({
+      ...session,
+      messages: [{ ...session.messages[0], content: 'See PMID: 99999999 for the claim.' }]
+    })
+    const verifyCitations = vi.fn(async () => [
+      { kind: 'pmid' as const, id: '99999999', status: 'not-found' as const }
+    ])
+    const service = createService({ verifyCitations })
+    await expect(
+      service.exportConversation({
+        projectId: 'project-1',
+        sessionId: 'session-1',
+        format: 'markdown'
+      })
+    ).rejects.toThrow('Export blocked: citation not found')
+    expect(showSaveDialog).not.toHaveBeenCalled()
+
+    await service.exportConversation({
+      projectId: 'project-1',
+      sessionId: 'session-1',
+      format: 'markdown',
+      citationOverrideReason: 'The identifier was illustrative only.'
+    })
+    expect(showSaveDialog).toHaveBeenCalled()
+    expect(JSON.stringify(verifyCitations.mock.calls)).not.toContain('illustrative')
+  })
 })
 
 describe('conversation export IPC handler', () => {

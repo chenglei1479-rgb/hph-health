@@ -5021,6 +5021,9 @@ const NOT_TRANSLATABLE = new Set([
   'GitHub',
   'PubMed',
   'Crossref',
+  // Identifier schemes. The numeric or suffix portion is interpolated beside these labels.
+  'PMID',
+  'DOI',
   // Provider brand names rendered inside decorative/internal SVG marks.
   'Claude',
   'Codex',

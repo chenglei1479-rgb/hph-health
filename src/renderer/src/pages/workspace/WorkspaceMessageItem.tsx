@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CitationVerificationStrip } from '@/components/CitationVerificationStrip'
 import { ReplayReferenceText } from './ReplayReferenceText'
 import { splitReplayReferenceText } from './replay-reference-text'
 import { formatDisplayNumber } from '@/lib/locale-format'
@@ -1955,6 +1956,9 @@ const WorkspaceMessageItemImpl = ({
               ) : null}
               <MessageImageList images={message.images ?? []} />
               <MessageArtifactList onPreviewArtifact={onPreviewArtifact} artifacts={artifacts} />
+              {!isAssistantPresenting ? (
+                <CitationVerificationStrip text={assistantPresentation.content} />
+              ) : null}
               {showAssistantFooter && !isAssistantPresenting ? (
                 <WorkspaceAssistantTurnCompletion
                   message={message}
