@@ -1856,6 +1856,12 @@ describe('HomePage recent session ordering', () => {
     useProjectStore.setState({ projects: [project], isLoaded: true })
   })
 
+  it('marks the document when the home screen has mounted', async () => {
+    delete document.documentElement.dataset.draHomeReady
+    await renderHome()
+    expect(document.documentElement.dataset.draHomeReady).toBe('1')
+  })
+
   it('keeps the logo and three-line DRA signature in the home header', async () => {
     await renderHome()
     const brand = container.querySelector('header .dra-app-brand')

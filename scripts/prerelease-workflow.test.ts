@@ -11,12 +11,21 @@ type Step = {
 }
 
 type Job = {
+  if?: string
+  needs?: string | string[]
   'runs-on'?: string
   permissions?: Record<string, string>
   steps?: Step[]
   strategy?: {
     matrix?: {
-      include?: Array<{ arch?: string; os?: string; platform?: string; target?: string }>
+      include?: Array<{
+        arch?: string
+        artifact?: string
+        label?: string
+        os?: string
+        platform?: string
+        target?: string
+      }>
     }
   }
 }
@@ -42,7 +51,7 @@ it('builds unsigned macOS dmg and Windows NSIS packages and publishes a prerelea
   const targets = build?.strategy?.matrix?.include ?? []
   expect(targets).toEqual([
     { os: 'macos-latest', label: 'macOS arm64 dmg', platform: 'mac', target: 'dmg', arch: 'arm64' },
-    { os: 'macos-latest', label: 'macOS x64 dmg', platform: 'mac', target: 'dmg', arch: 'x64' },
+    { os: 'macos-26-intel', label: 'macOS x64 dmg', platform: 'mac', target: 'dmg', arch: 'x64' },
     {
       os: 'windows-latest',
       label: 'Windows x64 NSIS',
@@ -91,6 +100,28 @@ it('builds unsigned macOS dmg and Windows NSIS packages and publishes a prerelea
   const publish = release?.steps?.find((step) => step.name === 'Publish the GitHub prerelease')
   expect(publish?.run).toContain('--prerelease')
   expect(publish?.run).toContain('build/prerelease-release-notes.md')
+})
+
+it('launches the packaged app on Windows, Apple silicon, and Intel macOS before publishing', () => {
+  expect(workflow.on).toHaveProperty('pull_request')
+  const smoke = workflow.jobs.smoke
+  expect(smoke?.needs).toBe('build')
+  expect(smoke?.strategy?.matrix?.include).toEqual([
+    { os: 'windows-latest', label: 'Windows x64', artifact: 'dra-x64-win' },
+    { os: 'macos-14', label: 'macOS arm64', artifact: 'dra-arm64-mac' },
+    { os: 'macos-15-intel', label: 'macOS x64', artifact: 'dra-x64-mac' }
+  ])
+  const launch = smoke?.steps?.find(
+    (step) => step.name === 'Launch the packaged app and wait for home'
+  )
+  expect(launch?.run).toContain('scripts/ci/packaged-startup-smoke.mjs')
+  expect(launch?.run).toContain('--timeout-ms 240000')
+
+  const release = workflow.jobs.release
+  expect(release?.needs).toEqual(['build', 'smoke'])
+  expect(release?.if).toBe("github.event_name != 'pull_request'")
+  const raw = readFileSync('.github/workflows/prerelease.yml', 'utf8')
+  expect(raw).toContain('macos-13, the previous free Intel image, was removed in December 2025.')
 })
 
 it('writes the release body in Japanese and Chinese', () => {
