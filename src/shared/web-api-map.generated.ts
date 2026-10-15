@@ -438,7 +438,9 @@ export const WEB_INVOKE_CHANNELS = {
   'uploads.stageLocalPath': 'uploads:stage-local-path',
   'variableDefinition.exportTemplate': 'variable-definition:export-template',
   'variableDefinition.generate': 'variable-definition:generate',
-  'window.close': 'window:close'
+  'window.close': 'window:close',
+  'writingSafeguards.getEthicsApproval': 'writing-safeguards:get-ethics-approval',
+  'writingSafeguards.setEthicsApproval': 'writing-safeguards:set-ethics-approval'
 } as const
 
 export const WEB_EVENT_CHANNELS = {

@@ -18,6 +18,7 @@ import { hasCurrentRunningDelegatedAttempt } from '../../shared/delegated-work-p
 import type { PersistedChatSession } from '../../shared/session-persistence'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
 import { publishUserFile } from '../user-file-publisher'
+import { confirmDeidentifiedExports } from '../writing-safeguards/export-confirm'
 import { createLogger, diagnosticErrorFields } from '../logger'
 
 const log = createLogger('conversation-export')
@@ -246,9 +247,28 @@ const createConversationExportService = (
 
     if (dialogResult.canceled || !dialogResult.filePath) return { saved: false }
 
+    const markdown = renderConversationMarkdown(document)
+    const allowed = await confirmDeidentifiedExports(
+      [{ name: `${sanitizeExportFilename(document.title)}.md`, text: markdown }],
+      async (findings) => {
+        const { response } = await dialog.showMessageBox({
+          type: 'warning',
+          title: '書き出しの確認',
+          message:
+            'カルテ番号、生年月日、または個別の患者値がありそうです。確認するまで書き出しません。',
+          detail: findings.map((finding) => [finding.label, finding.excerpt].join(' ')).join('\n'),
+          buttons: ['書き出しを中止', '確認して書き出す'],
+          defaultId: 0,
+          cancelId: 0
+        })
+        return response === 1
+      }
+    )
+    if (!allowed) return { saved: false }
+
     if (request.format === 'markdown') {
       await deps.publishUserFile(dialogResult.filePath, (temporaryPath) =>
-        deps.writeFile(temporaryPath, renderConversationMarkdown(document))
+        deps.writeFile(temporaryPath, markdown)
       )
       return { saved: true, filePath: dialogResult.filePath }
     }

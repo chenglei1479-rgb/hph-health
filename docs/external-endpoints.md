@@ -4,11 +4,23 @@ Catalog of outbound connector hosts this application may contact. These hosts ar
 
 JENGER (`jenger.riken.jp`) was checked on 2026-10-15: TCP port 443 accepted a connection but the TLS handshake timed out, and TCP port 80 accepted a connection but returned no bytes. The catalogue request stays on `http://jenger.riken.jp/en/result` until HTTPS serves a response.
 
-| Host | What is sent | Recipient | Country | Purpose |
-| --- | --- | --- | --- | --- |
-| `cir.nii.ac.jp` | IP address; query terms; optional NII appid | National Institute of Informatics (NII), CiNii Research | Japan | Search public CiNii article, project, and dataset metadata when an optional NII appid is saved. |
-| `api.jstage.jst.go.jp` | IP address; query terms | Japan Science and Technology Agency (JST), J-STAGE | Japan | Search public J-STAGE article metadata through the official JST API. |
-| `pheweb.jp` | IP address; query terms | BioBank Japan PheWeb | Japan | Query public BioBank Japan GWAS summary statistics through the official API and the public download catalogue. Individual-level data is not requested. |
-| `humandbs.dbcls.jp` | IP address; query terms | NBDC Human Database, Database Center for Life Science (DBCLS) | Japan | Read the public NBDC hum0014 catalogue and allow only datasets marked 制限なし / unrestricted. |
-| `jenger.riken.jp` | IP address; query terms | RIKEN, JENGER | Japan | Read the public JENGER result catalogue and official download links. |
-| `pdc.cancer.gov` | IP address; query terms | National Cancer Institute Proteomic Data Commons | United States | Discover public PDC study, biospecimen, and file metadata. Study files are not downloaded by these tools. |
+## Patient tables and the model
+
+Synthetic sample rows are generated only from the column name, the column type, and the row index (`src/main/notebook/schema-only/synthetic-sample.ts`). The generator does not read cell values and does not derive samples from real rows. The same name, type, and row index always produce the same placeholder.
+
+By default, a patient table contributes only the following to the model:
+
+- column names and column types
+- the row count
+- synthetic sample rows built from those names, types, and row indexes
+
+Identifier columns are dropped before that context is built. Real categorical values are not sent unless the doctor opts in for that column. A column is treated as categorical only when it has at most 12 distinct values, and the opt-in list for one column stays within that maximum of 12. Notebook execution output (stdout, error text, head, and result tables) is returned to the model after the release gate. Aggregate count cells under 10 are shown to the model as `<10`; the local Notebook still shows the real counts.
+
+| Host                   | What is sent                                | Recipient                                                     | Country       | Purpose                                                                                                                                                |
+| ---------------------- | ------------------------------------------- | ------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cir.nii.ac.jp`        | IP address; query terms; optional NII appid | National Institute of Informatics (NII), CiNii Research       | Japan         | Search public CiNii article, project, and dataset metadata when an optional NII appid is saved.                                                        |
+| `api.jstage.jst.go.jp` | IP address; query terms                     | Japan Science and Technology Agency (JST), J-STAGE            | Japan         | Search public J-STAGE article metadata through the official JST API.                                                                                   |
+| `pheweb.jp`            | IP address; query terms                     | BioBank Japan PheWeb                                          | Japan         | Query public BioBank Japan GWAS summary statistics through the official API and the public download catalogue. Individual-level data is not requested. |
+| `humandbs.dbcls.jp`    | IP address; query terms                     | NBDC Human Database, Database Center for Life Science (DBCLS) | Japan         | Read the public NBDC hum0014 catalogue and allow only datasets marked 制限なし / unrestricted.                                                         |
+| `jenger.riken.jp`      | IP address; query terms                     | RIKEN, JENGER                                                 | Japan         | Read the public JENGER result catalogue and official download links.                                                                                   |
+| `pdc.cancer.gov`       | IP address; query terms                     | National Cancer Institute Proteomic Data Commons              | United States | Discover public PDC study, biospecimen, and file metadata. Study files are not downloaded by these tools.                                              |

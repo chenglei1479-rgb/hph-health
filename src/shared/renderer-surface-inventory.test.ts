@@ -345,7 +345,8 @@ const REMOTE_LOCAL_ONLY_CHANNELS: GroupedInventory = {
   ],
   update: ['apply', 'cancel', 'download'],
   uploads: ['stage-local-path'],
-  'variable-definition': ['export-template', 'generate']
+  'variable-definition': ['export-template', 'generate'],
+  'writing-safeguards': ['get-ethics-approval', 'set-ethics-approval']
 }
 
 const ELECTRON_ONLY_CALLABLE_PATHS = [

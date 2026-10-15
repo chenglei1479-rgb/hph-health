@@ -56,6 +56,7 @@ import { NotificationBell } from '@/components/NotificationBell'
 import { ProjectDeletionCleanupNotice } from '@/components/ProjectDeletionCleanupNotice'
 import { UpdateCapsule } from '@/components/UpdateCapsule'
 import { MedicalResearchLaunchpad, type MedicalResearchWorkflow } from './MedicalResearchLaunchpad'
+import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
 import { sessionWaitReasonLabelKeys } from '@/lib/session-wait-reason-labels'
 import { APP } from '../../../../shared/app-config'
 import { earliestCurrentDelegatedAttemptStartedAt } from '../../../../shared/delegated-work-projection'
@@ -215,6 +216,7 @@ const HomePage = ({
   const pendingCredentialRequests = useSettingsStore((state) => state.pendingCredentialRequests)
   const requiredEnvironmentFailures = getRequiredEnvironmentFailures(environmentCheck)
   const environmentRepairPanel = getEnvironmentRepairPanel(requiredEnvironmentFailures)
+  const [ethicsReminderOpen, setEthicsReminderOpen] = useState(false)
   const [selectedMedicalWorkflow, setSelectedMedicalWorkflow] = useState<{
     workflow: MedicalResearchWorkflow
     theme: string
@@ -584,6 +586,13 @@ const HomePage = ({
   }
 
   const selectMedicalWorkflow = (workflow: MedicalResearchWorkflow, theme: string): void => {
+    if (
+      workflow === 'manuscript' ||
+      workflow === 'writing-pack' ||
+      workflow === 'academic-english'
+    ) {
+      setEthicsReminderOpen(true)
+    }
     const templates: Record<MedicalResearchWorkflow, { name: string; description: string }> = {
       'mentor-pack': {
         name: t('Mentor discussion pack'),
@@ -903,6 +912,7 @@ const HomePage = ({
           <PackageOperationIndicator />
 
           <MedicalResearchLaunchpad onSelectWorkflow={selectMedicalWorkflow} />
+          <EthicsWritingNotice open={ethicsReminderOpen} />
 
           {sessionUpdates.length > 0 ? (
             <section className="mt-8 sm:mt-10" aria-label={t('Session updates')}>

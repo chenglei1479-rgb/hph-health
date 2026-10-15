@@ -35,6 +35,7 @@ import { buildReviewScopeSnapshot } from './scope-snapshot'
 import { assertDelegatedReviewEvidenceScope } from './scope'
 import { resolveReviewerTurnEvidence, type ReviewerFileEvidenceResolver } from './turn-evidence'
 import { releaseModelText, restoreModelValue } from '../phi/gate'
+import { appendConclusionFlags } from '../writing-safeguards/reviewer-hook'
 
 const log = createLogger('reviewer:orchestrator')
 
@@ -525,6 +526,10 @@ export const runReviewAssessment = async (
       { reviewId: review.id, error: errorMessage }
     )
     return fail(errorMessage)
+  }
+
+  if (options.mode === 'initial') {
+    checksReceived = appendConclusionFlags(checksReceived, scopeSnapshot)
   }
 
   let finalReview: ReviewWithChecks

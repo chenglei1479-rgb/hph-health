@@ -42,6 +42,7 @@ import type {
 } from '../../shared/notebook'
 import type { GrantedLocalRoot } from '../../shared/local-fs'
 import { publishUserFile } from '../user-file-publisher'
+import { confirmDeidentifiedExports } from '../writing-safeguards/export-confirm'
 import { NotebookBackgroundRunError } from '../../shared/notebook'
 import {
   isNotebookRunCursor,
@@ -340,6 +341,23 @@ const saveIpynbWithDialog = async (
   })
 
   if (canceled || !filePath) return { saved: false }
+  const allowed = await confirmDeidentifiedExports(
+    [{ name: suggestedName, text: data }],
+    async (findings) => {
+      const { response } = await dialog.showMessageBox({
+        type: 'warning',
+        title: '書き出しの確認',
+        message:
+          'カルテ番号、生年月日、または個別の患者値がありそうです。確認するまで書き出しません。',
+        detail: findings.map((finding) => [finding.label, finding.excerpt].join(' ')).join('\n'),
+        buttons: ['書き出しを中止', '確認して書き出す'],
+        defaultId: 0,
+        cancelId: 0
+      })
+      return response === 1
+    }
+  )
+  if (!allowed) return { saved: false }
   await publishUserFile(filePath, (temporaryPath) => writeFile(temporaryPath, data, 'utf8'))
   return { saved: true, filePath }
 }

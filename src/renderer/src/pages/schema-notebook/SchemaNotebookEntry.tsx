@@ -177,6 +177,10 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
             <div>
               <h2 className="font-medium">{copy.title}</h2>
               <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.intro}</p>
+              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">
+                <span className="font-medium text-[#20343a]">{copy.modelView}</span>{' '}
+                {copy.smallCellNote}
+              </p>
               <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.maskingCheckNote}</p>
             </div>
             <button type="button" onClick={() => setOpen(false)}>
