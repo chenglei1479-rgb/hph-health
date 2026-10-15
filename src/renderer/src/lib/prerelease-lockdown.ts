@@ -1,4 +1,8 @@
-import { isBlockedPrereleaseUrl, isDraPrerelease } from '../../../shared/prerelease'
+import {
+  isBlockedPrereleaseUrl,
+  isDraPrerelease,
+  PRERELEASE_BLOCKED_REQUEST
+} from '../../../shared/prerelease'
 
 const USAGE_OPT_IN_STORAGE_KEY = 'dra-usage-statistics-opt-in'
 const USAGE_INSTALL_ID_STORAGE_KEY = 'dra-usage-install-id'
@@ -24,7 +28,7 @@ export const installRendererPrereleaseLockdown = (): void => {
   const original = window.fetch.bind(window)
   window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (isBlockedPrereleaseUrl(requestUrl(input))) {
-      throw new Error('Prerelease builds do not contact Auth0 or usage statistics.')
+      throw new Error(PRERELEASE_BLOCKED_REQUEST)
     }
     return original(input, init)
   }) as typeof window.fetch

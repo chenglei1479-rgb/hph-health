@@ -1,4 +1,10 @@
-import { isBlockedPrereleaseUrl, isDraPrerelease } from '../../shared/prerelease'
+import { net } from 'electron'
+
+import {
+  isBlockedPrereleaseUrl,
+  isDraPrerelease,
+  PRERELEASE_BLOCKED_REQUEST
+} from '../../shared/prerelease'
 
 const AUTH_ENV_KEYS = [
   'DRA_AUTH_MODE',
@@ -21,19 +27,32 @@ const requestUrl = (input: RequestInfo | URL): string => {
   return input.url
 }
 
-// Drops account configuration and refuses Auth0 or usage-statistics requests for this process.
+const guardedFetch = (original: typeof fetch): typeof fetch =>
+  (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (isBlockedPrereleaseUrl(requestUrl(input))) throw new Error(PRERELEASE_BLOCKED_REQUEST)
+    return original(input, init)
+  }) as typeof fetch
+
+// Chromium net.fetch is a separate stack from global fetch. Update manifests use it.
+const patchElectronNetFetch = (): void => {
+  try {
+    const current = net?.fetch
+    if (!net || typeof current !== 'function') return
+    net.fetch = guardedFetch(current.bind(net) as typeof fetch) as typeof net.fetch
+  } catch {
+    // A locked net.fetch cannot be wrapped. global fetch is still guarded.
+  }
+}
+
+// Drops account configuration and refuses Auth0, usage statistics, and the upstream update host.
 export const installMainPrereleaseLockdown = (): void => {
   if (!isDraPrerelease() || installed) return
   installed = true
   for (const key of AUTH_ENV_KEYS) delete process.env[key]
   process.env.DRA_TELEMETRY = '0'
   process.env.DRA_USAGE_STATISTICS = '0'
+  patchElectronNetFetch()
   const original = globalThis.fetch
   if (typeof original !== 'function') return
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    if (isBlockedPrereleaseUrl(requestUrl(input))) {
-      throw new Error('Prerelease builds do not contact Auth0 or usage statistics.')
-    }
-    return original(input, init)
-  }) as typeof fetch
+  globalThis.fetch = guardedFetch(original)
 }

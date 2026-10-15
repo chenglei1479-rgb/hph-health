@@ -35,7 +35,7 @@ const responseAt = (url: string, body: BodyInit | null, init: ResponseInit = {})
 }
 
 const installerResponse = (body: BodyInit | null, init: ResponseInit = {}): Response =>
-  responseAt('https://statics.aipoch.com/releases/0.3.0/installer.dmg', body, init)
+  responseAt('https://updates.dra.example/releases/0.3.0/installer.dmg', body, init)
 
 const createLogSpy = (): Logger => ({
   debug: vi.fn(),
@@ -328,7 +328,7 @@ describe('UpdateService.download', () => {
     releaseDate: '',
     notes: '',
     downloads: {
-      'mac-arm64': { url: 'https://statics.aipoch.com/releases/0.3.0/installer.dmg', size, sha256 }
+      'mac-arm64': { url: 'https://updates.dra.example/releases/0.3.0/installer.dmg', size, sha256 }
     }
   })
 
@@ -360,7 +360,7 @@ describe('UpdateService.download', () => {
         platform: 'darwin',
         arch: 'arm64',
         currentVersion: '0.2.0',
-        manifestUrl: 'https://statics.aipoch.com/version.json',
+        manifestUrl: 'https://updates.dra.example/version.json',
         broadcast: vi.fn(),
         promptSavePath,
         defaultDownloadPath
@@ -400,7 +400,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -434,7 +434,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -474,7 +474,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -510,7 +510,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast,
       promptSavePath,
       defaultDownloadPath,
@@ -572,7 +572,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -615,7 +615,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -633,7 +633,7 @@ describe('UpdateService.download', () => {
       version: '0.4.0',
       downloads: {
         'mac-arm64': {
-          url: 'https://statics.aipoch.com/releases/0.4.0/installer.dmg',
+          url: 'https://updates.dra.example/releases/0.4.0/installer.dmg',
           size: body.byteLength,
           sha256: checksum
         }
@@ -662,7 +662,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target),
       log
@@ -684,7 +684,7 @@ describe('UpdateService.download', () => {
     )
     const serialized = JSON.stringify(records)
     expect(serialized).not.toContain('private-installer.dmg')
-    expect(serialized).not.toContain('statics.aipoch.com')
+    expect(serialized).not.toContain('updates.dra.example')
   })
 
   it('drops a prior-session <target>.part on the first download so a restart starts fresh', async () => {
@@ -710,7 +710,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target),
       removeFile
@@ -747,7 +747,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target),
       removeFile
@@ -778,7 +778,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target),
       removeFile
@@ -815,7 +815,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target),
       removeFile
@@ -883,7 +883,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn((_channel: string, payload: unknown) => {
         const transferred = (payload as { transferred?: number } | undefined)?.transferred
         if (typeof transferred === 'number' && transferred >= 2) onTwoBytes?.()
@@ -923,7 +923,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(null)
     })
@@ -946,7 +946,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.reject(new Error('private shell diagnostic detail')),
       log
@@ -1033,7 +1033,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target),
       log
@@ -1100,7 +1100,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -1157,7 +1157,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -1218,7 +1218,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -1261,7 +1261,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       // First prompt throws (e.g. a dialog failure); the second succeeds.
       promptSavePath: () =>
@@ -1373,7 +1373,7 @@ describe('UpdateService.download', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target)
     })
@@ -1411,7 +1411,7 @@ describe('UpdateService.apply', () => {
       notes: '',
       downloads: {
         'mac-arm64': {
-          url: 'https://statics.aipoch.com/releases/0.3.0/installer.dmg',
+          url: 'https://updates.dra.example/releases/0.3.0/installer.dmg',
           size: body.byteLength,
           sha256: createHash('sha256').update(body).digest('hex')
         }
@@ -1426,7 +1426,7 @@ describe('UpdateService.apply', () => {
       platform: 'darwin',
       arch: 'arm64',
       currentVersion: '0.2.0',
-      manifestUrl: 'https://statics.aipoch.com/version.json',
+      manifestUrl: 'https://updates.dra.example/version.json',
       broadcast: vi.fn(),
       promptSavePath: () => Promise.resolve(target),
       ...overrides
@@ -1489,7 +1489,7 @@ describe('UpdateService.apply', () => {
           notes: '',
           downloads: {
             'mac-arm64': {
-              url: 'https://statics.aipoch.com/releases/0.3.0/installer.dmg',
+              url: 'https://updates.dra.example/releases/0.3.0/installer.dmg',
               size: body.byteLength,
               sha256: createHash('sha256').update(body).digest('hex')
             }

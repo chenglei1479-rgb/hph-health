@@ -15,6 +15,7 @@ import { ExternalTextLink } from '@/components/ExternalTextLink'
 import { Button } from '@/components/ui/button'
 import { useUpdateStore } from '@/stores/update-store'
 import { APP } from '../../../../shared/app-config'
+import { isDraPrerelease, PRERELEASE_UPDATE_NOTICE } from '../../../../shared/prerelease'
 import { SettingsRow, SettingsSection } from './SettingsLayout'
 
 export type AppVersionSectionPreviewState =
@@ -49,6 +50,7 @@ const AppVersionSection = ({
   const openDialog = useUpdateStore((state) => state.openDialog)
 
   const version = appInfo?.version ?? status.current
+  const prerelease = isDraPrerelease()
   const isChecking = status.state === 'checking'
   const isDownloading = status.state === 'downloading'
   const canCheck = status.state !== 'disabled' && !isChecking && !isDownloading
@@ -62,30 +64,32 @@ const AppVersionSection = ({
           ? 'translate-y-px'
           : ''
 
-  const statusLine = ((): string => {
-    if (status.error) return status.error
-    switch (status.state) {
-      case 'disabled':
-        return t('Automatic updates are disabled until a DRA update service is configured.')
-      case 'checking':
-        return t('Checking for updates…')
-      case 'available':
-        return t('New version {{version}} is available', { version: status.latest })
-      case 'downloading':
-        return t('Downloading… {{percent}}%', { percent: status.progress ?? 0 })
-      case 'ready':
-        return status.applyKind === 'restart'
-          ? t('Restart to update')
-          : t('Update downloaded — open the installer to finish')
-      case 'up-to-date':
-        return t('You are on the latest version')
-      case 'error':
-        // Backend-supplied failure text passes through verbatim in every locale.
-        return status.error ?? t('Update check failed')
-      default:
-        return ''
-    }
-  })()
+  const statusLine = prerelease
+    ? PRERELEASE_UPDATE_NOTICE
+    : ((): string => {
+        if (status.error) return status.error
+        switch (status.state) {
+          case 'disabled':
+            return t('Automatic updates are disabled until a DRA update service is configured.')
+          case 'checking':
+            return t('Checking for updates…')
+          case 'available':
+            return t('New version {{version}} is available', { version: status.latest })
+          case 'downloading':
+            return t('Downloading… {{percent}}%', { percent: status.progress ?? 0 })
+          case 'ready':
+            return status.applyKind === 'restart'
+              ? t('Restart to update')
+              : t('Update downloaded — open the installer to finish')
+          case 'up-to-date':
+            return t('You are on the latest version')
+          case 'error':
+            // Backend-supplied failure text passes through verbatim in every locale.
+            return status.error ?? t('Update check failed')
+          default:
+            return ''
+        }
+      })()
 
   return (
     <SettingsSection title={t('About')} aria-label={t('App version')}>
@@ -100,7 +104,7 @@ const AppVersionSection = ({
               </p>
               <p className="mt-0.5 text-xs font-normal text-muted-foreground">{APP.copyright}</p>
               {statusLine ? (
-                !status.error && status.state !== 'error' ? (
+                prerelease || (!status.error && status.state !== 'error') ? (
                   <p className="mt-1 text-xs text-muted-foreground" role="status">
                     {statusLine}
                   </p>
@@ -115,26 +119,33 @@ const AppVersionSection = ({
         }
         className="pt-0 sm:grid-cols-[minmax(0,1fr)_auto]"
       >
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => void check()} disabled={!canCheck}>
-            <RefreshCw
-              className={isChecking ? 'size-4 animate-spin' : 'size-4'}
-              aria-hidden="true"
-            />
-            {isChecking ? t('Checking…') : t('Check now')}
-          </Button>
-
-          {hasUpdate ? (
-            <Button type="button" onClick={() => openDialog()}>
-              <Download className="size-4" aria-hidden="true" />
-              {isDownloading
-                ? t('Downloading {{percent}}%', { percent: status.progress ?? 0 })
-                : status.state === 'ready'
-                  ? t('Update ready')
-                  : t('Update to {{version}}', { version: status.latest })}
+        {prerelease ? null : (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void check()}
+              disabled={!canCheck}
+            >
+              <RefreshCw
+                className={isChecking ? 'size-4 animate-spin' : 'size-4'}
+                aria-hidden="true"
+              />
+              {isChecking ? t('Checking…') : t('Check now')}
             </Button>
-          ) : null}
-        </div>
+
+            {hasUpdate ? (
+              <Button type="button" onClick={() => openDialog()}>
+                <Download className="size-4" aria-hidden="true" />
+                {isDownloading
+                  ? t('Downloading {{percent}}%', { percent: status.progress ?? 0 })
+                  : status.state === 'ready'
+                    ? t('Update ready')
+                    : t('Update to {{version}}', { version: status.latest })}
+              </Button>
+            ) : null}
+          </div>
+        )}
       </SettingsRow>
 
       <div>

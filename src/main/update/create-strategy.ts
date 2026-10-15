@@ -5,6 +5,7 @@ import type { DraUpdateDeployment } from '../../shared/dra-update-deployment'
 
 import { app } from 'electron'
 import { APP } from '../../shared/app-config'
+import { isDraPrerelease } from '../../shared/prerelease'
 import { DisabledUpdateStrategy } from './disabled-strategy'
 
 import { createLogger } from '../logger'
@@ -61,21 +62,28 @@ const macCanAutoUpdate = (isPackaged: boolean, version: string): boolean =>
 // Picks the update strategy for the host platform. Windows/Linux always get true in-place auto-update
 // via electron-updater. macOS gets it too on signed stable builds (see macCanAutoUpdate); otherwise
 // (dev, nightly, or any other platform) it falls back to the manifest installer flow (UpdateService).
+// A DRA prerelease build, and a deployment file that says `enabled: false`, never reach either path.
 export const createUpdateStrategy = (
   platform: NodeJS.Platform = process.platform,
   opts: CreateStrategyOptions = {}
 ): UpdateStrategy => {
+  const version = opts.version ?? app?.getVersion?.() ?? '0.0.0'
+  if (isDraPrerelease()) return new DisabledUpdateStrategy(version)
+
   let deployment = opts.deployment
+  let explicitlyDisabled = false
   if (opts.updatesEnabled === undefined && !deployment && process.resourcesPath) {
     try {
-      deployment = readDraUpdateDeployment(join(process.resourcesPath, 'app-update.yml'))
+      const read = readDraUpdateDeployment(join(process.resourcesPath, 'app-update.yml'))
+      if (read.state === 'disabled') explicitlyDisabled = true
+      else if (read.state === 'configured') deployment = read.deployment
     } catch {
-      return new DisabledUpdateStrategy(opts.version ?? app?.getVersion?.() ?? '0.0.0')
+      return new DisabledUpdateStrategy(version)
     }
   }
-  if (!(opts.updatesEnabled ?? Boolean(deployment ?? APP.update.enabled))) {
-    return new DisabledUpdateStrategy(opts.version ?? app?.getVersion?.() ?? '0.0.0')
-  }
+  const updatesEnabled =
+    opts.updatesEnabled ?? (!explicitlyDisabled && Boolean(deployment ?? APP.update.enabled))
+  if (!updatesEnabled) return new DisabledUpdateStrategy(version)
   const log = createLogger('update')
   const createInPlaceStrategy = (): ElectronUpdaterStrategy =>
     new ElectronUpdaterStrategy({
@@ -89,7 +97,6 @@ export const createUpdateStrategy = (
   if (platform === 'win32' || platform === 'linux') return createInPlaceStrategy()
 
   const isPackaged = opts.isPackaged ?? app?.isPackaged ?? false
-  const version = opts.version ?? app?.getVersion?.() ?? '0.0.0'
   if (platform === 'darwin' && macCanAutoUpdate(isPackaged, version)) {
     return createInPlaceStrategy()
   }

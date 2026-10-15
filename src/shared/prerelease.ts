@@ -7,6 +7,13 @@ export const PRERELEASE_BANNER_TEXT = '内部テスト版：架空データの�
 export const PRERELEASE_DATA_DESTINATION_NOTICE =
   '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
 
+// Settings → About. Fixed Japanese on every locale; beta builds do not offer an update check.
+export const PRERELEASE_UPDATE_NOTICE =
+  'テスト版では自動更新は無効です。新しい版は配布元からお知らせします。'
+
+export const PRERELEASE_BLOCKED_REQUEST =
+  'Prerelease builds do not contact Auth0, usage statistics, or the upstream update host.'
+
 const runtimeEnv = (): NodeJS.ProcessEnv => (typeof process === 'undefined' ? {} : process.env)
 
 // Vite replaces the boolean while building main and renderer. A packaged beta therefore stays
@@ -23,7 +30,7 @@ export const telemetryAllowed = (env?: NodeJS.ProcessEnv): boolean => !isDraPrer
 
 export const usageStatisticsAllowed = (env?: NodeJS.ProcessEnv): boolean => !isDraPrerelease(env)
 
-// Auth0 and the anonymous usage endpoint are the only hosts a prerelease build must refuse.
+// Auth0, the anonymous usage endpoint, and the upstream update host are refused.
 // Provider calls (OpenAI, Azure OpenAI, or another endpoint the user typed) stay allowed and
 // still pass through fetchProviderRequest, which applies the PHI gate when that module is present.
 export const isBlockedPrereleaseUrl = (value: string): boolean => {
@@ -34,6 +41,7 @@ export const isBlockedPrereleaseUrl = (value: string): boolean => {
     return false
   }
   const host = url.hostname.toLowerCase()
+  if (host === 'statics.aipoch.com') return true
   if (host === 'auth0.com' || host.endsWith('.auth0.com')) return true
   return url.pathname === '/dra/usage' || url.pathname.endsWith('/dra/usage')
 }

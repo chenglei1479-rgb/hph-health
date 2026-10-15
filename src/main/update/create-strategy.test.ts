@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const spawnSync = vi.hoisted(() => vi.fn())
 const quitAndInstall = vi.hoisted(() => vi.fn())
@@ -57,7 +60,19 @@ import { createUpdateStrategy } from './create-strategy'
 import { ElectronUpdaterStrategy } from './electron-updater-strategy'
 import { UpdateService } from './service'
 import { DisabledUpdateStrategy } from './disabled-strategy'
+import { startUpdateScheduler } from './scheduler'
 import { APP } from '../../shared/app-config'
+
+const withResourcesPath = (dir: string, run: () => void): void => {
+  const previous = Object.getOwnPropertyDescriptor(process, 'resourcesPath')
+  Object.defineProperty(process, 'resourcesPath', { configurable: true, value: dir })
+  try {
+    run()
+  } finally {
+    if (previous) Object.defineProperty(process, 'resourcesPath', previous)
+    else Reflect.deleteProperty(process, 'resourcesPath')
+  }
+}
 
 vi.mock('../../shared/app-config', async (importOriginal) => {
   const original = await importOriginal<typeof import('../../shared/app-config')>()
@@ -96,6 +111,11 @@ describe('createUpdateStrategy', () => {
       Object.assign(APP.update, { enabled })
     }
   })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
   beforeEach(() => {
     setFeedURL.mockClear()
     updaterListeners.clear()
@@ -109,6 +129,65 @@ describe('createUpdateStrategy', () => {
       stdout: '',
       stderr: 'Identifier=com.dra-hph.desktop\nTeamIdentifier=87G9WFU9H3\n'
     })
+  })
+
+  it('disables updates when app-update.yml explicitly sets enabled: false', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dra-update-disabled-'))
+    writeFileSync(join(dir, 'app-update.yml'), 'enabled: false\n')
+    try {
+      withResourcesPath(dir, () => {
+        const strategy = createUpdateStrategy('win32', { version: '0.1.33' })
+        expect(strategy).toBeInstanceOf(DisabledUpdateStrategy)
+        expect(strategy.getStatus()).toEqual({ state: 'disabled', current: '0.1.33' })
+        expect(setFeedURL).not.toHaveBeenCalled()
+        expect(updaterListeners.size).toBe(0)
+      })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('still follows the build flag when the update file is missing', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dra-update-missing-'))
+    try {
+      withResourcesPath(dir, () => {
+        expect(createUpdateStrategy('win32')).toBeInstanceOf(ElectronUpdaterStrategy)
+      })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('disables a prerelease build even with a valid deployment and does not schedule checks', async () => {
+    vi.stubEnv('DRA_PRERELEASE', '1')
+    const fetchImpl = vi.fn()
+    vi.stubGlobal('fetch', fetchImpl)
+    const strategy = createUpdateStrategy('win32', {
+      updatesEnabled: true,
+      version: '0.1.33-beta.1',
+      deployment: {
+        provider: 'generic',
+        url: 'https://updates.dra.example/stable/',
+        manifestUrl: 'https://updates.dra.example/stable/version.json',
+        publisherName: 'DRA Publisher',
+        channel: 'latest'
+      }
+    })
+    expect(strategy).toBeInstanceOf(DisabledUpdateStrategy)
+    expect(setFeedURL).not.toHaveBeenCalled()
+    expect(updaterListeners.size).toBe(0)
+    const check = vi.spyOn(strategy, 'check')
+    const stop = startUpdateScheduler(strategy, 60_000)
+    try {
+      expect(check).not.toHaveBeenCalled()
+      await expect(strategy.check()).resolves.toEqual({
+        state: 'disabled',
+        current: '0.1.33-beta.1'
+      })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      stop()
+    }
   })
 
   it('uses ElectronUpdaterStrategy on win32', () => {

@@ -30,8 +30,10 @@ export const APP = {
   },
   copyright: '© 2026 DRA. Based on AIPOCH Open-Science.',
   update: {
-    enabled: true,
-    manifestUrl: 'https://statics.aipoch.com/medical-research-agent/app/stable/version.json',
+    // No DRA feed is published yet. Leave this off so a missing deployment file cannot
+    // fall back to an upstream updater.
+    enabled: false,
+    manifestUrl: '',
     downloadPage: PRODUCT_RELEASES_URL
   }
 } as const

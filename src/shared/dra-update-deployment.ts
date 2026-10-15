@@ -6,12 +6,28 @@ export type DraUpdateDeployment = {
   channel: 'latest'
 }
 
+// Distinct from a missing file. A missing file may follow the build default; this must not.
+export type ExplicitlyDisabledDraUpdate = {
+  enabled: false
+}
+
+export type DraUpdateDeploymentRead =
+  | { state: 'missing' }
+  | { state: 'disabled' }
+  | { state: 'configured'; deployment: DraUpdateDeployment }
+
+export const isExplicitlyDisabledDraUpdate = (
+  value: DraUpdateDeployment | ExplicitlyDisabledDraUpdate
+): value is ExplicitlyDisabledDraUpdate => 'enabled' in value && value.enabled === false
+
 // Administrative deployment config, never supplied by a renderer or remote manifest.
-export const parseDraUpdateDeployment = (value: unknown): DraUpdateDeployment | undefined => {
+export const parseDraUpdateDeployment = (
+  value: unknown
+): DraUpdateDeployment | ExplicitlyDisabledDraUpdate => {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Invalid DRA update configuration.')
   const config = value as Record<string, unknown>
-  if (config.enabled === false && Object.keys(config).length === 1) return undefined
+  if (config.enabled === false && Object.keys(config).length === 1) return { enabled: false }
   if (
     Object.keys(config).some(
       (k) => !['enabled', 'provider', 'url', 'manifestUrl', 'publisherName', 'channel'].includes(k)
