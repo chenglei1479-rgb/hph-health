@@ -1,23 +1,16 @@
-import { join } from 'node:path'
-
 import { ipcMainHandle } from '../ipc-handler-registry'
-import { normalizeEthicsApprovalNumber } from '../../shared/writing-safeguards/ethics-approval'
-import { createEthicsApprovalStore } from './ethics-store'
+import type { WritingSafeguardsCommandOwner } from './application-commands'
 
 type EthicsRequest = {
   projectId?: string
   approvalNumber?: string
 }
 
-export const registerWritingSafeguardsIpc = (directory: string): void => {
-  const store = createEthicsApprovalStore(join(directory, 'ethics-approval.json'))
-  ipcMainHandle('writing-safeguards:get-ethics-approval', (_event, request: EthicsRequest) => ({
-    approvalNumber: store.get(request?.projectId ?? '')
-  }))
-  ipcMainHandle('writing-safeguards:set-ethics-approval', (_event, request: EthicsRequest) => ({
-    approvalNumber: store.set(
-      request?.projectId ?? '',
-      normalizeEthicsApprovalNumber(request?.approvalNumber ?? '')
-    )
-  }))
+export const registerWritingSafeguardsIpc = (owner: WritingSafeguardsCommandOwner): void => {
+  ipcMainHandle('writing-safeguards:get-ethics-approval', (_event, request: EthicsRequest) =>
+    owner.getEthicsApproval(request)
+  )
+  ipcMainHandle('writing-safeguards:set-ethics-approval', (_event, request: EthicsRequest) =>
+    owner.setEthicsApproval(request)
+  )
 }

@@ -78,7 +78,11 @@ export function composeCommandDependencies({
   artifactSurfaces,
   sessionPackageSurfaces,
   reviewerCommandOwner,
-  listAppIconPreviews
+  listAppIconPreviews,
+  schemaNotebook,
+  writingSafeguards,
+  statisticianReview,
+  variableDefinition
 }: {
   applicationEvents: ApplicationEvents
   settingsBootstrap: Awaited<ReturnType<typeof composeSettingsBootstrap>>
@@ -115,6 +119,10 @@ export function composeCommandDependencies({
   sessionPackageSurfaces: ReturnType<typeof composeSessionPackageSurfaces>
   reviewerCommandOwner: Awaited<ReturnType<typeof registerReviewerComposition>>
   listAppIconPreviews: (() => import('../../shared/settings').AppIconPreview[]) | undefined
+  schemaNotebook: ApplicationCommandCompositionDependencies['schemaNotebook']
+  writingSafeguards: ApplicationCommandCompositionDependencies['writingSafeguards']
+  statisticianReview: ApplicationCommandCompositionDependencies['statisticianReview']
+  variableDefinition: ApplicationCommandCompositionDependencies['variableDefinition']
 }): { applicationCommandDependencies: ApplicationCommandCompositionDependencies } {
   const electronSenderFor = (
     invocation: ApplicationInvocation<readonly unknown[]>
@@ -391,7 +399,11 @@ export function composeCommandDependencies({
       reviewer: reviewerCommandOwner,
       storage: storageHandoff.storageCommandOwner,
       update: handoff.updateCommandOwner
-    }
+    },
+    schemaNotebook,
+    writingSafeguards,
+    statisticianReview,
+    variableDefinition
   }
   return { applicationCommandDependencies }
 }

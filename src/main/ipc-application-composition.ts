@@ -40,9 +40,12 @@ import {
 } from './composition/specialists'
 import { composeStorageStartup } from './composition/storage-startup'
 import { composeUploadStorage } from './composition/upload-storage'
+import { createStatisticianReviewCommandOwner } from './statistician-review/application-commands'
 import { registerStatisticianReviewIpc } from './statistician-review/ipc'
 import { registerVariableDefinitionIpc } from './variable-definition/ipc'
+import { createWritingSafeguardsCommandOwner } from './writing-safeguards/application-commands'
 import { registerWritingSafeguardsIpc } from './writing-safeguards/ipc'
+import { createEthicsApprovalStore } from './writing-safeguards/ethics-store'
 import { defaultVariableDefinitionCompleter } from './variable-definition/model-client'
 import { captureVariableDefinitionProviderTarget } from './variable-definition/provider-target'
 import { createVariableDefinitionService } from './variable-definition/service'
@@ -51,6 +54,7 @@ import { app } from 'electron'
 import { join } from 'node:path'
 
 import { registerSchemaNotebookIpc } from './notebook/schema-only/ipc'
+import { createSchemaNotebookService } from './notebook/schema-only/service'
 
 import { type ApplicationCommandComposition } from './application-command-composition'
 import { createApplicationEventModule, type ApplicationEventSource } from './application-events'
@@ -638,6 +642,11 @@ export const createApplicationModules = async (
     ...agentRuntime,
     translate
   })
+  const schemaNotebookDirectory = join(app.getPath('userData'), 'schema-notebook')
+  const schemaNotebook = createSchemaNotebookService({
+    directory: schemaNotebookDirectory,
+    approvalLogPath: join(app.getPath('userData'), 'phi-vault', 'machine-approval.jsonl')
+  })
   surfaceAdapters.push(
     ...createCoreElectronSurfaces({
       permissionGrantProjection: settingsEffects.permissionGrantProjection,
@@ -652,27 +661,35 @@ export const createApplicationModules = async (
       previewStateRepository: sessionPackages.previewStateRepository
     }),
     createElectronSurfaceAdapter('schema-notebook', () => {
-      registerSchemaNotebookIpc({
-        directory: join(app.getPath('userData'), 'schema-notebook'),
-        approvalLogPath: join(app.getPath('userData'), 'phi-vault', 'machine-approval.jsonl')
-      })
+      registerSchemaNotebookIpc(
+        {
+          directory: schemaNotebookDirectory,
+          approvalLogPath: join(app.getPath('userData'), 'phi-vault', 'machine-approval.jsonl')
+        },
+        schemaNotebook
+      )
     })
   )
+  const writingSafeguards = createWritingSafeguardsCommandOwner(
+    createEthicsApprovalStore(
+      join(app.getPath('userData'), 'writing-safeguards', 'ethics-approval.json')
+    )
+  )
+  const statisticianReview = createStatisticianReviewCommandOwner(translate)
+  const variableDefinition = createVariableDefinitionService({
+    complete: defaultVariableDefinitionCompleter(() =>
+      captureVariableDefinitionProviderTarget(settingsBootstrap.settingsService)
+    )
+  })
   surfaceAdapters.push(
     createElectronSurfaceAdapter('writing-safeguards', () => {
-      registerWritingSafeguardsIpc(join(app.getPath('userData'), 'writing-safeguards'))
+      registerWritingSafeguardsIpc(writingSafeguards)
     }),
     createElectronSurfaceAdapter('statistician-review', () => {
-      registerStatisticianReviewIpc(translate)
+      registerStatisticianReviewIpc(statisticianReview)
     }),
     createElectronSurfaceAdapter('variable-definition', () => {
-      registerVariableDefinitionIpc(
-        createVariableDefinitionService({
-          complete: defaultVariableDefinitionCompleter(() =>
-            captureVariableDefinitionProviderTarget(settingsBootstrap.settingsService)
-          )
-        })
-      )
+      registerVariableDefinitionIpc(variableDefinition)
     })
   )
   // Compute IPC handlers are registered earlier (before the notebook RPC server) so computeService
@@ -766,7 +783,11 @@ export const createApplicationModules = async (
     artifactSurfaces,
     sessionPackageSurfaces,
     reviewerCommandOwner,
-    listAppIconPreviews
+    listAppIconPreviews,
+    schemaNotebook,
+    writingSafeguards,
+    statisticianReview,
+    variableDefinition
   })
   await composeBackendLifecycle({
     settingsBootstrap,
