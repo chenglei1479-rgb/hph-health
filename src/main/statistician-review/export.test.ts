@@ -12,8 +12,8 @@ import {
 import type { PhiPreview } from '../phi/confirm'
 import { deidentify } from '../phi/deidentify'
 import { createMemoryPhiVault } from '../phi/store'
+import { inspectExportFile } from '../../shared/writing-safeguards/export-deidentify'
 import { exportStatisticianReviewPackage } from './export'
-import { remainingExportFindings } from './redact'
 
 const confirm = async (): Promise<{ confirmed: true }> => ({ confirmed: true })
 
@@ -50,8 +50,11 @@ describe('statistician review beta export', () => {
   it('reuses the shared de-identification module and review page', () => {
     const redact = readFileSync(new URL('./redact.ts', import.meta.url), 'utf8')
     const review = readFileSync(new URL('./confirm-window.ts', import.meta.url), 'utf8')
+    const exporter = readFileSync(new URL('./export.ts', import.meta.url), 'utf8')
     expect(redact).toContain("from '../phi/deidentify'")
     expect(redact).toContain('detectPhi')
+    expect(redact).toContain("from '../../shared/writing-safeguards/export-deidentify'")
+    expect(exporter).toContain('releaseExportSet')
     expect(review).toContain('buildConfirmInstaller')
     expect(BETA_STATISTICIAN_EXPORT_KINDS).toEqual([
       'statistical-report',
@@ -175,7 +178,9 @@ describe('statistician review beta export', () => {
     expect(direct.text).toContain('[番号')
     expect(direct.text).not.toContain('0083341')
     expect(result.files[2].filename).toBe('analysis.py')
-    expect(remainingExportFindings(joined)).toEqual([])
+    expect(
+      result.files.flatMap((file) => inspectExportFile({ name: file.filename, text: file.text }))
+    ).toEqual([])
     const dismissed = await exportStatisticianReviewPackage(aggregate(), {
       confirm: async () => ({ confirmed: false })
     })

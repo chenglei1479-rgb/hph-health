@@ -11,6 +11,7 @@ import {
   type StatisticianReviewExportRequest,
   type StatisticianReviewExportResponse
 } from '../../shared/statistician-review-export'
+import { releaseExportSet } from '../../shared/writing-safeguards/export-deidentify'
 import {
   buildDocx,
   buildPdf,
@@ -18,7 +19,7 @@ import {
   sheetsFromConfirmedText,
   sheetText
 } from './files'
-import { redactExportText, redactResultSheet, remainingExportFindings } from './redact'
+import { redactExportText } from './redact'
 
 type Part = {
   kind: StatisticianReviewExportFile['kind']
@@ -32,26 +33,46 @@ const SCRIPT_NOTE = '# Aggregate analysis script for statistician review.\n'
 
 const partsFor = (request: StatisticianReviewExportRequest): Part[] => {
   const store = createMemoryPhiVault().store(request.projectId)
-  const report = redactExportText(
-    `${request.statisticalReport.title}\n\n${request.statisticalReport.body}`,
-    store
-  )
-  const sheets = request.resultTables.sheets.map((sheet) => redactResultSheet(sheet, store))
-  const tableText = sheets.map(sheetText).join('\n\n')
-  const table = redactExportText(tableText, store)
-  const script = redactExportText(`${SCRIPT_NOTE}${request.analysisScript.source}`, store)
-  const definition = redactExportText(
-    request.variableDefinition.rows
-      .map((row) => [row.name, row.definition, row.type, row.coding].join('\t'))
-      .join('\n'),
-    store
-  )
-  const log = redactExportText(request.executionLog.text, store)
   const reportName =
     request.statisticalReport.format === 'docx'
       ? 'statistical-report.docx'
       : 'statistical-report.pdf'
   const scriptName = request.analysisScript.language === 'r' ? 'analysis.R' : 'analysis.py'
+  const report = redactExportText(
+    `${request.statisticalReport.title}\n\n${request.statisticalReport.body}`,
+    store,
+    reportName
+  )
+  const tablePieces = request.resultTables.sheets.map((sheet) =>
+    redactExportText(sheetText(sheet), store, 'result-tables.xlsx')
+  )
+  let tableText = ''
+  const tableHighlights: PhiHighlight[] = []
+  for (const piece of tablePieces) {
+    if (tableText.length > 0) tableText += '\n\n'
+    const offset = tableText.length
+    tableText += piece.text
+    for (const highlight of piece.highlights) {
+      tableHighlights.push({
+        start: highlight.start + offset,
+        end: highlight.end + offset,
+        category: highlight.category
+      })
+    }
+  }
+  const script = redactExportText(
+    `${SCRIPT_NOTE}${request.analysisScript.source}`,
+    store,
+    scriptName
+  )
+  const definition = redactExportText(
+    request.variableDefinition.rows
+      .map((row) => [row.name, row.definition, row.type, row.coding].join('\t'))
+      .join('\n'),
+    store,
+    'variable-definition.pdf'
+  )
+  const log = redactExportText(request.executionLog.text, store, 'execution-log.pdf')
   return [
     {
       kind: 'statistical-report',
@@ -67,8 +88,8 @@ const partsFor = (request: StatisticianReviewExportRequest): Part[] => {
       kind: 'result-tables',
       filename: 'result-tables.xlsx',
       mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      text: table.text,
-      highlights: table.highlights
+      text: tableText,
+      highlights: tableHighlights
     },
     {
       kind: 'analysis-script',
@@ -162,9 +183,9 @@ export const exportStatisticianReviewPackage = async (
   const parsed = parseStatisticianReviewExportRequest(value)
   if (!parsed.ok) return parsed
   let parts = partsFor(parsed.request)
-  if (parts.some((part) => remainingExportFindings(part.text).length > 0)) {
-    return { ok: false, code: 'deidentify-failed' }
-  }
+  const stillIdentified = (current: readonly Part[]): boolean =>
+    !releaseExportSet(current.map((part) => ({ name: part.filename, text: part.text }))).ok
+  if (stillIdentified(parts)) return { ok: false, code: 'deidentify-failed' }
   const bundled = previewOf(parts)
   let decision
   try {
@@ -180,9 +201,7 @@ export const exportStatisticianReviewPackage = async (
     )
     if (!marked) return { ok: false, code: 'invalid' }
     parts = marked
-    if (parts.some((part) => remainingExportFindings(part.text).length > 0)) {
-      return { ok: false, code: 'deidentify-failed' }
-    }
+    if (stillIdentified(parts)) return { ok: false, code: 'deidentify-failed' }
   }
   const files: StatisticianReviewExportFile[] = []
   for (const part of parts) {

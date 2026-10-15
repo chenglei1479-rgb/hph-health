@@ -33,6 +33,21 @@ describe('export de-identification', () => {
     expect(findings.every((finding) => finding.fileKind === 'result-table')).toBe(true)
   })
 
+  it('flags a birth_date literal and a same-line patient measurement', () => {
+    expect(
+      inspectExportFile({
+        name: 'analysis.py',
+        text: 'birth_date = "1952-04-03"\n'
+      }).map((finding) => finding.kind)
+    ).toContain('birth-date')
+    const sentence = inspectExportFile({
+      name: 'report.docx',
+      text: '患者0083341のHbA1cは7.2。研究期間：2020-01-01。\n'
+    })
+    expect(sentence.map((finding) => finding.kind)).toContain('individual-patient-value')
+    expect(sentence.some((finding) => finding.excerpt.includes('2020-01-01'))).toBe(false)
+  })
+
   it('leaves aggregate tables and study periods alone', () => {
     expect(
       inspectExportFile({
