@@ -32,6 +32,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount())
   container.remove()
+  vi.unstubAllEnvs()
   vi.unstubAllGlobals()
 })
 
@@ -47,6 +48,23 @@ describe('AppVersionSection', () => {
     )
     expect(checkButton?.disabled).toBe(true)
     expect(container.textContent).not.toContain('You are on the latest version')
+  })
+
+  it('shows a fixed Japanese notice and no update actions in a prerelease build', () => {
+    vi.stubEnv('DRA_PRERELEASE', '1')
+    useUpdateStore.setState({
+      status: { state: 'available', current: '0.1.33-beta.1', latest: '0.2.0', notes: 'n' }
+    })
+    act(() => root.render(<AppVersionSection />))
+    expect(container.textContent).toContain(
+      'テスト版では自動更新は無効です。新しい版は配布元からお知らせします。'
+    )
+    expect(container.textContent).not.toContain('Check now')
+    expect(container.textContent).not.toContain('Update to 0.2.0')
+    expect(container.textContent).not.toContain(
+      'Automatic updates are disabled until a DRA update service is configured.'
+    )
+    expect(container.querySelectorAll('button')).toHaveLength(0)
   })
   it('opens the project license from a resource row without an inline disclosure', () => {
     act(() => root.render(<AppVersionSection />))

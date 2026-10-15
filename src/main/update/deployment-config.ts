@@ -1,22 +1,20 @@
 import { readFileSync } from 'node:fs'
 import { load } from 'js-yaml'
 import {
+  isExplicitlyDisabledDraUpdate,
   parseDraUpdateDeployment,
-  type DraUpdateDeployment
+  type DraUpdateDeploymentRead
 } from '../../shared/dra-update-deployment'
 
-export const readDraUpdateDeployment = (file: string): DraUpdateDeployment | undefined => {
+// A missing file is `missing` so the caller can apply the build default. An explicit
+// `enabled: false` is `disabled` and must not fall through to that default.
+export const readDraUpdateDeployment = (file: string): DraUpdateDeploymentRead => {
   try {
-    const config = load(readFileSync(file, 'utf8')) as Record<string, unknown>
-    // User-authorized restoration of the original pinned upstream feed.
-    // Electron-updater reads this file directly; APP enables the built-in strategy.
-    if (config && config.provider === 'generic' &&
-      config.url === 'https://statics.aipoch.com/medical-research-agent/app/stable' &&
-      config.channel === 'latest' &&
-      Object.keys(config).every(key => ['provider', 'url', 'channel', 'updaterCacheDirName'].includes(key))) return undefined
-    return parseDraUpdateDeployment(config)
+    const parsed = parseDraUpdateDeployment(load(readFileSync(file, 'utf8')))
+    if (isExplicitlyDisabledDraUpdate(parsed)) return { state: 'disabled' }
+    return { state: 'configured', deployment: parsed }
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { state: 'missing' }
     throw error
   }
 }

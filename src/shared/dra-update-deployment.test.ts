@@ -9,7 +9,7 @@ const configured = {
   channel: 'latest'
 }
 it('disables updates explicitly and accepts a configured HTTPS feed with a signer', () => {
-  expect(parseDraUpdateDeployment({ enabled: false })).toBeUndefined()
+  expect(parseDraUpdateDeployment({ enabled: false })).toEqual({ enabled: false })
   expect(parseDraUpdateDeployment(configured)).toMatchObject({ publisherName: 'DRA Publisher' })
 })
 it('rejects legacy, insecure, unsigned or cross-origin update configuration', () => {

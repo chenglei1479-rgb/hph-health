@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* Unsigned, manually distributed doctor-test builds only. */
 const fs = require('node:fs')
 const path = require('node:path')
@@ -11,15 +12,9 @@ delete config.win.azureSignOptions
 delete config.win.signtoolOptions
 config.afterSign = undefined
 config.afterAllArtifactBuild = undefined
-config.publish = { provider: 'generic', url: 'https://statics.aipoch.com/medical-research-agent/app/stable', channel: 'latest' }
-// Directory packages also need the native updater configuration.
-config.afterPack = async context => {
+// Doctor-test packages do not publish an application update feed.
+config.afterPack = async (context) => {
   await require('./deployment-pack.cjs').default(context)
-  if (context.electronPlatformName === 'win32') {
-    fs.writeFileSync(path.join(context.appOutDir, 'resources/app-update.yml'), yaml.dump({
-      ...config.publish, updaterCacheDirName: 'medresearch-agent-updater'
-    }))
-  }
 }
 config.extraMetadata = { ...config.extraMetadata, version: '0.1.33-unified.1' }
 config.directories = { ...config.directories, output: '../doctor-test-dist-0.1.33-unified.1' }
