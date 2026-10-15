@@ -7318,6 +7318,11 @@
     "Developed based on AIPOCH Open-Science.": "AIPOCH Open-Science를 기반으로 개발했습니다.",
     "Project license (LICENSE)": "프로젝트 라이선스(LICENSE)",
     "Notices (NOTICE)": "고지(NOTICE)",
-    "Third-party notices": "제3자 고지"
+    "Third-party notices": "제3자 고지",
+    "Do not enter patient information in search terms.": "검색어에 환자 정보를 입력하지 마세요.",
+    "Enter an appid only if you use CiNii. Application is free.": "CiNii를 사용할 때만 appid를 입력하세요. 신청은 무료입니다.",
+    "CiNii appid": "CiNii appid",
+    "Save CiNii appid": "CiNii appid 저장",
+    "Apply for a free NII appid.": "무료 NII appid 신청"
   }
 }

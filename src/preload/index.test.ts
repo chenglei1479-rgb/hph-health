@@ -724,6 +724,7 @@ describe('preload bridge — public surface inventory', () => {
       'settings.setActiveProvider',
       'settings.setAgentFramework',
       'settings.setAppIconVariant',
+      'settings.setCiniiAppId',
       'settings.setClosePreference',
       'settings.setConnectorAutoAllow',
       'settings.setConnectorEnabled',

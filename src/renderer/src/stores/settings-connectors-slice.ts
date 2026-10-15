@@ -16,6 +16,7 @@ import type {
   NcbiCredentialsView,
   OpenAlexCredentialView,
   OpenAlexCredentialValidation,
+  SetCiniiAppIdRequest,
   SetNcbiCredentialsRequest,
   SetOpenAlexCredentialRequest,
   ToolPermission,
@@ -33,10 +34,15 @@ type SettingsConnectorsProjection = {
   skillProjectionStatus?: 'degraded'
   ncbi: NcbiCredentialsView
   openAlex?: OpenAlexCredentialView
+  ciniiAppId?: string
 }
 
-type NormalizedSettingsConnectorsProjection = Omit<SettingsConnectorsProjection, 'openAlex'> & {
+type NormalizedSettingsConnectorsProjection = Omit<
+  SettingsConnectorsProjection,
+  'openAlex' | 'ciniiAppId'
+> & {
   openAlex: OpenAlexCredentialView
+  ciniiAppId: string
 }
 
 export type ConnectorAuthNotice = Readonly<{
@@ -79,6 +85,7 @@ export type SettingsConnectorsActions = {
   setConnectorAutoAllow: (id: string, autoAllow: boolean) => Promise<void>
   setToolPermission: (toolId: string, permission: ToolPermission) => Promise<ConnectorDetailView>
   setNcbiCredentials: (request: SetNcbiCredentialsRequest) => Promise<void>
+  setCiniiAppId: (request: SetCiniiAppIdRequest) => Promise<void>
   setOpenAlexCredential: (request: SetOpenAlexCredentialRequest) => Promise<void>
   validateOpenAlexCredential: (
     request: ValidateOpenAlexCredentialRequest
@@ -118,6 +125,7 @@ type SettingsConnectorsCommands = Pick<
   | 'setConnectorAutoAllow'
   | 'setToolPermission'
   | 'setNcbiCredentials'
+  | 'setCiniiAppId'
   | 'setOpenAlexCredential'
   | 'validateOpenAlexCredential'
   | 'addCustomServer'
@@ -158,7 +166,8 @@ export const createInitialSettingsConnectorsState = (): SettingsConnectorsState 
   deviceCredentialsLoading: false,
   deviceCredentialsError: undefined,
   ncbi: { hasApiKey: false },
-  openAlex: { hasApiKey: false }
+  openAlex: { hasApiKey: false },
+  ciniiAppId: ''
 })
 
 // Owns the renderer projection for Connector catalogs, custom servers, NCBI credentials, and the
@@ -179,6 +188,7 @@ export const createSettingsConnectorsSlice = ({
     ...projection,
     skillProjectionStatus: projection.skillProjectionStatus,
     openAlex: projection.openAlex ?? { hasApiKey: false },
+    ciniiAppId: projection.ciniiAppId ?? '',
     reservedCustomServerIds: projection.reservedCustomServerIds ?? [],
     connectors: projection.connectors.map((connector) => ({
       ...connector,
@@ -568,6 +578,7 @@ export const createSettingsConnectorsSlice = ({
       getCommands().setToolPermission({ toolId, permission }),
     setNcbiCredentials: (request) =>
       reconcileMutation(() => getCommands().setNcbiCredentials(request)),
+    setCiniiAppId: (request) => reconcileMutation(() => getCommands().setCiniiAppId(request)),
     setOpenAlexCredential: (request) =>
       reconcileMutation(() => getCommands().setOpenAlexCredential(request)),
     validateOpenAlexCredential: (request) => getCommands().validateOpenAlexCredential(request),

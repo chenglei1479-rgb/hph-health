@@ -215,6 +215,8 @@ export type StoredConnectors = {
   // OpenAlex is consumed by a subset of the bundled Literature Connector tools. Keep its secret
   // beside the other Connector-owned credentials so dispatch can resolve it immediately before use.
   openAlexApiKeyRef?: string
+  // Optional CiNii Research application id. Empty means CiNii search stays unavailable.
+  ciniiAppId?: string
   // Fully-qualified "<connector>/<method>" ids denied by policy; allow by default otherwise.
   blockedToolIds?: string[]
   // Fully-qualified "<connector>/<method>" ids that require per-call approval (opt-in). Tools default

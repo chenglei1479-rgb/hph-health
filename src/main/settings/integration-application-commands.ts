@@ -43,6 +43,7 @@ type ConnectorIntegrationWorkflows = Pick<
   | 'setConnectorEnabled'
   | 'setConnectorAutoAllow'
   | 'setToolPermission'
+  | 'setCiniiAppId'
   | 'setNcbiCredentials'
   | 'setOpenAlexCredential'
   | 'validateOpenAlexCredential'
@@ -192,6 +193,11 @@ const settingsIntegrationApplicationCommands = Object.freeze({
     OwnerArgs<ConnectorIntegrationWorkflows, 'setNcbiCredentials'>,
     OwnerResult<ConnectorIntegrationWorkflows, 'setNcbiCredentials'>
   >('settings:set-ncbi-credentials'),
+  setCiniiAppId: defineApplicationCommand<
+    'settings:set-cinii-app-id',
+    OwnerArgs<ConnectorIntegrationWorkflows, 'setCiniiAppId'>,
+    OwnerResult<ConnectorIntegrationWorkflows, 'setCiniiAppId'>
+  >('settings:set-cinii-app-id'),
   setOpenAlexCredential: defineApplicationCommand<
     'settings:set-openalex-credential',
     OwnerArgs<ConnectorIntegrationWorkflows, 'setOpenAlexCredential'>,
@@ -302,6 +308,7 @@ const settingsConnectorApplicationCommandGroup = defineApplicationCommandGroup(
     settingsIntegrationApplicationCommands.setConnectorEnabled,
     settingsIntegrationApplicationCommands.setConnectorAutoAllow,
     settingsIntegrationApplicationCommands.setToolPermission,
+    settingsIntegrationApplicationCommands.setCiniiAppId,
     settingsIntegrationApplicationCommands.setNcbiCredentials,
     settingsIntegrationApplicationCommands.setOpenAlexCredential,
     settingsIntegrationApplicationCommands.validateOpenAlexCredential,
@@ -403,6 +410,7 @@ const registerIntegrationSettingsApplicationCommands = (
         dependencies.connectors.setConnectorAutoAllow(args[0]),
       'settings:set-tool-permission': ({ args }) =>
         dependencies.connectors.setToolPermission(args[0]),
+      'settings:set-cinii-app-id': ({ args }) => dependencies.connectors.setCiniiAppId(args[0]),
       'settings:set-ncbi-credentials': ({ args }) =>
         dependencies.connectors.setNcbiCredentials(args[0]),
       'settings:set-openalex-credential': ({ args, callerContext }) => {

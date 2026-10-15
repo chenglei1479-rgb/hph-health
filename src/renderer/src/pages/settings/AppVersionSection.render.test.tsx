@@ -64,7 +64,9 @@ describe('AppVersionSection', () => {
     expect(container.textContent).not.toContain(
       'Automatic updates are disabled until a DRA update service is configured.'
     )
-    expect(container.querySelectorAll('button')).toHaveLength(0)
+    const buttons = Array.from(container.querySelectorAll('button'))
+    expect(buttons).toHaveLength(1)
+    expect(buttons[0]?.textContent).toContain('Licenses')
   })
   it('opens the project license from a resource row without an inline disclosure', () => {
     act(() => root.render(<AppVersionSection />))

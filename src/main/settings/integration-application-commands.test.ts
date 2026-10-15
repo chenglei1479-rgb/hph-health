@@ -59,6 +59,7 @@ const expectedConnectorChannels = [
   'settings:set-connector-enabled',
   'settings:set-connector-auto-allow',
   'settings:set-tool-permission',
+  'settings:set-cinii-app-id',
   'settings:set-ncbi-credentials',
   'settings:set-openalex-credential',
   'settings:validate-openalex-credential',
@@ -174,7 +175,7 @@ describe('Settings integration application commands', () => {
     }
     expect(skillMethod('startSkillMarketplaceBatch')).toHaveBeenCalledWith(request)
   })
-  it('defines the exact 39-command Skill, Connector, and approval inventory', () => {
+  it('defines the exact 40-command Skill, Connector, and approval inventory', () => {
     const groups = [
       settingsSkillApplicationCommandGroup,
       settingsConnectorApplicationCommandGroup,
@@ -208,7 +209,7 @@ describe('Settings integration application commands', () => {
     expect(settingsApprovalApplicationCommandGroup.commands.map((command) => command.name)).toEqual(
       expectedApprovalChannels
     )
-    expect(groups.reduce((count, group) => count + group.commands.length, 0)).toBe(39)
+    expect(groups.reduce((count, group) => count + group.commands.length, 0)).toBe(40)
     expect(router.dispatcher.commandNames()).toEqual([...expectedChannels].sort())
     expect(settingsChannels).toEqual(
       expect.arrayContaining([
@@ -217,7 +218,7 @@ describe('Settings integration application commands', () => {
         ...expectedApprovalChannels
       ])
     )
-    expect(integrationContracts).toHaveLength(38)
+    expect(integrationContracts).toHaveLength(39)
     expect(
       integrationContracts
         ?.filter(

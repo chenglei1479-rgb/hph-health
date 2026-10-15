@@ -271,10 +271,11 @@ describe('renderSkillDoc', () => {
     expect(md).not.toContain('Settings > Connectors')
   })
 
-  it('keeps the PubMed Skill under a 2.3k-token on-demand budget', () => {
+  it('keeps the PubMed Skill under a 2.4k-token on-demand budget', () => {
     const md = renderSkillDoc('pubmed')
 
-    expect(tokenizer.encode(md).length).toBeLessThan(2_300)
+    // The shared patient-information hint is included once in every connector skill.
+    expect(tokenizer.encode(md).length).toBeLessThan(2_400)
   })
 
   it('keeps every authored connector example valid for the JavaScript REPL', () => {

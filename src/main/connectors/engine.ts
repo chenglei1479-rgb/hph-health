@@ -1,6 +1,15 @@
 import type { ConnectorCredentials, ToolContext, ToolDescriptor } from './types'
 import { abortableDelay } from './abortable-delay'
+import {
+  CONNECTOR_USER_AGENT,
+  isPoliteHost,
+  readPoliteCache,
+  reservePoliteSlot,
+  writePoliteCache
+} from './polite-fetch'
 import { CONNECTOR_RETRYABLE_STATUS, connectorRetryDelay } from './request-policy'
+import { refuseConnectorQueryArgs, refuseConnectorQueryUrl } from '../phi/gate'
+import { assertOutboundEndpointRegistered } from '../../shared/outbound-endpoints'
 
 const DEFAULT_TIMEOUT_MS = 30_000
 const DEFAULT_TOTAL_TIMEOUT_MS = 120_000
@@ -23,6 +32,7 @@ function redactUrl(url: string): string {
     const parsed = new URL(url)
     parsed.searchParams.delete('email')
     parsed.searchParams.delete('api_key')
+    parsed.searchParams.delete('appid')
     return parsed.toString()
   } catch {
     return url
@@ -96,6 +106,7 @@ export class ParserEngine {
     for (const key of descriptor.required ?? []) {
       if (args[key] == null) throw new Error(`missing required arg: ${key}`)
     }
+    refuseConnectorQueryArgs(args)
     const totalTimeoutMs = descriptor.totalTimeoutMs ?? this.totalTimeoutMs
     const deadline = Date.now() + totalTimeoutMs
     const controller = new AbortController()
@@ -160,6 +171,32 @@ export class ParserEngine {
       retries = this.retries,
       allowHttpStatuses: readonly number[] = []
     ): Promise<{ response: Response; bodyText?: string }> => {
+      let politeHostname = ''
+      try {
+        politeHostname = new URL(url).hostname
+      } catch {
+        politeHostname = ''
+      }
+      if (politeHostname) assertOutboundEndpointRegistered(politeHostname)
+      refuseConnectorQueryUrl(url)
+      const polite = isPoliteHost(politeHostname)
+      const method = String(init?.method ?? 'GET').toUpperCase()
+      // Vitest injects fetch and runs many catalogue calls back to back. Production waits and caches.
+      const politePolicy = polite && !process.env.VITEST
+      if (politePolicy && method === 'GET') {
+        const cached = readPoliteCache(url)
+        if (cached) {
+          return {
+            response: new Response(cached.body, {
+              status: 200,
+              headers: { 'content-type': cached.contentType, 'x-dra-cache': 'hit' }
+            }),
+            bodyText: cached.body
+          }
+        }
+        const wait = reservePoliteSlot(politeHostname)
+        if (wait > 0) await abortableDelay(wait, signal)
+      }
       for (let attempt = 0; ; attempt++) {
         signal.throwIfAborted()
         const controller = new AbortController()
@@ -180,9 +217,15 @@ export class ParserEngine {
         let failure: unknown
         try {
           armTimeout()
+          const headers = {
+            accept,
+            'user-agent': polite ? CONNECTOR_USER_AGENT : USER_AGENT,
+            ...init?.headers,
+            ...(polite ? { 'user-agent': CONNECTOR_USER_AGENT } : {})
+          }
           res = await this.fetchImpl(url, {
             ...init,
-            headers: { accept, 'user-agent': USER_AGENT, ...init?.headers },
+            headers,
             signal: requestSignal
           })
           if ((res.ok || allowHttpStatuses.includes(res.status)) && res.body) {
@@ -250,6 +293,9 @@ export class ParserEngine {
         if (!res) throw new Error(`No response for ${redactUrl(url)}`)
         if (res.ok || allowHttpStatuses.includes(res.status)) {
           signal?.throwIfAborted()
+          if (politePolicy && method === 'GET' && bodyText !== undefined) {
+            writePoliteCache(url, bodyText, res.headers.get('content-type') ?? accept)
+          }
           return { response: res, ...(bodyText !== undefined ? { bodyText } : {}) }
         }
         // Retry only transient upstream statuses; never shorten the server's requested wait.

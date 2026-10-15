@@ -15,6 +15,7 @@ import type {
   RemoveDeviceCredentialRequest,
   SetConnectorAutoAllowRequest,
   SetConnectorEnabledRequest,
+  SetCiniiAppIdRequest,
   SetNcbiCredentialsRequest,
   SetOpenAlexCredentialRequest,
   SetToolPermissionRequest,
@@ -42,6 +43,7 @@ type ConnectorSettingsWorkflowStore = Pick<
   | 'setConnectorEnabled'
   | 'setConnectorAutoAllow'
   | 'setToolPermission'
+  | 'setCiniiAppId'
   | 'setNcbiCredentials'
   | 'setOpenAlexCredential'
   | 'validateOpenAlexCredential'
@@ -274,6 +276,10 @@ class ConnectorSettingsWorkflows {
     request: SetNcbiCredentialsRequest
   ): WorkflowResult<'setNcbiCredentials'> {
     return this.afterConnectorsChanged(() => this.settings.setNcbiCredentials(request))
+  }
+
+  async setCiniiAppId(request: SetCiniiAppIdRequest): WorkflowResult<'setCiniiAppId'> {
+    return this.afterConnectorsChanged(() => this.settings.setCiniiAppId(request))
   }
 
   async setOpenAlexCredential(

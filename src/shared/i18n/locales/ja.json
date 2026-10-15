@@ -7320,6 +7320,11 @@
     "Developed based on AIPOCH Open-Science.": "AIPOCH Open-Science をベースに開発",
     "Project license (LICENSE)": "プロジェクトライセンス（LICENSE）",
     "Notices (NOTICE)": "表記（NOTICE）",
-    "Third-party notices": "第三者表記"
+    "Third-party notices": "第三者表記",
+    "Do not enter patient information in search terms.": "検索語に患者情報を入力しないでください",
+    "Enter an appid only if you use CiNii. Application is free.": "CiNii を使う場合のみ appid を入力してください（申請は無料）",
+    "CiNii appid": "CiNii appid",
+    "Save CiNii appid": "CiNii appid を保存",
+    "Apply for a free NII appid.": "無料の NII appid を申請"
   }
 }

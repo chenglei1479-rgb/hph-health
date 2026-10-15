@@ -1112,6 +1112,13 @@ class SettingsRepository {
     })
   }
 
+  // Sets or clears the optional CiNii appid. An empty value leaves CiNii search unavailable.
+  async setCiniiAppId(appId: string | undefined): Promise<StoredSettings> {
+    return this.mutateConnectors((connectors) => {
+      connectors.ciniiAppId = appId || undefined
+    })
+  }
+
   // Sets or clears the OpenAlex API-key reference. Plaintext is encrypted by the Connector settings
   // owner before this repository boundary.
   async setOpenAlexCredential(apiKeyRef: string | undefined): Promise<StoredSettings> {

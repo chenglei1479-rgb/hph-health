@@ -7320,6 +7320,11 @@
     "Developed based on AIPOCH Open-Science.": "基于 AIPOCH Open-Science 开发。",
     "Project license (LICENSE)": "项目许可证（LICENSE）",
     "Notices (NOTICE)": "声明（NOTICE）",
-    "Third-party notices": "第三方声明"
+    "Third-party notices": "第三方声明",
+    "Do not enter patient information in search terms.": "请勿在搜索词中输入患者信息。",
+    "Enter an appid only if you use CiNii. Application is free.": "仅在使用 CiNii 时输入 appid。申请免费。",
+    "CiNii appid": "CiNii appid",
+    "Save CiNii appid": "保存 CiNii appid",
+    "Apply for a free NII appid.": "申请免费的 NII appid。"
   }
 }

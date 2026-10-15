@@ -606,6 +606,41 @@ describe('PDC discovery', () => {
     }
   )
 
+  it('cites PDC, the original study, CC BY 4.0, and CPTAC when that program applies', async () => {
+    const cptac = {
+      ...study,
+      program_name: 'CPTAC',
+      project_name: 'CPTAC',
+      study_submitter_id: 'CPTAC-CCRCC'
+    }
+    const { call } = setup({ data: { study: [cptac] } }, { data: { studyCatalog: [catalog] } })
+    await expect(call('pdc_get_study', { study_id: studyId })).resolves.toMatchObject({
+      citation: {
+        license: 'CC BY 4.0',
+        original_study: 'CPTAC-CCRCC',
+        cptac_acknowledgement: expect.stringContaining('CPTAC')
+      },
+      studies: [
+        {
+          citation: {
+            license: 'CC BY 4.0',
+            cptac_acknowledgement: expect.stringContaining('CPTAC')
+          }
+        }
+      ]
+    })
+  })
+
+  it('cites PDC and CC BY 4.0 on a non-CPTAC search result', async () => {
+    const { call } = setup({ data: { studyCatalog: [catalog] } })
+    const result = (await call('pdc_search_studies', { query: 'CCRCC' })) as {
+      citation: { license: string; notice: string; cptac_acknowledgement?: string }
+    }
+    expect(result.citation.license).toBe('CC BY 4.0')
+    expect(result.citation.notice).toContain('CC BY 4.0')
+    expect(result.citation.cptac_acknowledgement).toBeUndefined()
+  })
+
   it('propagates HTTP failures through the shared engine', async () => {
     const engine = new ParserEngine({
       fetchImpl: vi

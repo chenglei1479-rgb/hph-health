@@ -147,6 +147,7 @@ const SpecialistCapabilitiesSection = ({
   const [connectorTagFilter, setConnectorTagFilter] = useState('all')
   const skillSearchRef = useRef<HTMLInputElement>(null)
   const connectorSearchRef = useRef<HTMLInputElement>(null)
+  const connectorSearchHintId = useId()
   const [skillPopoverOpen, setSkillPopoverOpen] = useState(false)
   const [connectorPopoverOpen, setConnectorPopoverOpen] = useState(false)
   useSettingsSearchShortcut(skillSearchRef, skillPopoverOpen && !isFullAccess)
@@ -597,12 +598,20 @@ const SpecialistCapabilitiesSection = ({
                         ref={connectorSearchRef}
                         type="search"
                         aria-label={t('Search connectors to add')}
+                        aria-describedby={connectorSearchHintId}
                         aria-keyshortcuts={getSettingsSearchKeyShortcuts()}
                         placeholder={t('Search connectors…')}
                         value={connectorSearchQuery}
                         onChange={(e) => setConnectorSearchQuery(e.target.value)}
                         className="w-full rounded-md border border-border bg-card px-2.5 py-1.5 text-[12.5px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
                       />
+                      <p
+                        id={connectorSearchHintId}
+                        className="mt-1 text-[11px] text-muted-foreground"
+                        lang="ja"
+                      >
+                        {t('Do not enter patient information in search terms.', { lng: 'ja' })}
+                      </p>
                       <TagFilter
                         resourceType="catalog.connector"
                         value={connectorTagFilter}

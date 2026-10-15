@@ -21,6 +21,7 @@ import type {
   SetConnectorAutoAllowRequest,
   SetConnectorEnabledRequest,
   SetCustomServerEnabledRequest,
+  SetCiniiAppIdRequest,
   SetNcbiCredentialsRequest,
   SetOpenAlexCredentialRequest,
   SetToolPermissionRequest,
@@ -582,6 +583,16 @@ class ConnectorSettingsModule {
 
     await this.repository.setNcbiCredentials(request.contactEmail?.trim() || undefined, apiKeyRef)
 
+    return this.connectorsSnapshot()
+  }
+
+  async setCiniiAppId(request: SetCiniiAppIdRequest): Promise<ConnectorsSnapshot> {
+    const appId = request.appId.trim()
+    if (appId.length > 200) throw new Error('CiNii appid is too long.')
+    if ([...appId].some((char) => char.charCodeAt(0) <= 32 || /\s/u.test(char))) {
+      throw new Error('CiNii appid cannot contain spaces.')
+    }
+    await this.repository.setCiniiAppId(appId || undefined)
     return this.connectorsSnapshot()
   }
 
@@ -1311,7 +1322,8 @@ class ConnectorSettingsModule {
         : {}),
       reservedCustomServerIds: connectors?.pendingCustomServerDeletionIds ?? [],
       ncbi: this.ncbiView(connectors),
-      openAlex: this.openAlexView(connectors)
+      openAlex: this.openAlexView(connectors),
+      ciniiAppId: connectors?.ciniiAppId ?? ''
     }
   }
 }
