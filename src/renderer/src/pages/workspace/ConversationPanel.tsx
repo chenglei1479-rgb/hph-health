@@ -116,6 +116,7 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { useSpecialistStore } from '@/stores/specialist-store'
 import { ConnectorCredentialControls } from '@/pages/settings/ConnectorCredentialDialog'
 
+import { DeliverableNextStepHost } from '@/pages/home/DeliverableNextStepHost'
 import { MentorPackComposerNotice } from '@/pages/home/MentorPackComposerNotice'
 import { ComposerEditor } from './composer/ComposerEditor'
 import { FileTypeIcon } from './file-type-icon'
@@ -1638,6 +1639,19 @@ const ConversationPanel = ({
             )}
           />
 
+          <DeliverableNextStepHost
+            session={
+              activeSession
+                ? {
+                    id: activeSession.id,
+                    status: activeSession.status,
+                    projectId: activeSession.projectId,
+                    contentLoaded: activeSession.contentLoaded,
+                    messages: activeSession.messages
+                  }
+                : undefined
+            }
+          />
           <div
             className={cn(
               'px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] md:px-4 md:pb-[6px]',

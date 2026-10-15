@@ -7694,6 +7694,22 @@
     "Aggregate statistics export": "Exportación de estadísticas agregadas",
     "Aggregated results only; source data is not included": "Solo resultados agregados; no se incluyen los datos de origen",
     "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "No se ejecuta un análisis. Solo se exporta el paquete agregado para el estadístico. No se incluyen los datos de origen ni el historial del chat.",
-    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "Este paquete no carga datos de pacientes. No solicite tablas de pacientes ni filas individuales. Limite la consulta al diseño del estudio y a un resumen de los resultados agregados."
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "Este paquete no carga datos de pacientes. No solicite tablas de pacientes ni filas individuales. Limite la consulta al diseño del estudio y a un resumen de los resultados agregados.",
+    "Not available in this version": "No disponible en esta versión",
+    "Ethics application documents": "Documentos de la solicitud ética",
+    "Slides and poster": "Diapositivas y póster",
+    "Pack deliveries on this device": "Entregas de paquetes en este equipo",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "El número de entregas terminadas permanece en este equipo. Puede copiarlo en un registro en papel. No se envía nada.",
+    "Deliveries completed": "Entregas terminadas",
+    "Packs used": "Paquetes utilizados",
+    "No pack deliveries yet.": "Aún no hay entregas.",
+    "Copy counts": "Copiar los números",
+    "Counts copied.": "Números copiados.",
+    "Open this step": "Abrir este paso",
+    "This destination is not in the app yet.": "Este destino no está en la aplicación.",
+    "Fictional sample abstract": "Resumen de muestra ficticio",
+    "Open the fictional sample. No model call and no API key.": "Abrir la muestra ficticia. Sin llamada al modelo y sin clave de API.",
+    "Save this sample": "Guardar esta muestra",
+    "Sample saved on this device.": "Guardado en este equipo."
   }
 }

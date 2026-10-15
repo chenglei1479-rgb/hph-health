@@ -67,6 +67,7 @@ import {
 } from './deliverable-packages'
 import { sessionWaitReasonLabelKeys } from '@/lib/session-wait-reason-labels'
 import { APP } from '../../../../shared/app-config'
+import { WORKFLOW_MODE_ANALYSIS_LINE } from '../../../../shared/deliverable-next-step'
 import { earliestCurrentDelegatedAttemptStartedAt } from '../../../../shared/delegated-work-projection'
 import { PROJECT_NAME_MAX_LENGTH, type Project } from '../../../../shared/projects'
 import type { EnvironmentCheckItem, EnvironmentCheckResult } from '../../../../shared/settings'
@@ -268,7 +269,7 @@ const HomePage = ({
         )
         const analysisPrompt =
           selection.workflow === 'analysis'
-            ? `\n\n${t('For data analysis, ask the researcher to attach an anonymized CSV if none is attached. Preserve the original and stop if direct identifiers or likely patient identifiers are found; do not reproduce them. First provide a reviewable data profile: row and column counts, schema, variable names and types, units, coding, duplicates, ranges, missingness by variable, and appropriate descriptive statistics. Explain limitations and any data-quality decisions. Recommend a statistical plan based on the design, outcomes, distributions, sample size, and missingness; state assumptions, alternatives, effect measures, and missing-data handling. Propose Table 1 and figure specifications. Then stop and wait for explicit researcher approval of the plan. Only after approval run Python or R. Provide the exact reproducible code, software and package versions, input-file checksum, parameters, and generated tables and figures. Report only computed results with effect sizes and uncertainty, then draft Methods and Results from those outputs and request researcher review. If the environment cannot execute an analysis or generate an artifact, say so and provide the code as a draft instead of claiming completion.')}`
+            ? `\n\n${t('For data analysis, ask the researcher to attach an anonymized CSV if none is attached. Preserve the original and stop if direct identifiers or likely patient identifiers are found; do not reproduce them. First provide a reviewable data profile: row and column counts, schema, variable names and types, units, coding, duplicates, ranges, missingness by variable, and appropriate descriptive statistics. Explain limitations and any data-quality decisions. Recommend a statistical plan based on the design, outcomes, distributions, sample size, and missingness; state assumptions, alternatives, effect measures, and missing-data handling. Propose Table 1 and figure specifications. Then stop and wait for explicit researcher approval of the plan. Only after approval run Python or R. Provide the exact reproducible code, software and package versions, input-file checksum, parameters, and generated tables and figures. Report only computed results with effect sizes and uncertainty, then draft Methods and Results from those outputs and request researcher review. If the environment cannot execute an analysis or generate an artifact, say so and provide the code as a draft instead of claiming completion.')}\n${WORKFLOW_MODE_ANALYSIS_LINE}`
             : ''
         const noveltyPrompt =
           selection.workflow === 'novelty'

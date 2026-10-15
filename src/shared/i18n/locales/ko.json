@@ -7364,6 +7364,22 @@
     "Aggregate statistics export": "집계 통계 자료 내보내기",
     "Aggregated results only; source data is not included": "집계 결과만 포함하며 원본 데이터는 포함하지 않습니다",
     "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "분석은 실행하지 않습니다. 통계 담당 선생님께 전달할 집계 패키지만 내보냅니다. 원본 데이터와 채팅 기록은 포함하지 않습니다.",
-    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "이 팩은 환자 데이터를 불러오지 않습니다. 환자 표나 개별 행을 요청하지 마세요. 상담은 연구 설계와 집계 결과 요약으로 한정하세요."
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "이 팩은 환자 데이터를 불러오지 않습니다. 환자 표나 개별 행을 요청하지 마세요. 상담은 연구 설계와 집계 결과 요약으로 한정하세요.",
+    "Not available in this version": "이 버전에는 없습니다",
+    "Ethics application documents": "윤리 신청 문서",
+    "Slides and poster": "슬라이드와 포스터",
+    "Pack deliveries on this device": "이 기기의 산출물 전달 횟수",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "완료된 산출물 전달 횟수는 이 컴퓨터에만 남습니다. 종이 로그에 옮겨 적을 수 있습니다. 업로드하지 않습니다.",
+    "Deliveries completed": "완료된 전달",
+    "Packs used": "사용한 패키지",
+    "No pack deliveries yet.": "아직 전달이 없습니다.",
+    "Copy counts": "횟수 복사",
+    "Counts copied.": "횟수를 복사했습니다.",
+    "Open this step": "이 단계 열기",
+    "This destination is not in the app yet.": "이 목적지는 아직 앱에 없습니다.",
+    "Fictional sample abstract": "가상 표본 학회 초록",
+    "Open the fictional sample. No model call and no API key.": "가상 표본을 엽니다. 모델을 호출하지 않으며 API 키도 필요 없습니다.",
+    "Save this sample": "이 표본 저장",
+    "Sample saved on this device.": "이 기기에 저장했습니다."
   }
 }

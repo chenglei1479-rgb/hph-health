@@ -7366,6 +7366,22 @@
     "Aggregate statistics export": "統計資料の書き出し",
     "Aggregated results only; source data is not included": "集計結果のみ・原データ含まず",
     "This does not run an analysis. It only exports the aggregate package for a statistician. Source data and chat history are not included.": "解析は行わず、統計の先生へ渡す集計パッケージだけを書き出します。元データやチャット履歴は含めません。",
-    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "このパックは患者データを読み込みません。患者表や個別の行を求めないでください。相談は研究デザインと集計結果の要約にとどめてください。"
+    "This pack does not load patient data. Do not ask for patient tables or individual rows. Keep the consultation to study design and a summary of aggregate results.": "このパックは患者データを読み込みません。患者表や個別の行を求めないでください。相談は研究デザインと集計結果の要約にとどめてください。",
+    "Not available in this version": "近日公開",
+    "Ethics application documents": "倫理申請書類",
+    "Slides and poster": "スライド・ポスター",
+    "Pack deliveries on this device": "この端末での交付回数",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "完了した交付の回数は、このコンピュータにだけ残ります。紙の記録に書き写せます。アップロードはしません。",
+    "Deliveries completed": "完了した交付",
+    "Packs used": "使ったパック",
+    "No pack deliveries yet.": "まだ交付はありません。",
+    "Copy counts": "回数をコピー",
+    "Counts copied.": "回数をコピーしました。",
+    "Open this step": "このステップを開く",
+    "This destination is not in the app yet.": "この行き先は、まだこのアプリにはありません。",
+    "Fictional sample abstract": "架空サンプルの学会抄録",
+    "Open the fictional sample. No model call and no API key.": "架空サンプルを開きます。モデルは呼ばず、API キーも要りません。",
+    "Save this sample": "このサンプルを保存",
+    "Sample saved on this device.": "この端末に保存しました。"
   }
 }
