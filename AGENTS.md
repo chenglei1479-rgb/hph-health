@@ -269,3 +269,42 @@ Apply this to any `Tooltip` + `DropdownMenuTrigger` (or `DialogTrigger`) combo. 
 alternatives: `onCloseAutoFocus={(e) => e.preventDefault()}` breaks focus return for keyboard/screen
 reader users, and fully controlled `open` state is more code for the same behavior. Reference
 implementation: `ConversationPanel.tsx` (composer "+" and split-send triggers, commit 7aafedca).
+
+## Cursor Cloud specific instructions
+
+Node.js 24 (`.nvmrc`) is the development toolchain. Cloud Agents use Node.js 24.21.0 on
+`/usr/local/bin` and npm 10.9.8. npm 11, which ships with Node.js 24, rejects this lockfile's
+`file:` packages. Login shells prepend `/usr/local/bin`.
+
+From the repository root:
+
+```bash
+npm ci --no-audit --install-links
+npm run build:web
+```
+
+`npm run build:web` writes the headless web UI to `out/web` (`out/` is gitignored). `npm run dev`
+opens an Electron window. On Linux without a desktop session, start the headless web UI instead:
+
+```bash
+export OPEN_SCIENCE_WEB_PORT=44100
+export DRA_AUTH_MODE=local
+node scripts/check-prisma-client.mjs
+node scripts/dev-app-branding.cjs
+node node_modules/electron-vite/bin/electron-vite.js dev -- --open-science-headless --credential-store=file
+```
+
+- `DRA_AUTH_MODE=local` selects local mode. The shipped `resources/dra-auth.json` test Auth0 file
+  otherwise requires a signed-in account before the research UI loads. Set real `DRA_AUTH_*`
+  values when testing account login.
+- `--credential-store=file` is the Linux headless credential mode documented in `docs/design.md`.
+  Settings secrets are stored unencrypted. The flag is valid only together with headless mode.
+- The UI and task API listen on `http://127.0.0.1:44100/`. The loopback token is
+  `~/.medresearch-agent-project/web-token`.
+- First launch opens setup. Environment checks and the default data location can be completed
+  locally. The agent-runtime step stays closed until Claude Agent, OpenCode, Codex, or CodeBuddy
+  is installed, and the next step needs a model provider.
+- Micromamba 2.8.1 (`scripts/micromamba-versions.json`) is installed on `/usr/local/bin` so
+  Notebook can resolve the binary. It does not create scientific environments.
+- Validation commands: `npm run typecheck`, `npm run lint`, and `npm test`. `npm run lint`
+  currently exits non-zero because of existing repository findings.
