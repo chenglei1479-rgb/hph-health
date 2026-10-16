@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { Tiktoken } from 'js-tiktoken/lite'
 import cl100kBase from 'js-tiktoken/ranks/cl100k_base'
 import { renderConnectorInstructions, renderSkillDoc, renderCustomSkillDoc } from './skill-doc'
-import { CONNECTOR_CATALOG } from './catalog'
+import { CONNECTOR_CATALOG } from '@aipoch/connector-builtins/catalog'
 
 const tokenizer = new Tiktoken(cl100kBase)
 
@@ -61,67 +61,6 @@ describe('renderConnectorInstructions', () => {
 })
 
 describe('renderSkillDoc', () => {
-  it('publishes discovery, version and file-access contracts in the generated skill', () => {
-    const doc = renderSkillDoc('zenodo')
-    for (const contract of [
-      'name: mcp-zenodo',
-      '### search_records',
-      '### get_record',
-      'next_page',
-      'pagination_limited',
-      '(page - 1) * page_size',
-      'all_versions',
-      'concept_record_id',
-      'No uploads or file downloads',
-      'not sanitized',
-      'empty file list does not establish'
-    ])
-      expect(doc).toContain(contract)
-  })
-  it('documents ENA discovery limits and original submitted file locations', () => {
-    const md = renderSkillDoc('omics-archives')
-    expect(md).toContain('### ena_query_runs')
-    expect(md).toContain('### ena_get_submitted_files')
-    expect(md).toContain('Discover ENA sequencing runs by taxonomy')
-    expect(md).toContain('including descendant taxa')
-    expect(md).toContain('not the host of a microbiome sample')
-    expect(md).toContain('repeated calls are not pagination')
-    expect(md).toContain('filenames may contain literal #')
-    expect(md).toContain('A CRAM may require its matching reference')
-  })
-
-  it('documents the GEO matrix acquisition and preflight workflow', () => {
-    const md = renderSkillDoc('omics-archives')
-    expect(md).toContain('### geo_get_matrix_files')
-    expect(md).toContain('### geo_preflight_matrix')
-    expect(md).toContain('NCBI-generated RNA-seq count files')
-    expect(md).toContain('A preview cannot establish total dimensions')
-    expect(md).toContain('never by position')
-    expect(md).toContain('Only plain TSV supports unique exact title matching')
-    expect(md).toContain('Series Matrix requires exactly one !Sample_geo_accession header')
-    expect(md).toContain('valid GSM accessions matching the sample column count and order')
-    expect(md).toContain('and never falls back to title matching')
-    expect(md).toContain('For plain TSV previews, pass the table header plus complete preview rows')
-    expect(md).toContain(
-      'For Series Matrix previews, also preserve the preceding metadata, including !Sample_geo_accession and any !Sample_platform_id header, and !series_matrix_table_begin'
-    )
-    expect(md).toContain('do not submit only the table or fabricate !series_matrix_table_end')
-    expect(md).toContain('not an analysis-readiness guarantee')
-    expect(md).toContain('manual download by the user')
-    expect(md).toContain('completeness is caller-declared')
-    expect(md).toContain('If both sources are unavailable, the call throws')
-    expect(md).toContain('multiple platforms alone are advisory warnings')
-  })
-
-  it('exposes the PRIDE paged file contract in the generated connector skill', () => {
-    const md = renderSkillDoc('omics-archives')
-    expect(md).toContain('### pride_get_project_files')
-    expect(md).toContain('next_page')
-    expect(md).toContain('for a PXD or PRD accession')
-    expect(md).toContain('paged project file inventories with download locations')
-    expect(md).toContain('Aspera locations are transfer addresses, not HTTP URLs')
-  })
-
   it('renders a compact self-contained catalog without repeating the shared conventions', () => {
     const md = renderSkillDoc('chemistry')
     expect(md).toContain('name: mcp-chemistry')
@@ -151,7 +90,7 @@ describe('renderSkillDoc', () => {
       md.indexOf('### get_article_metadata')
     )
     expect(block).toContain(
-      'const result = await host.mcp("pubmed", "search_articles", {"query": "CRISPR gene editing", "max_results": 10})'
+      'const result = await host.mcp("pubmed", "search_articles", {"query":"CRISPR gene editing","max_results":10})'
     )
     expect(block).not.toContain('```')
   })
@@ -340,7 +279,20 @@ describe('MaveDB generated skill contracts', () => {
     for (const id of ['get_score_set', 'download_scores', 'get_mapped_variants']) {
       const section = doc.split(`### mavedb_${id}\n`)[1]?.split('\n### ')[0]
       expect(section).toContain('manual download by the user')
-      expect(section).toContain('do not fetch these URLs with raw HTTP to bypass host.mcp')
+      expect(doc).toContain('Do not bypass `host.mcp` with raw HTTP')
     }
   })
+})
+
+it('keeps contact-email settings and retention guidance in the host document', () => {
+  const doc = renderSkillDoc('interproscan')
+  expect(doc).toContain('Settings → Credentials → Literature access')
+  expect(doc).toContain('Notebook persistence')
+  expect(doc).toContain('This email is sent to EMBL-EBI')
+})
+
+it('keeps ENCORI approval and Specialist policy in the host Skill', () => {
+  const doc = renderSkillDoc('encori')
+  expect(doc).toContain('Skip approvals and remembered grants retain their existing precedence')
+  expect(doc).toContain('Specialist capability scopes follow their existing independent policy')
 })

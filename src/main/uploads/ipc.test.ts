@@ -119,7 +119,7 @@ describe('default upload repository', () => {
       ]
     })
 
-    // Uploads follow the configurable data root; a fresh dev install defaults to <home>/DRA-DEV.
+    // Uploads follow the configurable data root; a fresh dev install defaults to <home>/Open-Science-DEV.
     expect(attachment.path).toBe(
       join(
         homeRoot,
@@ -924,3 +924,7 @@ describe('default upload repository', () => {
     expect(ipcHandlers.has('uploads:stage-files')).toBe(false)
   })
 })
+
+await (
+  await import('../../../test/runtime-host')
+).configureTestElectronHost(await import('electron'))

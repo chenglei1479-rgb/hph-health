@@ -19,9 +19,32 @@ export default defineConfig({
       '@renderer': resolve('src/renderer/src')
     }
   },
+  // Prebundle linked CommonJS leaves when serving the renderer in development.
+  optimizeDeps: {
+    include: [
+      '@aipoch/connector-mcp-client/oauth-redirect',
+      '@aipoch/compute',
+      '@aipoch/diagnostics',
+      '@aipoch/skills/document',
+      '@aipoch/notebook-analysis/contracts',
+      '@aipoch/environment/contracts',
+      '@aipoch/specialists',
+      '@aipoch/reproducibility/contracts',
+      '@aipoch/reproducibility/comparison',
+      '@aipoch/reproducibility/execution-context'
+    ]
+  },
   plugins: [react(), tailwindcss()],
   build: {
     outDir: resolve('out/web'),
+    // Local npm packages resolve outside node_modules through their file: links.
+    commonjsOptions: {
+      include: [
+        /node_modules/,
+        /packages[\\/](?:connector-(?:core|mcp-client)|compute|diagnostics|skills|specialists)[\\/]dist/,
+        /packages[\\/](?:notebook-analysis|environment|reproducibility)[\\/]dist/
+      ]
+    },
     emptyOutDir: true
   }
 })

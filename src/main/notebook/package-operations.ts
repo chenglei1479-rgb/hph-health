@@ -1,32 +1,34 @@
-import type { NotebookLanguage, NotebookSessionRequest } from '../../shared/notebook'
-import type { PackageMirror } from '../../shared/mirror'
-import type { RuntimeEnablement, RuntimeTargetReceipt } from '../../shared/notebook-runtime'
-import type { NotebookEnvironmentOperations } from './environment-operations'
 import type {
   EnvironmentCaptureTarget,
   EnvironmentStateTracker,
+  InstallDeps,
+  InstallSpawn,
+  MicromambaRunner,
+  MicromambaWorkingCacheRetainer,
+  NotebookRecoveryCoordinator,
+  NotebookRuntimeRepairPolicy,
   PackageInspectionResult
-} from './environment-state-tracker'
-import { boundedFailureDiagnostic } from './failure-diagnostic'
-import { effectiveMirrorAsync, type ProbeDeps } from './mirror-probe'
-import { NotebookPackageAdmissionOwner } from './package-admission'
-import type { NotebookPackageAdmittedTarget } from './package-admission'
-import type { InstallDeps, InstallRequest, InstallResult, InstallSpawn } from './package-manager'
-import type { MicromambaWorkingCacheRetainer } from './windows-micromamba-working-cache'
-import { NotebookPackageMutationOwner } from './package-mutation'
-import { packagePreflight, type NotebookPackagePreflight } from './package-preflight'
-import type { NotebookRecoveryCoordinator } from './recovery-coordinator'
+} from '@aipoch/environment'
 import {
   DEFAULT_ENV_VERSION,
   DEFAULT_PY_ENV,
   DEFAULT_R_ENV,
+  EnvironmentPackageMutationOwner,
   envPrefix,
   pythonReady,
   rReady
-} from './runtime-paths'
+} from '@aipoch/environment'
+import type { PackageMirror } from '../../shared/mirror'
+import type { NotebookSessionRequest } from '../../shared/notebook'
+import type { InstallRequest, InstallResult } from '../../shared/notebook-env'
+import type { NotebookLanguage } from '../../shared/notebook-language-contract'
+import type { RuntimeEnablement, RuntimeTargetReceipt } from '../../shared/notebook-runtime'
+import type { NotebookEnvironmentOperations } from './environment-operations'
+import { boundedFailureDiagnostic } from './failure-diagnostic'
+import { effectiveMirrorAsync, type ProbeDeps } from './mirror-probe'
+import type { NotebookPackageAdmittedTarget } from './package-admission'
+import { NotebookPackageAdmissionOwner } from './package-admission'
 import type { NotebookRuntimeRepairOwner } from './runtime-repair'
-import type { NotebookRuntimeRepairPolicy } from './runtime-repair-policy'
-import type { MicromambaRunner } from './windows-micromamba-runner'
 import type {
   NotebookSessionAggregate,
   NotebookSessionResolvedInterpreter,
@@ -123,7 +125,7 @@ const packageOperationFailure = (error: unknown, target: RuntimeTargetReceipt): 
 /** Composes package inspection and mutation behind two stable operations. */
 class NotebookPackageOperations {
   private readonly admission: NotebookPackageAdmissionOwner
-  private readonly mutation: NotebookPackageMutationOwner
+  private readonly mutation: EnvironmentPackageMutationOwner
 
   constructor(private readonly options: NotebookPackageOperationsOptions) {
     this.admission = new NotebookPackageAdmissionOwner({
@@ -138,7 +140,7 @@ class NotebookPackageOperations {
       recovery: options.recovery,
       createEnvironmentCaptureTarget: options.createEnvironmentCaptureTarget
     })
-    this.mutation = new NotebookPackageMutationOwner({
+    this.mutation = new EnvironmentPackageMutationOwner({
       storageRoot: options.storageRoot,
       runtimeRoot: options.runtimeRoot,
       environmentOperations: options.environmentOperations,

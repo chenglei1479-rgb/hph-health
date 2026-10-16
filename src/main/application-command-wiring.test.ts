@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 const projectRoot = resolve(__dirname, '../..')
 const readSource = (path: string): string => readFileSync(resolve(projectRoot, path), 'utf8')
@@ -29,6 +29,7 @@ const commandRegistrationSource = compact(
 const literatureOwnerSource = compact(readSource('src/main/literature/command-owner.ts'))
 const coreSurfaceSource = compact(readSource('src/main/ipc-surfaces/core.ts'))
 const indexSource = readSource('src/main/index.ts')
+const nodeEntrySource = readSource('src/main/node-entry.ts')
 const runtimeSource = readSource('src/main/application-runtime.ts')
 const compositionSource = readSource('src/main/application-command-composition.ts')
 const ipcRegistrySource = readSource('src/main/ipc-handler-registry.ts')
@@ -85,7 +86,7 @@ describe('production application command wiring', () => {
 
   it('adopts package publications into the live persistence owner before exposing desktop commands', () => {
     expect(domainCompact('session-packages')).toContain(
-      'await packagePublicationOwner.current?.adoptPublishedSession(projectId, sessionId)'
+      'await packagePublicationOwner.current?.adoptPublishedSession(publication)'
     )
     const authority = domain('session-authority')
     expect(
@@ -104,7 +105,7 @@ describe('production application command wiring', () => {
       'sessionPackageDesktopLifecycle.isActive = () => sessionPackageDesktop.operations.active'
     )
     expect(source).toContain(
-      'sessionPackageDesktopLifecycle.close = async () => { removePackageQuitGuard() await sessionPackageDesktop.close() }'
+      'sessionPackageDesktopLifecycle.close = async () => { await sessionPackageDesktop.close() }'
     )
     expect(source).toContain(
       'await Promise.all([service.close(), sessionPackageDesktopLifecycle.close()])'
@@ -153,7 +154,7 @@ describe('production application command wiring', () => {
   it('installs Office preview once with shared resources between managed preview and environment', () => {
     const source = domainCompact('notebook-surfaces')
     expect(source).toContain(
-      "...createOfficePreviewElectronSurfaces({ previewResources: managedFiles.previewResources, runtimeHtmlPath: join(__dirname, '../renderer/office-preview.html') })"
+      "...createOfficePreviewElectronSurfaces({ commands: officePreviewCommands, previewResources: managedFiles.previewResources, runtimeHtmlPath: join(__dirname, '../renderer/office-preview.html') })"
     )
     const preview = source.indexOf("declareElectronAdapter('managed-preview'")
     const office = source.indexOf('...createOfficePreviewElectronSurfaces(')
@@ -168,7 +169,7 @@ describe('production application command wiring', () => {
   it('installs Settings once with shared owners before Notebook in afterAcp', () => {
     const source = domainCompact('settings-effects')
     expect(source).toContain(
-      'createSettingsElectronSurface({ service: settingsService, workflows: settingsWorkflows, snapshotCommits: settingsSnapshotCommits, listAppIconPreviews, translate })'
+      'createSettingsElectronSurface({ fileCommands: settingsFileCommands, service: settingsService, workflows: settingsWorkflows, snapshotCommits: settingsSnapshotCommits, listAppIconPreviews, translate })'
     )
     const settings = source.indexOf('createSettingsElectronSurface(')
     expect(settings).toBeGreaterThan(-1)
@@ -217,7 +218,7 @@ describe('production application command wiring', () => {
     )
     expect(occurrences(ipcSource, 'createConnectorApprovalElectronSurface(')).toBe(1)
     expect(domainCompact('connectors')).toContain(
-      'connectorApprovals: approvalBroker, credentialRequests: credentialRequestBroker, skillImportApprovals: skillImportApprovalBroker } = connectorApplication'
+      'connectorApprovals: approvalBroker, credentialRequests: credentialRequestBroker } = connectorApplication'
     )
     const surface = compact(readSource('src/main/ipc-surfaces/connector-approvals.ts'))
     expect(surface).toContain("createElectronSurfaceAdapter('connector-approvals'")
@@ -257,6 +258,19 @@ describe('production application command wiring', () => {
     )
     expect(literatureOwnerSource).toContain(
       'transact: (command) => transactLiterature(literatureCatalog, contentRepository, command)'
+    )
+  })
+
+  it('wakes durable delegated messages after command saves without holding the write gate', () => {
+    const source = compact(domain('command-dependencies'))
+    expect(source).toContain(
+      'sessionSurfaces.sessionDetailsOwner.afterSessionSaved(result.session)'
+    )
+    expect(source).toContain(
+      'void delegation.delegatedWork.root.wakeMessages?.(result.session.id).catch('
+    )
+    expect(source.indexOf('wakeMessages?.(result.session.id)')).toBeGreaterThan(
+      source.indexOf('sessionSurfaces.sessionDetailsOwner.afterSessionSaved(result.session)')
     )
   })
 
@@ -308,7 +322,7 @@ describe('production application command wiring', () => {
   it('installs the Artifact surface in its existing phase with the shared owners', () => {
     const source = domainCompact('artifact-surfaces')
     expect(source).toContain(
-      'surfaceAdapters.push( createArtifactElectronSurface({ artifactRepository, artifactRunRegistry, artifactProvenanceRepository, artifactHandlers, artifactReproducibilityAttemptOwnerRef, archiveCoordinator, sessionPersistenceCoordinator, notebookService, translate }) )'
+      'surfaceAdapters.push( createArtifactElectronSurface({ reproducibilityCommands, artifactRepository, artifactRunRegistry, artifactProvenanceRepository, artifactHandlers, artifactReproducibilityAttemptOwnerRef, archiveCoordinator, sessionPersistenceCoordinator, notebookService, translate }) )'
     )
     expect(source.indexOf('createArtifactElectronSurface(')).toBeLessThan(
       source.indexOf('createUploadElectronSurface(uploadCommandOwner)')
@@ -452,7 +466,8 @@ describe('production application command wiring', () => {
     expect(returnedViews).toContain('localWeb: applicationCommandComposition.localWeb')
     expect(returnedViews).toContain('remoteWeb: applicationCommandComposition.remoteWeb')
     expect(returnedViews).toContain('task: applicationCommandComposition.task')
-    expect(occurrences(returnedViews, 'applicationCommandComposition.')).toBe(3)
+    expect(returnedViews).toContain('desktop: applicationCommandComposition.desktop')
+    expect(occurrences(returnedViews, 'applicationCommandComposition.')).toBe(4)
   })
 
   it('shares one Electron page preview resolver with the production Reviewer owner', () => {
@@ -463,11 +478,11 @@ describe('production application command wiring', () => {
       'previewResources: managedFiles.previewResources, runtimeShutdownOwner: handoff.reviewerModelRuntimeShutdown, declareElectronAdapter'
     )
     expect(reviewerCompositionSource).toContain(
-      'pagedContentResolver: createReviewerElectronPagedContentResolver(previewResources)'
+      'pagedContentResolver: createReviewerHostPagedContentResolver(previewResources)'
     )
-    expect(
-      occurrences(reviewerCompositionSource, 'createReviewerElectronPagedContentResolver(')
-    ).toBe(1)
+    expect(occurrences(reviewerCompositionSource, 'createReviewerHostPagedContentResolver(')).toBe(
+      1
+    )
     expect(reviewerCompositionSource).toContain('createReviewerCommandOwner(reviewerOptions)')
     expect(reviewerCompositionSource).toContain(
       'registerReviewerIpcHandlers(reviewerOptions, reviewerCommandOwner)'
@@ -479,7 +494,7 @@ describe('production application command wiring', () => {
   it('installs every notification inbox request on the Electron adapter', () => {
     callBefore('composeNotifications({', 'composeComputeServices({')
     expect(domainCompact('notifications')).toContain(
-      'surfaceAdapters.push( createNotificationElectronSurface( storageStartup.notificationInbox, taskNotifications, taskNotificationDeliveryDeps ) )'
+      'surfaceAdapters.push( createNotificationElectronSurface( storageStartup.notificationInbox, taskNotifications, taskNotificationDeliveryDeps, delivery ) )'
     )
     expect(occurrences(domain('notifications'), 'createNotificationElectronSurface(')).toBe(1)
     expect(notificationAdapterBlock).toContain(
@@ -523,36 +538,50 @@ describe('production application command wiring', () => {
     expect(runtimeSource).toContain("await modules.dispose('rollback')")
   })
 
-  it('registers startup network IPC before creating the first renderer window', () => {
+  it('exposes startup network commands before attaching the desktop transport', () => {
     const preWindowStartup = compact(
-      between(indexSource, 'await app.whenReady()', 'const startupWindow = webMode.headless')
+      between(
+        nodeEntrySource,
+        'const earlyChannels =',
+        'desktop = await startDesktopRuntimeTransport('
+      )
     )
-
-    expect(preWindowStartup).toContain('registerNetworkIpcHandlers()')
+    expect(preWindowStartup).toContain("'network:get-info'")
+    expect(preWindowStartup).toContain("'network:check-connectivity'")
+    expect(preWindowStartup).toContain('requireDesktopCaller(invocation.callerContext)')
+    expect(preWindowStartup).toContain('return networkCommands.getInfo()')
+    expect(preWindowStartup).toContain('return networkCommands.checkConnectivity()')
     expect(legacyAdapterBlock).not.toContain('registerNetworkIpcHandlers()')
-    expect(occurrences(indexSource + ipcSource, 'registerNetworkIpcHandlers()')).toBe(1)
+    expect(occurrences(nodeEntrySource, 'createNetworkCommandOwner()')).toBe(1)
+    const desktopStartup = between(
+      indexSource,
+      'await app.whenReady()',
+      'const lifecycle = installAppLifecycle('
+    )
+    expect(desktopStartup).toContain('installElectronNetwork()')
+    expect(desktopStartup).toContain('installDesktopRuntimeElectronAdapter(')
   })
 
   it('late-binds the unique Remote Access owner and passes only narrow views to Web and Task', () => {
     const startup = compact(
       between(
-        indexSource,
-        'const remoteAccess = await RemoteAccessService.create()',
-        '// A launch that itself requested serving'
+        nodeEntrySource,
+        'remoteAccess = await RemoteAccessService.create()',
+        'void remoteAccess.restore()'
       )
     )
-    expect(occurrences(indexSource, 'RemoteAccessService.create()')).toBe(1)
+    expect(occurrences(nodeEntrySource, 'RemoteAccessService.create()')).toBe(1)
+    expect(indexSource).not.toContain('RemoteAccessService.create()')
     // Ownership bookkeeping may sit between acquisition and binding; preserve their order.
     expect(startup).toMatch(
-      /const remoteAccess = await RemoteAccessService\.create\(\).*?bindRemoteAccess\(remoteAccess\) const webController = createWebServiceController\(\{[^}]*externalAccess: remoteAccess\.webAccess/
+      /remoteAccess = await RemoteAccessService\.create\(\).*?runtime\.bindRemoteAccess\(remoteAccess\) web = createWebServiceController\(\{[^}]*externalAccess: remoteAccess\.webAccess/
     )
-    expect(startup).toContain('remoteAccess.attachWebController(webController)')
-    expect(startup).toContain('registerRemoteAccessIpcHandlers(remoteAccess)')
+    expect(startup).toContain('remoteAccess.attachWebController(web)')
+    expect(startup).toContain('...runtime,')
 
     expect(occurrences(ipcSource, 'applicationCommands')).toBe(2)
-    expect(indexSource).toContain('applicationCommands,')
-    expect(startup).toContain('applicationCommands,')
-    expect(startup).toContain('taskControls, computePreferences, detectActiveSessions }')
+    expect(nodeEntrySource).toContain('runtime.applicationCommands.desktop')
+    expect(compact(ipcSource)).toContain('taskControls: {')
     expect(compact(ipcSource)).toContain(
       "computePreferences: Pick<SessionEnabledComputeHostsOwner, 'withReservation' | 'set'>"
     )
@@ -611,4 +640,340 @@ describe('production application command wiring', () => {
       expect(source).not.toContain('sender.id')
     }
   })
+})
+
+const rootFixture = vi.hoisted(() => ({ owners: {} as Record<string, unknown> }))
+vi.mock('./composition/agent-activation', () => ({
+  composeAgentActivation: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/agent-completion', () => ({
+  composeAgentCompletion: vi.fn(() => rootFixture.owners),
+  composeAgentWorkflows: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/agent-controls', () => ({
+  composeAgentControls: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/agent-runtime', () => ({
+  composeAgentRuntime: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/application-commands', () => ({
+  registerApplicationCommandComposition: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/artifact-surfaces', () => ({
+  composeArtifactSurfaces: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/backend-lifecycle', () => ({
+  composeBackendLifecycle: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/background-results', () => ({
+  composeBackgroundResults: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/command-dependencies', () => ({
+  composeCommandDependencies: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/compute', () => ({
+  composeComputeAdmission: vi.fn(() => rootFixture.owners),
+  composeComputeServices: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/compute-recovery', () => ({
+  composeComputeRecovery: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/connectors', () => ({
+  composeConnectorRecovery: vi.fn(() => rootFixture.owners),
+  composeConnectors: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/delegation', () => ({ composeDelegation: vi.fn(() => rootFixture.owners) }))
+vi.mock('./composition/desktop-utilities', () => ({
+  composeDesktopUtilities: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/document-reading', () => ({
+  composeDocumentReading: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/handoff', () => ({
+  composeHandoff: vi.fn(() => rootFixture.owners),
+  composeStorageHandoff: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/managed-files', () => ({
+  composeManagedFiles: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/notebook-bridge', () => ({
+  composeNotebookBridge: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/notebook-runtime', () => ({
+  composeNotebookRuntime: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/notebook-surfaces', () => ({
+  composeNotebookSurfaces: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/notifications', () => ({
+  composeNotifications: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/project-lifecycle', () => ({
+  composeProjectLifecycle: vi.fn(() => rootFixture.owners),
+  composeProjectRecovery: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/research-catalog', () => ({
+  composeResearchCatalog: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/reviewer', () => ({
+  registerReviewerComposition: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/session-authority', () => ({
+  composeSessionAuthority: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/session-foundation', () => ({
+  composeSessionFoundation: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/session-packages', () => ({
+  composeSessionPackageSurfaces: vi.fn(() => rootFixture.owners),
+  composeSessionPackages: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/session-projection', () => ({
+  composeSessionProjection: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/session-surfaces', () => ({
+  composeSessionSurfaces: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/settings-bootstrap', () => ({
+  composeSettingsBootstrap: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/settings-effects', () => ({
+  composeSettingsEffects: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/side-chat', () => ({ composeSideChat: vi.fn(() => rootFixture.owners) }))
+vi.mock('./composition/specialists', () => ({
+  composeSessionSpecialists: vi.fn(() => rootFixture.owners),
+  composeSpecialistCatalog: vi.fn(() => rootFixture.owners),
+  composeSpecialistPackages: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/storage-startup', () => ({
+  composeStorageStartup: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./composition/upload-storage', () => ({
+  composeUploadStorage: vi.fn(() => rootFixture.owners)
+}))
+vi.mock('./managed-preview-handler', () => ({ createManagedPreviewProtocolHandler: vi.fn() }))
+vi.mock('./desktop-surface-declarations', () => ({
+  createElectronSurfaceAdapter: (name: string, install: () => void) => ({ name, install }),
+  createConnectorApprovalElectronSurface: vi.fn(() => ({ name: 'connector-approval' })),
+  createCoreElectronSurfaces: vi.fn(() => [])
+}))
+vi.mock('./runtime-metadata', () => ({ runtimeMetadata: () => ({ version: 'test' }) }))
+
+import { createApplicationModules } from './ipc-application-composition'
+import { composeProjectLifecycle } from './composition/project-lifecycle'
+import { composeSettingsBootstrap } from './composition/settings-bootstrap'
+import { composeBackgroundResults } from './composition/background-results'
+import { composeManagedFiles } from './composition/managed-files'
+import { composeSessionAuthority } from './composition/session-authority'
+import { composeSessionPackages } from './composition/session-packages'
+import { composeAgentControls } from './composition/agent-controls'
+import { composeConnectors } from './composition/connectors'
+import { createConnectorApprovalElectronSurface } from './desktop-surface-declarations'
+import { CredentialRequestBroker } from './connectors/credential-request-broker'
+
+// Keep domain factories isolated while exercising their real construction order and late bindings.
+it('connects committed deletion to the same credential broker used by approval surfaces', async () => {
+  const broadcast = vi.fn()
+  const broker = new CredentialRequestBroker({ generateId: () => 'credential', broadcast })
+  const journalDispose = vi.fn()
+  const runtime = { prepareForQuit: vi.fn(async () => 'completed'), abortQuitPreparation: vi.fn() }
+  const shutdown = vi.fn(async () => 'completed')
+  const resumeAfterHandoff = vi.fn()
+  const setClosePreference = vi.fn(async () => undefined)
+  const currentSnapshotAfter = vi.fn(async (value) => value)
+  const resolveSpecialist = vi.fn()
+  const owners = {
+    credentialRequestBroker: broker,
+    approvalBroker: {},
+    skillImportApprovalBroker: {},
+    reviewerCommandOwnerRef: { current: undefined },
+    journalAttributes: { dispose: journalDispose },
+    computeIpcModule: { handlers: {} },
+    runtime,
+    sideChatRuntime: { resumeAfterHandoff },
+    shutdownCoordinator: { runForQuitPreparation: shutdown },
+    reviewerModelRuntimeShutdown: { current: { hasActiveWork: vi.fn(() => true) } },
+    settingsService: {
+      setClosePreference,
+      getActiveInstallId: vi.fn(() => 'install'),
+      holdInstallAdmission: vi.fn()
+    },
+    settingsSnapshotCommits: { currentSnapshotAfter },
+    specialistService: { resolveRunnableByReference: resolveSpecialist },
+    sessionPackageDesktop: {
+      reportOpenOverflow: vi.fn(),
+      enqueueFile: vi.fn(),
+      hasActiveTransfer: vi.fn(() => true)
+    },
+    sessionPersistenceCoordinator: { sessionProjectId: vi.fn(async () => 'project') },
+    sessionRepository: { loadSession: vi.fn(async () => ({ memoryEnabled: false })) },
+    archiveCoordinator: { withSessionAvailableById: vi.fn(async (_id, operation) => operation()) },
+    notebookService: {},
+    specialistDomain: {},
+    notebookCommands: {},
+    jobRepository: {},
+    hostRepository: {},
+    notebookInputRegistry: {},
+    delegatedWorkRef: {},
+    literatureCatalog: { getMany: vi.fn() },
+    detectSessionExportBlockingSessions: vi.fn(),
+    localWeb: {},
+    remoteWeb: {},
+    task: {},
+    desktop: {}
+  }
+  rootFixture.owners = owners
+  const moduleRecords: { name: string; dispose?: () => unknown }[] = []
+  const events = { publish: vi.fn() }
+  const add = vi.fn(async (input, create) => {
+    if (typeof input === 'function') return events
+    const module = await create(input)
+    moduleRecords.push(module)
+    return module.capability
+  })
+  const localeOwner = { t: vi.fn((key: string) => key) }
+  const phase = vi.fn()
+  const result = await createApplicationModules(
+    { mainEntryPath: '/unused/main.js', localeOwner } as unknown as Parameters<
+      typeof createApplicationModules
+    >[0],
+    { add } as unknown as Parameters<typeof createApplicationModules>[1],
+    { phase } as unknown as Parameters<typeof createApplicationModules>[2]
+  )
+  const lifecycle = vi.mocked(composeProjectLifecycle).mock.calls.at(-1)![0]
+  const info = {
+    credentialId: 'openalex' as const,
+    connector: 'literature',
+    method: 'search',
+    sessionId: 'session'
+  }
+  const pending = broker.request(info)
+  broker.respond('credential', false)
+  expect(await pending).toBe(false)
+  expect(await broker.request(info)).toBe(false)
+  expect(broadcast).toHaveBeenCalledTimes(1)
+  lifecycle.clearSessionCredentials('session')
+  const renewed = broker.request(info)
+  expect(broadcast).toHaveBeenCalledTimes(2)
+  broker.respond('credential', true)
+  expect(await renewed).toBe(true)
+  expect(createConnectorApprovalElectronSurface).toHaveBeenLastCalledWith(
+    owners.approvalBroker,
+    broker,
+    owners.skillImportApprovalBroker
+  )
+  expect(vi.mocked(composeProjectLifecycle).mock.invocationCallOrder.at(-1)).toBeLessThan(
+    vi.mocked(composeConnectors).mock.invocationCallOrder.at(-1)!
+  )
+  expect(lifecycle.getNotebookService()).toBe(owners.notebookService)
+
+  const settings = vi.mocked(composeSettingsBootstrap).mock.calls.at(-1)![0]
+  expect(settings.getSpecialistDomain()).toBe(owners.specialistDomain)
+  expect(settings.getSpecialistService()).toBe(owners.specialistService)
+  expect(settings.getRuntimeRef()).toBe(lifecycle.runtimeRef)
+  const background = vi.mocked(composeBackgroundResults).mock.calls.at(-1)![0]
+  expect(background.getSessionRepository()).toBe(owners.sessionRepository)
+  expect(background.getSessionPersistenceCoordinator()).toBe(owners.sessionPersistenceCoordinator)
+  expect(background.getNotebookCommands()).toBe(owners.notebookCommands)
+  expect(background.getJobRepository()).toBe(owners.jobRepository)
+  expect(background.getHostRepository()).toBe(owners.hostRepository)
+  const managed = vi.mocked(composeManagedFiles).mock.calls.at(-1)![0]
+  expect(managed.getNotebookInputRegistry()).toBe(owners.notebookInputRegistry)
+  managed.readLiteratureItems(['paper'])
+  expect(owners.literatureCatalog.getMany).toHaveBeenCalledWith(['paper'])
+  expect(vi.mocked(composeSessionAuthority).mock.calls.at(-1)![0].getDelegatedWorkRef()).toBe(
+    owners.delegatedWorkRef
+  )
+  expect(
+    vi.mocked(composeSessionPackages).mock.calls.at(-1)![0].getDetectSessionExportBlockingSessions()
+  ).toBe(owners.detectSessionExportBlockingSessions)
+  expect(vi.mocked(composeAgentControls).mock.calls.at(-1)![0].getRuntime()).toBe(runtime)
+  expect(phase).toHaveBeenCalledWith('commands')
+  expect(result.applicationCommands.localWeb).toBe(owners.localWeb)
+  expect(result.applicationCommands.remoteWeb).toBe(owners.remoteWeb)
+  expect(result.applicationCommands.task).toBe(owners.task)
+  expect(result.applicationCommands.desktop).toBe(owners.desktop)
+  expect(result.sessionDeletionCapability).toBe(owners.sessionPersistenceCoordinator)
+  expect(result.archiveCapability).toBe(owners.archiveCoordinator)
+
+  await result.commitClosePreference('quit')
+  expect(setClosePreference).toHaveBeenCalledWith('quit')
+  expect(currentSnapshotAfter).toHaveBeenCalledOnce()
+  result.openSessionPackageFile(null)
+  result.openSessionPackageFile('/session.osci')
+  expect(owners.sessionPackageDesktop.reportOpenOverflow).toHaveBeenCalledOnce()
+  expect(owners.sessionPackageDesktop.enqueueFile).toHaveBeenCalledWith('/session.osci')
+  expect(result.hasActivePackageTransfer()).toBe(true)
+  expect(result.hasActiveReviewerWork()).toBe(true)
+  expect(result.getActiveSettingsInstallId()).toBe('install')
+  result.holdSettingsInstallAdmission()
+  expect(owners.settingsService.holdInstallAdmission).toHaveBeenCalledOnce()
+  await result.taskControls.specialists.resolve('specialist')
+  expect(resolveSpecialist).toHaveBeenCalledWith('specialist')
+  expect(await result.prepareForQuit()).toBe('completed')
+  expect(shutdown).toHaveBeenCalledOnce()
+  runtime.prepareForQuit.mockResolvedValueOnce('timeout')
+  expect(await result.prepareForQuit()).toBe('timeout')
+  expect(shutdown).toHaveBeenCalledOnce()
+  runtime.abortQuitPreparation.mockImplementationOnce(() => {
+    throw new Error('abort failed')
+  })
+  expect(() => result.abortQuitPreparation()).toThrow('abort failed')
+  expect(resumeAfterHandoff).toHaveBeenCalledOnce()
+
+  const { trackLifecycleSettlement, waitForLifecycleSettlement } =
+    await import('./lifecycle-settlement')
+  let finishCleanup!: () => void
+  trackLifecycleSettlement(
+    new Promise<void>((resolve) => {
+      finishCleanup = resolve
+    })
+  )
+  result.abortQuitPreparation()
+  expect(runtime.abortQuitPreparation).toHaveBeenCalledTimes(2)
+  expect(resumeAfterHandoff).toHaveBeenCalledOnce()
+  finishCleanup()
+  await waitForLifecycleSettlement()
+  await Promise.resolve()
+  expect(resumeAfterHandoff).toHaveBeenCalledTimes(2)
+
+  let finishOldCleanup!: () => void
+  trackLifecycleSettlement(
+    new Promise<void>((resolve) => {
+      finishOldCleanup = resolve
+    })
+  )
+  result.abortQuitPreparation()
+  // A later preparation owns the admission hold, even if an earlier abort is still queued.
+  await result.prepareForQuit()
+  finishOldCleanup()
+  await waitForLifecycleSettlement()
+  await Promise.resolve()
+  expect(resumeAfterHandoff).toHaveBeenCalledTimes(2)
+  result.abortQuitPreparation()
+  expect(resumeAfterHandoff).toHaveBeenCalledTimes(3)
+
+  // A teardown that never settles is abandoned, so Side Chat still resumes.
+  trackLifecycleSettlement(new Promise<void>(() => {}), { abandonAfterMs: 50 })
+  result.abortQuitPreparation()
+  expect(resumeAfterHandoff).toHaveBeenCalledTimes(3)
+  await vi.waitFor(() => expect(resumeAfterHandoff).toHaveBeenCalledTimes(4), { timeout: 2000 })
+  const operation = vi.fn(async () => 'available')
+  expect(
+    await result.electronAdapters.acp.sessionAdmission.withSessionAvailableById(
+      'session',
+      operation
+    )
+  ).toBe('available')
+  expect(owners.archiveCoordinator.withSessionAvailableById).toHaveBeenCalledWith(
+    'session',
+    operation
+  )
+  expect(await result.electronAdapters.acp.resolveMemoryEnabled!({ sessionId: 'session' })).toBe(
+    false
+  )
+  expect(owners.sessionRepository.loadSession).toHaveBeenCalledWith('project', 'session')
+  await moduleRecords.find((module) => module.name === 'literature-journal-attributes')!.dispose!()
+  expect(journalDispose).toHaveBeenCalledOnce()
 })

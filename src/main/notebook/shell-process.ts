@@ -1,46 +1,44 @@
 import { spawn, type ChildProcess, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { ShellCellSession } from './shell-cell-session'
 import { dirname } from 'node:path'
 import type { NotebookExecutionRecovery } from '../../shared/execution-recovery'
-import { assertShellSearchScope } from './shell-search-scope'
+import { nodeRuntimeEnvironment } from '../node-process-host'
+import { ShellCellSession } from './shell-cell-session'
+import type { NotebookShellProcessRequest, NotebookShellResult } from './shell-process-contract'
 import type { ShellProcessLaunchOwnership } from './shell-process-ownership.windows-posix'
-import type { GrantedLocalRoot } from '../../shared/local-fs'
+import { assertShellSearchScope } from './shell-search-scope'
 
-import { protectManagedRuntimeWrites, detectManagedRuntimeMutation } from './managed-runtime-guard'
-import { wsl2BashPreviewStatus } from '../wsl/wsl2-preview-gate'
 import {
-  type NotebookProcessSandbox,
-  type NotebookSandboxCleanupReason,
-  type NotebookSandboxCleanupResult,
-  type NotebookSandboxProcessOutcome,
-  withNotebookSandboxProcessState
-} from './process-sandbox'
-import {
-  assertProcessTreeSupport,
-  ProcessTreeUnavailableError,
-  createPosixProcessTreeOwnership,
-  trackOwnedPosixProcessTree,
-  terminateProcessTree,
-  type ProcessTreeKillResult
-} from '../process-tree'
-import { resolveWindowsPowerShellExecutable } from '../windows-powershell'
-import {
-  resolveWindowsNotebookRuntime,
-  windowsNotebookRuntimeEnvironment
-} from './windows-notebook-runtime'
-import { NOTEBOOK_SHELL_DEFAULT_TIMEOUT_MS } from '../../shared/notebook'
-import type { ShellRuntimeBinding } from '../../shared/notebook'
-import {
+  buildShellProcessEnvironment,
+  environmentPathRoots,
   notebookWorkloadCacheEnv,
   notebookWorkloadCacheRoot,
   prepareNotebookWorkloadCache
-} from './notebook-workload-cache-paths'
+} from '@aipoch/environment'
+import type { ShellRuntimeBinding } from '../../shared/notebook'
+import { NOTEBOOK_SHELL_DEFAULT_TIMEOUT_MS } from '../../shared/notebook'
+import {
+  ProcessTreeUnavailableError,
+  assertProcessTreeSupport,
+  createPosixProcessTreeOwnership,
+  terminateProcessTree,
+  trackOwnedPosixProcessTree,
+  type ProcessTreeKillResult
+} from '../process-tree'
+import { resolveWindowsPowerShellExecutable } from '../windows-powershell'
+import { wsl2BashPreviewStatus } from '../wsl/wsl2-preview-gate'
 import {
   NOTEBOOK_DIAGNOSTIC_RESERVE_BYTES,
   NOTEBOOK_TEXT_LIMIT_BYTES,
   limitUtf8
 } from './content-limits'
-import { buildNotebookShellEnvironment, environmentPathRoots } from './process-environment'
+import { detectManagedRuntimeMutation, protectManagedRuntimeWrites } from './managed-runtime-guard'
+import {
+  withNotebookSandboxProcessState,
+  type NotebookProcessSandbox,
+  type NotebookSandboxCleanupReason,
+  type NotebookSandboxCleanupResult,
+  type NotebookSandboxProcessOutcome
+} from './process-sandbox'
 import {
   prepareShellNpmEnvironment,
   shellNpmPaths,
@@ -51,6 +49,10 @@ import {
   shellRuntimePlatform,
   shellRuntimeSandboxTarget
 } from './shell-runtime'
+import {
+  resolveWindowsNotebookRuntime,
+  windowsNotebookRuntimeEnvironment
+} from './windows-notebook-runtime'
 
 const SHELL_TIMEOUT_MESSAGE_RESERVE_BYTES = 256
 const SHELL_CLEANUP_INCOMPLETE_MESSAGE =
@@ -60,41 +62,6 @@ const SHELL_NETWORK_TRANSPORT_UNSUPPORTED_PREFIX = 'WSL2_NETWORK_TRANSPORT_UNSUP
 // Result of one bash_execute run. No status/traceback classification: the shell is
 // expected to fail non-zero sometimes, so the caller inspects exitCode directly instead of a
 // completed/failed status flag.
-type NotebookShellResult = {
-  stdout: string
-  stderr: string
-  exitCode: number | null
-  cwd?: string
-  cwdBefore?: string
-  truncated?: boolean
-  cancelled?: boolean
-  // Runtime-private cleanup evidence. Public adapters project only the legacy result fields.
-  ownedTreeReaped?: boolean
-  runtimeStatus?: 'unavailable'
-  recovery?: NotebookExecutionRecovery
-  errorCode?:
-    'shell-runtime-unavailable' | 'shell-cleanup-incomplete' | 'shell-network-transport-unsupported'
-}
-
-type NotebookShellProcessRequest = {
-  laneKey?: string
-  runId?: string
-  command: string
-  cwd: string
-  handoffDir: string
-  runtimeRoot: string
-  notebookSessionRoot?: string
-  inputRoot?: string
-  protectedDirs?: readonly string[]
-  environment?: NodeJS.ProcessEnv
-  executionReference?: string
-  sessionId: string
-  projectId: string
-  timeoutMs?: number
-  signal?: AbortSignal
-  runtimeBinding?: ShellRuntimeBinding
-  grantedRoots?: readonly GrantedLocalRoot[]
-}
 
 // Runtime-private port: platform invocation, encoding, env projection, and teardown stay in its adapter.
 type NotebookShellProcess = {
@@ -126,7 +93,10 @@ const buildShellEnv = (
   workloadCacheEnv?: NodeJS.ProcessEnv,
   binding: ShellRuntimeBinding = defaultShellRuntimeBinding(platform)
 ): NodeJS.ProcessEnv => {
-  const env = buildNotebookShellEnvironment(handoffDir, platform, sourceEnv)
+  const env = buildShellProcessEnvironment(platform, sourceEnv)
+  // Handoff and PowerShell bootstrap variables are the Notebook host's protocol.
+  env.OPEN_SCIENCE_HANDOFF_DIR = handoffDir
+  if (platform === 'win32' && env.PSModulePath) env.OPEN_SCIENCE_PSMODULEPATH = env.PSModulePath
   if (runtimeRoot) {
     Object.assign(env, workloadCacheEnv ?? notebookWorkloadCacheEnv(runtimeRoot))
   }
@@ -677,7 +647,7 @@ const runShellCommand = (
         {
           cwd: options.cwd,
           env: ownershipHost
-            ? { ...processTreeOwnership.env, ELECTRON_RUN_AS_NODE: '1' }
+            ? { ...processTreeOwnership.env, ...nodeRuntimeEnvironment() }
             : processTreeOwnership.env,
           windowsHide: true,
           // On POSIX this makes the shell the leader of a private process group/session. Keep its handle

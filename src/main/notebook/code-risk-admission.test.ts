@@ -1,16 +1,20 @@
+import * as riskAnalysis from '@aipoch/notebook-code-risk'
 import { execFile, spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { createInterface } from 'node:readline'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { promisify } from 'node:util'
+import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createInterface } from 'node:readline'
+import { promisify } from 'node:util'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { configureTestRuntimeMetadata } from '../../../test/runtime-metadata'
+import type { NotebookRunSummary, ShellRuntimeBinding } from '../../shared/notebook'
+import type { DiscoveredInterpreter } from '@aipoch/environment/contracts'
+import { NotebookKernelExecutor } from './kernel-executor'
+import * as powerShellParser from './powershell-search-parser'
 import { NotebookRuntimeService, type NotebookExecutionRequest } from './runtime-service'
-import { analyzeNotebookCodeRisk } from './code-risk-analysis'
-import * as riskAnalysis from './code-risk-analysis'
-import type { ShellRuntimeBinding } from '../../shared/notebook'
-import type { DiscoveredInterpreter } from '../../shared/notebook-runtime'
+import * as windowsRuntime from './windows-notebook-runtime'
 
 const roots: string[] = []
 const services: NotebookRuntimeService[] = []
@@ -153,14 +157,17 @@ async function harness(
     kernelDispatched: true
   }))
   const shell = vi.fn(async () => ({ stdout: '', stderr: '', exitCode: 0 }))
-  const runtimes = Array.from({ length: environmentCount }, (_, index) => ({
-    language: 'python' as const,
-    provenance: 'user-own' as const,
-    envId: join(root, `python-${index}`),
-    interpreterPath: join(root, `python-${index}`),
-    label: `Python ${index}`,
-    runnable: true
-  }))
+  const runtimes: DiscoveredInterpreter[] = Array.from(
+    { length: environmentCount },
+    (_, index) => ({
+      language: 'python' as const,
+      provenance: 'user-own' as const,
+      envId: join(root, `python-${index}`),
+      interpreterPath: join(root, `python-${index}`),
+      label: `Python ${index}`,
+      runnable: true
+    })
+  )
   const service = new NotebookRuntimeService({
     notebookRuntimeSettings: {
       getSnapshot: async (language) => ({
@@ -176,7 +183,8 @@ async function harness(
     configRoot: root,
     dataRoot: root,
     projectId: 'project',
-    discoverRuntimes: async (language) => (language === 'python' ? runtimes : []),
+    discoverRuntimes: async (language) =>
+      runtimes.filter((runtime) => runtime.language === language),
     executorFactory: () => ({ execute, shutdown: async () => ({ reaped: true }) }),
     shellRuntimeBinding,
     shellProcess: { execute: shell }
@@ -191,35 +199,403 @@ async function harness(
   }
 }
 
+async function productionKernelHarness(language: 'python' | 'r' | 'repl'): Promise<
+  Awaited<ReturnType<typeof harness>> & {
+    executor: NotebookKernelExecutor
+    overrides: Partial<NotebookExecutionRequest>
+  }
+> {
+  const setup = await harness()
+  const executor = new NotebookKernelExecutor({
+    pythonLoopPath: join(__dirname, '../../../resources/notebook/python_loop.py'),
+    rLoopPath: join(__dirname, '../../../resources/notebook/r_loop.R'),
+    replLoopPath: join(__dirname, '../../../resources/notebook/repl_loop.js'),
+    platform: 'linux'
+  })
+  const overrides: Partial<NotebookExecutionRequest> =
+    language === 'repl'
+      ? {}
+      : {
+          resolvedInterpreter: {
+            command: (language === 'r'
+              ? process.env.OPEN_SCIENCE_RISK_R
+              : process.env.OPEN_SCIENCE_RISK_PYTHON)!
+          }
+        }
+  setup.execute.mockImplementation((execution) => executor.execute({ ...execution, ...overrides }))
+  return { ...setup, executor, overrides }
+}
+
 describe('host-owned one-shot execution admission', () => {
-  it('carries PowerShell dialect from the actual runtime into approval evidence', async () => {
-    const analyze = vi
-      .spyOn(riskAnalysis, 'analyzePowerShellCodeRisk')
-      .mockResolvedValue([
-        { operation: 'Remove-Item', source: 'Remove-Item ./temporary.txt', line: 1 }
-      ])
+  it('keeps a production REPL compile failure out of subsequent risk history without calling connectors', async () => {
+    const { service, execute, request, executor, overrides } = await productionKernelHarness('repl')
+    const calls: string[] = []
+    const rpc = createServer(async (req, res) => {
+      let body = ''
+      for await (const chunk of req) body += chunk
+      calls.push(JSON.parse(body).method)
+      res.setHeader('content-type', 'application/json')
+      res.end(JSON.stringify({ result: { description: 'test help' } }))
+    })
+    rpc.listen(0, '127.0.0.1')
+    await once(rpc, 'listening')
+    const address = rpc.address() as { port: number }
+    overrides.mcpRpcEndpoint = `http://127.0.0.1:${address.port}`
+    overrides.mcpRpcToken = 'test-token'
+    const approve = vi.fn(async () => true)
+    service.setExecutionApproval(approve)
     try {
-      const { service, shell, request } = await harness(0, { kind: 'powershell', version: '5.1' })
+      const failed = await service.executeControl({
+        ...request,
+        code: 'await host.mcp("data","list",{});\nconst ='
+      })
+      expect(failed.status).toBe('failed')
+      expect(calls).toEqual([])
+      approve.mockClear().mockResolvedValue(false)
+      for (let index = 0; index < 3; index++) {
+        const result = await service.executeControl({
+          ...request,
+          code: 'return await host.help();'
+        })
+        expect(approve).not.toHaveBeenCalled()
+        expect(result.status).toBe('completed')
+      }
+      expect(approve).not.toHaveBeenCalled()
+      expect(calls).toEqual(['hostSdkHelp', 'hostSdkHelp', 'hostSdkHelp'])
+      expect(await execute.mock.results[0].value).toMatchObject({ executionStarted: false })
+      expect(await service.state(request)).toMatchObject({
+        runs: expect.arrayContaining([
+          expect.objectContaining({
+            script: 'await host.mcp("data","list",{});\nconst =',
+            status: 'failed',
+            executionStarted: false
+          })
+        ])
+      })
+    } finally {
+      await executor.shutdown()
+      await new Promise<void>((resolve) => rpc.close(() => resolve()))
+    }
+  }, 30_000)
+
+  it.skipIf(!process.env.OPEN_SCIENCE_RISK_R)(
+    'keeps a production R parse failure out of subsequent risk history',
+    async () => {
+      const { service, execute, request, executor } = await productionKernelHarness('r')
+      const approve = vi.fn(async () => true)
+      service.setExecutionApproval(approve)
+      try {
+        const failed = await service.execute({
+          ...request,
+          language: 'r',
+          code: 'print("must not run")\nvalue <- 1\nprint("broken"))'
+        })
+        expect(failed.status).toBe('failed')
+        expect((await execute.mock.results[0].value).stdout).toBe('')
+        approve.mockClear().mockResolvedValue(false)
+        for (const code of ['print(1)', 'print(2)', 'print(3)'])
+          expect(await service.execute({ ...request, language: 'r', code })).toMatchObject({
+            status: 'completed'
+          })
+        expect(approve).not.toHaveBeenCalled()
+        expect(await execute.mock.results[0].value).toMatchObject({ executionStarted: false })
+        expect(await service.state(request)).toMatchObject({
+          runs: expect.arrayContaining([
+            expect.objectContaining({ runId: failed.runId, status: 'failed' })
+          ])
+        })
+      } finally {
+        await executor.shutdown()
+      }
+    },
+    30_000
+  )
+
+  describe.each(['r', 'repl'] as const)('production %s partial execution', (language) => {
+    it
+      .skipIf(language === 'r' && !process.env.OPEN_SCIENCE_RISK_R)
+      .each(['runtime', 'syntax'] as const)(
+      'retains assignments before a %s failure and reviews deletion and overwrite',
+      async (failure) => {
+        const { service, execute, request, executor } = await productionKernelHarness(language)
+        const approve = vi.fn(async () => true)
+        service.setExecutionApproval(approve)
+        const target = join(request.workspaceCwd, 'sentinel.txt')
+        await writeFile(target, 'keep')
+        const run = (
+          code: string
+        ):
+          | ReturnType<NotebookRuntimeService['executeControl']>
+          | ReturnType<NotebookRuntimeService['execute']> =>
+          language === 'repl'
+            ? service.executeControl({ ...request, code })
+            : service.execute({ ...request, language, code })
+        const broken =
+          language === 'r'
+            ? 'erase <- unlink\n' +
+              (failure === 'syntax' ? 'parse(text="broken)")' : 'stop("test")')
+            : 'const fs = require("node:fs"); const erase = fs.unlinkSync;\n' +
+              (failure === 'syntax' ? 'eval("const =")' : 'throw new Error("test")')
+        try {
+          expect(await run(broken)).toMatchObject({ status: 'failed' })
+          expect(await execute.mock.results[0].value).toMatchObject({ executionStarted: true })
+          approve.mockClear().mockResolvedValue(false)
+          // Forward slashes keep native Windows paths literal; escaped source is intentionally opaque.
+          const literalTarget = JSON.stringify(target.replaceAll('\\', '/'))
+          const commands = [
+            `erase(${literalTarget})`,
+            language === 'r'
+              ? `writeLines("replace", ${literalTarget})`
+              : `fs.writeFileSync(${literalTarget}, "replace")`
+          ]
+          for (const code of commands) {
+            if (language === 'repl') expect(await run(code)).toMatchObject({ status: 'failed' })
+            else await expect(run(code)).rejects.toThrow('one-time approval')
+          }
+          expect(approve).toHaveBeenCalledTimes(2)
+          expect(execute).toHaveBeenCalledTimes(1)
+          expect(await readFile(target, 'utf8')).toBe('keep')
+        } finally {
+          await executor.shutdown()
+        }
+      },
+      30_000
+    )
+  })
+
+  it.each(
+    (['python', 'r', 'repl'] as const).flatMap((language) =>
+      [false, undefined].map((executionStarted) => ({ language, executionStarted }))
+    )
+  )(
+    'omits failed source from risk history only with explicit not-started evidence: $language $executionStarted',
+    async ({ language, executionStarted }) => {
+      const { service, execute, request } = await harness()
+      execute.mockResolvedValueOnce({
+        status: 'failed',
+        stdout: '',
+        stderr: '',
+        traceback: 'SyntaxError',
+        cwdAfter: request.workspaceCwd,
+        outputs: [],
+        kernelDispatched: true,
+        ...(executionStarted === false ? { executionStarted } : {})
+      })
+      const approve = vi.fn(async () => true)
+      service.setExecutionApproval(approve)
+      const broken = language === 'repl' ? 'const =' : 'print("broken"))'
+      const harmless = language === 'repl' ? 'console.log(1)' : 'print(1)'
+      const run = (
+        code: string
+      ):
+        | ReturnType<NotebookRuntimeService['executeControl']>
+        | ReturnType<NotebookRuntimeService['execute']> =>
+        language === 'repl'
+          ? service.executeControl({ ...request, code })
+          : service.execute({ ...request, language, code })
+      await run(broken)
+      approve.mockClear().mockResolvedValue(false)
+      if (executionStarted === false) {
+        expect(await run(harmless)).toMatchObject({
+          status: 'completed'
+        })
+        expect(approve).not.toHaveBeenCalled()
+      } else {
+        if (language === 'repl') expect(await run(harmless)).toMatchObject({ status: 'failed' })
+        else await expect(run(harmless)).rejects.toThrow('one-time approval')
+        expect(approve).toHaveBeenCalledTimes(1)
+      }
+      expect(await service.state(request)).toMatchObject({
+        runs: expect.arrayContaining([
+          expect.objectContaining({ script: broken, status: 'failed' })
+        ])
+      })
+    }
+  )
+
+  it
+    .skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON)
+    .each([
+      'print("must not run")\nvalue = 1\nprint("broken"))',
+      'print("must not run")\nreturn 1'
+    ])(
+    'keeps a parse/compile-failed Python cell in history without reviewing later harmless cells: %s',
+    async (broken) => {
+      const { service, execute, request, executor } = await productionKernelHarness('python')
       const approve = vi.fn(async () => false)
       service.setExecutionApproval(approve)
-      await expect(
-        service.executeShell({ ...request, command: 'Remove-Item ./temporary.txt' })
-      ).rejects.toThrow('one-time approval')
-      expect(approve).toHaveBeenCalledWith(
+      approve.mockResolvedValue(true)
+      try {
+        const failed = await service.execute({ ...request, code: broken })
+        expect(failed.status).toBe('failed')
+        expect(await execute.mock.results[0].value).toMatchObject({
+          stdout: '',
+          executionStarted: false
+        })
+        expect((await execute.mock.results[0].value).traceback).toContain('SyntaxError')
+        approve.mockClear().mockResolvedValue(false)
+        for (const code of ['print(1)', 'print(2)', 'print(3)'])
+          expect(await service.execute({ ...request, code })).toMatchObject({ status: 'completed' })
+        expect(approve).not.toHaveBeenCalled()
+        expect(await service.state(request)).toMatchObject({
+          runs: expect.arrayContaining([
+            expect.objectContaining({ runId: failed.runId, status: 'failed' })
+          ])
+        })
+      } finally {
+        await executor.shutdown()
+      }
+    },
+    30_000
+  )
+
+  it.skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON).each(['exec("broken)")', 'await erase'])(
+    'retains Python assignments before a later syntax failure (%s) and reviews deletion and overwrite',
+    async (failure) => {
+      const { service, execute, request, executor } = await productionKernelHarness('python')
+      const approve = vi.fn(async () => false)
+      service.setExecutionApproval(approve)
+      const target = join(request.workspaceCwd, 'sentinel.txt')
+      await writeFile(target, 'keep')
+      try {
+        approve.mockResolvedValue(true)
+        const failed = await service.execute({
+          ...request,
+          code: 'import os\nerase = os.unlink\n' + failure
+        })
+        expect(failed.status).toBe('failed')
+        expect(await execute.mock.results[0].value).toMatchObject({
+          executionStarted: true,
+          stdout: '',
+          traceback: expect.stringContaining('SyntaxError')
+        })
+        approve.mockClear().mockResolvedValue(false)
+        await expect(
+          service.execute({ ...request, code: `erase(${JSON.stringify(target)})` })
+        ).rejects.toThrow('one-time approval')
+        await expect(
+          service.execute({
+            ...request,
+            code: `open(${JSON.stringify(target)}, "w").write("replace")`
+          })
+        ).rejects.toThrow('one-time approval')
+        expect(await readFile(target, 'utf8')).toBe('keep')
+        expect(execute).toHaveBeenCalledTimes(1)
+        expect(approve).toHaveBeenCalledTimes(2)
+      } finally {
+        await executor.shutdown()
+      }
+    },
+    30_000
+  )
+  it.each(['python', 'r'] as const)(
+    'keeps %s default binding admission separate from every later destructive Cell',
+    async (language) => {
+      const { service, execute, request, runtimes } = await harness()
+      const environment = language === 'r' ? 'default-r' : 'default-python'
+      const interpreter = join(
+        request.workspaceCwd,
+        'runtime',
+        'envs',
+        environment,
+        'bin',
+        language === 'r' ? 'R' : 'python'
+      )
+      runtimes.push({
+        language,
+        provenance: 'app-managed',
+        envId: interpreter,
+        interpreterPath: interpreter,
+        label: environment,
+        condaEnv: environment,
+        runnable: true
+      })
+      const environmentApproval = vi.fn(async (decision) => decision.defaultManagedFirstBinding)
+      const codeApproval = vi.fn(async () => false)
+      service.setRuntimeBindingApproval(environmentApproval)
+      service.setExecutionApproval(codeApproval)
+      const run = async (code: string): Promise<NotebookRunSummary> => {
+        const cell = await service.beginCodeCell({ ...request, language })
+        await service.appendCodeCell({ ...request, ...cell, delta: code })
+        await service.finishCodeCell({ ...request, ...cell })
+        return service.runCell({ ...request, cellId: cell.cellId })
+      }
+      await run('print(1)')
+      expect(environmentApproval).toHaveBeenCalledTimes(1)
+      expect(codeApproval).not.toHaveBeenCalled()
+      const dangerous =
+        language === 'r' ? 'unlink("sentinel.txt")' : 'import os\nos.unlink("sentinel.txt")'
+      await expect(run(dangerous)).rejects.toThrow('one-time approval')
+      await expect(run(dangerous)).rejects.toThrow('one-time approval')
+      expect(environmentApproval).toHaveBeenCalledTimes(1)
+      expect(codeApproval).toHaveBeenCalledTimes(2)
+      expect(execute).toHaveBeenCalledTimes(1)
+      expect(codeApproval).toHaveBeenCalledWith(
         expect.objectContaining({
           rawInput: expect.objectContaining({
-            notebookCodeRisk: expect.objectContaining({
-              language: 'bash',
-              shellRuntime: { kind: 'powershell' }
-            })
+            notebookCodeRisk: expect.objectContaining({ language, environment })
           })
         })
       )
-      expect(shell).not.toHaveBeenCalled()
-    } finally {
-      analyze.mockRestore()
     }
-  })
+  )
+
+  it.each(['5.1', '7.6'] as const)(
+    'carries PowerShell %s parser policy, cancellation and cwd into approval evidence',
+    async (version) => {
+      const runtime = vi.spyOn(windowsRuntime, 'resolveWindowsNotebookRuntime').mockReturnValue({
+        root: process.cwd(),
+        node: process.execPath,
+        powershell: process.execPath
+      })
+      const parse = vi
+        .spyOn(powerShellParser, 'parsePowerShellSearchCommands')
+        .mockResolvedValue([])
+      const analyze = vi
+        .spyOn(riskAnalysis, 'analyzePowerShellCodeRisk')
+        .mockImplementation(async (source, parser, signal) => {
+          await parser(source, signal)
+          return [{ operation: 'Remove-Item', source: 'Remove-Item ./temporary.txt', line: 1 }]
+        })
+      try {
+        const { service, shell, request } = await harness(0, { kind: 'powershell', version })
+        const controller = new AbortController()
+        const source = 'Remove-Item ./temporary.txt'
+        const approve = vi.fn(async () => false)
+        service.setExecutionApproval(approve)
+        await expect(
+          service.executeShell({ ...request, command: source }, controller.signal)
+        ).rejects.toThrow('one-time approval')
+        expect(analyze).toHaveBeenCalledTimes(1)
+        const signal = analyze.mock.calls[0][2]
+        expect(signal).toBeInstanceOf(AbortSignal)
+        expect(analyze).toHaveBeenCalledWith(
+          source,
+          expect.any(Function),
+          signal,
+          join(request.workspaceCwd, 'notebooks', request.projectId, request.sessionId, 'data')
+        )
+        expect(parse).toHaveBeenCalledWith(source, signal, version, true)
+        controller.abort()
+        expect(signal?.aborted).toBe(true)
+        expect(approve).toHaveBeenCalledWith(
+          expect.objectContaining({
+            rawInput: expect.objectContaining({
+              notebookCodeRisk: expect.objectContaining({
+                language: 'bash',
+                shellRuntime: { kind: 'powershell' }
+              })
+            })
+          })
+        )
+        expect(shell).not.toHaveBeenCalled()
+      } finally {
+        analyze.mockRestore()
+        parse.mockRestore()
+        runtime.mockRestore()
+      }
+    }
+  )
 
   it.skipIf(process.platform === 'win32').each(['cp', 'mv'])(
     'gates real %s overwrite and source removal per execution',
@@ -479,321 +855,6 @@ describe('host-owned one-shot execution admission', () => {
       expect(await readFile(keep, 'utf8')).toBe('keep')
     }
   )
-  it.skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON)(
-    'matches native Python split keyword mappings and container truth',
-    async () => {
-      const options = [
-        'dict()',
-        'dict(maxsplit=1)',
-        'dict(sep=None)',
-        'dict(sep=" ",maxsplit=1)',
-        'dict({"maxsplit":-1})',
-        'dict(dict(sep=None),maxsplit=1)',
-        'D(maxsplit=1)',
-        '{**dict(maxsplit=1)}',
-        '{"maxsplit":0,"maxsplit":1}',
-        'dict([("maxsplit",1)])',
-        '{"sep":" ","maxsplit":1}'
-      ]
-      const expressions = options.flatMap((form) =>
-        ['split', 'rsplit'].flatMap((method) => [
-          `"echo target.txt".${method}(**${form})`,
-          `str.${method}("echo target.txt",**${form})`
-        ])
-      )
-      const { stdout } = await promisify(execFile)(
-        process.env.OPEN_SCIENCE_RISK_PYTHON!,
-        [
-          '-c',
-          'import operator,json\nfrom builtins import dict as D\n' +
-            `print(json.dumps([${expressions.join(',')}]))`
-        ],
-        { timeout: 5000 }
-      )
-      const singleExpressions = [
-        '"echo target.txt".split(**dict(maxsplit=0))',
-        '"echo target.txt".rsplit(**dict(sep=","))'
-      ]
-      const single = await promisify(execFile)(
-        process.env.OPEN_SCIENCE_RISK_PYTHON!,
-        ['-c', 'import json;print(json.dumps([' + singleExpressions.join(',') + ']))'],
-        { timeout: 5000 }
-      )
-      expect(JSON.parse(single.stdout)).toEqual([['echo target.txt'], ['echo target.txt']])
-      for (const expr of singleExpressions) {
-        expect(
-          await analyzeNotebookCodeRisk('python', 'import subprocess;subprocess.run(' + expr + ')')
-        ).toEqual([])
-        expect(
-          await analyzeNotebookCodeRisk(
-            'python',
-            'import subprocess;subprocess.run(' + expr.replaceAll('echo', 'rm') + ')'
-          )
-        ).toEqual([])
-      }
-      const vectors = JSON.parse(stdout) as string[][]
-      expect(vectors).toHaveLength(expressions.length)
-      for (const [index, expr] of expressions.entries()) {
-        expect(vectors[index]).toEqual(['echo', 'target.txt'])
-        expect(
-          await analyzeNotebookCodeRisk(
-            'python',
-            `import subprocess,operator\nfrom builtins import dict as D\nsubprocess.run(${expr})`
-          )
-        ).toEqual([])
-        expect(
-          (
-            await analyzeNotebookCodeRisk(
-              'python',
-              `import subprocess,operator\nfrom builtins import dict as D\nsubprocess.run(${expr.replaceAll('echo', 'rm')})`
-            )
-          ).length
-        ).toBeGreaterThan(0)
-      }
-    }
-  )
-  it.skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON)(
-    'matches native Python constructed keyword precedence and process classification',
-    async () => {
-      const forms = [
-        ...pythonNativeKeywordForms,
-        'dict(check=True)',
-        'dict(stdout=subprocess.PIPE,check=True)',
-        'dict({"shell":False},shell=True)',
-        'dict([("shell",False),("shell",True)])',
-        'dict(dict(shell=False),shell=True)',
-        'operator.call(dict,{"shell":False},shell=True)'
-      ]
-      const { stdout } = await promisify(execFile)(
-        process.env.OPEN_SCIENCE_RISK_PYTHON!,
-        [
-          '-c',
-          pythonNativeFlagPrelude +
-            'from builtins import dict as D\nimport json\n' +
-            `print(json.dumps([{"literal":repr(options),"shell":bool(options.get("shell",False))} for options in [${forms.join(',')}]]))`
-        ],
-        { timeout: 5000 }
-      )
-      const mappings = JSON.parse(stdout) as { literal: string; shell: boolean }[]
-      expect(mappings).toHaveLength(forms.length)
-      expect(
-        mappings.slice(0, pythonNativeKeywordForms.length).every((value) => !value.shell)
-      ).toBe(true)
-      for (const [index, form] of forms.entries())
-        for (const danger of [false, true]) {
-          const argv = JSON.stringify(
-            mappings[index].shell
-              ? danger
-                ? 'rm target.txt'
-                : 'echo hello'
-              : [danger ? 'rm' : 'echo', 'target.txt']
-          )
-          const code =
-            pythonNativeFlagPrelude +
-            'from builtins import dict as D\n' +
-            `subprocess.run(${argv},**${form})`
-          const literal = `import subprocess\nsubprocess.run(${argv},**${mappings[index].literal})`
-          expect(
-            (await analyzeNotebookCodeRisk('python', code)).map((value) => value.operation),
-            form
-          ).toEqual(
-            (await analyzeNotebookCodeRisk('python', literal)).map((value) => value.operation)
-          )
-        }
-    }
-  )
-  it.skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON)(
-    'matches native Python constructed flag truth and process classification',
-    async () => {
-      const flags = [...pythonNativeFalseFlags, ...pythonNativeTrueFlags]
-      const { stdout } = await promisify(execFile)(
-        process.env.OPEN_SCIENCE_RISK_PYTHON!,
-        [
-          '-c',
-          pythonNativeFlagPrelude +
-            `import json\nprint(json.dumps([bool(value) for value in [${flags.join(',')}]]))`
-        ],
-        { timeout: 5000 }
-      )
-      const values = JSON.parse(stdout) as boolean[]
-      expect(values).toEqual([
-        ...pythonNativeFalseFlags.map(() => false),
-        ...pythonNativeTrueFlags.map(() => true)
-      ])
-      for (const [index, flag] of flags.entries())
-        for (const danger of [false, true]) {
-          const argv = JSON.stringify(
-            values[index]
-              ? danger
-                ? 'rm target.txt'
-                : 'echo hello'
-              : [danger ? 'rm' : 'echo', 'hello']
-          )
-          const risks = await analyzeNotebookCodeRisk(
-            'python',
-            pythonNativeFlagPrelude + `subprocess.run(${argv},shell=(${flag}))`
-          )
-          const literal = await analyzeNotebookCodeRisk(
-            'python',
-            `import subprocess\nsubprocess.run(${argv},shell=${values[index] ? 'True' : 'False'})`
-          )
-          expect(
-            risks.map((risk) => risk.operation),
-            flag
-          ).toEqual(literal.map((risk) => risk.operation))
-        }
-    }
-  )
-  it.skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON || process.platform === 'win32')(
-    'matches native Python literal truth and selected process argument choices',
-    async () => {
-      const conditions = [
-        'True',
-        'False',
-        '1',
-        '0',
-        '-1',
-        '0.0',
-        'None',
-        '""',
-        '"text"',
-        '[]',
-        '[1]',
-        '()',
-        '(1,)',
-        '{}',
-        '{"key":1}',
-        '{1}',
-        'not 0'
-      ]
-      const selections = conditions.flatMap((condition) => [
-        `["echo","hello"] if ${condition} else ["rm","target.txt"]`,
-        `["rm","target.txt"] if ${condition} else ("echo","hello")`
-      ])
-      const expressions = selections.flatMap((source) => [
-        source,
-        `list(${source})`,
-        `tuple(${source})`,
-        `(${source})[:]`,
-        `[*(${source})]`
-      ])
-      const { stdout } = await promisify(execFile)(
-        process.env.OPEN_SCIENCE_RISK_PYTHON!,
-        ['-c', `import json\nprint(json.dumps([${expressions.join(',')}]))`],
-        { timeout: 5000 }
-      )
-      const vectors = JSON.parse(stdout) as string[][]
-      expect(vectors).toHaveLength(expressions.length)
-      for (const [index, expression] of expressions.entries()) {
-        const literalRisks = await analyzeNotebookCodeRisk(
-          'python',
-          `import subprocess\nsubprocess.run(${JSON.stringify(vectors[index])})`
-        )
-        const risks = await analyzeNotebookCodeRisk(
-          'python',
-          `import subprocess\nsubprocess.run(${expression})`
-        )
-        expect(
-          risks.map((risk) => risk.operation),
-          expression
-        ).toEqual(literalRisks.map((risk) => risk.operation))
-      }
-    }
-  )
-  it.skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON || process.platform === 'win32')(
-    'matches native Python slice bounds, clipping and reversed stops',
-    async () => {
-      const bounds = ['None', '-5', '-2', '-1', '0', '1', '2', '5', 'True', 'False']
-      const steps = ['None', '-3', '-1', '1', '2', '5', 'True']
-      const expressions = bounds.flatMap((start) =>
-        bounds.flatMap((stop) =>
-          steps.map((step) => `["rm","echo","target.txt","--help"][${start}:${stop}:${step}]`)
-        )
-      )
-      const { stdout } = await promisify(execFile)(
-        process.env.OPEN_SCIENCE_RISK_PYTHON!,
-        ['-c', `import json\nprint(json.dumps([${expressions.join(',')}]))`],
-        { timeout: 5000 }
-      )
-      const vectors = JSON.parse(stdout) as string[][]
-      expect(vectors).toHaveLength(700)
-      for (const [index, expression] of expressions.entries()) {
-        const literalRisks = await analyzeNotebookCodeRisk(
-          'python',
-          `import subprocess\nsubprocess.run(${JSON.stringify(vectors[index])})`
-        )
-        for (const source of [expression, `tuple(${expression})`, `[*${expression}]`]) {
-          const risks = await analyzeNotebookCodeRisk(
-            'python',
-            `import subprocess\nsubprocess.run(${source})`
-          )
-          expect(
-            risks.map((risk) => risk.operation),
-            source
-          ).toEqual(literalRisks.map((risk) => risk.operation))
-        }
-      }
-    }
-  )
-  it.skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON || process.platform === 'win32').each(
-    (
-      [
-        ['"echo:::hello".split("::",1)', ['echo', ':hello'], false],
-        ['"echo:::hello".rsplit("::",1)', ['echo:', 'hello'], false],
-        ['"echo:::hello".rsplit("::")', ['echo:', 'hello'], false],
-        ['"echo::::hello".rsplit("::")', ['echo', '', 'hello'], false],
-        ['"echo|||hello".rsplit("||",1)', ['echo|', 'hello'], false],
-        ['"echo::hello::world".rsplit("::",1)', ['echo::hello', 'world'], false],
-        ['"echo::hello::world".split("::",1)', ['echo', 'hello::world'], false],
-        ['"echo::hello".rsplit("::",0)', ['echo::hello'], false],
-        ['"echo::hello".rsplit("::",-2)', ['echo', 'hello'], false],
-        ['"echo ".split(None,0)', ['echo '], false],
-        ['" echo".rsplit(None,0)', [' echo'], false],
-        ['"  echo  ".split(None,0)', ['echo  '], false],
-        ['"  echo  ".rsplit(None,0)', ['  echo'], false],
-        ['"echo hello ".split(None,1)', ['echo', 'hello '], false],
-        ['" echo hello".rsplit(None,1)', [' echo', 'hello'], false],
-        ['" echo hello ".split(None,2)', ['echo', 'hello'], false],
-        ['" echo hello ".rsplit(None,2)', ['echo', 'hello'], false],
-        ['"echo hello world".rsplit(None,1)', ['echo hello', 'world'], false],
-        ['"echo hello world".split(None,1)', ['echo', 'hello world'], false],
-        ['" \t".split(None,0)', [], true],
-        ['"".rsplit(None,0)', [], true],
-        ['"echo\x1chello\x1fworld".split()', ['echo', 'hello', 'world'], false],
-        ['"echo\x1dhello\x1eworld".rsplit()', ['echo', 'hello', 'world'], false],
-        ['"rm\ttarget.txt".split()', ['rm', 'target.txt'], true],
-        ['"rm:::target.txt".rsplit("::",1)', ['rm:', 'target.txt'], false],
-        ['"rm:::target.txt".split("::",1)', ['rm', ':target.txt'], true],
-        ['"rm ".split(None,0)', ['rm '], false],
-        ['" rm".rsplit(None,0)', [' rm'], false],
-        ['"rm ".split()', ['rm'], true],
-        ['" rm".rsplit()', ['rm'], true]
-      ] as Array<[string, string[], boolean]>
-    ).flatMap(([expression, expected, review]): Array<[string, string[], boolean]> =>
-      [expression, `list(${expression})`, `[*( ${expression} )]`].map((source) => [
-        source,
-        expected,
-        review
-      ])
-    )
-  )('matches native Python split boundaries: %s', async (expression, expected, review) => {
-    const { stdout } = await promisify(execFile)(
-      process.env.OPEN_SCIENCE_RISK_PYTHON!,
-      ['-c', `import json\nprint(json.dumps(${expression}))`],
-      { timeout: 5000 }
-    )
-    expect(JSON.parse(stdout)).toEqual(expected)
-    const risks = await analyzeNotebookCodeRisk(
-      'python',
-      `import subprocess\nsubprocess.run(${expression})`
-    )
-    const literalRisks = await analyzeNotebookCodeRisk(
-      'python',
-      `import subprocess\nsubprocess.run(${JSON.stringify(expected)})`
-    )
-    expect(risks.map((risk) => risk.operation)).toEqual(literalRisks.map((risk) => risk.operation))
-    expect(risks.length > 0).toBe(review)
-  })
   it
     .skipIf(!process.env.OPEN_SCIENCE_RISK_PYTHON || process.platform === 'win32')
     .each(
@@ -5933,7 +5994,7 @@ print(reader("."))`)
           : ['--version']
         return nestedProcessSource(
           route,
-          JSON.stringify(process.execPath) + ',' + JSON.stringify(args)
+          JSON.stringify(process.execPath.replaceAll('\\', '/')) + ',' + JSON.stringify(args)
         )
       }
       const approve = vi.fn(async () => false)
@@ -6435,6 +6496,10 @@ print(reader("."))`)
   )
 
   it.each([
+    [
+      'Promise timer with an outer result',
+      'const r = JSON.parse("{}"); await new Promise(r => setTimeout(r, 1)); OP'
+    ],
     [
       'global timeout',
       'await new Promise(done => { function run() { OP; done() }; setTimeout(run, 0) })'
@@ -7729,7 +7794,10 @@ print(reader("."))`)
     ['r', 'f <- NULL; tapply(1:3, 1:3, f)', 'f <- NULL; f <- unlink; tapply("x", 1, f)'],
     ['r', 'f <- NULL; tapply(1:3, 1:3, f)', 'unlink <- NULL; unlink("x")']
   ] as const)('batch preserves one-shot admission for %s: %s', async (language, safe, risky) => {
-    const { service, execute, shell, request } = await harness()
+    const { service, execute, shell, request } = await harness(
+      0,
+      language === 'bash' ? { kind: 'native-posix', shell: '/bin/bash' } : undefined
+    )
     const approve = vi.fn(async () => false)
     service.setExecutionApproval(approve)
     const run = async (code: string): Promise<void> => {
@@ -7888,3 +7956,5 @@ print(reader("."))`)
     )
   })
 })
+
+configureTestRuntimeMetadata()

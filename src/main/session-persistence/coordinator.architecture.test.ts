@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { relative, resolve, sep } from 'node:path'
 
 import {
@@ -546,6 +546,7 @@ describe('Session persistence coordinator architecture', () => {
         'DelegatedWorkRecordCommands',
         'PatchSessionRuntimeContextCommand',
         'ProjectSessionDeletionResult',
+        'PublishedSessionHandoff',
         'SessionCatalog',
         'SessionPersistenceCommands',
         'SessionDeletion',
@@ -831,8 +832,20 @@ describe('Session persistence coordinator architecture', () => {
         expect(calls).toEqual(['this.operationScheduler.runSession'])
         continue
       }
-      expect(method.body?.statements, name).toHaveLength(1)
-      const statement = method.body?.statements[0]
+      const statements = method.body?.statements
+      if (name === 'adoptPublishedSession') {
+        // The package publisher has a different scheduler. Snapshot its handoff synchronously
+        // before this owner queues the ordinary read and catalog mutation in the Session lane.
+        expect(statements, name).toHaveLength(2)
+        const capture = statements?.[0]
+        expect(capture && isVariableStatement(capture)).toBe(true)
+        expect(capture?.getText(facadeFile)).toBe(
+          'const { projectId, sessionId, session, pendingProjectImport } = structuredClone(publication)'
+        )
+      } else {
+        expect(statements, name).toHaveLength(1)
+      }
+      const statement = statements?.[name === 'adoptPublishedSession' ? 1 : 0]
       expect(statement, name).toBeDefined()
       if (!statement) continue
       expect(isReturnStatement(statement), name).toBe(true)
@@ -1295,7 +1308,9 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/session-persistence/turn-outcome-reconciliation.test.ts',
       'src/main/session-persistence/record-facts.ts',
       'src/main/session-persistence/attention-projection.test.ts',
-      'src/main/session-persistence/turn-outcome-authority.test.ts'
+      'src/main/session-persistence/turn-outcome-authority.test.ts',
+      'src/main/session-persistence/flush-protocol.ts',
+      'src/main/session-persistence/conversation-pdf-electron.ts'
     ])
     expect(sessionPersistence.interfacePaths).toEqual([
       'src/main/session-persistence/coordinator.ts',
@@ -1322,7 +1337,9 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/session-persistence/state-owner.ts',
       'src/main/session-persistence/task-admission.ts',
       'src/main/session-persistence/runtime-session-owner.ts',
-      'src/main/session-persistence/runtime-writer.ts'
+      'src/main/session-persistence/runtime-writer.ts',
+      'src/main/session-persistence/flush-protocol.ts',
+      'src/main/session-persistence/conversation-pdf-electron.ts'
     ])
     expect(sessionPersistence.consumerModules).toEqual(['project_lifecycle'])
     expect(sessionPersistence.testFiles.owner).toEqual([
@@ -1377,6 +1394,8 @@ describe('Session persistence coordinator architecture', () => {
       'src/shared/renderer-contract-catalog.test.ts'
     ])
     expect(sessionPersistence.testFiles.consumer).toEqual([
+      'src/main/application-command-wiring.test.ts',
+      'src/main/composition/project-lifecycle.test.ts',
       'src/main/storage/wsl-npm-migration.integration.test.ts',
       'src/main/composition/notebook-environment.test.ts',
       'src/main/literature/command-owner.test.ts',
@@ -1486,16 +1505,16 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/compute/agent-compute-service.test.ts',
       'src/main/compute/ambiguous-dispatch-recovery.integration.test.ts',
       'src/main/compute/application-commands.test.ts',
-      'src/main/compute/compute-job-cancellation-owner.integration.test.ts',
+      'src/main/compute/cancellation-persistence.integration.test.ts',
+      'src/main/compute/cancellation-no-launch.integration.test.ts',
+      'src/main/compute/job-cleanup-retry.integration.test.ts',
       'src/main/compute/compute-job-workflow-owner.test.ts',
       'src/main/compute/compute-jobs.integration.test.ts',
       'src/main/compute/compute-password-auth.real-ssh.integration.test.ts',
       'src/main/compute/compute-password-auth.release.test.ts',
       'src/main/compute/compute-service.test.ts',
       'src/main/compute/concurrency-integration.test.ts',
-      'src/main/compute/concurrency-manager.test.ts',
       'src/main/compute/ipc.test.ts',
-      'src/main/compute/job-deletion-owner.test.ts',
       'src/main/compute/job-deletion-runtime-drain.test.ts',
       'src/main/compute/job-deletion-runtime-isolation.test.ts',
       'src/main/compute/job-dispatcher.test.ts',
@@ -1509,8 +1528,7 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/compute/session-enabled-hosts-owner.test.ts',
       'src/main/compute/skill-provisioning.test.ts',
       'src/main/compute/slurm.real-ssh.integration.test.ts',
-      'src/main/compute/ssh-runner.test.ts',
-      'src/main/connectors/application.test.ts',
+      'src/main/composition/connector-application.test.ts',
       'src/main/data-content-application-commands.test.ts',
       'src/main/database/literature-inbox-integrity-migration.test.ts',
       'src/main/database/managed-file-version-domain.test.ts',
@@ -1543,7 +1561,6 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/literature/library-mcp-server.test.ts',
       'src/main/literature/library-tool-contracts.test.ts',
       'src/main/literature/mcp-server.test.ts',
-      'src/main/literature/metadata-enricher.test.ts',
       'src/main/literature/migration-writers.test.ts',
       'src/main/literature/pdf-attachment-reliability.test.ts',
       'src/main/literature/pdf-elements-mcp.test.ts',
@@ -1553,7 +1570,6 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/literature/pdf-structure/owner.test.ts',
       'src/main/literature/pdf-structure/reader.test.ts',
       'src/main/literature/pdf-structure/source-metadata.test.ts',
-      'src/main/literature/reference-resolver.test.ts',
       'src/main/literature/scale-regressions.test.ts',
       'src/main/literature/session-pdf-source-resolver.test.ts',
       'src/main/local-models/owner.test.ts',
@@ -1565,20 +1581,14 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/managed-preview-resources.test.ts',
       'src/main/notebook/application-commands.test.ts',
       'src/main/notebook/application.test.ts',
-      'src/main/notebook/bundle-local.test.ts',
       'src/main/notebook/cell-execution-input.test.ts',
       'src/main/notebook/cross-turn-input-repro.integration.test.ts',
       'src/main/notebook/delegated-lane-capability.test.ts',
-      'src/main/notebook/dependency-analysis.r-plot-repro.test.ts',
+      'src/main/notebook/artifact-r-reproduction.integration.test.ts',
       'src/main/notebook/e2e.certification.test.ts',
       'src/main/notebook/env-ipc.test.ts',
       'src/main/notebook/environment-lifecycle-workflows.test.ts',
-      'src/main/notebook/environment-lock.test.ts',
       'src/main/notebook/environment-management.test.ts',
-      'src/main/notebook/environment-operation-foundation.test.ts',
-      'src/main/notebook/environment-state-tracker.test.ts',
-      'src/main/notebook/external-environment-lock.test.ts',
-      'src/main/notebook/external-r-library.test.ts',
       'src/main/notebook/full-stack.smoke.test.ts',
       'src/main/notebook/host-artifacts-service.test.ts',
       'src/main/notebook/host-compute.integration.test.ts',
@@ -1588,7 +1598,6 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/notebook/ipc.test.ts',
       'src/main/notebook/kernel-executor.test.ts',
       'src/main/notebook/kernel-startup-retry.integration.test.ts',
-      'src/main/notebook/language-pack-fetch.test.ts',
       'src/main/notebook/local-rpc-notebook-adapter.test.ts',
       'src/main/notebook/local-rpc-server.agents.test.ts',
       'src/main/notebook/local-rpc-server.artifacts.test.ts',
@@ -1608,35 +1617,22 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/notebook/local-rpc-server.wsl-setup.test.ts',
       'src/main/notebook/mcp-management-lifecycle.integration.test.ts',
       'src/main/notebook/mcp-server.test.ts',
-      'src/main/notebook/micromamba.test.ts',
-      'src/main/notebook/native-lock-restoration.test.ts',
       'src/main/notebook/native-shell-certification.macos.integration.test.ts',
       'src/main/notebook/network-sandbox-owner.macos-isolation.integration.test.ts',
       'src/main/notebook/network-sandbox-owner.test.ts',
       'src/main/notebook/no-legacy-bridge.test.ts',
       'src/main/notebook/package-admission.test.ts',
       'src/main/notebook/package-cache-sandbox.integration.test.ts',
-      'src/main/notebook/package-listing.test.ts',
-      'src/main/notebook/package-manager.test.ts',
-      'src/main/notebook/package-mutation.test.ts',
       'src/main/notebook/package-operations.test.ts',
       'src/main/notebook/package-process-sandbox.test.ts',
       'src/main/notebook/package-process-sandbox.windows.integration.test.ts',
-      'src/main/notebook/pip-install-evidence.test.ts',
-      'src/main/notebook/pip-wheel-evidence.test.ts',
       'src/main/notebook/process-tree-consumers.macos.integration.test.ts',
-      'src/main/notebook/provisioner.startup.test.ts',
-      'src/main/notebook/provisioner.test.ts',
-      'src/main/notebook/provisioner.upgrade.test.ts',
-      'src/main/notebook/recovery-coordinator.test.ts',
       'src/main/notebook/repl-loop.integration.test.ts',
       'src/main/notebook/reproduction-runtime.integration.test.ts',
       'src/main/notebook/reproduction-runtime.test.ts',
-      'src/main/notebook/restored-environment-verification.test.ts',
       'src/main/notebook/run-document-data-paths.test.ts',
       'src/main/notebook/runtime-application-commands.test.ts',
       'src/main/notebook/runtime-ipc.test.ts',
-      'src/main/notebook/runtime-relocation.test.ts',
       'src/main/notebook/runtime-repair.test.ts',
       'src/main/notebook/runtime-service-logging.integration.test.ts',
       'src/main/notebook/runtime-service.export.test.ts',
@@ -1646,12 +1642,12 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/notebook/runtime-workflows.test.ts',
       'src/main/notebook/windows-external-r.integration.test.ts',
       'src/main/notebook/windows-first-r-access.integration.test.ts',
-      'src/main/notebook/windows-micromamba-runner.test.ts',
       'src/main/notebook/windows-path-access.integration.test.ts',
       'src/main/notebook/windows-r-conda-discovery.integration.test.ts',
       'src/main/notebook/windows-repl-termination.integration.test.ts',
       'src/main/notebook/windows-shell.integration.test.ts',
       'src/main/notebook/working-file-observer.test.ts',
+      'src/main/notebook/working-file-observer-plain-host.test.ts',
       'src/main/notebook/wsl-setup-powershell.integration.test.ts',
       'src/main/notebook/wsl2-shell.integration.test.ts',
       'src/main/notifications/notification-inbox-runtime.test.ts',
@@ -1719,7 +1715,7 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/settings/service.connectors.test.ts',
       'src/main/settings/service.providers.test.ts',
       'src/main/settings/service.test.ts',
-      'src/main/settings/skill-catalog.registered-helpers.test.ts',
+      'src/main/skills/catalog.registered-helpers.test.ts',
       'src/main/settings/workflows.test.ts',
       'src/main/settings/workflows/connectors-diagnostic.test.ts',
       'src/main/side-chat/ipc.test.ts',
@@ -1768,7 +1764,7 @@ describe('Session persistence coordinator architecture', () => {
       'src/renderer/src/pages/workspace/previews/preview-pagination-contract.test.tsx',
       'src/shared/renderer-surface-inventory.test.ts',
       'src/shared/renderer-surface-matrix.test.ts',
-      'src/main/settings/skill-catalog.test.ts',
+      'src/main/skills/catalog.test.ts',
       'src/main/session-package/fork.test.ts',
       'src/main/storage/migration-target-race.test.ts',
       'src/renderer/src/components/LegacyDataMoveDialog.storage.test.tsx',
@@ -1802,7 +1798,7 @@ describe('Session persistence coordinator architecture', () => {
       'src/main/notebook/real-notebook-lineage.integration.test.ts',
       'src/main/notebook/real-parquet-lineage.integration.test.ts',
       'src/main/notebook/r-connection-guard.test.ts',
-      'src/main/notebook/dependency-analysis.lineage-regressions.test.ts',
+      'src/main/notebook/kernel-lineage-recovery.integration.test.ts',
       'src/renderer/src/lib/acp/workspace-prompt-admission.test.ts',
       'src/renderer/src/lib/acp/workspace-prompt-preparation.test.ts',
       'src/renderer/src/lib/acp/workspace-runtime-save-as-skill-owner.test.tsx',
@@ -1814,7 +1810,29 @@ describe('Session persistence coordinator architecture', () => {
       'src/renderer/src/lib/acp/workspace-prompt-rollback-failure.test.ts',
       'src/main/literature/pdf-translation/checkpoints.test.ts',
       'src/main/literature/pdf-translation/usage.test.ts',
-      'src/main/notebook/code-risk-admission.test.ts'
+      'src/main/notebook/code-risk-admission.test.ts',
+      'src/main/desktop-runtime-transport.integration.test.ts',
+      'src/main/side-chat/application-commands.test.ts',
+      'src/main/desktop-native-electron.test.ts',
+      'src/main/artifacts/artifact-reproducibility-commands.test.ts',
+      'src/main/settings/file-commands.test.ts',
+      'src/main/office-preview/application-commands.test.ts',
+      'src/main/reviewer/paged-preview-host.test.ts',
+      'src/main/session-plan/session-plan-turn-outcome.test.ts',
+      'src/main/notebook/runtime-repair.windows.integration.test.ts',
+      'src/main/acp/specialist-switch-recovery.integration.test.ts',
+      'src/main/agents/production-completion-handoff.test.ts',
+      'src/main/notebook/auto-mode-budget.integration.test.ts',
+      'src/main/session-diagnostics/schema-compatibility.integration.test.ts',
+      'src/main/notebook/artifact-analysis-contract.integration.test.ts',
+      'src/renderer/src/pages/literature/literature-localization.render.test.tsx',
+      'src/main/notebook/environment-startup.contract.test.ts',
+      'src/main/desktop-runtime-backpressure.integration.test.ts',
+      'src/main/desktop-runtime-transport-diagnostics.test.ts',
+      'src/main/node-entry.test.ts',
+      'src/main/desktop-runtime-session-size.integration.test.ts',
+      'src/main/notebook-payload.integration.test.ts',
+      'src/main/web-service/session-payload.integration.test.ts'
     ])
     expect(sessionPersistence.capabilityOverlays).toEqual([
       'windows_sensitive',

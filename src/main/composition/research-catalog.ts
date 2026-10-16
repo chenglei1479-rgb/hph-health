@@ -1,39 +1,44 @@
-import { JournalAttributes } from '../literature/journal-attributes'
-import { QUIT_SHUTDOWN_BUDGET_MS } from '../lifecycle-shutdown'
-import { session } from 'electron'
+import { createLogger, errorLogFields } from '@aipoch/diagnostics/node'
+import { LiteratureCitationFormatter } from '@aipoch/literature-citations'
+import { LiteratureCitationStyleLibrary } from '@aipoch/literature-citations/styles'
+import {
+  LiteratureBatchJobs,
+  LiteratureFullTextFinder,
+  LiteratureMetadataEnricher,
+  LiteratureReferenceResolver
+} from '@aipoch/literature-discovery'
+import { downloadFullText } from '@aipoch/literature-discovery/download'
+import type { LiteratureItemView } from '@aipoch/literature-library/contracts'
+import { tunnelThroughProxy } from '@aipoch/notebook-network-sandbox'
 import { join } from 'node:path'
 import type { ApplicationEvents } from '../application-events'
 import { type ApplicationModuleBuilder } from '../application-runtime'
 import { AgentPdfAcquisition } from '../literature/agent-pdf-acquisition'
-import { LiteratureBatchJobs } from '../literature/batch-jobs'
 import { LiteratureCatalog } from '../literature/catalog'
 import { LiteratureCitationDocument } from '../literature/citation-document'
-import { LiteratureCitationFormatter } from '../literature/citation-formatter'
-import { LiteratureCitationStyleLibrary } from '../literature/citation-style-library'
+import { discoveryJobOptions } from '../literature/discovery-adapters'
 import { LiteratureDocumentReader } from '../literature/document-reader'
-import { downloadFullText } from '../literature/full-text-download'
-import { LiteratureFullTextFinder } from '../literature/full-text-finder'
-import { LiteratureMetadataEnricher } from '../literature/metadata-enricher'
+import { JournalAttributes } from '../literature/journal-attributes'
 import { LiteraturePdfImporter } from '../literature/pdf-importer'
-import { LiteratureReferenceResolver } from '../literature/reference-resolver'
-import { LiteratureSmartCollections } from '../literature/smart-collections'
-import { createLogger, errorLogFields } from '../logger'
+import { createLiteratureScreening } from '../literature/screening-adapter'
 import { MemoryRepository } from '../memory/repository'
 import { MemoryService } from '../memory/service'
+import { netFetchStandard } from '../network-fetch'
 import { PdfAnnotationRepository } from '../pdf-annotations/repository'
 import { PdfAnnotationService } from '../pdf-annotations/service'
 import { getProjectDbClient } from '../projects/prisma-client'
+import { runtimeNetwork } from '../runtime-network'
 import type { SessionPersistenceCommands } from '../session-persistence/coordinator'
 import { tryDecryptKey } from '../settings/crypto'
 import { SettingsService } from '../settings/service'
 import { parseSystemProxyRules } from '../settings/system-proxy'
-import { netFetchStandard } from '../skills/net-fetch'
 import { SpecialistService } from '../specialist/service'
 import { resolveConfigRoot, resolveDataRoot } from '../storage-root'
 import { ContentRepository } from '../storage/content-repository'
 import { TagRepository } from '../tags/repository'
 import { TagResourceCatalog } from '../tags/resource-catalog'
 import { TagService } from '../tags/service'
+import { inspectPdfPageCount } from '../uploads/attachment-media'
 import { createDefaultUploadRepository } from '../uploads/ipc'
 
 export async function composeResearchCatalog({
@@ -73,8 +78,8 @@ export async function composeResearchCatalog({
   literatureCitationFormatter: LiteratureCitationFormatter
   literatureCitationDocument: LiteratureCitationDocument
   literatureReferenceResolver: LiteratureReferenceResolver
-  literatureMetadataEnricher: LiteratureMetadataEnricher
-  literatureFullTextFinder: LiteratureFullTextFinder
+  literatureMetadataEnricher: LiteratureMetadataEnricher<LiteratureItemView>
+  literatureFullTextFinder: LiteratureFullTextFinder<LiteratureItemView>
   literaturePdfImporter: LiteraturePdfImporter
   literaturePdfAcquisition: AgentPdfAcquisition
   literatureBatchJobs: LiteratureBatchJobs
@@ -108,7 +113,7 @@ export async function composeResearchCatalog({
     applicationEvents
   )
   let smartCollectionRevision = 0
-  const smartCollections = new LiteratureSmartCollections(
+  const smartCollections = createLiteratureScreening(
     () => getProjectDbClient(configRoot),
     settingsService.classification,
     (id) =>
@@ -128,12 +133,6 @@ export async function composeResearchCatalog({
     () => getProjectDbClient(configRoot),
     () => applicationEvents.publish('literature:changed', { revision: ++smartCollectionRevision })
   )
-  await modules.add({ journalAttributes }, ({ journalAttributes: owner }) => ({
-    name: 'literature-journal-attributes',
-    capability: owner,
-    dispose: () => owner.dispose(),
-    disposeTimeoutMs: QUIT_SHUTDOWN_BUDGET_MS
-  }))
   const literatureCatalog = new LiteratureCatalog(
     () => getProjectDbClient(configRoot),
     () => tagService.notifyAssignmentsChanged(),
@@ -174,12 +173,15 @@ export async function composeResearchCatalog({
       maxBytes,
       onProgress,
       async (target) => {
-        const environment = parseSystemProxyRules(await session.defaultSession.resolveProxy(target))
+        const environment = parseSystemProxyRules(await runtimeNetwork().resolveProxy(target))
         return environment.HTTPS_PROXY ?? environment.ALL_PROXY
       },
-      signal
+      signal,
+      (proxy, address, port, signal) => tunnelThroughProxy(proxy, address, port, undefined, signal)
     )
   const literatureFullTextFinder = new LiteratureFullTextFinder({
+    fetch: netFetchStandard,
+    pageCount: inspectPdfPageCount,
     catalog: literatureCatalog,
     content: contentRepository,
     download: downloadLiteraturePdf,
@@ -203,6 +205,7 @@ export async function composeResearchCatalog({
     download: downloadLiteraturePdf
   })
   const literatureBatchJobs = new LiteratureBatchJobs({
+    ...discoveryJobOptions,
     path: join(resolveDataRoot(), 'literature', 'batch-jobs.json'),
     catalog: literatureCatalog,
     metadata: literatureMetadataEnricher,

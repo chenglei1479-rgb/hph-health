@@ -1,8 +1,11 @@
-import { parseLiteratureAttachmentVersionReference } from '../../shared/literature'
+import type { NotebookDependencyAnalyzer } from '@aipoch/notebook-analysis'
+import { createNotebookDependencyAnalyzer } from '../notebook/dependency-analysis-adapter'
+import { parseLiteratureAttachmentVersionReference } from '../../shared/literature-attachment-reference'
 import type { ManagedPreviewSource } from '../../shared/preview-resources'
 import { createDefaultArtifactRepository } from '../artifacts/ipc'
 import { ProvenanceMessageSnapshotRepository } from '../artifacts/provenance-message-snapshot'
 import { ArtifactProvenanceRepository } from '../artifacts/provenance-repository'
+import type { ReadArtifactLiteratureItems } from '../artifacts/literature-manifest'
 import { ArtifactRunRegistry } from '../artifacts/run-registry'
 import { BookmarkRepository } from '../bookmarks/repository'
 import { ImmutableInputAuthority } from '../immutable-input-authority'
@@ -11,9 +14,9 @@ import { SessionPdfSourceResolver } from '../literature/session-pdf-source-resol
 import { GrantedLocalRootsRepository } from '../local-fs/granted-roots-repository'
 import { LocalFsService } from '../local-fs/service'
 import { ManagedFileVersionService } from '../managed-file-versions/service'
-import { createManagedPreviewOwnerRegistry } from '../managed-preview-ipc'
+import { createManagedPreviewOwnerRegistry } from '../managed-preview-owner-registry'
 import { ManagedPreviewResources } from '../managed-preview-resources'
-import { NotebookDependencyAnalyzer } from '../notebook/dependency-analysis'
+
 import { NotebookInputRegistry } from '../notebook/input-registry'
 import { NotebookRunRepository } from '../notebook/repository'
 import { getProjectDbClient } from '../projects/prisma-client'
@@ -29,7 +32,8 @@ export function composeManagedFiles({
   settingsService,
   managedFileVersionService,
   sessionRepository,
-  getNotebookInputRegistry
+  getNotebookInputRegistry,
+  readLiteratureItems
 }: {
   grantedRootsRepositoryRef: { current?: GrantedLocalRootsRepository }
   shutdownNotebooksBeforePolicyChange: (
@@ -39,6 +43,7 @@ export function composeManagedFiles({
   managedFileVersionService: ManagedFileVersionService
   sessionRepository: ReturnType<typeof createDefaultSessionRepository>
   getNotebookInputRegistry: () => NotebookInputRegistry
+  readLiteratureItems: ReadArtifactLiteratureItems
 }): {
   artifactRepository: ReturnType<typeof createDefaultArtifactRepository>
   notebookRepository: NotebookRunRepository
@@ -69,7 +74,7 @@ export function composeManagedFiles({
   // Share one repository and registry so runtime artifact claims and renderer finalization meet.
   const artifactRepository = createDefaultArtifactRepository()
   const notebookRepository = new NotebookRunRepository(resolveDataRoot())
-  const notebookDependencyAnalyzer = new NotebookDependencyAnalyzer({
+  const notebookDependencyAnalyzer = createNotebookDependencyAnalyzer({
     storageRoot: resolveDataRoot(),
     repository: notebookRepository
   })
@@ -81,6 +86,7 @@ export function composeManagedFiles({
     storageRoot: resolveDataRoot(),
     getClient: () => getProjectDbClient(resolveConfigRoot()),
     inputAuthority: immutableInputAuthority,
+    readLiteratureItems,
     managedFileVersions: managedFileVersionService,
     compatibilityRepository: artifactRepository,
     notebookRepository,

@@ -1,29 +1,35 @@
+import { projectUpdateBlockedTasks } from '../update/blocked-tasks'
+import {
+  registerStorageIpcHandlers,
+  registerUpdateIpcHandlers
+} from '../desktop-surface-declarations'
 import type { UpdateBlocker } from '../../shared/update'
 import { createAcpRuntime } from '../acp/runtime-composition'
 import { type ApplicationModuleBuilder } from '../application-runtime'
 import { withReproducibilityNotebookLifecycle } from '../artifacts/reproducibility-notebook-lifecycle'
 import { BackendShutdownCoordinator, UPDATE_SHUTDOWN_BUDGET_MS } from '../lifecycle-shutdown'
-import { createLogger } from '../logger'
-import { createProductionMicromambaRunner } from '../notebook/windows-micromamba-runner'
+import { createLogger } from '@aipoch/diagnostics/node'
+import { createProductionMicromambaRunner } from '../notebook/environment-runner'
 import {
   createWebSessionPersistenceFlush,
   rendererSessionPersistenceFlushBlocksShutdown,
   type RendererSessionPersistenceTarget
-} from '../session-persistence/renderer-flush'
+} from '../session-persistence/flush-protocol'
 import { SettingsService } from '../settings/service'
 import { SideChatRuntimeOwner } from '../side-chat/runtime-owner'
 import { createStorageCommandOwner } from '../storage/command-owner'
 import { DataRootCleanupJournal, createDataRootSourceCleanup } from '../storage/data-root-cleanup'
 import { detectActiveSessions } from '../storage/detect-active'
-import { registerStorageIpcHandlers } from '../storage/ipc'
+
 import { isMigrationInProgress, isMigrationPending } from '../storage/migration-state'
-import { createUpdateStrategy } from '../update/create-strategy'
-import { createUpdateCommandOwner, registerUpdateIpcHandlers } from '../update/ipc'
+import { createRuntimeUpdateStrategy } from '../update/runtime-strategy'
+import { createUpdateCommandOwner } from '../update/command-owner'
 import { startUpdateScheduler } from '../update/scheduler'
 import {
   createActiveResearchSafeInstallGate,
   createDataRootResearchSafeInstallGate,
   createDurableInstallGate,
+  canForceUpdateBlockers,
   type InstallReadiness
 } from '../update/strategy'
 import { type ReviewerRuntimeShutdownOwner } from './reviewer'
@@ -42,6 +48,7 @@ export async function composeHandoff({
   translate,
   confirmRendererDurability,
   notifyRendererDurabilityAborted,
+  loadSessionSummaries,
   modules
 }: {
   declareElectronAdapter: (name: string, install: () => void | (() => void)) => void
@@ -57,12 +64,13 @@ export async function composeHandoff({
   translate: import('../locale/main-process-messages').NativeTranslator
   confirmRendererDurability: (
     policy?:
-      | import('../session-persistence/renderer-flush').RendererSessionPersistenceFlushPolicy
+      | import('../session-persistence/flush-protocol').RendererSessionPersistenceFlushPolicy
       | undefined,
     surface?:
-      import('../session-persistence/renderer-flush').RendererSessionPersistenceSurface | undefined
+      import('../session-persistence/flush-protocol').RendererSessionPersistenceSurface | undefined
   ) => Promise<boolean>
   notifyRendererDurabilityAborted: () => void
+  loadSessionSummaries?: () => Promise<readonly { id: string; projectId: string; title: string }[]>
   modules: ApplicationModuleBuilder
 }): Promise<{
   reviewerModelRuntimeShutdown: { current: ReviewerRuntimeShutdownOwner | undefined }
@@ -72,6 +80,9 @@ export async function composeHandoff({
     confirmedInterruption: boolean
   ) => Promise<InstallReadiness>
   updateCommandOwner: ReturnType<typeof createUpdateCommandOwner>
+  prepareDesktopUpdate: import('../update/strategy').InstallGate
+  inspectDesktopUpdate: () => Promise<InstallReadiness>
+  abortDesktopUpdate: () => void
 }> {
   // Single shared teardown owner for both the before-quit handler (index.ts) and the pre-update-install
   // gate. Update handling is deliberately constructed below, after this dependency is complete.
@@ -168,15 +179,61 @@ export async function composeHandoff({
     durableBackendHandoffGate,
     () => isMigrationInProgress() || isMigrationPending()
   )
-  const updateStrategy = createUpdateStrategy(process.platform, {
+  const inspectDesktopUpdate = async (): Promise<InstallReadiness> => {
+    const blockedBy = [...new Set(detectResearchBlockers())]
+    const result: InstallReadiness = {
+      completed: blockedBy.length === 0,
+      reaped: false,
+      blockedBy,
+      canForce: canForceUpdateBlockers(blockedBy)
+    }
+    if (
+      isMigrationInProgress() ||
+      isMigrationPending() ||
+      sessionPackageDesktopLifecycle.isActive()
+    )
+      return { ...result, completed: false, canForce: false, reason: 'installation-busy' }
+    if (!loadSessionSummaries || !blockedBy.length) return result
+    const summaries = await loadSessionSummaries()
+    const active = detectActiveSessions({
+      runtime: { getActivePromptSessions: () => runtime.getQuitBlockingPromptSessions() },
+      sideChat: { getActivePromptSessions: getActiveSideChatSessions },
+      delegated: { getActiveDelegatedSessions },
+      notebook: notebookLifecycle
+    })
+    return { ...result, blockedTasks: projectUpdateBlockedTasks(active, summaries, blockedBy) }
+  }
+  const prepareDesktopUpdate: import('../update/strategy').InstallGate = async (options) => {
+    packageHandoffHeld.current = true
+    if (sessionPackageDesktopLifecycle.isActive())
+      throw new Error('Wait for the Session package operation to finish before updating.')
+    releaseSettingsInstallAdmission ??= settingsService.holdInstallAdmission()
+    const gateResult = await updateInstallGate(options)
+    const result = {
+      ...gateResult,
+      canForce: !options?.force && canForceUpdateBlockers(gateResult.blockedBy ?? [])
+    }
+    if (!result.blockedBy?.length || !loadSessionSummaries) return result
+    let summaries: Awaited<ReturnType<NonNullable<typeof loadSessionSummaries>>>
+    try {
+      summaries = await loadSessionSummaries()
+    } catch {
+      return result
+    }
+    const active = detectActiveSessions({
+      runtime: { getActivePromptSessions: () => runtime.getQuitBlockingPromptSessions() },
+      sideChat: { getActivePromptSessions: getActiveSideChatSessions },
+      delegated: { getActiveDelegatedSessions },
+      notebook: notebookLifecycle
+    })
+    return {
+      ...result,
+      blockedTasks: projectUpdateBlockedTasks(active, summaries, result.blockedBy)
+    }
+  }
+  const updateStrategy = createRuntimeUpdateStrategy(process.platform, {
     translate,
-    installGate: async (options) => {
-      packageHandoffHeld.current = true
-      if (sessionPackageDesktopLifecycle.isActive())
-        throw new Error('Wait for the Session package operation to finish before updating.')
-      releaseSettingsInstallAdmission = settingsService.holdInstallAdmission()
-      return updateInstallGate(options)
-    },
+    installGate: prepareDesktopUpdate,
     releaseInstallHandoff: abortUpdateHandoff
   })
   const updateCommandOwner = createUpdateCommandOwner(updateStrategy)
@@ -194,7 +251,10 @@ export async function composeHandoff({
     reviewerModelRuntimeShutdown,
     shutdownCoordinator,
     durableDataRootHandoffGate,
-    updateCommandOwner
+    updateCommandOwner,
+    prepareDesktopUpdate,
+    inspectDesktopUpdate,
+    abortDesktopUpdate: abortUpdateHandoff
   }
 }
 

@@ -16,7 +16,7 @@ import type { StoredCustomMcpOAuthConfig, StoredCustomMcpOAuthState } from '../.
 import {
   DEFAULT_LOOPBACK_OAUTH_REDIRECT_URI,
   normalizeLoopbackOAuthRedirectUri
-} from '../../../shared/oauth-redirect'
+} from '@aipoch/connector-mcp-client/oauth-redirect'
 
 export type OAuthCallback = {
   code?: string

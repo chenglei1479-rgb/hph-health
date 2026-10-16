@@ -5,8 +5,10 @@ import { expect, it } from 'vitest'
 
 type Step = {
   env?: Record<string, string>
+  if?: string
   name?: string
   run?: string
+  'timeout-minutes'?: number
   uses?: string
 }
 
@@ -16,6 +18,7 @@ type Job = {
   'runs-on'?: string
   permissions?: Record<string, string>
   steps?: Step[]
+  'timeout-minutes'?: number
   strategy?: {
     matrix?: {
       include?: Array<{
@@ -72,10 +75,19 @@ it('builds unsigned macOS dmg and Windows NSIS packages and publishes a prerelea
   const names = build?.steps?.map((step) => step.name)
   const buildIndex = names?.indexOf('Build the app') ?? -1
   const pythonIndex = names?.indexOf('Bundle the offline schema-notebook Python') ?? -1
+  const micromambaIndex = names?.indexOf('Stage pinned micromamba') ?? -1
   const packageIndex = names?.indexOf('Package unsigned installers') ?? -1
   expect(buildIndex).toBeGreaterThanOrEqual(0)
   expect(pythonIndex).toBeGreaterThan(buildIndex)
-  expect(packageIndex).toBeGreaterThan(pythonIndex)
+  expect(micromambaIndex).toBeGreaterThan(pythonIndex)
+  expect(packageIndex).toBeGreaterThan(micromambaIndex)
+
+  const stageMicromamba = build?.steps?.[micromambaIndex]
+  expect(stageMicromamba?.run).toContain('node scripts/fetch-micromamba.mjs "$subdir" "$primary_path"')
+  expect(stageMicromamba?.run).toContain('mac-arm64) subdir=osx-arm64')
+  expect(stageMicromamba?.run).toContain('mac-x64) subdir=osx-64')
+  expect(stageMicromamba?.run).toContain('win-x64) subdir=win-64')
+  expect(stageMicromamba?.run).toContain('compatibility')
 
   const bundlePython = build?.steps?.[pythonIndex]
   expect(bundlePython?.run).toBe('node scripts/stage-schema-notebook-python.mjs')
@@ -116,6 +128,10 @@ it('launches the packaged app on Windows, Apple silicon, and Intel macOS before 
   )
   expect(launch?.run).toContain('scripts/ci/packaged-startup-smoke.mjs')
   expect(launch?.run).toContain('--timeout-ms 240000')
+  expect(launch?.['timeout-minutes']).toBe(15)
+  expect(launch?.['timeout-minutes']).toBeLessThan(Number(smoke?.['timeout-minutes']))
+  const upload = smoke?.steps?.find((step) => step.name === 'Upload the startup log')
+  expect(upload?.if).toBe('always()')
 
   const release = workflow.jobs.release
   expect(release?.needs).toEqual(['build', 'smoke'])

@@ -1,5 +1,3 @@
-import { net } from 'electron'
-
 import {
   isBlockedPrereleaseUrl,
   isDraPrerelease,
@@ -33,25 +31,32 @@ const guardedFetch = (original: typeof fetch): typeof fetch =>
     return original(input, init)
   }) as typeof fetch
 
-// Chromium net.fetch is a separate stack from global fetch. Update manifests use it.
-const patchElectronNetFetch = (): void => {
+type ElectronNet = { fetch?: typeof fetch }
+
+const patchNet = (net: ElectronNet | undefined): void => {
   try {
     const current = net?.fetch
     if (!net || typeof current !== 'function') return
-    net.fetch = guardedFetch(current.bind(net) as typeof fetch) as typeof net.fetch
+    if ((current as { draGuarded?: boolean }).draGuarded) return
+    const guarded = guardedFetch(current.bind(net) as typeof fetch) as typeof fetch & {
+      draGuarded?: boolean
+    }
+    guarded.draGuarded = true
+    net.fetch = guarded
   } catch {
     // A locked net.fetch cannot be wrapped. global fetch is still guarded.
   }
 }
 
-// Drops account configuration and refuses Auth0, usage statistics, and the upstream update host.
-export const installMainPrereleaseLockdown = (): void => {
+// Chromium net.fetch is a separate stack from global fetch. The Electron shell passes its
+// net binding in. The Node backend does not import Electron.
+export const installMainPrereleaseLockdown = (electronNet?: ElectronNet): void => {
   if (!isDraPrerelease() || installed) return
   installed = true
   for (const key of AUTH_ENV_KEYS) delete process.env[key]
   process.env.DRA_TELEMETRY = '0'
   process.env.DRA_USAGE_STATISTICS = '0'
-  patchElectronNetFetch()
+  patchNet(electronNet)
   const original = globalThis.fetch
   if (typeof original !== 'function') return
   globalThis.fetch = guardedFetch(original)

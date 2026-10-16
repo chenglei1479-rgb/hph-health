@@ -2,10 +2,11 @@ import type { ApplicationModuleBuilder } from '../application-runtime'
 import { assertAccountChannelAccess } from '../account/runtime'
 import {
   createApplicationCommandComposition,
-  type ApplicationCommandComposition,
   type ApplicationCommandCompositionDependencies
 } from '../application-command-composition'
-import { registerApplicationCommandElectronAdapter } from '../application-command-electron-adapter'
+import type { ApplicationCommandComposition } from '../application-command-composition-contract'
+import type { ApplicationModuleBuilder } from '../application-runtime'
+import { registerApplicationCommandElectronAdapter } from '../desktop-surface-declarations'
 
 type ApplicationCommandCompositionRegistration = Readonly<{
   modules: ApplicationModuleBuilder

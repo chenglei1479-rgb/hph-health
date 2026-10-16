@@ -6,7 +6,7 @@ import type { ServerResponse } from 'node:http'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
-import { createLogger, errorLogFields, type Logger } from '../logger'
+import { createLogger, errorLogFields, type Logger } from '@aipoch/diagnostics/node'
 import { normalizeAnthropicBaseUrl } from './base-url'
 import {
   ProviderLoopbackHttpHost,
@@ -79,6 +79,8 @@ const requestHeaders = (
     const normalized = name.toLowerCase()
     if (
       HOP_BY_HOP_HEADERS.has(normalized) ||
+      // Fetch decodes upstream responses, so it must negotiate its own supported encodings.
+      normalized === 'accept-encoding' ||
       normalized === 'authorization' ||
       normalized === 'x-api-key' ||
       normalized.startsWith('sec-fetch-') ||

@@ -1,10 +1,11 @@
+import type { JournalResult } from '@aipoch/journal-catalog/contracts'
 import { expect } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
 import { open } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { ElectronApplication, Page } from 'playwright'
 import { test } from './fixtures/electron-app'
-import type { JournalResult } from '../src/shared/journal-attributes'
-import { literatureItemInputSchema } from '../src/shared/literature'
+
+import { literatureItemInputSchema } from '@aipoch/literature-library/contracts'
 
 // Independently authored fixtures; never use user spreadsheets or provider datasets.
 const prepare = (
@@ -141,6 +142,8 @@ test('resolves journals through real IPC in two windows and persists colors outs
   await expect(
     primary.getByRole('button', { name: 'Remote editorial band', exact: true })
   ).toBeVisible()
+  // Cancelling the stale draft reloads entries; finish that read before stopping the backend.
+  await expect(primary.getByRole('combobox', { name: 'Journals per page' })).toBeEnabled()
   const restored = await app.restart()
   const stored = await restored.evaluate(() => window.api.literature.journals({ action: 'list' }))
   expect(

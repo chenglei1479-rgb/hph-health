@@ -1,3 +1,4 @@
+import { nodeRuntimeEnvironment } from '../node-process-host'
 import { execFile, spawn } from 'node:child_process'
 import { constants } from 'node:fs'
 import { access, mkdtemp, rm } from 'node:fs/promises'
@@ -6,7 +7,7 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 
 import { isSupportedCodexAcpVersion, isSupportedCodexCliVersion } from '../../shared/codex-runtime'
-import { createLogger } from '../logger'
+import { createLogger } from '@aipoch/diagnostics/node'
 import { augmentedPathEnv } from './shell-path'
 import { stripCodexCredentialEnv } from './process-tree'
 import { registerOwnedPosixProcessGroup, terminateProcessTree } from '../process-tree'
@@ -305,7 +306,7 @@ const runAcpInitializeSmoke =
               stdio: ['pipe', 'pipe', 'ignore'],
               env: {
                 ...stripCodexCredentialEnv(augmentedPathEnv(process.env)),
-                ...(isJavaScript ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+                ...(isJavaScript ? { ...nodeRuntimeEnvironment() } : {}),
                 NO_BROWSER: '1',
                 CODEX_HOME: codexHome,
                 ...(opts.codexPath ? { CODEX_PATH: opts.codexPath } : {})
@@ -405,7 +406,7 @@ const runVersion =
         windowsHide: true,
         env: {
           ...augmentedPathEnv(process.env),
-          ...(isJavaScript ? { ELECTRON_RUN_AS_NODE: '1', NO_BROWSER: '1' } : {})
+          ...(isJavaScript ? { ...nodeRuntimeEnvironment(), NO_BROWSER: '1' } : {})
         },
         signal
       })

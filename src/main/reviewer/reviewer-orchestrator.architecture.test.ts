@@ -1,3 +1,4 @@
+import { expectModuleBoundary } from '../../../test/module-boundary-assertions'
 import { dirname, extname, relative, resolve, sep } from 'node:path'
 
 import {
@@ -405,9 +406,8 @@ describe('Reviewer orchestrator architecture', () => {
 
   it('routes interface changes through every cross-surface and downstream certification suite', () => {
     const manifest = loadModuleImpactManifest(manifestPath)
-    const module = manifest.modules.reviewer_orchestrator
 
-    expect(module).toEqual({
+    expectModuleBoundary(manifest, 'reviewer_orchestrator', {
       ownerPaths: [
         'src/main/reviewer/acp-runtime.ts',
         'src/main/reviewer/orchestrator.ts',
@@ -474,7 +474,9 @@ describe('Reviewer orchestrator architecture', () => {
         'src/main/reviewer/stale-reviews.ts',
         'src/main/reviewer/submission-limits.ts',
         'src/main/reviewer/turn-evidence.test.ts',
-        'src/main/reviewer/turn-evidence.ts'
+        'src/main/reviewer/turn-evidence.ts',
+        'src/main/reviewer/paged-preview-host.ts',
+        'src/main/reviewer/paged-preview-host.test.ts'
       ],
       interfacePaths: [
         'src/main/reviewer/orchestrator.ts',
@@ -493,7 +495,8 @@ describe('Reviewer orchestrator architecture', () => {
         'src/main/reviewer/rubric.ts',
         'src/main/reviewer/scope.ts',
         'src/main/reviewer/stale-reviews.ts',
-        'src/main/reviewer/turn-evidence.ts'
+        'src/main/reviewer/turn-evidence.ts',
+        'src/main/reviewer/paged-preview-host.ts'
       ],
       consumerModules: [
         'workspace_runtime',
@@ -533,7 +536,8 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/reviewer/reviewer-resilience.test.ts',
           'src/main/reviewer/rubric.test.ts',
           'src/main/reviewer/scope-snapshot.test.ts',
-          'src/main/reviewer/turn-evidence.test.ts'
+          'src/main/reviewer/turn-evidence.test.ts',
+          'src/main/reviewer/paged-preview-host.test.ts'
         ],
         contract: [
           'src/main/reviewer/ipc.test.ts',
@@ -561,7 +565,6 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/literature/command-owner.test.ts',
           'src/main/session-persistence/runtime-session-owner.test.ts',
           'src/main/session-plan/adversarial-session-plan.test.ts',
-          'packages/open-science/cli.test.ts',
           'src/main/notebook/local-rpc-notebook-adapter.test.ts',
           'src/renderer/src/lib/acp/workspace-events.test.ts',
           'src/renderer/src/stores/review-store.test.ts',
@@ -648,7 +651,7 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/compute/job-deletion-runtime-drain.test.ts',
           'src/main/compute/job-deletion-runtime-isolation.test.ts',
           'src/main/compute/session-catalog-hydration.integration.test.ts',
-          'src/main/connectors/application.test.ts',
+          'src/main/composition/connector-application.test.ts',
           'src/main/data-content-application-commands.test.ts',
           'src/main/database/application-database.integration.test.ts',
           'src/main/database/literature-inbox-integrity-migration.test.ts',
@@ -683,7 +686,6 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/literature/library-mcp-server.test.ts',
           'src/main/literature/library-tool-contracts.test.ts',
           'src/main/literature/mcp-server.test.ts',
-          'src/main/literature/metadata-enricher.test.ts',
           'src/main/literature/migration-writers.test.ts',
           'src/main/literature/pdf-attachment-reliability.test.ts',
           'src/main/literature/pdf-elements-mcp.test.ts',
@@ -693,7 +695,6 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/literature/pdf-structure/owner.test.ts',
           'src/main/literature/pdf-structure/reader.test.ts',
           'src/main/literature/pdf-structure/source-metadata.test.ts',
-          'src/main/literature/reference-resolver.test.ts',
           'src/main/literature/scale-regressions.test.ts',
           'src/main/literature/session-pdf-source-resolver.test.ts',
           'src/main/managed-file-versions/diff-task.test.ts',
@@ -823,7 +824,7 @@ describe('Reviewer orchestrator architecture', () => {
           'src/renderer/src/pages/workspace/previews/preview-pagination-contract.test.tsx',
           'src/shared/renderer-surface-inventory.test.ts',
           'src/shared/renderer-surface-matrix.test.ts',
-          'src/main/settings/skill-catalog.test.ts',
+          'src/main/skills/catalog.test.ts',
           'src/main/session-package/fork.test.ts',
           'src/main/storage/brand-location.test.ts',
           'src/main/storage/migration-target-race.test.ts',
@@ -851,7 +852,24 @@ describe('Reviewer orchestrator architecture', () => {
           'src/main/session-persistence/attention-projection.test.ts',
           'src/main/acp/approved-handoff-outcome.integration.test.ts',
           'src/main/acp/approved-handoff-outcome.test.ts',
-          'src/main/literature/pdf-translation/checkpoints.test.ts'
+          'src/main/literature/pdf-translation/checkpoints.test.ts',
+          'src/main/node-process-host.test.ts',
+          'src/main/desktop-runtime-transport.integration.test.ts',
+          'src/main/side-chat/application-commands.test.ts',
+          'src/main/artifacts/artifact-reproducibility-commands.test.ts',
+          'src/main/settings/file-commands.test.ts',
+          'src/main/office-preview/application-commands.test.ts',
+          'src/main/desktop-native-electron.test.ts',
+          'src/main/session-plan/session-plan-turn-outcome.test.ts',
+          'src/main/acp/specialist-switch-recovery.integration.test.ts',
+          'src/main/agents/production-completion-handoff.test.ts',
+          'src/renderer/src/pages/literature/literature-localization.render.test.tsx',
+          'src/main/desktop-runtime-backpressure.integration.test.ts',
+          'src/main/desktop-runtime-transport-diagnostics.test.ts',
+          'src/main/node-entry.test.ts',
+          'src/main/desktop-runtime-session-size.integration.test.ts',
+          'src/main/notebook-payload.integration.test.ts',
+          'src/main/web-service/session-payload.integration.test.ts'
         ]
       },
       capabilityOverlays: ['windows_sensitive', 'e2e_regressions', 'e2e_delegation'],

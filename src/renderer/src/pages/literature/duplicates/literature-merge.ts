@@ -1,10 +1,10 @@
 import {
-  preferredLiteratureIdentifier,
-  normalizeLiteratureIdentifierValue,
   normalizeLiteratureIdentifierPreferences,
-  type LiteratureItemInput,
-  type LiteratureItemView
-} from '../../../../../shared/literature'
+  normalizeLiteratureIdentifierValue,
+  preferredLiteratureIdentifier
+} from '@aipoch/literature-citations/contracts'
+import { type LiteratureItemInput } from '@aipoch/literature-library/item'
+import { type LiteratureItemView } from '@aipoch/literature-library/contracts'
 
 export const mergeScalarFields = [
   'title',

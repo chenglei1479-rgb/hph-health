@@ -7,7 +7,7 @@ import { basename, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import {
-  parsePackagedSqliteVersion,
+  readDesktopSqliteVersion,
   seedLegacyDatabase,
   verifyDatabaseMigrationLedger,
   verifyLegacyProjectPreserved,
@@ -132,7 +132,7 @@ const assertPackagedResources = async (appBundle) => {
     )
   ]
   for (const path of paths) await access(path)
-  const prismaRoot = join(resources, 'node_modules', '.prisma', 'client')
+  const prismaRoot = join(resources, 'backend', 'resources', 'prisma-client')
   const engines = await readdir(prismaRoot).catch(() => [])
   const nativeEngines = engines.filter(
     (name) => name.includes('query_engine-') && name.endsWith('.node')
@@ -222,7 +222,7 @@ const launchAndProbe = async ({ executable, expectedVersion, env, userDataRoot }
     ])
     terminateSpawnedProcessGroup(child)
     if (exitCode !== 0) throw new Error(`Packaged macOS app exited with ${exitCode}.\n${output}`)
-    return parsePackagedSqliteVersion(output)
+    return await readDesktopSqliteVersion(env.OPEN_SCIENCE_E2E_STORAGE_ROOT, child.pid)
   } catch (error) {
     child.kill('SIGKILL')
     terminateSpawnedProcessGroup(child)

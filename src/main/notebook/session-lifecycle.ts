@@ -22,7 +22,7 @@ import {
 } from './session-aggregate'
 import { NotebookSessionRegistry } from './session-registry'
 import type { NotebookRuntimeBindingOwner } from './runtime-binding'
-import { DEFAULT_PY_ENV, DEFAULT_R_ENV, resolveEnvName } from './runtime-paths'
+import { DEFAULT_PY_ENV, DEFAULT_R_ENV, resolveEnvName } from '@aipoch/environment'
 import type { KernelProcessKind, NotebookKernelTerminationDiagnostic } from './kernel-executor'
 import {
   createFrameNotebookLane,
@@ -33,7 +33,7 @@ import {
 } from './lane-identity'
 import { resolveProjectId } from '../../shared/project-scope'
 import { reconcileWorkingFileEvidence } from './working-file-observer'
-import { createLogger, diagnosticErrorFields } from '../logger'
+import { createLogger, diagnosticErrorFields } from '@aipoch/diagnostics/node'
 import type { KernelProcessLifecycleOwner } from './kernel-process-lifecycle.windows-posix'
 import { assertResearchSessionWritable } from '../storage/session-package-state'
 

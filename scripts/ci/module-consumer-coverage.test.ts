@@ -1,3 +1,8 @@
+import {
+  createConsumerDependencyReader,
+  provablyStaleConsumerTests
+} from './consumer-retirement.mjs'
+import { localPackageSourcePaths } from './local-package-exports.mjs'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { relative, resolve, sep } from 'node:path'
@@ -32,6 +37,7 @@ it('retains every statically reachable consumer test and declared runtime-loadin
     baseUrl: process.cwd(),
     // Resolve the local package inside this checkout, not a shared node_modules symlink.
     paths: {
+      ...localPackageSourcePaths(),
       '@aipoch/notebook-network-sandbox': ['packages/notebook-network-sandbox/src/index.ts'],
       '@aipoch/process-tree-native': ['packages/process-tree-native/index.d.ts'],
       '@aipoch/safe-file-publisher-native': ['packages/safe-file-publisher-native/index.d.ts'],
@@ -103,6 +109,13 @@ it('retains every statically reachable consumer test and declared runtime-loadin
       `${path} exports shared test contracts; register it as an interface to retain consumers`
     ).toBe(true)
   }
+  const inspectConsumer = createConsumerDependencyReader(
+    {
+      files: tracked,
+      read: (path: string) => (tracked.has(path) ? readFileSync(path, 'utf8') : undefined)
+    },
+    Object.entries(runtimeEdges)
+  )
   const missing: string[] = []
   for (const [id, module] of Object.entries(modules)) {
     if (module.fullTestReason || id === 'i18n_catalog') continue
@@ -116,6 +129,20 @@ it('retains every statically reachable consumer test and declared runtime-loadin
         visited.add(consumer)
         pending.push(consumer)
       }
+    }
+    // Reject proven stale package consumers, but preserve evidence whose dependency cone is opaque.
+    // This matches Integrity: native or dynamic loading cannot prove safe retirement.
+    if (['skill_package', 'specialist_package'].includes(id)) {
+      expect(
+        provablyStaleConsumerTests(
+          {
+            ownerPaths: module.ownerPaths,
+            testFiles: { consumer: module.testFiles.consumer.filter((path) => !visited.has(path)) }
+          },
+          inspectConsumer
+        ),
+        `${id} consumer evidence must have a dependency path or incomplete dependency evidence`
+      ).toEqual([])
     }
     const declared = new Set(Object.values(module.testFiles).flat())
     for (const path of visited)

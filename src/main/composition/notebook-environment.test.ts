@@ -1,3 +1,4 @@
+import { configureTestRuntimeMetadata } from '../../../test/runtime-metadata'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,22 +13,26 @@ const mocks = vi.hoisted(() => ({
 vi.mock('electron', () => ({
   app: { getLocale: () => 'en-US', getPath: () => 'home', isPackaged: false }
 }))
-vi.mock('../logger', () => ({
+vi.mock('@aipoch/diagnostics/node', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@aipoch/diagnostics/node')>()),
   createLogger: () => ({ error: mocks.error, info: vi.fn(), warn: vi.fn() }),
   errorLogFields: (error: unknown) => ({ error })
 }))
 vi.mock('../notebook/runtime-service', () => ({ NotebookRuntimeService: class {} }))
-vi.mock('../notebook/provisioner', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../notebook/provisioner')>()),
+vi.mock('../notebook/environment-production', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../notebook/environment-production')>()),
   createProductionProvisioner: mocks.createProvisioner
 }))
 vi.mock('../notebook/mirror-probe', () => ({ effectiveMirrorAsync: mocks.mirror }))
+vi.mock('../desktop-surface-declarations', () => ({
+  registerNotebookEnvIpcHandlers: mocks.register
+}))
 vi.mock('../notebook/env-ipc', () => ({
   registerNotebookEnvIpcHandlers: mocks.register,
   broadcastNotebookEnvProgress: mocks.progress
 }))
 
-import type { RuntimeProvisioner } from '../notebook/provisioner'
+import type { RuntimeProvisioner } from '@aipoch/environment'
 import { initializeDataRootWriteAvailability } from '../storage/migration-state'
 import { registerNotebookEnvironmentComposition } from './notebook-environment'
 
@@ -178,3 +183,5 @@ describe('Notebook environment composition', () => {
     })
   })
 })
+
+configureTestRuntimeMetadata()

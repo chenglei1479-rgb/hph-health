@@ -16,12 +16,12 @@ import type {
 
 type Sources = Pick<
   SessionDiagnosticWorkerInput,
-  'dataRoot' | 'configRoot' | 'logPath' | 'appVersion'
+  'dataRoot' | 'configRoot' | 'logPath' | 'desktopLogPath' | 'legacyDesktopLogPath' | 'appVersion'
 > & {
   sensitiveContent?: SensitiveContentFailure
   sensitiveContentSources?: SensitiveContentSource[]
 }
-type Options = {
+export type SessionDiagnosticsOptions = {
   createWorker: (options: WorkerOptions) => Worker
   resolveSources: (identity: SessionDiagnosticRequest) => Sources
   chooseDestination: (defaultName: string) => Promise<string | undefined>
@@ -91,7 +91,9 @@ const assertOutsideSources = async (path: string, sources: Sources): Promise<voi
   const roots = [
     sources.dataRoot,
     sources.configRoot,
-    ...(sources.logPath ? [dirname(sources.logPath)] : [])
+    ...(sources.logPath ? [dirname(sources.logPath)] : []),
+    ...(sources.desktopLogPath ? [dirname(sources.desktopLogPath)] : []),
+    ...(sources.legacyDesktopLogPath ? [dirname(sources.legacyDesktopLogPath)] : [])
   ]
   for (const root of roots) {
     if (within(await canonical(root), destination)) {
@@ -144,7 +146,9 @@ const abortableDestination = async (
 }
 
 /** A task-local owner. No repository, runtime, logger queue or application write gate is involved. */
-export const createSessionDiagnosticsDesktop = (options: Options): SessionDiagnosticsDesktop => {
+export const createSessionDiagnosticsDesktop = (
+  options: SessionDiagnosticsOptions
+): SessionDiagnosticsDesktop => {
   const operations = new Map<string, Operation>()
   const waiting = new Map<string, AbortController>()
   let closed = false

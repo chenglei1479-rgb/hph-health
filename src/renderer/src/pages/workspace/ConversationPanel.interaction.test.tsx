@@ -1,3 +1,7 @@
+import {
+  reportWorkspaceOperationError,
+  clearWorkspaceOperationError
+} from '@/lib/acp/workspace-operation-error'
 import { annotationTransfers, ANNOTATION_DRAG_TYPE } from './annotations/annotation-transfer'
 import { parseSideChatAnnotationText, type Annotation } from '../../../../shared/annotations'
 import { SideChatPanel } from './SideChatPanel'
@@ -5114,6 +5118,71 @@ describe('ConversationPanel composer intake', () => {
 })
 
 describe('ConversationPanel interrupted Session recovery', () => {
+  it.each(['absent', 'cancelled', 'failed'] as const)(
+    'keeps session Resume reachable when the selected turn result is %s and owned by another message',
+    async (kind) => {
+      const resume = vi.fn().mockResolvedValue(undefined)
+      const prompt = planOriginMessages()[0]
+      const activeSession: ChatSession = {
+        id: 'feedback-session',
+        projectId: 'project-a',
+        title: 'Plan feedback',
+        cwd: '/workspace',
+        status: 'idle',
+        resumeRecovery: {
+          kind: 'resume-required',
+          promptMessageId: 'feedback',
+          cause: 'cancelled'
+        },
+        messages: [
+          {
+            ...prompt,
+            turnOutcome:
+              kind === 'absent'
+                ? undefined
+                : kind === 'cancelled'
+                  ? { kind, settledAt: 2, recovery: 'resume' }
+                  : { kind, settledAt: 2, error: 'Original failed turn', errorReportable: true }
+          },
+          {
+            ...prompt,
+            id: 'feedback',
+            responseToMessageId: prompt.id,
+            content: 'Write it in English',
+            createdAt: 3,
+            turnOutcome: { kind: 'cancelled', settledAt: 4, recovery: 'resume' }
+          }
+        ],
+        createdAt: 1,
+        updatedAt: 4
+      }
+      renderPanel({ view: { activeSession }, conversation: { actions: { resume } } })
+      expect(container.querySelectorAll('[data-slot="session-recovery-notice"]')).toHaveLength(1)
+      expect(
+        container.textContent?.match(/This turn was interrupted\. Resume to continue\./g)
+      ).toHaveLength(1)
+      const button = container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')
+      expect(button?.disabled).toBe(false)
+      await act(async () => button?.click())
+      expect(resume).toHaveBeenCalledOnce()
+      expect(container.querySelector('[aria-label="Report this error"]') !== null).toBe(
+        kind === 'failed'
+      )
+
+      renderPanel({
+        view: { activeSession },
+        conversation: { availability: { resume: false }, actions: { resume } }
+      })
+      expect(
+        container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.disabled
+      ).toBe(true)
+      await act(async () =>
+        container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.click()
+      )
+      expect(resume).toHaveBeenCalledOnce()
+    }
+  )
+
   it('keeps anchorless recovery through real Main prepare/append/start, rollback and admission', () => {
     const original = materializeSessionConversationGraph({
       id: 'anchorless-main-preparation',
@@ -5221,11 +5290,8 @@ describe('ConversationPanel interrupted Session recovery', () => {
 
     renderPanel({ view: { activeSession: hydrateSession(restored) } })
 
-    expect(
-      container
-        .querySelector('[data-slot="turn-outcome-notice"]')
-        ?.getAttribute('data-prompt-message-id')
-    ).toBe('prompt')
+    expect(container.querySelector('[data-slot="session-recovery-notice"]')).not.toBeNull()
+    expect(container.querySelector('[data-slot="turn-outcome-notice"]')).toBeNull()
     expect(container.querySelector('[aria-label="Resume session"]')).not.toBeNull()
   })
 
@@ -5318,12 +5384,12 @@ describe('ConversationPanel interrupted Session recovery', () => {
         }
         const rendererSession = hydrateSession(prepared)
         renderPanel({ view: { activeSession: rendererSession } })
-        expect(
-          container
-            .querySelector('[data-slot="turn-outcome-notice"]')
-            ?.getAttribute('data-prompt-message-id')
-        ).toBe(latest.id)
         if (kind === 'legacy-failed') {
+          expect(
+            container
+              .querySelector('[data-slot="turn-outcome-notice"]')
+              ?.getAttribute('data-prompt-message-id')
+          ).toBe(latest.id)
           expect(container.textContent).toContain('Original latest error')
         } else {
           expect(
@@ -5338,7 +5404,7 @@ describe('ConversationPanel interrupted Session recovery', () => {
       }
     }
   )
-  it('preserves the attachment recovery entry for an anchorless legacy Session', async () => {
+  it('does not infer session recovery from an interrupted flag alone', async () => {
     const resume = vi.fn().mockResolvedValue(undefined)
     renderPanel({
       view: {
@@ -5359,7 +5425,8 @@ describe('ConversationPanel interrupted Session recovery', () => {
     await act(async () =>
       container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.click()
     )
-    expect(resume).toHaveBeenCalledOnce()
+    expect(container.querySelector('[aria-label="Resume session"]')).toBeNull()
+    expect(resume).not.toHaveBeenCalled()
   })
 
   it('does not let an unadmitted preparation displace anchorless legacy recovery', () => {
@@ -5438,7 +5505,7 @@ describe('ConversationPanel interrupted Session recovery', () => {
         }
       }
     })
-    expect(container.querySelector('[data-slot="turn-outcome-notice"]')?.textContent).toContain(
+    expect(container.querySelector('[data-slot="session-recovery-notice"]')?.textContent).toContain(
       'Connection lost'
     )
     const composerError = Array.from(container.querySelectorAll('span')).find(
@@ -5497,11 +5564,8 @@ describe('ConversationPanel interrupted Session recovery', () => {
         }
       }
       renderPanel({ view: { activeSession: preparing } })
-      expect(
-        container
-          .querySelector('[data-slot="turn-outcome-notice"]')
-          ?.getAttribute('data-prompt-message-id')
-      ).toBe(previous.id)
+      expect(container.querySelector('[data-slot="session-recovery-notice"]')).not.toBeNull()
+      expect(container.querySelector('[data-slot="turn-outcome-notice"]')).toBeNull()
       expect(
         container.querySelector<HTMLButtonElement>('[aria-label="Resume session"]')?.disabled
       ).toBe(true)
@@ -5678,9 +5742,9 @@ describe('ConversationPanel interrupted Session recovery', () => {
     try {
       await act(async () => i18next.changeLanguage('zh-Hans'))
       renderPanel({ view: { activeSession } })
-      expect(container.querySelector('[data-slot="turn-outcome-notice"]')?.textContent).toContain(
-        '连接已断开'
-      )
+      expect(
+        container.querySelector('[data-slot="session-recovery-notice"]')?.textContent
+      ).toContain('连接已断开')
       expect(activeSession.messages[0].turnOutcome).toMatchObject({
         error: 'ACP connection closed'
       })
@@ -5725,11 +5789,8 @@ describe('ConversationPanel interrupted Session recovery', () => {
         view: { activeSession },
         conversation: { actions: { resume: onResumeSession } }
       })
-      expect(
-        container
-          .querySelector('[data-slot="turn-outcome-notice"]')
-          ?.getAttribute('data-prompt-message-id')
-      ).toBe(prompt.id)
+      expect(container.querySelectorAll('[data-slot="session-recovery-notice"]')).toHaveLength(1)
+      expect(container.querySelector('[data-slot="turn-outcome-notice"]')).toBeNull()
       const resumeButton = container.querySelector<HTMLButtonElement>(
         'button[aria-label="Resume session"]'
       )
@@ -8283,6 +8344,145 @@ describe('ConversationPanel error box + report affordance', () => {
     expect(reportButton()).not.toBeNull()
   })
 
+  it.each(
+    [true, false].flatMap((canExport) =>
+      [
+        ['Internal error', 'Your conversation is preserved. Try Resume again.'],
+        [
+          'Resume timed out',
+          'The agent did not respond in time. Your conversation is preserved. Try Resume again.'
+        ],
+        [
+          'Resume Runtime Segment does not match the adopted Agent context.',
+          'The selected agent could not be attached to this conversation. Try Resume again.'
+        ]
+      ].map(([failure, explanation]) => ({ canExport, failure, explanation }))
+    )
+  )(
+    'shows resume diagnostics for $failure with export capability $canExport',
+    async ({ canExport, failure, explanation }) => {
+      const session = { ...errorSession, status: 'idle' as const, error: undefined }
+      const raw = new Error(`Error invoking remote method 'acp:resume-session': ${failure}`)
+      const message = 'Agent session resume failed: Unknown error'
+      const exportDiagnostics = vi.fn()
+      const writeText = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('Clipboard unavailable'))
+        .mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+      act(() =>
+        reportWorkspaceOperationError(session.id, message, { operation: 'resume', rawError: raw })
+      )
+      renderPanel({
+        view: { activeSession: session, actionError: message },
+        sessionTools: { exportDiagnostics: canExport ? exportDiagnostics : undefined }
+      })
+      const notice = container.querySelector('[data-testid="resume-operation-error"]')!
+      expect(notice).not.toBeNull()
+      expect(notice.classList.contains('bg-card')).toBe(true)
+      expect(notice.classList.contains('border-border')).toBe(true)
+      expect(notice.closest('.border-red-200')).toBeNull()
+      expect(notice.getAttribute('data-notice-inline')).toBeNull()
+      expect(notice.textContent).toContain('Could not resume this conversation')
+      expect(notice.textContent).toContain(explanation)
+      const details = notice.querySelector('details')!
+      expect(details.open).toBe(false)
+      expect(details.parentElement?.classList.contains('pl-7')).toBe(true)
+      expect(details.textContent).toContain(raw.message)
+      act(() => details.querySelector('summary')!.click())
+      expect(details.open).toBe(true)
+      await act(async () => details.querySelector<HTMLButtonElement>('button')!.click())
+      expect(writeText).toHaveBeenCalledWith(raw.stack)
+      expect(details.querySelector('[role="status"]')?.textContent).toBe(
+        'Could not copy details. Select the text and copy it manually.'
+      )
+      expect(details.open).toBe(true)
+      await act(async () => details.querySelector<HTMLButtonElement>('button')!.click())
+      expect(writeText).toHaveBeenCalledTimes(2)
+      expect(details.querySelector('[role="status"]')).toBeNull()
+      const button = Array.from(notice.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Export diagnostics…'
+      )
+      expect(Boolean(button)).toBe(canExport)
+      if (button) {
+        act(() => button.click())
+        expect(exportDiagnostics).toHaveBeenCalledWith(session)
+      }
+      renderPanel({
+        view: { activeSession: { ...session, id: 'different-session' }, actionError: message },
+        sessionTools: { exportDiagnostics }
+      })
+      expect(container.querySelector('[data-testid="resume-operation-error"]')).toBeNull()
+      act(() => clearWorkspaceOperationError(session.id))
+    }
+  )
+
+  it('keeps Resume reachable after dismissal and reopens the same failure on retry or recurrence', async () => {
+    const session: ChatSession = {
+      ...errorSession,
+      resumeRecovery: { kind: 'resume-required', cause: 'connection-lost' }
+    }
+    const message = 'Agent session resume failed: Unknown error'
+    const resume = vi.fn().mockResolvedValue(undefined)
+    const show = (actionError: string | null = message, activeSession = session): void =>
+      renderPanel({ view: { activeSession, actionError }, conversation: { actions: { resume } } })
+    act(() =>
+      reportWorkspaceOperationError(session.id, message, {
+        operation: 'resume',
+        rawError: new Error('Resume timed out')
+      })
+    )
+    const notice = (): Element | null =>
+      container.querySelector('[data-testid="resume-operation-error"]')
+    const dismiss = (): void =>
+      act(() => notice()?.querySelector<HTMLButtonElement>('[aria-label="Dismiss error"]')?.click())
+    show()
+    dismiss()
+    expect(notice()).toBeNull()
+    show(message, { ...session, updatedAt: session.updatedAt + 1 })
+    expect(notice()).toBeNull()
+    const resumeButton = container.querySelector<HTMLButtonElement>(
+      '[aria-label="Resume session"]'
+    )!
+    expect(resumeButton.disabled).toBe(false)
+    await act(async () => resumeButton.click())
+    expect(resume).toHaveBeenCalledOnce()
+    expect(notice()).not.toBeNull()
+    expect(session.error).toBe(errorSession.error)
+    expect(session.resumeRecovery?.kind).toBe('resume-required')
+    dismiss()
+    show(null)
+    show()
+    expect(notice()).not.toBeNull()
+    act(() => clearWorkspaceOperationError(session.id))
+  })
+
+  it('preserves the shared dismissal scope for a coexisting run failure', () => {
+    const message = 'Agent session resume failed: Unknown error'
+    act(() =>
+      reportWorkspaceOperationError(errorSession.id, message, {
+        operation: 'resume',
+        rawError: new Error('Resume timed out')
+      })
+    )
+    renderPanel({ view: { activeSession: errorSession, actionError: message } })
+    const notice = container.querySelector('[data-testid="resume-operation-error"]')!
+    expect(errorBoxText()).toContain(errorSession.error)
+    expect(reportButton()).not.toBeNull()
+    act(() => notice.querySelector<HTMLButtonElement>('[aria-label="Dismiss error"]')?.click())
+    expect(container.querySelector('[data-testid="resume-operation-error"]')).toBeNull()
+    expect(errorBoxText()).toBe('')
+    expect(reportButton()).toBeNull()
+    renderPanel({ view: { activeSession: errorSession, actionError: null } })
+    expect(errorBoxText()).toContain(errorSession.error)
+    act(() => reportButton()?.click())
+    expect(
+      document.body.querySelector<HTMLTextAreaElement>('textarea[aria-label="Error details"]')
+        ?.value
+    ).toBe(errorSession.error)
+    act(() => clearWorkspaceOperationError(errorSession.id))
+  })
+
   it('shows only the transient actionError, without a Report button, for a non-failed session', () => {
     renderPanel({
       view: {
@@ -8366,9 +8566,7 @@ describe('ConversationPanel error box + report affordance', () => {
         }
       })
       expect(reportButton()).toBeNull()
-      expect(Boolean(container.querySelector('[aria-label="Resume session"]'))).toBe(
-        Boolean(wrapper)
-      )
+      expect(container.querySelector('[aria-label="Resume session"]')).toBeNull()
       const button = Array.from(container.querySelectorAll('button')).find(
         (candidate) => candidate.textContent === 'Agent settings'
       )

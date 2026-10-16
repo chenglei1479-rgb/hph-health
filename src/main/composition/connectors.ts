@@ -1,12 +1,13 @@
-import { BrowserWindow, shell } from 'electron'
+import { createSkillApplicationModule } from '../skills/application'
+import { desktopShellInteraction, desktopInteraction } from '../desktop-interaction'
 import { createAcpRuntime } from '../acp/runtime-composition'
 import { type ApplicationModuleBuilder } from '../application-runtime'
 import { waitForInitialConnectorRefresh } from '../connector-reload'
-import { createConnectorApplicationModule } from '../connectors/application'
-import { createMoleculePreviewHandler } from '../connectors/molecule'
+import { createConnectorApplicationModule } from './connector-application'
+import { createMoleculePreviewHandler } from '../connectors/molecule-artifact-adapter'
 import { connectorSkillSourceDir } from '../connectors/provision'
-import { type DiagnosticOperation } from '../diagnostics/operation'
-import { createLogger, errorLogFields } from '../logger'
+import { type DiagnosticOperation } from '@aipoch/diagnostics/node'
+import { createLogger, errorLogFields } from '@aipoch/diagnostics/node'
 import { ManagedFileVersionService } from '../managed-file-versions/service'
 import {
   buildConnectorApprovalBroadcast,
@@ -23,7 +24,7 @@ import { broadcastToRenderers } from '../renderer-broadcast'
 import { tryDecryptKey } from '../settings/crypto'
 import { SettingsRepository } from '../settings/repository'
 import { SettingsService } from '../settings/service'
-import { netFetchStandard } from '../skills/net-fetch'
+import { netFetchStandard } from '../network-fetch'
 import { SpecialistService } from '../specialist/service'
 import { resolveConfigRoot } from '../storage-root'
 import { TagService } from '../tags/service'
@@ -32,6 +33,7 @@ import { createDefaultUploadRepository } from '../uploads/ipc'
 const permissionGrantsLog = createLogger('permission-grants')
 
 export async function composeConnectors({
+  canRequestDesktopCredential,
   settingsService,
   uploadRepository,
   managedFileVersionService,
@@ -45,6 +47,7 @@ export async function composeConnectors({
   modules,
   composition
 }: {
+  canRequestDesktopCredential?: () => boolean
   settingsService: SettingsService
   uploadRepository: ReturnType<typeof createDefaultUploadRepository>
   managedFileVersionService: ManagedFileVersionService
@@ -60,13 +63,14 @@ export async function composeConnectors({
 }): Promise<{
   connectorService: import('../connectors/service').ConnectorService
   connectorRuntimeSettings: import('../connectors/runtime-settings-projection').ConnectorRuntimeSettingsProjection
-  mcpClientManager: import('../connectors/custom-mcp/client-manager').McpClientManager
+  mcpClientManager: import('@aipoch/connector-mcp-client').McpClientManager
   conversationSkillImporter: import('../skills/conversation-import').ConversationSkillImporter
   approvalBroker: import('../connectors/approval-broker').ApprovalBroker
   credentialRequestBroker: import('../connectors/credential-request-broker').CredentialRequestBroker
   skillImportApprovalBroker: import('../skills/conversation-import').SkillImportApprovalBroker
 }> {
-  // The connector application owns MCP, connector/skill approval, runtime projection, and service
+  // Connector and Skill application modules own their independent approvals and lifecycles.
+  // The connector application owns MCP, runtime projection, and service
   // construction. Late-bound local tools remain composition-root dependencies and are passed in.
   const moleculePreviewHandler = createMoleculePreviewHandler({
     writeArtifactForCurrentRun: (sessionId, input) => {
@@ -74,11 +78,32 @@ export async function composeConnectors({
       return runtimeRef.current.writeArtifactForCurrentRun(sessionId, input)
     }
   })
+  const {
+    skillImporter: conversationSkillImporter,
+    skillImportApprovals: skillImportApprovalBroker
+  } = await modules.add(
+    {
+      settings: settingsService,
+      broadcastSkillImportApproval: buildSkillImportApprovalBroadcast({
+        broadcastToRenderers,
+        taskNotifications,
+        onNotificationError: (error) =>
+          notificationsLog.warn('skill import approval notification failed', errorLogFields(error))
+      }),
+      onSkillImportSettled: (id) => broadcastToRenderers('skills:conversation-import-settled', id),
+      onSkillImportLifecycleSettled: (id, state) =>
+        void taskNotifications.settleAuthorization('skill-import', id, state),
+      uploads: uploadRepository,
+      managedFileVersions: managedFileVersionService,
+      onSkillsChanged: requestSkillCatalogRefresh
+    },
+    createSkillApplicationModule
+  )
   const connectorApplication = await modules.add(
     {
       settings: settingsService,
       skillsDir: connectorSkillSourceDir(resolveConfigRoot()),
-      openExternal: (url) => shell.openExternal(url),
+      openExternal: (url) => desktopShellInteraction().openExternal(url),
       notifyStatusChanged: () =>
         broadcastToRenderers('settings:connector-runtime-changed', undefined),
       broadcastConnectorApproval: buildConnectorApprovalBroadcast({
@@ -111,20 +136,11 @@ export async function composeConnectors({
           void taskNotifications.settleConnectorCredentialRequest(id, configured)
         }
       },
-      broadcastSkillImportApproval: buildSkillImportApprovalBroadcast({
-        broadcastToRenderers,
-        taskNotifications,
-        onNotificationError: (error) =>
-          notificationsLog.warn('skill import approval notification failed', errorLogFields(error))
-      }),
-      onSkillImportSettled: (id) => broadcastToRenderers('skills:conversation-import-settled', id),
-      onSkillImportLifecycleSettled: (id, state) =>
-        void taskNotifications.settleAuthorization('skill-import', id, state),
-      uploads: uploadRepository,
-      managedFileVersions: managedFileVersionService,
       fetchImpl: netFetchStandard,
       resolveApiKey: (ref) => tryDecryptKey(ref),
-      canRequestCredential: () => !headless && BrowserWindow.getAllWindows().length > 0,
+      canRequestCredential:
+        canRequestDesktopCredential ??
+        (() => !headless && desktopInteraction('Connector credential dialog').hasWindow()),
       permissionGrantRegistry,
       resolveSpecialistProfile: async (specialistId) => {
         try {
@@ -133,8 +149,7 @@ export async function composeConnectors({
           return undefined
         }
       },
-      localToolHandlers: { 'molecule/preview_molecule': moleculePreviewHandler },
-      onSkillsChanged: requestSkillCatalogRefresh
+      localToolHandlers: { 'molecule/preview_molecule': moleculePreviewHandler }
     } satisfies Parameters<typeof createConnectorApplicationModule>[0],
     createConnectorApplicationModule
   )
@@ -142,10 +157,8 @@ export async function composeConnectors({
     connectorService,
     runtimeSettings: connectorRuntimeSettings,
     mcpClientManager,
-    skillImporter: conversationSkillImporter,
     connectorApprovals: approvalBroker,
-    credentialRequests: credentialRequestBroker,
-    skillImportApprovals: skillImportApprovalBroker
+    credentialRequests: credentialRequestBroker
   } = connectorApplication
   composition.phase('connectors')
   return {

@@ -1,12 +1,10 @@
+import {
+  literatureCandidateInputSchema,
+  literatureItemInputSchema
+} from '@aipoch/literature-library/contracts'
 import { expect } from '@playwright/test'
-import type { Page } from 'playwright'
 import { test } from './fixtures/electron-app'
-import { literatureCandidateInputSchema, literatureItemInputSchema } from '../src/shared/literature'
-
-const library = async (page: Page): Promise<void> => {
-  await page.getByRole('button', { name: 'Library', exact: true }).click()
-  await page.getByRole('button', { name: 'All references', exact: true }).click()
-}
+import { openAllReferences } from './fixtures/library'
 
 test('synchronizes ordinary writes across two Electron renderers and a Web client', async ({
   app,
@@ -19,7 +17,7 @@ test('synchronizes ordinary writes across two Electron renderers and a Web clien
   const web = await browser.newPage()
   try {
     await web.goto(await app.authenticatedWebUrl())
-    for (const page of [first, second, web]) await library(page)
+    for (const page of [first, second, web]) await openAllReferences(page)
     const item = literatureItemInputSchema.parse({
       itemType: 'journalArticle',
       title: 'Created in desktop'
@@ -107,7 +105,7 @@ test('synchronizes ordinary writes across two Electron renderers and a Web clien
 test('protects unsaved reference edits and keeps save actions visible', async ({ app }) => {
   const page = await app.completeOnboarding()
   await page.evaluate(() => window.api.locale.setPreference({ preference: 'en' }))
-  await library(page)
+  await openAllReferences(page)
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Add reference', exact: true }).click()
   const title = page.getByLabel('Title', { exact: true })
@@ -156,7 +154,7 @@ test('protects unsaved reference edits and keeps save actions visible', async ({
 test('finishes manual reference creation before opening its saved detail', async ({ app }) => {
   const page = await app.completeOnboarding()
   await page.evaluate(() => window.api.locale.setPreference({ preference: 'en' }))
-  await library(page)
+  await openAllReferences(page)
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Add reference', exact: true }).click()
   const editor = page.getByRole('dialog', { name: 'Add reference', exact: true })
@@ -165,4 +163,55 @@ test('finishes manual reference creation before opening its saved detail', async
   await expect(editor).toHaveCount(0)
   await expect(page.getByRole('alertdialog')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Manual creation regression' })).toBeVisible()
+})
+
+test('formats citations from packaged styles and preserves style errors through desktop and Web', async ({
+  app,
+  browser
+}) => {
+  const page = await app.completeOnboarding()
+  const web = await browser.newPage()
+  try {
+    await web.goto(await app.authenticatedWebUrl())
+    const item = literatureItemInputSchema.parse({
+      itemType: 'journalArticle',
+      title: 'Packaged citation acceptance',
+      issuedYear: 2025,
+      creators: [
+        { nameMode: 'person', givenName: 'Ada', familyName: 'Lovelace', creatorType: 'author' }
+      ]
+    })
+    const created = await page.evaluate(
+      (item) => window.api.literature.transact({ kind: 'create-item', item }),
+      item
+    )
+    for (const client of [page, web]) {
+      const styles = await client.evaluate(() =>
+        window.api.literature.citationStyles({ kind: 'list' })
+      )
+      expect(styles.styles.some((style) => style.id === 'apa')).toBe(true)
+      const formatted = await client.evaluate(
+        (id) =>
+          window.api.literature.formatReferences({
+            itemIds: [id],
+            styleId: 'apa',
+            locale: 'en-US'
+          }),
+        created.id
+      )
+      expect(formatted.references[0].reference).toContain(item.title)
+      expect(formatted.exports.bibtex).toContain(item.title)
+      const failure = await client.evaluate(async () => {
+        try {
+          await window.api.literature.citationStyles({ kind: 'import', content: '<not-a-style/>' })
+          return null
+        } catch (error) {
+          return (error as { code?: string }).code
+        }
+      })
+      expect(failure).toBe('csl-unsupported-style')
+    }
+  } finally {
+    await web.close()
+  }
 })

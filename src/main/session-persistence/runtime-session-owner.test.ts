@@ -1038,6 +1038,21 @@ describe('RuntimeSessionOwner', () => {
     expect(receipt.artifacts).toContainEqual(expect.objectContaining({ versionId: 'version-1' }))
   })
 
+  it('rejects replacing a live execution even when a newer durable run exists', async () => {
+    const first = scope()
+    const { owner, sessions } = harness()
+    await owner.begin(first)
+    sessions.get(first.sessionId)!.activeRun = {
+      promptMessageId: first.promptMessageId,
+      startedAt: 10
+    }
+
+    await expect(owner.begin({ ...first, executionId: 'rival-execution' })).rejects.toThrow(
+      'Runtime Session turn is already owned by another execution.'
+    )
+    expect(sessions.get(first.sessionId)?.runtimeSessionAdmissions).toHaveLength(1)
+  })
+
   it('admits a resumed execution only after a newer durable run and fences stale output', async () => {
     const first = scope()
     const { owner, sessions } = harness()
@@ -1630,11 +1645,6 @@ describe('RuntimeSessionOwner', () => {
           }
         }
       }
-      const cancellation = { kind: 'cancelled' as const, settledAt: 3, recovery: 'resume' as const }
-      if (kind === 'rejected-plan') {
-        restored.messages[0].turnOutcome = cancellation
-        restored.conversationGraph!.messages[0].turnOutcome = cancellation
-      }
       for (const state of ['queued', 'accepted', 'interrupted'] as const) {
         const stale = structuredClone(restored)
         stale.runtimeContext = {
@@ -1667,12 +1677,71 @@ describe('RuntimeSessionOwner', () => {
       owner.accept(stopEvent(turn, 12))
       await owner.flush(turn.sessionId, turn.promptMessageId)
       expect(sessions.get(turn.sessionId)?.messages[0].turnOutcome).toEqual(
-        kind === 'review-feedback'
-          ? undefined
-          : kind === 'rejected-plan'
-            ? cancellation
-            : { kind: 'completed', settledAt: 12 }
+        kind === 'review-feedback' ? undefined : { kind: 'completed', settledAt: 12 }
       )
+    }
+  )
+
+  it.each(['cancelled', 'failed'] as const)(
+    'clears the real %s outcome when admitting a new rejection delivery execution',
+    async (terminal) => {
+      const turn = scope()
+      const initial = session(turn)
+      initial.runtimeContext = {
+        version: 1,
+        revision: 1,
+        plan: {
+          artifactId: 'plan-artifact',
+          artifactVersionId: 'plan-version',
+          artifactChecksum: 'a'.repeat(64),
+          approval: 'rejected',
+          originatingPromptMessageId: turn.promptMessageId,
+          stepStatuses: {},
+          delivery: {
+            commandId: 'rejection-delivery',
+            kind: 'rejected-plan',
+            state: 'delivering',
+            originatingPromptMessageId: turn.promptMessageId,
+            createdAt: 2
+          }
+        }
+      }
+      const { owner, sessions } = harness([initial])
+      const admission = { planDeliveryCommandId: 'rejection-delivery' }
+      await owner.begin(turn, admission)
+      owner.accept(
+        terminal === 'cancelled'
+          ? { ...stopEvent(turn, 3), text: 'cancelled' }
+          : {
+              id: 'provider-failure',
+              kind: 'error',
+              level: 'error',
+              sessionId: turn.sessionId,
+              promptMessageId: turn.promptMessageId,
+              timestamp: 3,
+              text: 'Provider unavailable',
+              providerError: true
+            }
+      )
+      await owner.flush(turn.sessionId, turn.promptMessageId)
+      expect(sessions.get(turn.sessionId)?.messages[0].turnOutcome?.kind).toBe(terminal)
+
+      const resumed = { ...turn, executionId: 'resumed-rejection-delivery' }
+      await owner.begin(resumed, admission)
+      const running = sessions.get(turn.sessionId)!
+      expect(running.status).toBe('running')
+      expect(running.messages[0].turnOutcome).toBeUndefined()
+      expect(running.conversationGraph?.messages[0].turnOutcome).toBeUndefined()
+      expect(running.resumeRecovery).toBeUndefined()
+      expect(running.runtimeContext?.plan?.approval).toBe('rejected')
+      owner.accept({ ...messageEvent(resumed, 'rejection-ack', 'Plan dismissed.'), timestamp: 11 })
+      owner.accept(stopEvent(resumed, 12))
+      await owner.flush(turn.sessionId, turn.promptMessageId)
+      expect(sessions.get(turn.sessionId)?.messages[0].turnOutcome).toEqual({
+        kind: 'completed',
+        settledAt: 12
+      })
+      expect(sessions.get(turn.sessionId)?.messages.at(-1)?.content).toBe('Plan dismissed.')
     }
   )
 

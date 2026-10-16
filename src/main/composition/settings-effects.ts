@@ -1,15 +1,23 @@
+import { CONNECTOR_CATALOG } from '../connectors/catalog'
+import { createSettingsExportFiles, createSettingsFileCommands } from '../settings/file-commands'
+import { createBackgroundResultActivityOwner } from '../background-result-delivery/ipc'
+import {
+  registerBackgroundResultDeliveryIpcHandlers,
+  createSettingsElectronSurface,
+  registerNotebookIpcHandlers
+} from '../desktop-surface-declarations'
 import type { BackgroundResultDelivery } from '../../shared/background-result-delivery'
 import type { WslSetupStatus } from '../../shared/wsl-setup'
 import { createAcpRuntime } from '../acp/runtime-composition'
 import { type ApplicationModuleBuilder } from '../application-runtime'
-import { registerBackgroundResultDeliveryIpcHandlers } from '../background-result-delivery/ipc'
+
 import { BackgroundResultDeliveryRepository } from '../background-result-delivery/repository'
 import { type ResolvedBackgroundResultSource } from '../background-result-delivery/source-resolver'
 import { ALL_CONNECTOR_IDS } from '../connectors/registry'
-import { createSettingsElectronSurface } from '../ipc-surfaces/settings'
-import { createLogger } from '../logger'
+
+import { createLogger } from '@aipoch/diagnostics/node'
 import { createNotebookApplicationModule } from '../notebook/application'
-import { registerNotebookIpcHandlers } from '../notebook/ipc'
+
 import { createPermissionGrantProjectionController } from '../permission-grants/projection-controller'
 import { createPermissionGrantRegistry } from '../permission-grants/registry'
 import { ProjectDeletionCoordinator } from '../projects/deletion-coordinator'
@@ -76,7 +84,7 @@ export async function composeSettingsEffects({
   removeResourceTags: (resources: Parameters<TagService['removeResources']>[0]) => Promise<void>
   connectorService: import('../connectors/service').ConnectorService
   connectorRuntimeSettings: import('../connectors/runtime-settings-projection').ConnectorRuntimeSettingsProjection
-  mcpClientManager: import('../connectors/custom-mcp/client-manager').McpClientManager
+  mcpClientManager: import('@aipoch/connector-mcp-client').McpClientManager
   runtime: ReturnType<typeof createAcpRuntime>
   sideChatRuntime: SideChatRuntimeOwner
   translate: import('../locale/main-process-messages').NativeTranslator
@@ -87,6 +95,8 @@ export async function composeSettingsEffects({
 }): Promise<{
   permissionGrantProjection: import('../permission-grants/projection-controller').PermissionGrantProjectionController
   settingsWorkflows: ReturnType<typeof createSettingsWorkflows>
+  settingsFileCommands: ReturnType<typeof createSettingsFileCommands>
+  backgroundResultActivity: ReturnType<typeof createBackgroundResultActivityOwner>
 }> {
   const permissionGrantProjection = await modules.add(
     {
@@ -105,10 +115,27 @@ export async function composeSettingsEffects({
           )
       },
       connectors: {
-        get: async () => ({
-          ...(await settingsService.getConnectors()),
-          bundledConnectorIds: ALL_CONNECTOR_IDS
-        })
+        get: async () => {
+          const stored = await settingsService.getConnectors()
+          return {
+            autoAllowIds: stored?.autoAllowIds,
+            blockedToolIds: stored?.blockedToolIds,
+            askToolIds: stored?.askToolIds,
+            disabledConnectorIds: stored?.disabledConnectorIds,
+            bundledConnectorIds: ALL_CONNECTOR_IDS,
+            bundledConnectorNames: Object.fromEntries(
+              CONNECTOR_CATALOG.map(({ id, displayName }) => [id, displayName])
+            ),
+            customMcpServers: stored?.customMcpServers?.map((server) => ({
+              id: server.id,
+              name: server.name,
+              displayName: server.displayName,
+              enabled: server.enabled,
+              oauth: Boolean(server.oauth),
+              oauthAuthenticated: Boolean(server.oauthState?.tokens?.access_token)
+            }))
+          }
+        }
       }
     },
     (dependencies) => {
@@ -181,8 +208,13 @@ export async function composeSettingsEffects({
       .catch((error) => createLogger('wsl-setup').warn('PowerShell fallback failed', { error }))
   }
   wslRuntimeReconciliation.current(wslSetup.getStatus())
+  const settingsFileCommands = createSettingsFileCommands(
+    settingsService,
+    createSettingsExportFiles(translate)
+  )
   surfaceAdapters.push(
     createSettingsElectronSurface({
+      fileCommands: settingsFileCommands,
       service: settingsService,
       workflows: settingsWorkflows,
       snapshotCommits: settingsSnapshotCommits,
@@ -191,10 +223,19 @@ export async function composeSettingsEffects({
     })
   )
   declareElectronAdapter('notebook', () => registerNotebookIpcHandlers(notebookCommands))
-  declareElectronAdapter('background-result-delivery', () =>
-    registerBackgroundResultDeliveryIpcHandlers(backgroundResultDeliveryRepository, {
+  const backgroundResultActivity = createBackgroundResultActivityOwner(
+    backgroundResultDeliveryRepository,
+    {
       resolveSources: resolveDeliverySources
-    })
+    }
   )
-  return { permissionGrantProjection, settingsWorkflows }
+  declareElectronAdapter('background-result-delivery', () =>
+    registerBackgroundResultDeliveryIpcHandlers(backgroundResultActivity)
+  )
+  return {
+    permissionGrantProjection,
+    settingsWorkflows,
+    settingsFileCommands,
+    backgroundResultActivity
+  }
 }

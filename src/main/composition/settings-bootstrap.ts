@@ -1,4 +1,5 @@
-import { app, session } from 'electron'
+import { runtimeMetadata } from '../runtime-metadata'
+import { runtimeNetwork } from '../runtime-network'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { AcpSessionAgentTarget } from '../../shared/acp'
@@ -10,10 +11,10 @@ import {
 } from '../acp/session-agent-target'
 import type { ApplicationEvents } from '../application-events'
 import { type ApplicationModuleBuilder } from '../application-runtime'
-import { startDiagnosticOperation } from '../diagnostics/operation'
+import { startDiagnosticOperation } from '@aipoch/diagnostics/node'
 import { QUIT_SHUTDOWN_BUDGET_MS } from '../lifecycle-shutdown'
 import { GrantedLocalRootsRepository } from '../local-fs/granted-roots-repository'
-import { createLogger } from '../logger'
+import { createLogger } from '@aipoch/diagnostics/node'
 import { resolveAvailableShellRuntimeBinding } from '../notebook/configured-shell-runtime'
 import { NotebookNetworkSandboxOwner } from '../notebook/network-sandbox-owner'
 import type { NotebookRuntimeService } from '../notebook/runtime-service'
@@ -24,9 +25,8 @@ import { SettingsRepository } from '../settings/repository'
 import { SettingsService } from '../settings/service'
 import { SettingsInstallCoordinator } from '../settings/settings-install-coordinator'
 import { SettingsSnapshotCommitOwner } from '../settings/settings-snapshot-commit-owner'
-import { netFetchStandard } from '../skills/net-fetch'
-import { UserSkillSpecialistPackageAdapter } from '../skills/specialist-package-adapter'
-import { SpecialistRepository } from '../specialist/repository'
+import { netFetchStandard } from '../network-fetch'
+import { UserSkillSpecialistPackageAdapter } from '@aipoch/skills'
 import { SpecialistService } from '../specialist/service'
 import { resolveConfigRoot, resolveDataRoot } from '../storage-root'
 import { initializeDataLocation } from '../storage/initialize-location'
@@ -40,7 +40,7 @@ export async function composeSettingsBootstrap({
   applicationEvents,
   permissionApprovalPresence,
   getRuntimeRef,
-  getSpecialistRepository,
+  getSpecialistDomain,
   getSpecialistService,
   mainEntryPath,
   settingsStore,
@@ -50,7 +50,7 @@ export async function composeSettingsBootstrap({
   applicationEvents: ApplicationEvents
   permissionApprovalPresence: PermissionApprovalPresence
   getRuntimeRef: () => { current: ReturnType<typeof createAcpRuntime> | undefined }
-  getSpecialistRepository: () => SpecialistRepository
+  getSpecialistDomain: () => { withReadLock<T>(operation: () => Promise<T>): Promise<T> }
   getSpecialistService: () => SpecialistService
   mainEntryPath: string
   settingsStore: import('../settings/document-store').SettingsDocumentStore | undefined
@@ -95,8 +95,8 @@ export async function composeSettingsBootstrap({
   initializeWsl2BashPreview({
     platform: process.platform,
     arch: process.arch,
-    packaged: app.isPackaged,
-    resourcesPath: process.resourcesPath
+    packaged: runtimeMetadata().packaged,
+    resourcesPath: runtimeMetadata().resourcesPath
   })
   const settingsInstallCoordinator = new SettingsInstallCoordinator()
   const wslSetupSessions = new WslSetupSessionOwner(resolveConfigRoot())
@@ -144,7 +144,7 @@ export async function composeSettingsBootstrap({
     return Object.freeze({ kind: 'powershell', version: '7.6' })
   }
   const networkProxyRuntime = new NetworkProxyRuntime({
-    setProxy: (config) => session.defaultSession.setProxy(config)
+    setProxy: (config) => runtimeNetwork().setProxy(config)
   })
   const settingsServiceRef: { current?: SettingsService } = {}
   const grantedRootsRepositoryRef: { current?: GrantedLocalRootsRepository } = {}
@@ -176,11 +176,11 @@ export async function composeSettingsBootstrap({
   const notebookNetworkSandbox = await modules.add(undefined, () => {
     const capability = new NotebookNetworkSandboxOwner({
       windowsRuntimeRoot: join(resolveConfigRoot(), 'notebook-runtimes'),
-      packaged: app.isPackaged,
+      packaged: runtimeMetadata().packaged,
       allowRuntimeAccessPrompt: !headless,
-      resourceRoot: app.isPackaged
-        ? join(process.resourcesPath, 'notebook-network-sandbox')
-        : join(app.getAppPath(), 'packages', 'notebook-network-sandbox', 'vendor'),
+      resourceRoot: runtimeMetadata().packaged
+        ? join(runtimeMetadata().resourcesPath, 'notebook-network-sandbox')
+        : join(runtimeMetadata().applicationPath, 'packages', 'notebook-network-sandbox', 'vendor'),
       // R rejects a TEMP path containing spaces. Electron's product-named userData directory
       // includes them in both production and development; keep command temp under the fixed config root.
       temporaryRoot: join(resolveConfigRoot(), 'notebook-command-temp'),
@@ -290,7 +290,7 @@ export async function composeSettingsBootstrap({
           throw new Error('Specialist impact inspection is unavailable.')
         return snapshot.items
       },
-      withMarketplaceImpactLock: (operation) => getSpecialistRepository().withReadLock(operation),
+      withMarketplaceImpactLock: (operation) => getSpecialistDomain().withReadLock(operation),
       withUserSkillRecoveryBarrier: (operation) =>
         specialistPackageRecovery.current?.(operation) ?? operation(),
       applyNotebookNetwork: async (settings) => notebookNetworkSandbox.applySettings(settings),

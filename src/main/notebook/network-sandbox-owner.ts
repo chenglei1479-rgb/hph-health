@@ -27,12 +27,12 @@ import {
 import { probeWindowsRuntimeComponent } from './windows-runtime-probe'
 import type { ShellRuntimeBinding } from '../../shared/notebook'
 
+import { type NotebookNetworkSettings } from '../../shared/notebook-network-settings'
 import {
   buildNotebookNetworkPolicy,
   notebookNetworkSettingsAllowDomain,
   normalizeNotebookNetworkSettings,
   validateCustomAllowedDomain,
-  type NotebookNetworkSettings,
   type NotebookNetworkStatus,
   type NotebookNetworkStatusReason
 } from '../../shared/notebook-network'
@@ -50,14 +50,14 @@ import type {
   NotebookSandboxedSpawn,
   NotebookSandboxInvocation
 } from './process-sandbox'
-import { startDiagnosticOperation } from '../diagnostics/operation'
-import { createLogger, diagnosticErrorFields, type Logger } from '../logger'
+import { startDiagnosticOperation } from '@aipoch/diagnostics/node'
+import { createLogger, diagnosticErrorFields, type Logger } from '@aipoch/diagnostics/node'
 import {
   buildNotebookKernelEnvironment,
   normalizeRProcessLocale,
   environmentPathRoots,
   notebookTrustBundleEnvironment
-} from './process-environment'
+} from '@aipoch/environment'
 import {
   notebookTrustBundleStatus,
   resolveNotebookTrustBundle,
@@ -66,15 +66,15 @@ import {
 } from './trust-bundle'
 import type { GrantedLocalRoot } from '../../shared/local-fs'
 import { kernelExecutableReadRoot } from './kernel-executor'
-import { windowsCondaPrefixForR } from './environment-discovery'
-import { rKernelProtocolProbe } from './r-command'
-import { runtimeChildProcessErrorFields } from './runtime-diagnostics'
+import { windowsCondaPrefixForR } from '@aipoch/environment'
+import { rKernelProtocolProbe } from '@aipoch/environment'
+import { runtimeChildProcessErrorFields } from '@aipoch/diagnostics/node'
 import {
   condaActivatedPath,
   DEFAULT_R_ENV,
   envPrefix,
   legacyDefaultEnvPrefix
-} from './runtime-paths'
+} from '@aipoch/environment'
 
 export type NotebookNetworkDecision = 'deny' | 'allowOnce' | 'alwaysAllow' | 'unavailable'
 

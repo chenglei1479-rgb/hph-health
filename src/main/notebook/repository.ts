@@ -16,12 +16,12 @@ import type {
 import { parseOwnedExecutionFileEvidenceSummary } from '../../shared/execution-file-evidence'
 import { NOTEBOOK_RUN_FILE, NOTEBOOKS_DIR } from '../../shared/notebook'
 import type { NotebookRuntimeBindings } from '../../shared/notebook-runtime'
-import { createLogger } from '../logger'
+import { createLogger } from '@aipoch/diagnostics/node'
 import {
   DurableJsonRecoveryBarrierError,
   readDurableJsonFile,
   writeDurableJsonFile
-} from '../storage/durable-json-file'
+} from '@aipoch/durable-files'
 import { decodeVersionedJson } from '../storage/versioned-json-decoder'
 import {
   decodeRunDocumentDataPaths,
@@ -239,6 +239,7 @@ const notebookRunCandidate = (value: unknown): boolean => {
       (!Number.isSafeInteger(value.exitCode) || Number(value.exitCode) < 0)) ||
     (value.kernelEpochId !== undefined &&
       (typeof value.kernelEpochId !== 'string' || value.kernelEpochId.length === 0)) ||
+    (value.executionStarted !== undefined && typeof value.executionStarted !== 'boolean') ||
     (value.kernelDispatched !== undefined && typeof value.kernelDispatched !== 'boolean') ||
     (value.replPersistentBindings !== undefined &&
       (value.replPersistentBindings !== true || value.kernelKind !== 'repl')) ||

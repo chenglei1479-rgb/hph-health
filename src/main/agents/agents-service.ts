@@ -1,3 +1,5 @@
+import type { SkillCatalogReadModel } from './catalog-contract'
+export type { SkillCatalogReadModel } from './catalog-contract'
 // host.agents adapter: the control-plane SDK's server-side read surface.
 //
 // This module is the ONLY place that turns internal Specialist/catalog records into the public
@@ -24,6 +26,7 @@ import type { SpecialistService } from '../specialist/service'
 import type { SessionBindingService } from '../specialist/session-binding'
 import type { SpecialistView } from '../../shared/specialist'
 import type { StoredConnectors } from '../settings/types'
+import type { SpecialistDeleteRequest, SpecialistDeleteResult } from '@aipoch/specialists'
 import {
   isAgentsOpName,
   isAgentsParams,
@@ -32,16 +35,18 @@ import {
   type SwitchNotifier,
   type TrustedCallingSession
 } from '../../shared/agents-contract'
-import { executeAgentsMutation, type AgentsMutationCatalog } from './agents-mutations'
-import { SwitchOperation, SwitchCommitSequencer, type SwitchParams } from './switch-operation'
-import { applyDelete } from './specialist-privileged-ops'
 import type { HandoffApprovalContext } from '../../shared/handoff-lifecycle'
-import type {
-  SpecialistDeleteRequest,
-  SpecialistDeleteResult
-} from '../../shared/specialist-package'
+import type { SpecialistView } from '../../shared/specialist'
+import type { ConnectorReadModel } from '../connectors/read-model'
+import type { SpecialistService } from '../specialist/service'
+import type { SessionBindingService } from '../specialist/session-binding'
 import { AgentsSafeError, agentsPublicError, formatAgentsError } from './agents-error'
+import { executeAgentsMutation, type AgentsMutationCatalog } from './agents-mutations'
 import { applyNameOrIdFilter } from './name-or-id-filter'
+import { applyDelete } from './specialist-privileged-ops'
+import { SwitchCommitSequencer, SwitchOperation, type SwitchParams } from './switch-operation'
+
+export type { ConnectorReadModel } from '../connectors/read-model'
 
 // The minimal read surface this adapter needs from the settings/connectors catalog. Keeping it
 // narrow avoids pulling the whole SettingsService into the SDK contract and lets tests stub it.
@@ -59,18 +64,13 @@ export type AgentsCatalogSource = {
       available: boolean
     }>
   >
-  // The stored connectors document (bundled enablement + custom MCP servers). Used to project
-  // public connector information; secret material is never read through this adapter.
-  getConnectors(): Promise<StoredConnectors | undefined>
+  // Public, secret-free Connector snapshot; discovery and credential projection stay with its owner.
+  getConnectors(): Promise<ConnectorReadModel[]>
 }
 
 export type AgentsServiceDeps = {
   specialistService: SpecialistService
   catalog: AgentsCatalogSource
-  // Runtime failures are projected separately from durable Settings. Keeping this as a narrow,
-  // optional resolver lets host.agents share the authoritative custom MCP status without owning
-  // the connector runtime or forcing read-only tests to construct it.
-  customServerAvailability?: (id: string) => CustomMcpFailureAvailability | undefined
   // Injected (fake-able) seams for privileged mutations and Specialist switches. Read-only callers
   // may leave these unset; the dispatcher routes privileged ops through
   // `approvalGateway` and signals approved switches via `switchNotifier`. They are SERVER-supplied
@@ -122,32 +122,9 @@ export type SpecialistDetailReadModel = SpecialistSummaryReadModel & {
   revision: number
 }
 
-export type SkillCatalogReadModel = {
-  id: string
-  name: string
-  displayName: string
-  source: string
-  mainEnabled: boolean
-  available: boolean
-}
-
 export type ConnectorToolReadModel = {
   id: string
   description: string
-}
-
-export type ConnectorReadModel = {
-  id: string
-  name: string
-  displayName: string
-  description: string
-  mainEnabled: boolean
-  // Authentication/availability state, projected without secret detail. Custom connectors report
-  // 'unavailable'/'unauthenticated'/'credential_unavailable' from their stored shape; bundled
-  // connectors are 'available'.
-  availability: 'available' | 'unavailable' | 'unauthenticated' | 'credential_unavailable'
-  source: 'bundled' | 'custom'
-  tools: ConnectorToolReadModel[]
 }
 
 // ---------------------------------------------------------------------------
@@ -394,15 +371,8 @@ export class AgentsService {
   // name, description, Main enabled state, authentication/availability state, and safe public tool
   // information. Never returns credentials, headers, environment values, or connector arguments.
   async listConnectors(params: { name_or_id?: unknown }): Promise<ConnectorReadModel[]> {
-    const stored = await this.deps.catalog.getConnectors()
-    return applyNameOrIdFilter(this.projectConnectors(stored), params.name_or_id, 'list_connectors')
-  }
-
-  // Shared projection used by both the read slice and the ordinary-mutation module (issue 03), so
-  // the mutation module never duplicates the connector catalog rules. Exported via the standalone
-  // `projectConnectorsFromStored` below.
-  private projectConnectors(stored: StoredConnectors | undefined): ConnectorReadModel[] {
-    return projectConnectorsFromStored(stored, this.deps.customServerAvailability)
+    const snapshot = await this.deps.catalog.getConnectors()
+    return applyNameOrIdFilter(snapshot, params.name_or_id, 'list_connectors')
   }
 }
 

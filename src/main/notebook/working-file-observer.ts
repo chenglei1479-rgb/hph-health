@@ -1,9 +1,22 @@
+import { matchesWriteScope } from '@aipoch/notebook-analysis'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, watch, type FSWatcher } from 'node:fs'
 import { lstat, mkdir, readdir, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { nodeRuntimeEnvironment } from '../node-process-host'
+import { runtimeMetadataIfConfigured } from '../runtime-metadata'
 
+import { createLogger, diagnosticErrorFields } from '@aipoch/diagnostics/node'
+import {
+  analyzeNotebookSourceFileAccess,
+  verifiedSerializedValues
+} from '@aipoch/notebook-analysis'
+import type {
+  NotebookSourceFileAccessContext,
+  NotebookSourceFileWriteScope
+} from '@aipoch/notebook-analysis/contracts'
+import type { ComputeJob } from '../../shared/compute'
 import {
   parseOwnedExecutionFileEvidenceSummary,
   type ExecutionActivityKind,
@@ -12,28 +25,20 @@ import {
   type ExecutionFileEvidenceSummary,
   type ScientificOutputEvidence
 } from '../../shared/execution-file-evidence'
-import type { ComputeJob } from '../../shared/compute'
 import type {
-  NotebookLanguage,
   NotebookRunInputFile,
   NotebookRunRecord,
   NotebookWorkingFile
 } from '../../shared/notebook'
+import type { NotebookLanguage } from '../../shared/notebook-language-contract'
 import { assertDiskReserve, digestFileWithinBudget } from '../bounded-file-io'
-import { createLogger, diagnosticErrorFields } from '../logger'
 import { LOCAL_RESOURCE_BUDGETS } from '../resource-budget'
 import { availableBytes } from '../storage/usage'
-import { analyzeScientificOutputs } from './scientific-output-analysis'
-import { createRootNotebookLane } from './lane-identity'
-import { getNotebookFileEvidenceLocation } from './repository'
-import { notebookPromptInputPath } from './prompt-input-materialization'
-import { analyzeNotebookSourceFileAccess } from './source-file-access-analysis'
-import { verifiedSerializedValues } from './serialized-file-provenance'
 import { reportNotebookFileAnalysis } from './evidence-diagnostics'
-import type {
-  NotebookSourceFileAccessContext,
-  NotebookSourceFileWriteScope
-} from './dependency-analysis-types'
+import { createRootNotebookLane } from './lane-identity'
+import { notebookPromptInputPath } from './prompt-input-materialization'
+import { getNotebookFileEvidenceLocation } from './repository'
+import { analyzeScientificOutputs } from './scientific-output-analysis'
 
 const log = createLogger('notebook:file-evidence')
 
@@ -445,18 +450,14 @@ const stripUnpublishedGenerations = (workingFiles: NotebookWorkingFile[]): Noteb
     return unpublished
   })
 
+// Plain-Node hosts (runtime certification, SDK consumers) configure no host entry; the
+// __dirname candidates below resolve the worker directly instead of throwing.
 const resolveEvidenceWorkerPath = (): string => {
+  const resourcesPath = runtimeMetadataIfConfigured()?.resourcesPath
   const candidates = [
-    process.resourcesPath &&
-      join(
-        process.resourcesPath,
-        'app.asar.unpacked',
-        'resources',
-        'notebook',
-        'file_evidence_worker.js'
-      ),
-    process.resourcesPath &&
-      join(process.resourcesPath, 'resources', 'notebook', 'file_evidence_worker.js'),
+    resourcesPath &&
+      join(resourcesPath, 'app.asar.unpacked', 'resources', 'notebook', 'file_evidence_worker.js'),
+    resourcesPath && join(resourcesPath, 'resources', 'notebook', 'file_evidence_worker.js'),
     join(__dirname, '../../resources/notebook/file_evidence_worker.js'),
     join(__dirname, '../../../resources/notebook/file_evidence_worker.js')
   ].filter((candidate): candidate is string => Boolean(candidate))
@@ -472,7 +473,8 @@ export const runEvidenceWorker = async (
     signal?.throwIfAborted()
     const child = spawn(process.execPath, [resolveEvidenceWorkerPath()], {
       cwd: evidenceRoot,
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      env: { ...process.env, ...nodeRuntimeEnvironment() },
+      windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe']
     })
     let stdout = ''
@@ -1636,68 +1638,6 @@ const prepareSourceFileAccess = async (
   return result
 }
 
-const companionStemMatches = (
-  candidate: string,
-  stem: string,
-  suffixes: readonly string[]
-): boolean => {
-  const normalizeCase = (value: string): string =>
-    process.platform === 'win32' ? value.toLocaleLowerCase('en-US') : value
-  const normalizedCandidate = normalizeCase(candidate)
-  const normalizedStem = normalizeCase(stem)
-  return suffixes.some(
-    (suffix) =>
-      normalizedCandidate.endsWith(suffix) &&
-      normalizeCase(candidate.slice(0, -suffix.length)) === normalizedStem
-  )
-}
-
-const matchesWriteScope = (scope: NotebookSourceFileWriteScope, candidate: string): boolean => {
-  if (scope.kind === 'directory') {
-    const normalizeDirectoryPath = (value: string): string => {
-      const portable = value
-        .replaceAll('\\', '/')
-        .replace(/\/{2,}/gu, '/')
-        .replace(/\/$/u, '')
-      return process.platform === 'win32' ? portable.toLocaleLowerCase('en-US') : portable
-    }
-    const normalizedScope = normalizeDirectoryPath(scope.path)
-    const normalizedCandidate = normalizeDirectoryPath(candidate)
-    return normalizedCandidate.startsWith(`${normalizedScope}/`)
-  }
-  if (scope.kind === 'timestamped-log')
-    return (
-      candidate.startsWith(scope.path) &&
-      /^\.\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?:\.\d+)?\.log$/.test(
-        candidate.slice(scope.path.length)
-      )
-    )
-  const lowerPath = scope.path.toLocaleLowerCase('en-US')
-  if (scope.kind === 'shapefile') {
-    if (!lowerPath.endsWith('.shp')) return false
-    return companionStemMatches(candidate, scope.path.slice(0, -'.shp'.length), [
-      '.shp.xml',
-      '.shp',
-      '.shx',
-      '.dbf',
-      '.prj',
-      '.cpg',
-      '.sbn',
-      '.sbx',
-      '.qix',
-      '.fix'
-    ])
-  }
-  const extension = lowerPath.endsWith('.tiff') ? '.tiff' : '.tif'
-  if (!lowerPath.endsWith(extension)) return false
-  const stem = scope.path.slice(0, -extension.length)
-  return (
-    candidate === scope.path ||
-    companionStemMatches(candidate, scope.path, ['.aux.xml', '.ovr']) ||
-    companionStemMatches(candidate, stem, ['.tfw', '.tifw', '.prj'])
-  )
-}
-
 function selectInitialFilesForCapture(
   initialFiles: readonly SnapshotEntry[],
   access: WorkingFileObservationRequest['sourceFileAccess']
@@ -2562,14 +2502,19 @@ export {
   completeWorkingFileEvidence,
   deleteWorkingFileEvidenceProject,
   ensureWorkingFileEvidenceProject,
+  publishComputeJobFileEvidence,
   reconcileComputeJobFileEvidence,
   reconcileWorkingFileEvidence,
-  publishComputeJobFileEvidence,
   recoverPublishedComputeJobFileEvidence,
   settleComputeJobFileEvidence,
   startWorkingFileObservation,
-  matchesWriteScope,
   toPortableNotebookRelativePath
 }
-export type { WorkingFileEvidenceLocation, WorkingFileObservation, WorkingFileObservationResult }
-export type { ComputeTransferInput, ComputeTransferOutput, FrozenComputeTransferInput }
+export type {
+  ComputeTransferInput,
+  ComputeTransferOutput,
+  FrozenComputeTransferInput,
+  WorkingFileEvidenceLocation,
+  WorkingFileObservation,
+  WorkingFileObservationResult
+}

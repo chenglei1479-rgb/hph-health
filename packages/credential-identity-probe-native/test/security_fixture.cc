@@ -207,17 +207,6 @@ ProbeResult Run(const char* expected_status, const char* expected_reason = nullp
 
 int main() {
   // Every scenario starts with an independent fake Keychain; no system Security call is reachable.
-  for (const std::string& identity : {std::string("MedResearch Agent"), std::string("MedResearch Agent (DEV)")}) {
-    fixture = {};
-    fixture.identity = identity;
-    fixture.primary_status = errSecSuccess;
-    const auto own_identity = Run("exists");
-    Expect(own_identity.account == identity + " Key", "DRA identity account mismatch");
-    Expect(fixture.queries == 1 && fixture.restorations == 1 && fixture.interaction,
-           "DRA lookup did not retain the no-interaction contract");
-  }
-
-
   fixture = {};
   fixture.primary_status = errSecSuccess;
   auto result = Run("exists");

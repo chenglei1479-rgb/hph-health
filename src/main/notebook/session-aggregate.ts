@@ -1,32 +1,36 @@
 import { randomUUID } from 'node:crypto'
+import type { NotebookKernelEpochOwnership } from './kernel-epoch-contract'
+export type { NotebookKernelEpochOwnership } from './kernel-epoch-contract'
 
+import type {
+  NotebookRunEnvironmentCapture,
+  NotebookRunEnvironmentLockCapture
+} from '@aipoch/environment/contracts'
+import type { NotebookSourceFileAccessContext } from '@aipoch/notebook-analysis/contracts'
+import type { TrustedControlInvocationIdentity } from '../../shared/agents-contract'
+import type { ExecutionFileEvidenceSummary } from '../../shared/execution-file-evidence'
 import type {
   NotebookCell,
   NotebookEnvironmentManifest,
-  NotebookHelperModuleEvidence,
   NotebookHelperEvidenceStatus,
+  NotebookHelperModuleEvidence,
   NotebookKernelInstanceIdentity,
   NotebookKernelMetadata,
-  NotebookLanguage,
   NotebookLiveEnvironmentOverlay,
   NotebookNamespaceVariable,
   NotebookOutput,
-  NotebookRunEnvironmentCapture,
-  NotebookRunEnvironmentLockCapture,
   NotebookRunInputFile,
   NotebookRunSource,
   NotebookRunStatus,
   NotebookWorkingFile,
   NotebookWriteLock
 } from '../../shared/notebook'
-import type { ExecutionFileEvidenceSummary } from '../../shared/execution-file-evidence'
+import type { NotebookLanguage } from '../../shared/notebook-language-contract'
 import type { NotebookRuntimeBinding } from '../../shared/notebook-runtime'
-import type { TrustedControlInvocationIdentity } from '../../shared/agents-contract'
-import type { TransientViewImage } from './host-view-image-service'
 import { resolveProjectId, type ProjectIdScope } from '../../shared/project-scope'
-import { notebookLaneScope, type NotebookLaneIdentity } from './lane-identity'
 import type { NotebookHelperModuleInjection } from './helper-module-host'
-import type { NotebookSourceFileAccessContext } from './dependency-analysis-types'
+import type { TransientViewImage } from './host-view-image-service'
+import { notebookLaneScope, type NotebookLaneIdentity } from './lane-identity'
 
 export type NotebookSessionResolvedInterpreter = {
   command: string
@@ -97,7 +101,7 @@ export type NotebookSessionExecutionRequest = {
   // binds this domain epoch to the OS process owner so startup recovery never adopts a stale writer.
   kernelEpochId?: string
   code: string
-  pythonRandomState?: import('../../shared/notebook-execution-context').NotebookExecutionContext['before']['pythonRandomState']
+  pythonRandomState?: import('@aipoch/reproducibility/execution-context').NotebookExecutionContext['before']['pythonRandomState']
   helperModules?: readonly NotebookHelperModuleInjection[]
   cwd: string
   notebookSessionRoot: string
@@ -154,6 +158,8 @@ export type NotebookSessionExecutionResult = {
   // Dispatch evidence persisted onto data runs and exposed in Agent results. Optional keeps injected/legacy executors
   // source-compatible; the execution owner treats a missing value after dispatch conservatively.
   kernelDispatched?: boolean
+  // False proves no user source began execution; absent evidence remains conservative.
+  executionStarted?: boolean
   // Exact helper initializations acknowledged by the persistent loop before producer dispatch.
   // The host uses this even when the producer later fails, so same-epoch retries stay idempotent.
   helperModulesInitialized?: readonly string[]
@@ -194,10 +200,6 @@ export type NotebookSessionExecutorGeneration = symbol
 // Stable object identity owned by the Aggregate for exactly one concrete process epoch. Host-owned
 // kernel extensions key their volatile state by this object, so retiring a process cannot accidentally
 // reuse loaded state even if a caller retains the printable UUID.
-export type NotebookKernelEpochOwnership = Readonly<{
-  id: string
-  processKey: string
-}>
 
 type NotebookKernelEpochSlot = {
   ownership: NotebookKernelEpochOwnership

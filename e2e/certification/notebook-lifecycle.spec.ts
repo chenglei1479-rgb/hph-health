@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test'
-import { access, mkdir, readFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { RUNTIME_LOCK_FILE } from '../../src/main/runtime-ownership'
 import { test } from '../fixtures/electron-app'
 import { createProject, openRecentSession, sendPrompt } from './helpers'
 
@@ -15,6 +16,32 @@ const captureLifecycleEvidence = async (
 
 const controlledWindowsFixtureAvailable =
   process.platform === 'win32' && Boolean(process.env.OPEN_SCIENCE_E2E_MICROMAMBA_EVENTS)
+
+const sendReviewedPrompt = async (
+  page: Parameters<typeof sendPrompt>[0],
+  prompt: string,
+  reply: string,
+  commands: string[],
+  timeout: number
+): Promise<void> => {
+  await Promise.all([
+    sendPrompt(page, prompt, reply, timeout),
+    (async () => {
+      const review = page.getByRole('group', {
+        name: 'Permission request: Review potentially destructive code',
+        exact: true
+      })
+      let previousCode: string | undefined
+      for (const command of commands) {
+        await expect(review).toContainText(command)
+        const code = review.getByTestId('tool-code-block')
+        if (previousCode) await expect(code).not.toHaveText(previousCode)
+        previousCode = await code.innerText()
+        await review.getByRole('button', { name: 'Allow', exact: true }).click()
+      }
+    })()
+  ])
+}
 
 test('executes Windows REPL cells and recovers Shell after an interpreter exit', async ({
   app
@@ -39,18 +66,20 @@ test('installs global npm tools through the app and reuses them across Sessions 
   await app.completeOnboarding()
   let page = await app.configureFakeAgent()
   await createProject(page, 'Npm installation')
-  await sendPrompt(
+  await sendReviewedPrompt(
     page,
     'Verify application npm global install.',
     'Application npm install verified',
+    ['node -e "eval(Buffer.from('],
     90_000
   )
   await page.getByRole('button', { name: 'All projects', exact: true }).click()
   await createProject(page, 'Npm shared tools')
-  await sendPrompt(
+  await sendReviewedPrompt(
     page,
     'Verify application npm shared tool and local install.',
     'Application npm local verified',
+    ['node -e "eval(Buffer.from(', 'node -e "eval(Buffer.from('],
     90_000
   )
   await captureLifecycleEvidence(page, 'npm-across-sessions.png')
@@ -103,7 +132,8 @@ test('installs global npm tools through the app and reuses them across Sessions 
     return bridge.api.storage.discardMigratedCopy(parent)
   }, parent)
   expect(discarded).toEqual({ ok: true })
-  await expect(access(staged.dataRoot)).rejects.toMatchObject({ code: 'ENOENT' })
+  // The runtime ownership inode must survive discard; all copied data must be gone.
+  expect(await readdir(staged.dataRoot)).toEqual([RUNTIME_LOCK_FILE])
   await sendPrompt(
     page,
     'Verify application npm tool after restart.',
@@ -118,7 +148,13 @@ test('runs and shuts down a Notebook session through its packaged MCP boundary',
   await app.completeOnboarding()
   let page = await app.configureFakeAgent()
   await createProject(page, 'Notebook lifecycle evidence')
-  await sendPrompt(page, 'Verify the notebook lifecycle.', 'Notebook lifecycle verified for')
+  await sendReviewedPrompt(
+    page,
+    'Verify the notebook lifecycle.',
+    'Notebook lifecycle verified for',
+    ['node -e "setTimeout(() => console.log(\'notebook-lifecycle-e2e\'), 0)"'],
+    30_000
+  )
 
   page = await app.restart()
   await openRecentSession(page, 'Verify the notebook lifecycle.')

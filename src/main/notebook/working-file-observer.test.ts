@@ -23,11 +23,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ProvenanceNotebookRun } from '../../shared/artifact-provenance'
 import type { NotebookRunRecord } from '../../shared/notebook'
 import { sealArtifactProvenanceGraph } from '../artifacts/artifact-provenance-graph'
-import {
-  resolveArtifactReproducibilityExecutionPlan,
-  sealArtifactReproducibilityRecipe
-} from '../artifacts/artifact-reproducibility-recipe'
-import { projectArtifactReproducibility } from '../artifacts/provenance-reproducibility-projection'
+import { reproductionRecipes } from '../artifacts/reproducibility-host'
+
+import { projectArtifactReproducibility } from '@aipoch/reproducibility'
 import {
   batchComputeProjectEvidenceRequests,
   beginComputeJobFileEvidence,
@@ -40,7 +38,6 @@ import {
   recoverPublishedComputeJobFileEvidence,
   settleComputeJobFileEvidence,
   startWorkingFileObservation,
-  matchesWriteScope,
   toPortableNotebookRelativePath,
   type WorkingFileObservationResult
 } from './working-file-observer'
@@ -84,30 +81,6 @@ afterEach(async () => {
 })
 
 describe('working-file evidence', () => {
-  it('matches scientific companions without changing the basename case', () => {
-    expect(
-      matchesWriteScope({ kind: 'shapefile', path: 'Outputs/Map.shp' }, 'Outputs/Map.dbf')
-    ).toBe(true)
-    expect(
-      matchesWriteScope({ kind: 'shapefile', path: 'Outputs/Map.shp' }, 'outputs/map.dbf')
-    ).toBe(process.platform === 'win32')
-    expect(matchesWriteScope({ kind: 'geotiff', path: 'Outputs/Map.tif' }, 'Outputs/Map.tfw')).toBe(
-      true
-    )
-    expect(matchesWriteScope({ kind: 'geotiff', path: 'Outputs/Map.tif' }, 'outputs/map.tfw')).toBe(
-      process.platform === 'win32'
-    )
-  })
-
-  it('matches directory scopes with the host filesystem case rules', () => {
-    expect(matchesWriteScope({ kind: 'directory', path: 'Outputs' }, 'Outputs/result.csv')).toBe(
-      true
-    )
-    expect(matchesWriteScope({ kind: 'directory', path: 'Outputs' }, 'outputs/result.csv')).toBe(
-      process.platform === 'win32'
-    )
-  })
-
   it('recovers many empty Session directories with one worker per Project', async () => {
     await createRoots()
     const evidenceRoot = join(storageRoot!, 'execution-file-evidence')
@@ -812,12 +785,14 @@ describe('working-file evidence', () => {
       outputs: [],
       inputFileVersionKeys: []
     }
-    const recipe = sealArtifactReproducibilityRecipe({
+    const recipe = reproductionRecipes.sealArtifactReproducibilityRecipe({
       provenanceGraph: graph,
       inputFiles: [],
       runs: [persistedRun]
     })
-    expect(resolveArtifactReproducibilityExecutionPlan(recipe, 'original-inputs')).toMatchObject({
+    expect(
+      reproductionRecipes.resolveArtifactReproducibilityExecutionPlan(recipe, 'original-inputs')
+    ).toMatchObject({
       steps: [{ activityId: run.runId }]
     })
   })
@@ -4092,3 +4067,5 @@ describe('working-file evidence', () => {
     })
   })
 })
+
+;(await import('../../../test/runtime-metadata')).configureTestRuntimeMetadata()

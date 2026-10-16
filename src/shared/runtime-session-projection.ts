@@ -2,13 +2,15 @@ import {
   ACP_CONTEXT_COMPACTION_ACTIVITY_TOOL_NAME,
   getAcpRuntimeEventImage,
   getAcpRuntimeEventText,
-  MAX_ACP_MESSAGE_IMAGE_BYTES_PER_MESSAGE,
-  MAX_ACP_MESSAGE_IMAGES_PER_MESSAGE,
-  MAX_ACP_SESSION_IMAGE_BYTES,
   normalizeClaudeCodeRefusalText,
   sanitizeAcpContextWindowSample,
   type AcpRuntimeEvent
 } from './acp'
+import {
+  MAX_ACP_MESSAGE_IMAGE_BYTES_PER_MESSAGE,
+  MAX_ACP_MESSAGE_IMAGES_PER_MESSAGE,
+  MAX_ACP_SESSION_IMAGE_BYTES
+} from './acp-image-contract'
 import { getActivityGroupTitleFromToolEvent, isActivityGroupToolEvent } from './activity-groups'
 import { artifactCreatedAtMs, type ArtifactFile } from './artifacts'
 import {
@@ -17,23 +19,23 @@ import {
   resolveActiveConversationMessages,
   resolveMessageBranchPath,
   validateConversationGraph,
-  type PersistedBranchActivityGroup,
   type PersistedAgentFrame,
+  type PersistedBranchActivityGroup,
   type PersistedConversationGraph,
   type PersistedMessageBranch,
   type PersistedMessageNode
 } from './conversation-graph'
+import { isClaudeApiResponseInterruption, isExpectedRunFailure } from './run-error-classification'
+import { createRuntimeAgentMessageId } from './runtime-message-identity'
 import {
-  legacySessionStateForOutcome,
-  type TurnOutcome,
   isInLatestTurn,
+  legacySessionStateForOutcome,
   retainRecentSessionEventIds,
   type PersistedArtifact,
   type PersistedChatSession,
-  type PersistedToolActivityStatus
+  type PersistedToolActivityStatus,
+  type TurnOutcome
 } from './session-persistence'
-import { isClaudeApiResponseInterruption, isExpectedRunFailure } from './run-error-classification'
-import { createRuntimeAgentMessageId } from './runtime-message-identity'
 
 export type RuntimeSessionScope = {
   promptMessageId: string
@@ -260,44 +262,38 @@ const terminalize = (
     )
     const planPending = session.runtimeContext?.plan?.approval === 'pending'
     const blocked = permissionPending || elicitationPending || planPending
-    const rejectedPlan =
-      session.runtimeContext?.plan?.approval === 'rejected' &&
-      session.runtimeContext.plan.originatingPromptMessageId === scope.promptMessageId &&
-      prompt?.turnOutcome?.kind === 'cancelled'
-    const outcome: TurnOutcome = rejectedPlan
-      ? prompt.turnOutcome!
-      : cancelled
-        ? { kind: 'cancelled', settledAt: event.timestamp, recovery: 'resume' }
-        : interrupted
+    const outcome: TurnOutcome = cancelled
+      ? { kind: 'cancelled', settledAt: event.timestamp, recovery: 'resume' }
+      : interrupted
+        ? {
+            kind: 'interrupted',
+            settledAt: event.timestamp,
+            cause: event.interruptionCause ?? 'connection-lost',
+            error: event.text || event.title,
+            errorReportable: false,
+            recovery: 'resume'
+          }
+        : failed
           ? {
-              kind: 'interrupted',
+              kind: 'failed',
               settledAt: event.timestamp,
-              cause: event.interruptionCause ?? 'connection-lost',
               error: event.text || event.title,
-              errorReportable: false,
-              recovery: 'resume'
+              errorReportable:
+                event.errorReportable ??
+                (!event.providerError && !isExpectedRunFailure(event.text || event.title)),
+              ...(event.artifactFailure &&
+              responses.some((response) =>
+                response.artifactIds?.some((id) => {
+                  const artifact = session.artifacts?.find((candidate) => candidate.id === id)
+                  if (!artifact || artifact.kind !== 'managed-file') return false
+                  const segments = artifact.path.split(/[\\/]+/u)
+                  return Boolean(artifact.versionId) || segments.at(-3) === '.pending'
+                })
+              )
+                ? { recovery: 'retry-artifact-publication' as const }
+                : {})
             }
-          : failed
-            ? {
-                kind: 'failed',
-                settledAt: event.timestamp,
-                error: event.text || event.title,
-                errorReportable:
-                  event.errorReportable ??
-                  (!event.providerError && !isExpectedRunFailure(event.text || event.title)),
-                ...(event.artifactFailure &&
-                responses.some((response) =>
-                  response.artifactIds?.some((id) => {
-                    const artifact = session.artifacts?.find((candidate) => candidate.id === id)
-                    if (!artifact || artifact.kind !== 'managed-file') return false
-                    const segments = artifact.path.split(/[\\/]+/u)
-                    return Boolean(artifact.versionId) || segments.at(-3) === '.pending'
-                  })
-                )
-                  ? { recovery: 'retry-artifact-publication' as const }
-                  : {})
-              }
-            : { kind: 'completed', settledAt: event.timestamp }
+          : { kind: 'completed', settledAt: event.timestamp }
     if (prompt && !blocked) {
       prompt.turnOutcome = outcome
       if (outcome.kind === 'completed' || outcome.kind === 'failed') delete prompt.interrupted
