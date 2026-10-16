@@ -119,6 +119,44 @@ it.each(['access-blocked', 'error', 'not-found'] as const)(
   }
 )
 
+it('treats the published helper rejecting the DRA product name as an absent key', async () => {
+  fixture.spawn.mockReturnValue({
+    status: 0,
+    signal: null,
+    error: undefined,
+    stdout: JSON.stringify({
+      schemaVersion: 1,
+      platform: 'darwin',
+      identity: '',
+      status: 'error',
+      reason: 'invalid-identity',
+      osStatus: 0
+    })
+  })
+  const { probeCredentialIdentity } = await import('./probe')
+  expect(probeCredentialIdentity('MedResearch Agent')).toEqual({
+    status: 'not-found',
+    reason: 'invalid-identity'
+  })
+})
+
+it('fails closed when a blank identity is not an allowlist rejection', async () => {
+  fixture.spawn.mockReturnValue({
+    status: 0,
+    signal: null,
+    error: undefined,
+    stdout: JSON.stringify({
+      schemaVersion: 1,
+      platform: 'darwin',
+      identity: '',
+      status: 'error',
+      reason: 'metadata-query-failed'
+    })
+  })
+  const { probeCredentialIdentity } = await import('./probe')
+  expect(probeCredentialIdentity('MedResearch Agent')).toEqual({ status: 'error' })
+})
+
 it('blocks MAS and timed-out helpers rather than inventing an absent credential', async () => {
   const { probeCredentialIdentity } = await import('./probe')
   Object.defineProperty(process, 'mas', { value: true, configurable: true })
