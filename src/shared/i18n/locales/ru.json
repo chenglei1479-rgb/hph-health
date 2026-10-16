@@ -3696,7 +3696,6 @@
     "Bundled with the app. Refresh from the vendor to pull the latest. Choose one from the Active model selector after adding.": "Встроены в приложение. Обновите с поставщика, чтобы получить последнюю версию. Выберите один из активных моделей в выпадающем списке после добавления.",
     "{{count}} damaged saved conversations were moved aside. Archiving remains unavailable for affected project data because its state cannot be verified. You can still permanently delete the affected project data._other": "{{count}} повреждённого сохранённого диалога изолировано. Архивация затронутых данных недоступна, поскольку их состояние невозможно проверить. При необходимости затронутые данные проекта всё равно можно удалить без возможности восстановления.",
     "Copy counts": "Копировать числа",
-    "Deliverable package": "Пакет результатов",
     "Require approval": "Запрашивать разрешение",
     "Messages, {{count}} unread_few": "Сообщения: {{count}} непрочитанных",
     "New projects": "Новые проекты",
@@ -3742,7 +3741,6 @@
     "Installed packages": "Пакеты установлены",
     "Detected scheduler": "Обнаруженный планировщик",
     "Available on target disk: {{size}}": "Доступно на целевом диске: {{size}}",
-    "Choose a deliverable": "Выберите пакет результатов",
     "Memory note is required.": "Заметка обязательна.",
     "Tracked": "Отслеживается",
     "File restore": "Восстановление файлов",
@@ -4455,7 +4453,6 @@
     "No comment": "Без комментария",
     "DRA will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>": "DRA перезапустится и будет использовать эту папку без изменений: <em>её содержимое не будет объединено с текущими данными</em>, а отсутствующие в ней элементы станут недоступны. <em>Текущая папка с данными останется без изменений, поэтому к ней можно будет вернуться.</em>",
     "{{processed}} / {{total}} pages": "{{processed}} / {{total}} стр.",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "После настройки проекта выберите пакет результатов. Черновик можно править, пока вы его не отправите.",
     "Changes notebook environment configuration.": "Изменяет настройки среды Notebook.",
     "Clear filters": "Очистить фильтры",
     "View Connector availability for {{count}} agents_few": "Показать доступность коннектора для {{count}} агентов",
@@ -7965,6 +7962,16 @@
     "Imported Sessions are read-only.": "Импортированные сеансы доступны только для чтения.",
     "{{count}} additional nodes_few": "{{count}} дополнительных узла",
     "Member files": "Файлы группы",
-    "Describes images when the main model can't see them. Only models with image input are listed.": "Описывает изображения, когда основная модель их не видит. В списке только модели с поддержкой изображений."
+    "Describes images when the main model can't see them. Only models with image input are listed.": "Описывает изображения, когда основная модель их не видит. В списке только модели с поддержкой изображений.",
+    "Prepare to consult your supervising doctor": "Подготовка к консультации с научным руководителем",
+    "Write an abstract or paper": "Написать тезисы или статью",
+    "Continue a project": "Продолжить проект",
+    "No recent projects yet.": "Недавних проектов пока нет.",
+    "Delete local copies": "Удалить локальные копии",
+    "Delete the app's local copies?": "Удалить локальные копии приложения?",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "Будут удалены локальные копии приложения: проекты, сохранённые диалоги и счётчики поставок на этом компьютере. Резервные копии и копии вне приложения, в том числе копии операционной системы, не удаляются. Файлы в рабочей папке проекта не удаляются.",
+    "The app's local copies were deleted.": "Локальные копии приложения удалены.",
+    "Could not delete the app's local copies. Try again.": "Не удалось удалить локальные копии приложения. Повторите попытку.",
+    "Deleting local copies…": "Удаление локальных копий…"
   }
 }

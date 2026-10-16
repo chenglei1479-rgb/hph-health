@@ -26,6 +26,7 @@ import { useApplicationStartup } from '@/hooks/useApplicationStartup'
 import { WorkspaceAgentRuntimeProvider } from '@/lib/acp/useWorkspaceAgentRuntime'
 import { WorkspaceComputeRecoveryBridge } from '@/lib/compute/WorkspaceComputeRecoveryBridge'
 import { HomePage } from '@/pages/home/HomePage'
+import { cornerFloatingEntriesVisible } from '@/pages/home/corner-floating-entries'
 import { VariableDefinitionEntry } from '@/pages/variable-definition/VariableDefinitionEntry'
 import { WritingSafeguardsEntry } from '@/pages/writing-safeguards/WritingSafeguardsEntry'
 import type { SettingsPageHandle } from '@/pages/settings/SettingsPage'
@@ -480,8 +481,12 @@ const ApplicationPresentationContent = ({
           onDismiss={startup.storageRecovery.dismissLegacyMove}
         />
       ) : null}
-      <VariableDefinitionEntry />
-      <WritingSafeguardsEntry />
+      {cornerFloatingEntriesVisible(events.navigation.view) ? (
+        <>
+          <VariableDefinitionEntry />
+          <WritingSafeguardsEntry />
+        </>
+      ) : null}
     </>
   )
 }

@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ClipboardCheck,
   FilePenLine,
-  FileSpreadsheet,
   Languages,
   Search,
   ShieldCheck,
@@ -16,16 +15,12 @@ import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  deliverableCardCopy,
-  HOME_DELIVERABLE_CARD_IDS,
-  type HomeDeliverableCardId
-} from './deliverable-packages'
+import { DeleteLocalCopiesButton } from './DeleteLocalCopies'
+import { homePrimaryEntries, type HomePrimaryEntryId } from './home-primary-entries'
 import { nextStepAfter } from '../../../../shared/deliverable-next-step'
 import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-delivery-ledger'
 import { PackNextStepCard } from './PackNextStepCard'
 import { SampleAbstractDialog } from './SampleAbstractDialog'
-import { StatisticianReviewExportDialog } from './StatisticianReviewExportDialog'
 
 export type MedicalResearchWorkflow =
   | 'mentor-pack'
@@ -46,34 +41,45 @@ type WorkflowCard = {
   iconClassName: string
 }
 
-type MedicalResearchLaunchpadProps = {
-  onSelectWorkflow: (workflow: MedicalResearchWorkflow, theme: string) => void
+export type RecentHomeProject = {
+  id: string
+  name: string
 }
 
-const PACKAGE_ICONS: Record<HomeDeliverableCardId, { icon: LucideIcon; iconClassName: string }> = {
-  'writing-pack': { icon: FilePenLine, iconClassName: 'bg-[#edf0f7] text-[#58668a]' },
-  'consultation-pack': { icon: ClipboardCheck, iconClassName: 'bg-[#eef2e9] text-[#58744b]' },
-  'mentor-pack': { icon: BookOpenCheck, iconClassName: 'bg-[#f3edf1] text-[#78576e]' },
-  'statistician-export': { icon: FileSpreadsheet, iconClassName: 'bg-[#eef2e9] text-[#58744b]' }
+type MedicalResearchLaunchpadProps = {
+  onSelectWorkflow: (workflow: MedicalResearchWorkflow, theme: string) => void
+  recentProjects?: readonly RecentHomeProject[]
+  onOpenProject?: (projectId: string) => void
+  canDeleteLocalCopies?: boolean
+  localProjectIds?: readonly string[]
+  onDeleteLocalCopies?: (projectIds: readonly string[]) => Promise<void>
+}
+
+const ENTRY_ICONS: Record<HomePrimaryEntryId, { icon: LucideIcon; iconClassName: string }> = {
+  'mentor-prep': { icon: BookOpenCheck, iconClassName: 'bg-[#f3edf1] text-[#78576e]' },
+  'analyze-data': { icon: ChartNoAxesCombined, iconClassName: 'bg-[#eef2e9] text-[#58744b]' },
+  'write-abstract': { icon: FilePenLine, iconClassName: 'bg-[#edf0f7] text-[#58668a]' }
 }
 
 const MedicalResearchLaunchpad = ({
-  onSelectWorkflow
+  onSelectWorkflow,
+  recentProjects = [],
+  onOpenProject = () => undefined,
+  canDeleteLocalCopies = true,
+  localProjectIds = [],
+  onDeleteLocalCopies = async () => undefined
 }: MedicalResearchLaunchpadProps): React.JSX.Element => {
   const { t } = useTranslation()
   const [researchTheme, setResearchTheme] = useState('')
-  const [statisticianExportOpen, setStatisticianExportOpen] = useState(false)
   const [sampleOpen, setSampleOpen] = useState(false)
   const [stepsOpen, setStepsOpen] = useState(false)
   const deliveryLedger = usePackDeliveryLedger()
   const exampleTheme = t(
     'I want to study the treatment effect of immune checkpoint inhibitors in patients with lung cancer.'
   )
-  const cardCopy = deliverableCardCopy(t)
-  const packages = HOME_DELIVERABLE_CARD_IDS.map((id) => ({
-    id,
-    ...cardCopy[id],
-    ...PACKAGE_ICONS[id]
+  const entries = homePrimaryEntries(t).map((entry) => ({
+    ...entry,
+    ...ENTRY_ICONS[entry.id]
   }))
   const workflows: WorkflowCard[] = [
     {
@@ -188,28 +194,24 @@ const MedicalResearchLaunchpad = ({
 
       <section
         data-testid="entry-step-2"
-        aria-label={t('Deliverable package')}
+        aria-label={t('Choose where to begin')}
         className="space-y-3"
       >
         <div className="px-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#536970]">
             <span>{t('Step 2')}</span>
             <span aria-hidden="true"> · </span>
-            <span>{t('Deliverable package')}</span>
+            <span>{t('Choose where to begin')}</span>
           </p>
           <h2 className="mt-1 text-[17px] font-medium leading-6 text-text-000">
-            {t('Choose a deliverable')}
+            {t('Choose where to begin')}
           </h2>
-          <p className="mt-0.5 text-xs text-text-300">
-            {t(
-              'Select the package to prepare after the project is set up. The draft stays editable until you send it.'
-            )}
-          </p>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {packages.map(
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3" data-testid="home-primary-entries">
+          {entries.map(
             ({
               id,
+              workflow,
               title,
               subtitle,
               description,
@@ -221,20 +223,10 @@ const MedicalResearchLaunchpad = ({
               <button
                 key={id}
                 type="button"
-                data-testid={
-                  id === 'statistician-export'
-                    ? 'export-statistician-package'
-                    : `deliverable-package-${id}`
-                }
-                data-deliverable-card={id}
+                data-testid={`home-entry-${id}`}
+                data-home-entry={id}
                 disabled={!themeReady}
-                onClick={() => {
-                  if (id === 'statistician-export') {
-                    setStatisticianExportOpen(true)
-                    return
-                  }
-                  onSelectWorkflow(id, researchTheme.trim())
-                }}
+                onClick={() => onSelectWorkflow(workflow, researchTheme.trim())}
                 className="group flex min-h-[168px] cursor-pointer flex-col rounded-2xl border border-border-200/70 bg-bg-000 p-4 text-left shadow-card transition-colors hover:border-[#adc0bf] hover:bg-[#fcfcf9] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-200/70 disabled:hover:bg-bg-000"
               >
                 <span className="flex w-full items-start justify-between gap-3">
@@ -254,7 +246,7 @@ const MedicalResearchLaunchpad = ({
                 </span>
                 <span className="mt-3 text-sm font-semibold text-text-000">{title}</span>
                 <span
-                  data-testid={`deliverable-subtitle-${id}`}
+                  data-testid={`home-entry-subtitle-${id}`}
                   className="mt-1 text-xs font-medium leading-[1.45] text-text-100"
                 >
                   {subtitle}
@@ -275,6 +267,37 @@ const MedicalResearchLaunchpad = ({
             )
           )}
         </div>
+        <section
+          data-testid="continue-project"
+          aria-label={t('Continue a project')}
+          className="space-y-3"
+        >
+          <h2 className="px-1 text-[17px] font-medium leading-6 text-text-000">
+            {t('Continue a project')}
+          </h2>
+          {recentProjects.length === 0 ? (
+            <p className="px-1 text-sm text-text-300">{t('No recent projects yet.')}</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {recentProjects.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  data-testid={`continue-project-${project.id}`}
+                  onClick={() => onOpenProject(project.id)}
+                  className="cursor-pointer rounded-2xl border border-border-200/70 bg-bg-000 px-4 py-3 text-left text-sm font-medium text-text-000 shadow-card hover:border-[#adc0bf] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  {project.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <DeleteLocalCopiesButton
+            canDelete={canDeleteLocalCopies}
+            projectIds={localProjectIds}
+            onDeleteLocalCopies={onDeleteLocalCopies}
+          />
+        </section>
         <div className="px-1">
           <button
             type="button"
@@ -304,11 +327,6 @@ const MedicalResearchLaunchpad = ({
         ) : null}
       </section>
       <SampleAbstractDialog open={sampleOpen} onClose={() => setSampleOpen(false)} />
-      <StatisticianReviewExportDialog
-        open={statisticianExportOpen}
-        projectId="consultation-pack"
-        onClose={() => setStatisticianExportOpen(false)}
-      />
 
       <div className="px-1">
         <button

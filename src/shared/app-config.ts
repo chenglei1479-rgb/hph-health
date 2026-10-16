@@ -1,6 +1,9 @@
 // Single source of truth for project identity and external links. Shared by the main process
 // (GitHub star-count fetch) and the renderer (every entry-point link). Keep this UI-free — no
 // icons, no JSX — so both processes can import it and any screen reuses the same values.
+// The visible product name lives in product-identity.ts.
+
+import { PRODUCT_DISPLAY_NAME } from './product-identity'
 
 import { DEFAULT_LOCALE, type Locale } from './locale'
 
@@ -11,8 +14,11 @@ const PRODUCT_RELEASES_URL = `${GITHUB_REPO_URL}/releases`
 const CDN_BASE_URL = 'https://statics.aipoch.com/open-science'
 
 export const APP = {
-  name: 'DRA',
-  brand: { name: 'DRA', taglineLines: ['AI Research', 'Infrastructure', 'for Medicine'] },
+  name: PRODUCT_DISPLAY_NAME,
+  brand: {
+    name: PRODUCT_DISPLAY_NAME,
+    taglineLines: ['AI Research', 'Infrastructure', 'for Medicine']
+  },
   tagline: 'AI Research Infrastructure for Medicine',
   githubOwner: GITHUB_OWNER,
   githubRepo: GITHUB_REPO,
@@ -30,7 +36,7 @@ export const APP = {
     // Placeholder DRA community handle. Replace when the product account exists.
     x: 'https://x.com/dra_ai'
   },
-  copyright: '© 2026 DRA. Based on AIPOCH Open-Science.',
+  copyright: `© 2026 ${PRODUCT_DISPLAY_NAME}. Based on AIPOCH Open-Science.`,
   update: {
     // No DRA feed is published yet. Leave this off so a missing deployment file cannot
     // fall back to an upstream updater.

@@ -1917,6 +1917,19 @@ describe('HomePage recent session ordering', () => {
     delete document.documentElement.dataset.draHomeReady
     await renderHome()
     expect(document.documentElement.dataset.draHomeReady).toBe('1')
+    expect(
+      [...container.querySelectorAll('[data-home-entry]')].map((entry) =>
+        entry.getAttribute('data-home-entry')
+      )
+    ).toEqual(['mentor-prep', 'analyze-data', 'write-abstract'])
+    expect(container.querySelector('[data-testid="export-statistician-package"]')).toBeNull()
+    expect(container.querySelector('[data-testid="delete-local-copies"]')).not.toBeNull()
+    expect(
+      container.querySelector('[data-testid="continue-project-project-1"]')?.textContent
+    ).toContain('Research project')
+    expect(container.querySelector('[data-testid="open-fictional-sample"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('変数定義表')
+    expect(container.textContent).not.toContain('執筆時の確認')
   })
 
   it('keeps the logo and three-line DRA signature in the home header', async () => {
@@ -1924,7 +1937,11 @@ describe('HomePage recent session ordering', () => {
     const brand = container.querySelector('header .dra-app-brand')
     expect(brand).not.toBeNull()
     expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('DRA')
-    expect(Array.from(brand?.querySelectorAll('.dra-app-brand-tagline > span') ?? []).map((line) => line.textContent)).toEqual(['AI Research', 'Infrastructure', 'for Medicine'])
+    expect(
+      Array.from(brand?.querySelectorAll('.dra-app-brand-tagline > span') ?? []).map(
+        (line) => line.textContent
+      )
+    ).toEqual(['AI Research', 'Infrastructure', 'for Medicine'])
     const images = brand?.querySelectorAll('img')
     expect(images).toHaveLength(2)
     expect(images?.[0].getAttribute('src')).toMatch(/logo/)

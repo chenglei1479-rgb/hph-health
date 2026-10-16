@@ -39,8 +39,11 @@ import {
 import type { AcquireManagedPreviewRequest } from '../../shared/preview-resources'
 import { installWebRendererContracts } from './api-installer'
 import { i18next, initI18n, prepareI18nLocale } from '@/i18n'
+import { APP } from '../../shared/app-config'
 import { applyHtmlLang, resolveInitialLocale } from '@/lib/locale-preference'
 import { applyTheme, resolveInitialTheme } from '@/lib/theme'
+
+document.title = APP.name
 
 // Apply the saved theme before the (async) web API install and the app import below, so the page
 // doesn't paint in light mode and then flip to dark. The Electron renderer does the same at the top

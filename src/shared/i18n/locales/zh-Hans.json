@@ -3468,7 +3468,6 @@
     "Bundled with the app. Refresh from the vendor to pull the latest. Choose one from the Active model selector after adding.": "随应用内置。从厂商刷新可拉取最新列表。添加后在「当前模型」选择器中选用。",
     "{{count}} damaged saved conversations were moved aside. Archiving remains unavailable for affected project data because its state cannot be verified. You can still permanently delete the affected project data._other": "已移出 {{count}} 个损坏的已保存会话。由于无法验证其状态，受影响的项目数据仍无法归档。你仍可永久删除受影响的项目数据。",
     "Copy counts": "复制次数",
-    "Deliverable package": "交付包",
     "Require approval": "需要批准",
     "New projects": "新增 Project",
     "DRA couldn't stop the agent for this Session. The Session was not deleted. Please try again.": "DRA 无法停止此会话的智能体。会话未被删除，请重试。",
@@ -3511,7 +3510,6 @@
     "Installed packages": "已安装软件包",
     "Detected scheduler": "检测到的调度器",
     "Available on target disk: {{size}}": "目标磁盘可用空间：{{size}}",
-    "Choose a deliverable": "选择交付包",
     "Memory note is required.": "记忆笔记不能为空。",
     "Tracked": "已跟踪",
     "File restore": "文件恢复",
@@ -4179,7 +4177,6 @@
     "No comment": "无评论",
     "DRA will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>": "DRA 将重启并按原样使用该文件夹——<em>其内容不会与你当前的数据合并</em>，缺少的内容会显示为不可用。<em>你当前的数据文件夹保持不变，可以随时切换回去。</em>",
     "{{processed}} / {{total}} pages": "{{processed}} / {{total}} 页",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "项目设置完成后，选择要准备的交付包。草稿在发送前可继续编辑。",
     "Changes notebook environment configuration.": "更改 Notebook 环境配置。",
     "Clear filters": "清除筛选",
     "The update could not be completed. Close this preview and review the current installation again.": "未能完成更新。请关闭此预览，重新查看当前安装。",
@@ -7498,6 +7495,16 @@
     "Test whether a protein set has more interactions than expected in STRING, with an optional background set.": "检验一组蛋白质在 STRING 中的互作是否显著多于预期，可指定背景集。",
     "Imported Sessions are read-only.": "导入的会话为只读。",
     "Member files": "成员文件",
-    "Describes images when the main model can't see them. Only models with image input are listed.": "当主模型无法看到图像时对其进行描述。仅列出支持图像输入的模型。"
+    "Describes images when the main model can't see them. Only models with image input are listed.": "当主模型无法看到图像时对其进行描述。仅列出支持图像输入的模型。",
+    "Prepare to consult your supervising doctor": "准备与指导医师咨询",
+    "Write an abstract or paper": "撰写摘要或论文",
+    "Continue a project": "继续项目",
+    "No recent projects yet.": "还没有最近的项目。",
+    "Delete local copies": "删除本地副本",
+    "Delete the app's local copies?": "删除应用内的本地副本？",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "将删除应用保存的项目、对话和本机交付次数的本地副本。应用之外的备份，以及操作系统保留的副本，不会删除。项目工作文件夹中的文件不会删除。",
+    "The app's local copies were deleted.": "已删除应用内的本地副本。",
+    "Could not delete the app's local copies. Try again.": "未能删除应用内的本地副本。请重试。",
+    "Deleting local copies…": "正在删除本地副本…"
   }
 }

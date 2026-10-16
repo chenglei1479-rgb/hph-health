@@ -3627,7 +3627,6 @@
     "Bundled with the app. Refresh from the vendor to pull the latest. Choose one from the Active model selector after adding.": "Livré avec l'application. Actualisez auprès du fournisseur pour extraire la dernière version. Choisissez-en un dans le sélecteur de modèle actif après l'ajout.",
     "{{count}} damaged saved conversations were moved aside. Archiving remains unavailable for affected project data because its state cannot be verified. You can still permanently delete the affected project data._other": "{{count}} conversations sauvegardées endommagées ont été mises de côté. L’archivage des données concernées reste indisponible car leur état ne peut pas être vérifié. Vous pouvez toujours supprimer définitivement les données concernées.",
     "Copy counts": "Copier les nombres",
-    "Deliverable package": "Paquet de livrables",
     "Require approval": "Exiger l'approbation",
     "New projects": "Nouveaux projets",
     "DRA couldn't stop the agent for this Session. The Session was not deleted. Please try again.": "DRA n'a pas pu arrêter l'agent pour cette session. La session n'a pas été supprimée. Veuillez réessayer.",
@@ -3672,7 +3671,6 @@
     "Installed packages": "Paquets installés",
     "Detected scheduler": "Ordonnanceur détecté",
     "Available on target disk: {{size}}": "Espace disponible sur le disque cible : {{size}}",
-    "Choose a deliverable": "Choisir un livrable",
     "Memory note is required.": "La note de mémoire est requise.",
     "Tracked": "Suivi",
     "File restore": "Restauration des fichiers",
@@ -4374,7 +4372,6 @@
     "No comment": "Aucun commentaire",
     "DRA will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>": "DRA va redémarrer et utiliser ce dossier tel quel : <em>son contenu ne sera pas fusionné avec vos données actuelles</em>, et tout élément manquant apparaîtra comme indisponible. <em>Votre dossier de données actuel restera intact, vous pourrez donc y revenir.</em>",
     "{{processed}} / {{total}} pages": "{{processed}} / {{total}} pages",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "Après la configuration du projet, choisissez le paquet de livrables à préparer. Le brouillon reste modifiable jusqu’à l’envoi.",
     "Changes notebook environment configuration.": "Modifie la configuration de l’environnement Notebook.",
     "Clear filters": "Effacer les filtres",
     "The update could not be completed. Close this preview and review the current installation again.": "La mise à jour n’a pas pu être terminée. Fermez cet aperçu et examinez de nouveau l’installation actuelle.",
@@ -7826,6 +7823,16 @@
     "Test whether a protein set has more interactions than expected in STRING, with an optional background set.": "Tester si un ensemble de protéines présente plus d’interactions que prévu dans STRING, avec un ensemble de référence facultatif.",
     "Imported Sessions are read-only.": "Les sessions importées sont en lecture seule.",
     "Member files": "Fichiers membres",
-    "Describes images when the main model can't see them. Only models with image input are listed.": "Décrit les images lorsque le modèle principal ne peut pas les voir. Seuls les modèles acceptant les images sont listés."
+    "Describes images when the main model can't see them. Only models with image input are listed.": "Décrit les images lorsque le modèle principal ne peut pas les voir. Seuls les modèles acceptant les images sont listés.",
+    "Prepare to consult your supervising doctor": "Préparer la discussion avec le directeur de recherche",
+    "Write an abstract or paper": "Rédiger un résumé ou un article",
+    "Continue a project": "Continuer un projet",
+    "No recent projects yet.": "Aucun projet récent pour le moment.",
+    "Delete local copies": "Supprimer les copies locales",
+    "Delete the app's local copies?": "Supprimer les copies locales de l'application ?",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "Cette action supprime les copies locales de l'application pour les projets, les conversations enregistrées et les compteurs de livraisons sur cet appareil. Les sauvegardes et les copies hors de l'application, y compris celles conservées par le système d'exploitation, ne sont pas supprimées. Les fichiers du dossier de travail d'un projet ne sont pas supprimés.",
+    "The app's local copies were deleted.": "Les copies locales de l'application ont été supprimées.",
+    "Could not delete the app's local copies. Try again.": "Impossible de supprimer les copies locales de l'application. Réessayez.",
+    "Deleting local copies…": "Suppression des copies locales…"
   }
 }

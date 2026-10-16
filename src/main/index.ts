@@ -82,6 +82,7 @@ import { createDesktopPreviewProxy } from './desktop-preview-proxy'
 import type { DesktopShutdownWork } from './desktop-runtime-lifecycle'
 import { PackageFileOpenRelay, packagePathsFromArgv } from './session-package/file-open'
 import { MANAGED_PREVIEW_SCHEME } from './managed-preview-resources'
+import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 import {
   OFFICE_PREVIEW_RUNTIME_SCHEME_CONFIG,
   registerOfficePreviewRuntimeProtocol
@@ -104,7 +105,7 @@ import {
 } from './renderer-diagnostics'
 import type { DiagnosticOperation } from '@aipoch/diagnostics/node'
 
-const APP_NAME = 'DRA'
+const APP_NAME = PRODUCT_DISPLAY_NAME
 const APP_USER_MODEL_ID = 'com.dra-hph.desktop'
 const bootstrapLog = createLogger('desktop-bootstrap')
 const webServiceLog = createLogger('web-service')

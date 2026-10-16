@@ -3468,7 +3468,6 @@
     "Bundled with the app. Refresh from the vendor to pull the latest. Choose one from the Active model selector after adding.": "アプリにバンドルされています。ベンダーから更新して最新のものを取得します。追加後は、アクティブモデルセレクターから 1 つを選択します。",
     "{{count}} damaged saved conversations were moved aside. Archiving remains unavailable for affected project data because its state cannot be verified. You can still permanently delete the affected project data._other": "破損した保存済みの会話 {{count}} 件を隔離しました。影響を受けたプロジェクトデータは状態を確認できないため、引き続きアーカイブできません。影響を受けたプロジェクトデータを完全に削除することはできます。",
     "Copy counts": "回数をコピー",
-    "Deliverable package": "成果物パッケージ",
     "Require approval": "承認が必要",
     "New projects": "新しいプロジェクト",
     "DRA couldn't stop the agent for this Session. The Session was not deleted. Please try again.": "DRA は、このセッションのエージェントを停止できませんでした。セッションは削除されませんでした。もう一度試してください。",
@@ -3511,7 +3510,6 @@
     "Installed packages": "パッケージをインストールしました",
     "Detected scheduler": "検出されたスケジューラー",
     "Available on target disk: {{size}}": "ターゲットディスクで利用可能: {{size}}",
-    "Choose a deliverable": "成果物を選択",
     "Memory note is required.": "メモリのメモを入力してください。",
     "Tracked": "追跡済み",
     "File restore": "ファイルの復元",
@@ -4179,7 +4177,6 @@
     "No comment": "コメントなし",
     "DRA will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>": "DRA が再起動され、このフォルダーがそのまま使用されます。<em>その内容は現在のデータとマージされません</em>。不足しているものは利用不可として表示されます。<em>現在のデータフォルダーは変更されないため、元に戻すことができます。</em>",
     "{{processed}} / {{total}} pages": "{{processed}} / {{total}}ページ",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "プロジェクト設定のあと、作成する成果物パッケージを選びます。下書きは送信するまで編集できます。",
     "Changes notebook environment configuration.": "Notebook 環境構成を変更します。",
     "Clear filters": "フィルターをクリア",
     "The update could not be completed. Close this preview and review the current installation again.": "更新を完了できませんでした。このプレビューを閉じて、現在のインストールを再確認してください。",
@@ -7498,6 +7495,16 @@
     "Test whether a protein set has more interactions than expected in STRING, with an optional background set.": "タンパク質集合の STRING 内の相互作用が期待値より多いかを検定します。背景集合は任意で指定できます。",
     "Imported Sessions are read-only.": "インポートしたセッションは読み取り専用です。",
     "Member files": "構成ファイル",
-    "Describes images when the main model can't see them. Only models with image input are listed.": "メインモデルが画像を認識できない場合に画像を説明します。画像入力に対応したモデルのみが一覧に表示されます。"
+    "Describes images when the main model can't see them. Only models with image input are listed.": "メインモデルが画像を認識できない場合に画像を説明します。画像入力に対応したモデルのみが一覧に表示されます。",
+    "Prepare to consult your supervising doctor": "指導医と相談する準備",
+    "Write an abstract or paper": "抄録・論文を書く",
+    "Continue a project": "プロジェクトを続ける",
+    "No recent projects yet.": "最近のプロジェクトはまだありません。",
+    "Delete local copies": "ローカルコピーを削除",
+    "Delete the app's local copies?": "アプリ内のローカルコピーを削除しますか？",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "プロジェクト、保存した会話、この端末の交付回数について、アプリが持つローカルコピーを削除します。アプリの外にあるバックアップや、OS が保持するコピーは削除しません。プロジェクトの作業フォルダー内のファイルは削除しません。",
+    "The app's local copies were deleted.": "アプリ内のローカルコピーを削除しました。",
+    "Could not delete the app's local copies. Try again.": "アプリ内のローカルコピーを削除できませんでした。もう一度お試しください。",
+    "Deleting local copies…": "ローカルコピーを削除しています…"
   }
 }

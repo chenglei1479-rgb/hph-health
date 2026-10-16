@@ -105,6 +105,10 @@ export const dismissPackDeliveryHomeCard = (): void => {
   persist({ ...state, homeCardDismissed: true })
 }
 
+export const clearPackDeliveryLedger = (): void => {
+  persist(emptyLedger())
+}
+
 export const resetPackDeliveryLedgerForTests = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEY)

@@ -3468,7 +3468,6 @@
     "Bundled with the app. Refresh from the vendor to pull the latest. Choose one from the Active model selector after adding.": "隨應用內建。從廠商重新整理可取得最新清單。新增後在「目前模型」選擇器中選用。",
     "{{count}} damaged saved conversations were moved aside. Archiving remains unavailable for affected project data because its state cannot be verified. You can still permanently delete the affected project data._other": "已移出 {{count}} 個損壞的已儲存對話。由於無法驗證其狀態，受影響的專案資料仍無法封存。你仍可永久刪除受影響的專案資料。",
     "Copy counts": "複製次數",
-    "Deliverable package": "交付包",
     "Require approval": "需要核准",
     "New projects": "新增 Project",
     "DRA couldn't stop the agent for this Session. The Session was not deleted. Please try again.": "DRA 無法停止此會話的智能體。會話未被刪除，請重試。",
@@ -3511,7 +3510,6 @@
     "Installed packages": "已安裝軟體套件",
     "Detected scheduler": "偵測到的排程器",
     "Available on target disk: {{size}}": "目標磁碟可用空間：{{size}}",
-    "Choose a deliverable": "選擇交付包",
     "Memory note is required.": "記憶筆記不能為空。",
     "Tracked": "已追蹤",
     "File restore": "檔案還原",
@@ -4179,7 +4177,6 @@
     "No comment": "無評論",
     "DRA will restart and use this folder as-is — <em>its contents are not merged with your current data</em>, and anything it's missing will show as unavailable. <em>Your current data folder is left untouched, so you can switch back.</em>": "DRA 將重新啟動並按原樣使用該資料夾——<em>其內容不會與你目前的資料合併</em>，缺少的內容會顯示為不可用。<em>你目前的資料夾保持不變，可以隨時切換回去。</em>",
     "{{processed}} / {{total}} pages": "{{processed}} / {{total}} 頁",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "專案設定完成後，選擇要準備的交付包。草稿在傳送前可繼續編輯。",
     "Changes notebook environment configuration.": "變更 Notebook 環境設定。",
     "Clear filters": "清除篩選",
     "The update could not be completed. Close this preview and review the current installation again.": "未能完成更新。請關閉此預覽，重新查看目前的安裝。",
@@ -7498,6 +7495,16 @@
     "Test whether a protein set has more interactions than expected in STRING, with an optional background set.": "檢驗一組蛋白質在 STRING 中的交互作用是否顯著多於預期，可指定背景集。",
     "Imported Sessions are read-only.": "匯入的工作階段為唯讀。",
     "Member files": "成員檔案",
-    "Describes images when the main model can't see them. Only models with image input are listed.": "當主模型無法看到影像時對其進行描述。僅列出支援影像輸入的模型。"
+    "Describes images when the main model can't see them. Only models with image input are listed.": "當主模型無法看到影像時對其進行描述。僅列出支援影像輸入的模型。",
+    "Prepare to consult your supervising doctor": "準備與指導醫師諮詢",
+    "Write an abstract or paper": "撰寫摘要或論文",
+    "Continue a project": "繼續專案",
+    "No recent projects yet.": "還沒有最近的專案。",
+    "Delete local copies": "刪除本機副本",
+    "Delete the app's local copies?": "刪除應用程式內的本機副本？",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "將刪除應用程式儲存的專案、對話和此裝置交付次數的本機副本。應用程式之外的備份，以及作業系統保留的副本，不會刪除。專案工作資料夾中的檔案不會刪除。",
+    "The app's local copies were deleted.": "已刪除應用程式內的本機副本。",
+    "Could not delete the app's local copies. Try again.": "未能刪除應用程式內的本機副本。請再試一次。",
+    "Deleting local copies…": "正在刪除本機副本…"
   }
 }

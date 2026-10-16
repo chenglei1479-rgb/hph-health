@@ -156,6 +156,9 @@ describe('home shell locale', () => {
       expect(declaration.value).toContain('在准备文稿时')
       expect(declaration.value).not.toContain('原稿の作成にあたり')
       expect(declaration.value).not.toContain('著者は DRA の無償提供を受けた')
+      expect(container.textContent).toContain('【运营公司名称（未设置）】')
+      expect(container.textContent).toContain('研究支持软件（开发代号）')
+      expect(container.textContent).not.toContain('免费获得了 DRA')
     }
     const feature = container.querySelector('input[aria-label="使用的功能"]')
     expect(feature).toBeInstanceOf(HTMLInputElement)

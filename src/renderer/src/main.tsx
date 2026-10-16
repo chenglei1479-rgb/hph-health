@@ -19,6 +19,9 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { startLocalePreferenceSync } from '@/stores/locale-store'
 import { useInterfaceScaleStore } from '@/stores/interface-scale-store'
 import { WindowsTitleBar } from '@/components/WindowsTitleBar'
+import { APP } from '../../shared/app-config'
+
+document.title = APP.name
 
 const rendererBootMark = 'open-science:renderer-boot-start'
 performance.mark(rendererBootMark)

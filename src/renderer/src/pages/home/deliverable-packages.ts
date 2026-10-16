@@ -1,6 +1,7 @@
-// Deliverable packages (交付包) on the home entry. The three chat modes match
-// resources/skills/research-deliverables. Statistician export is a fourth home
-// card that writes aggregate files and does not start a chat workflow.
+// Deliverable packages (交付包). The three chat modes match
+// resources/skills/research-deliverables. Statistician export writes aggregate
+// files and does not start a chat workflow; it is offered from the analysis flow,
+// not as a home card.
 
 import { isMentorDiscussionPack } from '../../../../shared/deliverable-pack-policy'
 
