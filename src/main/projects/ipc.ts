@@ -27,6 +27,7 @@ type ProjectHandlers = {
   update: (request: UpdateProjectRequest) => Promise<Project>
   updateArchive: (request: UpdateProjectArchiveRequest) => Promise<Project>
   delete: (id: string) => Promise<ProjectDeletionOutcome>
+  deleteDevicePatientData: (id: string) => Promise<void>
   listDeletionCleanup: () => Promise<ProjectDeletionCleanup[]>
   retryDeletionCleanup: () => Promise<void>
 }
@@ -48,6 +49,7 @@ type ProjectCrudRepository = Pick<ProjectRepository, 'list' | 'get' | 'create' |
   Partial<Pick<ProjectRepository, 'updateArchive'>>
 type ProjectHandlerEffects = Pick<ProjectHandlers, 'updateArchive'> & {
   onAgentContextChanged?: (projectId: string) => void
+  deleteDevicePatientData?: (projectId: string) => Promise<void>
 }
 
 // Adapts repository operations into thin handlers while enforcing Project-scoped recovery admission.
@@ -91,6 +93,13 @@ const createProjectHandlers = (
   delete: async (id) => {
     await deletionCoordinator.waitForProjectOperations([id])
     return deletionCoordinator.deleteProject(id)
+  },
+  deleteDevicePatientData: async (id) => {
+    await deletionCoordinator.waitForProjectOperations([id])
+    if (!effects.deleteDevicePatientData) {
+      throw new Error('Device patient-data deletion is unavailable.')
+    }
+    await effects.deleteDevicePatientData(id)
   },
   listDeletionCleanup: () => deletionCoordinator.listDeletionCleanup(),
   retryDeletionCleanup: async () => deletionCoordinator.retryDeletionCleanup()

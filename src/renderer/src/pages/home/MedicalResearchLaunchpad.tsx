@@ -15,7 +15,6 @@ import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
-import { DeleteLocalCopiesButton } from './DeleteLocalCopies'
 import { homePrimaryEntries, type HomePrimaryEntryId } from './home-primary-entries'
 import { nextStepAfter } from '../../../../shared/deliverable-next-step'
 import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-delivery-ledger'
@@ -50,9 +49,6 @@ type MedicalResearchLaunchpadProps = {
   onSelectWorkflow: (workflow: MedicalResearchWorkflow, theme: string) => void
   recentProjects?: readonly RecentHomeProject[]
   onOpenProject?: (projectId: string) => void
-  canDeleteLocalCopies?: boolean
-  localProjectIds?: readonly string[]
-  onDeleteLocalCopies?: (projectIds: readonly string[]) => Promise<void>
 }
 
 const ENTRY_ICONS: Record<HomePrimaryEntryId, { icon: LucideIcon; iconClassName: string }> = {
@@ -64,10 +60,7 @@ const ENTRY_ICONS: Record<HomePrimaryEntryId, { icon: LucideIcon; iconClassName:
 const MedicalResearchLaunchpad = ({
   onSelectWorkflow,
   recentProjects = [],
-  onOpenProject = () => undefined,
-  canDeleteLocalCopies = true,
-  localProjectIds = [],
-  onDeleteLocalCopies = async () => undefined
+  onOpenProject = () => undefined
 }: MedicalResearchLaunchpadProps): React.JSX.Element => {
   const { t } = useTranslation()
   const [researchTheme, setResearchTheme] = useState('')
@@ -292,11 +285,6 @@ const MedicalResearchLaunchpad = ({
               ))}
             </div>
           )}
-          <DeleteLocalCopiesButton
-            canDelete={canDeleteLocalCopies}
-            projectIds={localProjectIds}
-            onDeleteLocalCopies={onDeleteLocalCopies}
-          />
         </section>
         <div className="px-1">
           <button

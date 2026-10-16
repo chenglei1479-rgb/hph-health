@@ -153,6 +153,7 @@ const createDependencies = () => {
   const projects = {
     create: vi.fn(async () => project),
     delete: vi.fn(async () => ({ status: 'cleanup-pending' as const })),
+    deleteDevicePatientData: vi.fn(async () => undefined),
     get: vi.fn(async () => project),
     list: vi.fn(async () => [project]),
     listDeletionCleanup: vi.fn(async () => []),
@@ -271,6 +272,7 @@ const WRAPPED_COMMAND_KEYS = [
   'runtimeWriterClaim',
   'projectCreate',
   'projectDelete',
+  'projectDeleteDevicePatientData',
   'projectUpdate',
   'projectUpdateSessionDefaults',
   'sessionDelete',
@@ -393,6 +395,7 @@ describe('Data and content application commands', () => {
         'projects:create',
         'projects:update-archive',
         'projects:delete',
+        'projects:delete-device-patient-data',
         'projects:get',
         'projects:list',
         'projects:list-deletion-cleanup',
@@ -1781,6 +1784,13 @@ describe('Data and content application commands', () => {
         invocation([deleteProjectRequest] as const)
       )
     ).resolves.toEqual({ status: 'cleanup-pending' })
+    await expect(
+      router.dispatcher.invoke(
+        dataContentApplicationCommands.projectDeleteDevicePatientData,
+        invocation([deleteProjectRequest] as const)
+      )
+    ).resolves.toBeUndefined()
+    expect(deps.projects.deleteDevicePatientData).toHaveBeenCalledWith('project-1')
     await expect(
       router.dispatcher.invoke(dataContentApplicationCommands.sessionLoadAll, invocation([]))
     ).resolves.toBe(loadResult)

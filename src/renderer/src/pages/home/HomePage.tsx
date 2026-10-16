@@ -240,6 +240,7 @@ const HomePage = ({
     openEditDialog,
     dialogProps: projectFormDialogProps
   } = useProjectFormDialog({
+    canDeletePatientData: canDeleteProjects,
     onCreateCancelled: () => {
       consumeWslSetupProjectCreation()
       setSelectedMedicalWorkflow(undefined)
@@ -494,17 +495,6 @@ const HomePage = ({
       })),
     [projectSummaries]
   )
-  const localProjectIds = useMemo(() => projects.map((item) => item.id), [projects])
-
-  const deleteLocalCopies = async (ids: readonly string[]): Promise<void> => {
-    if (!canDeleteProjects) throw new Error('Project recovery is incomplete.')
-    useNavigationStore.getState().recordUserNavigation()
-    for (const id of ids) {
-      await deleteProject(id)
-      useSessionStore.getState().removeSessionsForProject(id)
-    }
-  }
-
   const recentSessions = useRecentSessions(
     persistedSessions,
     isProjectsLoaded && !loadError && hasCompleteSessionCatalog
@@ -944,9 +934,6 @@ const HomePage = ({
             onSelectWorkflow={selectMedicalWorkflow}
             recentProjects={recentHomeProjects}
             onOpenProject={(projectId) => openProject(projectId, 'user')}
-            canDeleteLocalCopies={canDeleteProjects}
-            localProjectIds={localProjectIds}
-            onDeleteLocalCopies={deleteLocalCopies}
           />
           <EthicsWritingNotice open={ethicsReminderOpen} />
 

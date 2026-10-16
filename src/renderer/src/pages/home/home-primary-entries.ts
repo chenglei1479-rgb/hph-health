@@ -34,7 +34,7 @@ export const homePrimaryEntries = (t: Translate): HomePrimaryEntry[] => [
   {
     id: 'analyze-data',
     workflow: 'analysis',
-    title: t('Analyze data'),
+    title: t('Analyze your own data'),
     subtitle: t(
       'Upload an anonymized CSV, review variables and missingness, approve a statistical plan, then create reproducible tables, figures, and code.'
     ),
@@ -45,7 +45,7 @@ export const homePrimaryEntries = (t: Translate): HomePrimaryEntry[] => [
   {
     id: 'write-abstract',
     workflow: 'writing-pack',
-    title: t('Write an abstract or paper'),
+    title: t('Prepare a conference abstract or paper'),
     subtitle: t('A short manuscript for a deadline, with checks for the ethics number and AI use.'),
     description: t(
       'This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.'

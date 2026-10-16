@@ -25,10 +25,12 @@ import {
   ProjectDeletionRecoveryLoop,
   recoverDeletionWork
 } from '../projects/deletion-coordinator'
+import { deleteDevicePatientData } from '../projects/device-patient-data'
 import { createDefaultProjectRepository, createProjectHandlers } from '../projects/ipc'
 import { getProjectDbClient } from '../projects/prisma-client'
 import { ProjectRuntimeQuiescenceOwner } from '../projects/project-runtime-quiescence-owner'
 import { broadcastToRenderers } from '../renderer-broadcast'
+import { resolveDataRoot } from '../storage-root'
 import { ReviewerProjectRuntimeOwner } from '../reviewer/project-runtime-owner'
 import type { SessionPersistenceCommands } from '../session-persistence/coordinator'
 import {
@@ -315,6 +317,7 @@ export function composeProjectLifecycle({
   })
   const projectHandlers = createProjectHandlers(projectRepository, projectDeletionCoordinator, {
     updateArchive: (request) => archiveCoordinator.updateProjectArchive(request),
+    deleteDevicePatientData: (projectId) => deleteDevicePatientData(resolveDataRoot(), projectId),
     onAgentContextChanged: (projectId) => {
       // Runtime generations capture Project Agent Context during Session setup. Retiring them marks
       // idle Sessions for resume immediately; an in-flight turn drains before its next prompt.
