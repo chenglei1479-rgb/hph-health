@@ -1,5 +1,6 @@
 import { copyForLocale } from '../../../../shared/copy-locale'
 import type { Locale } from '../../../../shared/locale'
+import { coiCheckboxLabel } from '../../../../shared/writing-safeguards/ai-usage-declaration'
 
 export type WritingSafeguardsCopy = {
   open: string
@@ -31,7 +32,7 @@ export type WritingSafeguardsCopy = {
   exported: string
 }
 
-const ja: WritingSafeguardsCopy = {
+const ja: Omit<WritingSafeguardsCopy, 'coi'> = {
   open: '執筆時の確認',
   close: '閉じる',
   title: '執筆時の確認',
@@ -47,7 +48,6 @@ const ja: WritingSafeguardsCopy = {
   purpose: '用途',
   addUsage: '機能を追加',
   rebuild: '開示文を作り直す',
-  coi: '利益相反の文を加える（DRA の無償提供を受けた／The authors received DRA free of charge.）',
   manuscript: '原稿',
   declaration: '開示の下書き',
   exportManuscript: '原稿を書き出す',
@@ -79,7 +79,6 @@ const catalogs = {
     purpose: 'Purpose',
     addUsage: 'Add a feature',
     rebuild: 'Rebuild the disclosure',
-    coi: 'Add a conflict-of-interest sentence (The authors received DRA free of charge.)',
     manuscript: 'Manuscript',
     declaration: 'Disclosure draft',
     exportManuscript: 'Export manuscript',
@@ -108,7 +107,6 @@ const catalogs = {
     purpose: '用途',
     addUsage: '添加功能',
     rebuild: '重新生成披露文',
-    coi: '加入利益冲突声明（作者免费获得了 DRA。／The authors received DRA free of charge.）',
     manuscript: '文稿',
     declaration: '披露草稿',
     exportManuscript: '导出文稿',
@@ -137,7 +135,6 @@ const catalogs = {
     purpose: '用途',
     addUsage: '新增功能',
     rebuild: '重新產生揭露文',
-    coi: '加入利益衝突聲明（作者免費取得 DRA。／The authors received DRA free of charge.）',
     manuscript: '文稿',
     declaration: '揭露草稿',
     exportManuscript: '匯出文稿',
@@ -166,7 +163,6 @@ const catalogs = {
     purpose: 'Zweck',
     addUsage: 'Funktion hinzufügen',
     rebuild: 'Offenlegung neu erstellen',
-    coi: 'Interessenkonflikt-Satz hinzufügen (The authors received DRA free of charge.)',
     manuscript: 'Manuskript',
     declaration: 'Entwurf der Offenlegung',
     exportManuscript: 'Manuskript exportieren',
@@ -195,7 +191,6 @@ const catalogs = {
     purpose: 'Finalidad',
     addUsage: 'Añadir función',
     rebuild: 'Regenerar la declaración',
-    coi: 'Añadir la frase de conflicto de intereses (The authors received DRA free of charge.)',
     manuscript: 'Manuscrito',
     declaration: 'Borrador de la declaración',
     exportManuscript: 'Exportar manuscrito',
@@ -224,7 +219,6 @@ const catalogs = {
     purpose: 'Usage',
     addUsage: 'Ajouter une fonction',
     rebuild: 'Régénérer la déclaration',
-    coi: 'Ajouter la phrase sur le conflit d’intérêts (The authors received DRA free of charge.)',
     manuscript: 'Manuscrit',
     declaration: 'Brouillon de la déclaration',
     exportManuscript: 'Exporter le manuscrit',
@@ -253,7 +247,6 @@ const catalogs = {
     purpose: '용도',
     addUsage: '기능 추가',
     rebuild: '공개문 다시 만들기',
-    coi: '이해충돌 문장을 추가 (The authors received DRA free of charge.)',
     manuscript: '원고',
     declaration: '공개문 초안',
     exportManuscript: '원고 내보내기',
@@ -282,7 +275,6 @@ const catalogs = {
     purpose: 'Назначение',
     addUsage: 'Добавить функцию',
     rebuild: 'Собрать текст раскрытия заново',
-    coi: 'Добавить фразу о конфликте интересов (The authors received DRA free of charge.)',
     manuscript: 'Рукопись',
     declaration: 'Черновик раскрытия',
     exportManuscript: 'Экспортировать рукопись',
@@ -295,7 +287,9 @@ const catalogs = {
     findingValue: 'Индивидуальное значение пациента',
     exported: 'Экспортировано.'
   }
-} satisfies Record<Locale, WritingSafeguardsCopy>
+} satisfies Record<Locale, Omit<WritingSafeguardsCopy, 'coi'>>
 
-export const writingSafeguardsCopy = (language?: string): WritingSafeguardsCopy =>
-  copyForLocale(catalogs, language)
+export const writingSafeguardsCopy = (language?: string): WritingSafeguardsCopy => ({
+  ...copyForLocale(catalogs, language),
+  coi: coiCheckboxLabel(language)
+})

@@ -7286,9 +7286,6 @@
     "Step 1": "Paso 1",
     "Project setup": "Configuración del proyecto",
     "Step 2": "Paso 2",
-    "Choose a deliverable": "Elegir un entregable",
-    "Deliverable package": "Paquete de entregables",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "Tras configurar el proyecto, elija el paquete de entregables que desea preparar. El borrador sigue siendo editable hasta que lo envíe.",
     "Research theme": "Tema de investigación",
     "Type a clinical question or research topic…": "Escribe una pregunta clínica o un tema de investigación…",
     "Try this example:": "Prueba este ejemplo:",
@@ -7710,6 +7707,16 @@
     "Fictional sample abstract": "Resumen de muestra ficticio",
     "Open the fictional sample. No model call and no API key.": "Abrir la muestra ficticia. Sin llamada al modelo y sin clave de API.",
     "Save this sample": "Guardar esta muestra",
+    "Prepare to consult your supervising doctor": "Preparar la consulta con el tutor",
+    "Write an abstract or paper": "Redactar un resumen o un artículo",
+    "Continue a project": "Continuar un proyecto",
+    "No recent projects yet.": "Aún no hay proyectos recientes.",
+    "Delete local copies": "Eliminar copias locales",
+    "Delete the app's local copies?": "¿Eliminar las copias locales de la aplicación?",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "Esta acción elimina las copias locales de la aplicación de los proyectos, las conversaciones guardadas y los contadores de entregas en este equipo. Las copias de seguridad y las copias fuera de la aplicación, incluidas las que conserva el sistema operativo, no se eliminan. Los archivos de la carpeta de trabajo de un proyecto no se eliminan.",
+    "The app's local copies were deleted.": "Se eliminaron las copias locales de la aplicación.",
+    "Could not delete the app's local copies. Try again.": "No se pudieron eliminar las copias locales de la aplicación. Inténtelo de nuevo.",
+    "Deleting local copies…": "Eliminando copias locales…",
     "Sample saved on this device.": "Guardado en este equipo."
   }
 }

@@ -6958,9 +6958,6 @@
     "Step 1": "步驟 1",
     "Project setup": "專案設定",
     "Step 2": "步驟 2",
-    "Choose a deliverable": "選擇交付包",
-    "Deliverable package": "交付包",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "專案設定完成後，選擇要準備的交付包。草稿在傳送前可繼續編輯。",
     "Research theme": "研究主題",
     "Type a clinical question or research topic…": "輸入臨床問題或研究主題…",
     "Try this example:": "試試這個範例：",
@@ -7382,6 +7379,16 @@
     "Fictional sample abstract": "虛構樣本學會摘要",
     "Open the fictional sample. No model call and no API key.": "開啟虛構樣本。不呼叫模型，也不需要 API 金鑰。",
     "Save this sample": "儲存此樣本",
+    "Prepare to consult your supervising doctor": "準備與指導醫師諮詢",
+    "Write an abstract or paper": "撰寫摘要或論文",
+    "Continue a project": "繼續專案",
+    "No recent projects yet.": "還沒有最近的專案。",
+    "Delete local copies": "刪除本機副本",
+    "Delete the app's local copies?": "刪除應用程式內的本機副本？",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "將刪除應用程式儲存的專案、對話和此裝置交付次數的本機副本。應用程式之外的備份，以及作業系統保留的副本，不會刪除。專案工作資料夾中的檔案不會刪除。",
+    "The app's local copies were deleted.": "已刪除應用程式內的本機副本。",
+    "Could not delete the app's local copies. Try again.": "未能刪除應用程式內的本機副本。請再試一次。",
+    "Deleting local copies…": "正在刪除本機副本…",
     "Sample saved on this device.": "已儲存在此裝置。"
   }
 }

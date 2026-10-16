@@ -3,8 +3,10 @@ import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
+import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
+
 const projectRoot = resolve(__dirname, '../..')
-const displayName = 'DRA'
+const displayName = PRODUCT_DISPLAY_NAME
 const appId = 'com.dra-hph.desktop'
 
 describe('app display branding', () => {
@@ -21,16 +23,16 @@ describe('app display branding', () => {
       'utf8'
     )
 
-    expect(mainSource).toContain(`const APP_NAME = '${displayName}'`)
-    expect(windowsSource).toContain(`title: '${displayName}'`)
+    expect(mainSource).toContain('const APP_NAME = PRODUCT_DISPLAY_NAME')
+    expect(windowsSource).toContain('title: PRODUCT_DISPLAY_NAME')
     expect(rendererHtmlSource).toContain(`<title>${displayName}</title>`)
     expect(builderSource).toContain(`productName: ${displayName}`)
     expect(builderSource).toContain(`CFBundleName: ${displayName}`)
     // Finder uses the installation label; CFBundleName stays aligned with Electron Helpers.
-    expect(builderSource).toContain('CFBundleDisplayName: DRA')
-    expect(builderSource).toContain('name: DRA.app')
+    expect(builderSource).toContain(`CFBundleDisplayName: ${displayName}`)
+    expect(builderSource).toContain(`name: ${displayName}.app`)
     expect(packageSource).toContain(`"productName": "${displayName}"`)
-    expect(appConfigSource).toContain(`name: '${displayName}'`)
+    expect(appConfigSource).toContain('name: PRODUCT_DISPLAY_NAME')
     expect(homePageSource).toContain('APP.name')
   })
 
