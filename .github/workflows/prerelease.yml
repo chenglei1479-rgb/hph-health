@@ -123,6 +123,33 @@ jobs:
           SCHEMA_NOTEBOOK_ARCH: ${{ matrix.arch }}
         run: node scripts/stage-schema-notebook-python.mjs
 
+      # stage-backend.mjs and electron-builder extraResources both require the pinned
+      # micromamba binary. It is gitignored and fetched from the official GitHub release.
+      - name: Stage pinned micromamba
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.platform }}-${{ matrix.arch }}" in
+            mac-arm64) subdir=osx-arm64 ;;
+            mac-x64) subdir=osx-64 ;;
+            win-x64) subdir=win-64 ;;
+            *)
+              echo "No pinned micromamba subdir for ${{ matrix.platform }}/${{ matrix.arch }}" >&2
+              exit 1
+              ;;
+          esac
+          name=micromamba
+          if [ "$subdir" = "win-64" ]; then
+            name=micromamba.exe
+          fi
+          export MICROMAMBA_VERSION=$(node -p "require('./scripts/micromamba-versions.json').version")
+          echo "using pinned micromamba $MICROMAMBA_VERSION"
+          primary_path="resources/bin/${{ matrix.platform }}/${{ matrix.arch }}/$name"
+          node scripts/fetch-micromamba.mjs "$subdir" "$primary_path"
+          if [ "$subdir" = "win-64" ]; then
+            node scripts/fetch-micromamba.mjs "$subdir" "resources/bin/${{ matrix.platform }}/${{ matrix.arch }}/micromamba-compat.exe" compatibility
+          fi
+
       - name: Package unsigned installers
         shell: bash
         # Same 6 GB ceiling as the app build. macos-latest has 7 GB of RAM;
