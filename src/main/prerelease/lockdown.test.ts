@@ -33,7 +33,7 @@ it('drops account configuration and refuses Auth0 and usage statistics', async (
   const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }))
   globalThis.fetch = fetchImpl as typeof fetch
 
-  installMainPrereleaseLockdown()
+  installMainPrereleaseLockdown(net)
 
   await expect(fetch('https://tenant.auth0.com/authorize')).rejects.toThrow(/Auth0/)
   await expect(fetch('https://stats.example.com/dra/usage', { method: 'POST' })).rejects.toThrow(

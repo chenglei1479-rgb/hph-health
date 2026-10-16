@@ -1,13 +1,8 @@
-import { createRequire } from 'node:module'
-import * as electronModule from 'electron'
-
 import {
   isBlockedPrereleaseUrl,
   isDraPrerelease,
   PRERELEASE_BLOCKED_REQUEST
 } from '../../shared/prerelease'
-
-const require = createRequire(import.meta.url)
 
 const AUTH_ENV_KEYS = [
   'DRA_AUTH_MODE',
@@ -53,35 +48,15 @@ const patchNet = (net: ElectronNet | undefined): void => {
   }
 }
 
-// Chromium net.fetch is a separate stack from global fetch. Update manifests use it.
-// A namespace import stays loadable in the Node backend (electron has no named net export
-// there) and still sees the Vitest mock. createRequire covers the Electron main process
-// when that binding is a different object.
-const patchElectronNetFetch = (): void => {
-  const namespace = electronModule as ElectronNet & { default?: ElectronNet }
-  patchNet(namespace.net)
-  try {
-    // Vitest's electron mock has no default export and throws if it is read.
-    patchNet(namespace.default?.net)
-  } catch {
-    // The namespace binding is enough when default is absent.
-  }
-  try {
-    const loaded = require('electron') as ElectronNet | string | undefined
-    if (loaded && typeof loaded === 'object') patchNet(loaded.net)
-  } catch {
-    // The Node backend does not provide Electron's net module.
-  }
-}
-
-// Drops account configuration and refuses Auth0, usage statistics, and the upstream update host.
-export const installMainPrereleaseLockdown = (): void => {
+// Chromium net.fetch is a separate stack from global fetch. The Electron shell passes its
+// net binding in. The Node backend does not import Electron.
+export const installMainPrereleaseLockdown = (electronNet?: ElectronNet): void => {
   if (!isDraPrerelease() || installed) return
   installed = true
   for (const key of AUTH_ENV_KEYS) delete process.env[key]
   process.env.DRA_TELEMETRY = '0'
   process.env.DRA_USAGE_STATISTICS = '0'
-  patchElectronNetFetch()
+  patchNet(electronNet)
   const original = globalThis.fetch
   if (typeof original !== 'function') return
   globalThis.fetch = guardedFetch(original)

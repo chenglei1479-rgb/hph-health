@@ -1,4 +1,3 @@
-import { app } from 'electron'
 import { getAccountOwner } from '../account/runtime'
 import { createWindowsExecutableVerifier } from '../windows-executable-trust'
 import { runtimeMetadata } from '../runtime-metadata'

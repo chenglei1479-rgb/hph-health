@@ -63,7 +63,7 @@ import { defaultVariableDefinitionCompleter } from './variable-definition/model-
 import { captureVariableDefinitionProviderTarget } from './variable-definition/provider-target'
 import { createVariableDefinitionService } from './variable-definition/service'
 
-import { app } from 'electron'
+import { getUserDataPath } from './user-data-path'
 import { join } from 'node:path'
 
 import { registerSchemaNotebookIpc } from './notebook/schema-only/ipc'
@@ -731,10 +731,10 @@ export const createApplicationModules = async (
     ...agentRuntime,
     translate
   })
-  const schemaNotebookDirectory = join(app.getPath('userData'), 'schema-notebook')
+  const schemaNotebookDirectory = join(getUserDataPath(), 'schema-notebook')
   const schemaNotebook = createSchemaNotebookService({
     directory: schemaNotebookDirectory,
-    approvalLogPath: join(app.getPath('userData'), 'phi-vault', 'machine-approval.jsonl'),
+    approvalLogPath: join(getUserDataPath(), 'phi-vault', 'machine-approval.jsonl'),
     readAgentContext: async (projectId) =>
       (await sessionPackages.projectRepository.get(projectId))?.agentContext
   })
@@ -755,7 +755,7 @@ export const createApplicationModules = async (
       registerSchemaNotebookIpc(
         {
           directory: schemaNotebookDirectory,
-          approvalLogPath: join(app.getPath('userData'), 'phi-vault', 'machine-approval.jsonl')
+          approvalLogPath: join(getUserDataPath(), 'phi-vault', 'machine-approval.jsonl')
         },
         schemaNotebook
       )
@@ -763,7 +763,7 @@ export const createApplicationModules = async (
   )
   const writingSafeguards = createWritingSafeguardsCommandOwner(
     createEthicsApprovalStore(
-      join(app.getPath('userData'), 'writing-safeguards', 'ethics-approval.json')
+      join(getUserDataPath(), 'writing-safeguards', 'ethics-approval.json')
     )
   )
   const statisticianReview = createStatisticianReviewCommandOwner(translate)

@@ -78,6 +78,7 @@ import { resolveBootstrapConfigRoot } from './storage/config-root'
 import { resolveElectronProfile } from './storage/electron-profile'
 import { cancelMigrationForQuit, isMigrationInProgress } from './storage/migration-state'
 import { installMainPrereleaseLockdown } from './prerelease/lockdown'
+import { configureUserDataPath } from './user-data-path'
 import { parseWebModeOptions } from './web-service/options'
 
 const startupReporter = createBackendStartupReporter()
@@ -272,6 +273,7 @@ async function main(): Promise<void> {
           ? join(home, 'Library', 'Application Support')
           : process.env.XDG_CONFIG_HOME || join(home, '.config')
     profilePath = resolveElectronProfile({ appData, configRoot, packaged })
+    configureUserDataPath(() => profilePath)
     const credentialBootstrapLease = acquireRuntimeDirectorySync(
       join(home, '.open-science-credential-bootstrap')
     )

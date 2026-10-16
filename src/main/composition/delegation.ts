@@ -1,4 +1,3 @@
-import { app } from 'electron'
 import { getAccountOwner } from '../account/runtime'
 import { parseArtifactVersionLocator } from '../../shared/artifact-provenance'
 import { runtimeMetadata } from '../runtime-metadata'
