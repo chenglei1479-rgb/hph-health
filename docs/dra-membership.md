@@ -40,4 +40,6 @@ The candidate DRA Research Project skill provides evidence-table records, manusc
 
 Payment, automatic renewal, cancellation billing and usage quotas remain deferred. No new remote usage telemetry is enabled by this change.
 
+Real membership enforcement still needs a server-side check, planned after beta. The desktop only reads a signed ID-token claim after local signature, issuer, audience, and expiry checks. That claim is not proof of payment, and it is not a live entitlement lookup. Do not treat a restored session as a membership decision made by a server.
+
 Verify actual Free → Plus → Pro → Free transitions with a controlled Auth0 identity, re-login after metadata changes, and attempt the protected operations. Unit tests use signed RSA fixtures and administrator Action event fixtures; they do not establish that a real user's grant or model execution has succeeded.

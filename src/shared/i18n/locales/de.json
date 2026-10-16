@@ -7184,6 +7184,8 @@
     "Account could not be loaded": "Konto konnte nicht geladen werden",
     "Loading account…": "Konto wird geladen…",
     "Account service configuration is invalid.": "Die Konfiguration des Kontodienstes ist ungültig.",
+    "The account consent notice could not be loaded.": "Der Hinweis zur Kontoeinwilligung konnte nicht geladen werden.",
+    "The terms of use could not be loaded.": "Die Nutzungsbedingungen konnten nicht geladen werden.",
     "Verify your email in the browser, then sign in again.": "Bestätigen Sie Ihre E-Mail im Browser und melden Sie sich erneut an.",
     "This local research profile belongs to another account. Sign in with its owner account.": "Dieses lokale Forschungsprofil gehört einem anderen Konto. Melden Sie sich mit dem Eigentümerkonto an.",
     "Login timed out. Please try again.": "Zeitüberschreitung bei der Anmeldung. Bitte erneut versuchen.",

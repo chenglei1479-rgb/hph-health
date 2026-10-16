@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { AccountOwner } from './owner'
 import { readAccountConfig } from './config'
 import { MEMBERSHIP_CLAIM } from '../../shared/membership'
-import type { AccountSessionStore, SavedAccountSession } from './session-store'
+import { JWKS_CACHE_TTL_MS, rsaKeyThumbprints } from './jwks-pin'
+import type { AccountJwksPin, AccountSessionStore, SavedAccountSession } from './session-store'
 
 const owners: AccountOwner[] = []
 describe('signed DRA membership', () => {
@@ -217,7 +218,13 @@ describe('DRA account configuration', () => {
   it('runs local research admission without identity, refresh, browser or network calls', async () => {
     const request = vi.fn()
     const browser = vi.fn()
-    const store = { read: vi.fn(), write: vi.fn(), clear: vi.fn() }
+    const store = {
+      read: vi.fn(),
+      write: vi.fn(),
+      readPin: vi.fn(),
+      writePin: vi.fn(),
+      clear: vi.fn()
+    }
     const owner = new AccountOwner({
       config: readAccountConfig({ DRA_AUTH_MODE: 'local' }),
       fetch: request,
@@ -285,16 +292,27 @@ describe('DRA account configuration', () => {
 })
 
 describe('persistent account sessions', () => {
-  const memory = (): AccountSessionStore & { value?: SavedAccountSession } => ({
+  const memory = (): AccountSessionStore & {
+    value?: SavedAccountSession
+    pin?: AccountJwksPin
+  } => ({
     value: undefined,
+    pin: undefined,
     read() {
       return this.value
     },
     write(value) {
       this.value = structuredClone(value)
     },
+    readPin() {
+      return this.pin
+    },
+    writePin(pin) {
+      this.pin = structuredClone(pin)
+    },
     clear() {
       this.value = undefined
+      this.pin = undefined
     }
   })
   const restart = (f: Fixture, store: AccountSessionStore, now?: () => number): AccountOwner => {
@@ -352,6 +370,112 @@ describe('persistent account sessions', () => {
     }
     store.value = original
     expect((await restart(f, store, () => Date.now() + 3600001).getState()).user).toBeUndefined()
+  })
+  it('rejects a JWKS substituted in account-session.enc when the signature pin does not match', async () => {
+    const store = memory()
+    const f = await fixture({
+      sessionStore: store,
+      expiry: '4h',
+      claims: {
+        [MEMBERSHIP_CLAIM]: { plan: 'pro', status: 'active', validUntil: Date.now() + 4 * 3600000 }
+      }
+    })
+    await f.owner.begin({ method: 'email' })
+    await f.complete()
+    f.owner.dispose()
+    const pin = structuredClone(store.pin)
+    const attacker = await generateKeyPair('RS256', { extractable: true })
+    const attackerJwk = {
+      ...(await exportJWK(attacker.publicKey)),
+      kid: 'attacker',
+      alg: 'RS256',
+      kty: 'RSA' as const
+    }
+    const forged = await new SignJWT({
+      sub: 'owner-1',
+      email: 'researcher@example.org',
+      email_verified: true,
+      [MEMBERSHIP_CLAIM]: { plan: 'pro', status: 'active', validUntil: Date.now() + 4 * 3600000 }
+    })
+      .setProtectedHeader({ alg: 'RS256', kid: 'attacker' })
+      .setIssuer('https://tenant.auth0.com/')
+      .setAudience('client-1')
+      .setIssuedAt()
+      .setExpirationTime('4h')
+      .sign(attacker.privateKey)
+    store.value = {
+      ...store.value!,
+      idToken: forged,
+      keys: { keys: [attackerJwk] },
+      pinnedKeyThumbprints: rsaKeyThumbprints({ keys: [attackerJwk] })
+    }
+    vi.mocked(f.request).mockImplementation(async () => {
+      throw new Error('offline')
+    })
+    const next = restart(f, store)
+    expect((await next.getState()).user).toBeUndefined()
+    expect(next.snapshot().membership).toBeUndefined()
+    expect(() => next.assertFeature('multi-agent')).toThrow('login required')
+    expect(store.pin).toEqual(pin)
+  })
+  it('refreshes signing keys after the cache expires instead of trusting them offline', async () => {
+    let now = Date.now()
+    const store = memory()
+    const f = await fixture({ sessionStore: store, now: () => now, expiry: '4h' })
+    await f.owner.begin({ method: 'email' })
+    await f.complete()
+    f.owner.dispose()
+    now += JWKS_CACHE_TTL_MS + 1000
+    vi.mocked(f.request).mockClear()
+    const next = restart(f, store, () => now)
+    expect((await next.getState()).user?.subject).toBe('owner-1')
+    expect(
+      vi
+        .mocked(f.request)
+        .mock.calls.some(([url]) => String(url).endsWith('/.well-known/jwks.json'))
+    ).toBe(true)
+  })
+  it('rejects an attacker-signed token once the cached JWKS has expired', async () => {
+    let now = Date.now()
+    const store = memory()
+    const f = await fixture({ sessionStore: store, now: () => now, expiry: '4h' })
+    await f.owner.begin({ method: 'email' })
+    await f.complete()
+    f.owner.dispose()
+    now += JWKS_CACHE_TTL_MS + 1000
+    const attacker = await generateKeyPair('RS256', { extractable: true })
+    const attackerJwk = {
+      ...(await exportJWK(attacker.publicKey)),
+      kid: 'attacker',
+      alg: 'RS256',
+      kty: 'RSA' as const
+    }
+    const forged = await new SignJWT({
+      sub: 'owner-1',
+      email: 'researcher@example.org',
+      email_verified: true
+    })
+      .setProtectedHeader({ alg: 'RS256', kid: 'attacker' })
+      .setIssuer('https://tenant.auth0.com/')
+      .setAudience('client-1')
+      .setIssuedAt(Math.floor(now / 1000))
+      .setExpirationTime(Math.floor(now / 1000) + 4 * 3600)
+      .sign(attacker.privateKey)
+    store.value = {
+      ...store.value!,
+      idToken: forged,
+      keys: { keys: [attackerJwk] },
+      keysFetchedAt: now,
+      pinnedKeyThumbprints: rsaKeyThumbprints({ keys: [attackerJwk] })
+    }
+    store.pin = {
+      ...store.pin!,
+      thumbprints: rsaKeyThumbprints({ keys: [attackerJwk] }),
+      fetchedAt: now - JWKS_CACHE_TTL_MS - 1000
+    }
+    const next = restart(f, store, () => now)
+    expect((await next.getState()).user).toBeUndefined()
+    expect(store.value).toBeUndefined()
   })
   it('refreshes expired identity, rotates credentials and reloads signed membership', async () => {
     const store = memory()

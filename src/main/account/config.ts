@@ -29,7 +29,17 @@ export const readAccountConfig = (
     throw new Error('Required account mode needs a production tenant.')
   if (!env.DRA_AUTH_ISSUER && !env.DRA_AUTH_CLIENT_ID) return undefined
   const issuer = new URL(env.DRA_AUTH_ISSUER ?? '')
-  if (issuer.href.includes('REPLACE_') || env.DRA_AUTH_CLIENT_ID?.includes('REPLACE_'))
+  const placeholder = (value: string | undefined): boolean => Boolean(value?.includes('REPLACE_'))
+  if (
+    placeholder(issuer.href) ||
+    placeholder(env.DRA_AUTH_CLIENT_ID) ||
+    placeholder(env.DRA_AUTH_AUDIENCE) ||
+    placeholder(env.DRA_AUTH_ORGANIZATION) ||
+    placeholder(env.DRA_AUTH_GOOGLE_CONNECTION) ||
+    placeholder(env.DRA_AUTH_MICROSOFT_CONNECTION) ||
+    placeholder(env.DRA_AUTH_APPLE_CONNECTION) ||
+    placeholder(env.DRA_AUTH_INSTITUTION_CONNECTION)
+  )
     throw new Error('Replace production account template values before deployment.')
   if (
     issuer.protocol !== 'https:' ||

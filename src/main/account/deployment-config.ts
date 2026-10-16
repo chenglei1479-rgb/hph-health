@@ -2,14 +2,25 @@ import { readFileSync } from 'node:fs'
 import { isDraPrerelease } from '../../shared/prerelease'
 import { readAccountConfig, type AccountConfig } from './config'
 
+export type DeployedAccountConfigOptions = {
+  // Packaged builds ignore DRA_AUTH_* and refuse to run when the deployment file is missing.
+  packaged?: boolean
+}
+
+const hasDraAuthEnv = (env: NodeJS.ProcessEnv): boolean =>
+  Boolean(env.DRA_AUTH_MODE || env.DRA_AUTH_ISSUER || env.DRA_AUTH_CLIENT_ID)
+
 // Public deployment configuration only. Passwords and OAuth client secrets never belong here.
 export const readDeployedAccountConfig = (
   files: string[],
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  options: DeployedAccountConfigOptions = {}
 ): AccountConfig | undefined => {
+  // Beta builds skip login and never open an Auth0 tenant, including when a
+  // deployment file or DRA_AUTH_* override is present.
   if (isDraPrerelease(env)) return undefined
-  if (env.DRA_AUTH_MODE || env.DRA_AUTH_ISSUER || env.DRA_AUTH_CLIENT_ID)
-    return readAccountConfig(env)
+  const packaged = options.packaged === true
+  if (!packaged && hasDraAuthEnv(env)) return readAccountConfig(env)
   for (const file of files) {
     let text: string
     try {
@@ -23,6 +34,7 @@ export const readDeployedAccountConfig = (
       throw new Error('Invalid deployed account configuration.')
     const config = value as Record<string, unknown>
     if (config.mode === 'local') {
+      if (packaged) throw new Error('Packaged builds cannot use unrestricted local mode.')
       if (Object.keys(config).some((key) => key !== 'mode'))
         throw new Error('Local account configuration must not contain OAuth settings.')
       return undefined
@@ -78,5 +90,17 @@ export const readDeployedAccountConfig = (
       DRA_AUTH_INSTITUTION_CONNECTION: names.institution
     })
   }
-  return undefined
+  throw new Error('Account configuration is missing.')
+}
+
+export const loadBundledAccountConfig = (
+  files: string[],
+  env: NodeJS.ProcessEnv = process.env,
+  options: DeployedAccountConfigOptions = {}
+): { config?: AccountConfig; configurationError: boolean } => {
+  try {
+    return { config: readDeployedAccountConfig(files, env, options), configurationError: false }
+  } catch {
+    return { configurationError: true }
+  }
 }

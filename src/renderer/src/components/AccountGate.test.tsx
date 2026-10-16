@@ -134,6 +134,175 @@ it('opens membership from the account dialog and preserves the research workspac
   expect(document.querySelector('[data-testid="membership-panel"]')?.textContent).toContain('$20')
   expect(host.querySelector('[data-testid="private-workspace"]')).not.toBeNull()
 })
+const consentNotice = {
+  version: '2026-10-14.placeholder',
+  title: '国外移転（仮文）',
+  body: 'シンガポール法人。Okta。米国には包括的な連邦プライバシー法がない。講じる措置。',
+  acknowledgement: '国外移転に同意します'
+}
+
+it('blocks every sign-in button until the consent box is checked', async () => {
+  const login = vi.fn(async () => state({ pending: true }))
+  await render({
+    getState: vi.fn(async () =>
+      state({
+        methods: ['email', 'google', 'microsoft', 'apple', 'institution'],
+        consent: { required: true, notice: consentNotice }
+      })
+    ),
+    login,
+    logout: vi.fn()
+  })
+  expect(host.querySelector('[data-testid="private-workspace"]')).toBeNull()
+  expect(host.querySelector('[data-testid="account-consent"]')?.textContent).toContain(
+    'シンガポール法人'
+  )
+  for (const copy of [
+    'Continue with email',
+    'Create a DRA account',
+    'Continue with Google',
+    'Continue with Microsoft',
+    'Continue with Apple',
+    'Continue with institution SSO'
+  ])
+    expect(button(copy).disabled, copy).toBe(true)
+  await act(async () => button('Create a DRA account').click())
+  expect(login).not.toHaveBeenCalled()
+  const box = host.querySelector('[data-testid="account-consent-accept"]') as HTMLInputElement
+  await act(async () => {
+    box.click()
+  })
+  expect(button('Create a DRA account').disabled).toBe(false)
+  await act(async () => button('Create a DRA account').click())
+  expect(login).toHaveBeenCalledWith({ method: 'email', signup: true, consentAccepted: true })
+})
+
+it('re-prompts when the consent version changes', async () => {
+  vi.useFakeTimers()
+  let current = state({
+    user: { subject: 'owner-1', email: 'owner@example.org' },
+    consent: { required: false, notice: consentNotice, acceptedAt: '2026-10-14T01:02:03.000Z' }
+  })
+  await render({ getState: vi.fn(async () => current), login: vi.fn(), logout: vi.fn() })
+  expect(host.querySelector('[data-testid="private-workspace"]')).not.toBeNull()
+  current = state({
+    user: { subject: 'owner-1', email: 'owner@example.org' },
+    consent: {
+      required: true,
+      notice: { ...consentNotice, version: '2026-11-01.legal', title: '新しい同意' }
+    }
+  })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2100)
+  })
+  expect(host.querySelector('[data-testid="private-workspace"]')).toBeNull()
+  expect(host.textContent).toContain('新しい同意')
+  expect(button('Continue with email').disabled).toBe(true)
+  expect(
+    (host.querySelector('[data-testid="account-consent-accept"]') as HTMLInputElement).checked
+  ).toBe(false)
+})
+
+const termsNotice = {
+  version: '2026-10-14.placeholder',
+  title: '【利用規約】',
+  body: '【運営会社名】の利用条件です。',
+  acknowledgement: '利用規約に同意します'
+}
+
+it('blocks sign-in until both the consent and terms boxes are checked', async () => {
+  const login = vi.fn(async () => state({ pending: true }))
+  await render({
+    getState: vi.fn(async () =>
+      state({
+        consent: { required: true, notice: consentNotice },
+        terms: { required: true, notice: termsNotice }
+      })
+    ),
+    login,
+    logout: vi.fn()
+  })
+  expect(host.querySelector('[data-testid="account-terms"]')?.textContent).toContain('利用規約')
+  const consentBox = host.querySelector(
+    '[data-testid="account-consent-accept"]'
+  ) as HTMLInputElement
+  const termsBox = host.querySelector('[data-testid="account-terms-accept"]') as HTMLInputElement
+  await act(async () => {
+    consentBox.click()
+  })
+  expect(button('Continue with email').disabled).toBe(true)
+  await act(async () => button('Continue with email').click())
+  expect(login).not.toHaveBeenCalled()
+  await act(async () => {
+    termsBox.click()
+  })
+  expect(button('Create a DRA account').disabled).toBe(false)
+  await act(async () => button('Create a DRA account').click())
+  expect(login).toHaveBeenCalledWith({
+    method: 'email',
+    signup: true,
+    consentAccepted: true,
+    termsAccepted: true
+  })
+})
+
+it('re-prompts when the terms version changes and keeps an accepted consent box checked', async () => {
+  vi.useFakeTimers()
+  let current = state({
+    user: { subject: 'owner-1', email: 'owner@example.org' },
+    consent: { required: false, notice: consentNotice, acceptedAt: '2026-10-14T01:02:03.000Z' },
+    terms: { required: false, notice: termsNotice, acceptedAt: '2026-10-14T01:02:03.000Z' }
+  })
+  await render({ getState: vi.fn(async () => current), login: vi.fn(), logout: vi.fn() })
+  expect(host.querySelector('[data-testid="private-workspace"]')).not.toBeNull()
+  current = state({
+    user: { subject: 'owner-1', email: 'owner@example.org' },
+    consent: { required: false, notice: consentNotice, acceptedAt: '2026-10-14T01:02:03.000Z' },
+    terms: {
+      required: true,
+      notice: { ...termsNotice, version: '2026-12-01.terms', title: '新しい利用規約' }
+    }
+  })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2100)
+  })
+  expect(host.querySelector('[data-testid="private-workspace"]')).toBeNull()
+  expect(host.textContent).toContain('新しい利用規約')
+  expect(host.querySelector('[data-testid="account-consent"]')).toBeNull()
+  expect(button('Continue with email').disabled).toBe(true)
+  expect(
+    (host.querySelector('[data-testid="account-terms-accept"]') as HTMLInputElement).checked
+  ).toBe(false)
+})
+
+it('keeps sign-in disabled when the terms of use failed to load', async () => {
+  await render({
+    getState: vi.fn(async () =>
+      state({
+        consent: { required: false, notice: consentNotice, acceptedAt: '2026-10-14T01:02:03.000Z' },
+        error: 'terms',
+        terms: { required: true }
+      })
+    ),
+    login: vi.fn(),
+    logout: vi.fn()
+  })
+  expect(host.textContent).toContain('The terms of use could not be loaded.')
+  expect(host.querySelector('[data-testid="account-terms"]')).toBeNull()
+  expect(button('Continue with email').disabled).toBe(true)
+})
+
+it('keeps sign-in disabled when the consent notice failed to load', async () => {
+  await render({
+    getState: vi.fn(async () => state({ error: 'consent', consent: { required: true } })),
+    login: vi.fn(),
+    logout: vi.fn()
+  })
+  expect(host.textContent).toContain('The account consent notice could not be loaded.')
+  expect(host.querySelector('[data-testid="account-consent"]')).toBeNull()
+  expect(button('Continue with email').disabled).toBe(true)
+})
+
 it('has translations for every account interface string in all eight locales', () => {
   const component = readFileSync(resolve('src/renderer/src/components/AccountGate.tsx'), 'utf8')
   const keys = [...component.matchAll(/\bt\('([^']+)'\)/g)].map((match) => match[1])

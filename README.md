@@ -41,7 +41,7 @@ npm run dev
 
 ## 用户注册与登录
 
-DRA 可配置邮箱注册登录及 Google、Microsoft、Apple 登录，由 Auth0 托管邮箱验证和密码找回。账号接入、首次账号与本地资料绑定、会话到期及手机配对限制见 [账号配置说明](docs/dra-accounts.md)。未配置账号服务时继续使用本地模式；真实第三方登录需配置各服务凭据并完成线上验证。
+DRA 可配置邮箱注册登录及 Google、Microsoft、Apple 登录，由 Auth0 托管邮箱验证和密码找回。账号接入、首次账号与本地资料绑定、会话到期及手机配对限制见 [账号配置说明](docs/dra-accounts.md)。随包的 `resources/dra-auth.json` 只是生产租户占位，所有者替换 `REPLACE_WITH_*` 后才会登录；删掉该文件或在打包版本里设置 `DRA_AUTH_*` 都不会进入无限制本地模式。未打包的开发构建可用 `DRA_AUTH_MODE=local` 跳过登录。真实第三方登录需配置各服务凭据并完成线上验证。
 
 ## 手机浏览器版
 

@@ -1,10 +1,17 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:http'
-import { createLocalJWKSet, jwtVerify, type JSONWebKeySet } from 'jose'
-import type { AccountLoginRequest, AccountState, NotebookAccessCheck } from '../../shared/account'
+import { createLocalJWKSet, jwtVerify, type JSONWebKeySet, type JWTPayload } from 'jose'
+import type {
+  AccountConsentNotice,
+  AccountLoginRequest,
+  AccountState,
+  NotebookAccessCheck
+} from '../../shared/account'
+import type { AccountConsentStore } from './consent'
 import type { AccountConfig } from './config'
 import { isDraPrerelease } from '../../shared/prerelease'
-import type { AccountSessionStore, SavedAccountSession } from './session-store'
+import { idTokenStillValid, jwksCacheFresh, rsaKeyThumbprints, sameThumbprints } from './jwks-pin'
+import type { AccountJwksPin, AccountSessionStore, SavedAccountSession } from './session-store'
 import {
   MEMBERSHIP_CLAIM,
   MEMBERSHIP_MINIMUM,
@@ -26,6 +33,11 @@ type Dependencies = {
   profile?: string
   config?: AccountConfig
   configurationError?: boolean
+  consent?: AccountConsentNotice
+  consentError?: boolean
+  terms?: AccountConsentNotice
+  termsError?: boolean
+  consentStore?: AccountConsentStore
   openBrowser: (url: string) => Promise<void>
   bindOwner: (identity: { issuer: string; subject: string }) => Promise<boolean>
   fetch?: typeof fetch
@@ -72,6 +84,65 @@ export class AccountOwner {
     return this.snapshot()
   }
 
+  private cachedKeysTrusted(saved: SavedAccountSession): boolean {
+    const pin = this.deps.sessionStore?.readPin()
+    if (!pin) return false
+    if (pin.issuer !== saved.issuer || pin.clientId !== saved.clientId) return false
+    if (
+      !jwksCacheFresh(pin.fetchedAt, this.now()) ||
+      !jwksCacheFresh(saved.keysFetchedAt, this.now())
+    )
+      return false
+    const actual = rsaKeyThumbprints(saved.keys)
+    return (
+      sameThumbprints(pin.thumbprints, saved.pinnedKeyThumbprints) &&
+      sameThumbprints(pin.thumbprints, actual)
+    )
+  }
+
+  private async verifyIdToken(
+    token: string,
+    keys: JSONWebKeySet,
+    config: AccountConfig
+  ): Promise<JWTPayload> {
+    return (
+      await jwtVerify(token, createLocalJWKSet(keys), {
+        issuer: config.issuer,
+        audience: config.clientId,
+        algorithms: ['RS256'],
+        requiredClaims: ['exp', 'iat', 'sub'],
+        currentDate: new Date(this.now())
+      })
+    ).payload
+  }
+
+  private async fetchJwks(config: AccountConfig, signal: AbortSignal): Promise<JSONWebKeySet> {
+    const keysResponse = await this.request(new URL('.well-known/jwks.json', config.issuer), {
+      signal,
+      redirect: 'error'
+    })
+    if (!keysResponse.ok) throw new Error('Signing keys unavailable.')
+    return (await keysResponse.json()) as JSONWebKeySet
+  }
+
+  private async rememberKeys(
+    keys: JSONWebKeySet,
+    session: SavedAccountSession
+  ): Promise<SavedAccountSession> {
+    const thumbprints = rsaKeyThumbprints(keys)
+    if (thumbprints.length === 0) throw new Error('Signing keys unavailable.')
+    const fetchedAt = this.now()
+    const pin: AccountJwksPin = {
+      version: 1,
+      issuer: session.issuer,
+      clientId: session.clientId,
+      thumbprints,
+      fetchedAt
+    }
+    this.deps.sessionStore?.writePin(pin)
+    return { ...session, keys, keysFetchedAt: fetchedAt, pinnedKeyThumbprints: thumbprints }
+  }
+
   private async recover(): Promise<void> {
     const revision = this.revision
     const config = this.deps.config!
@@ -84,28 +155,36 @@ export class AccountOwner {
     const active = (): boolean => !this.disposed && revision === this.revision && !this.attempt
     try {
       let session: SavedAccountSession = saved
-      let payload
-      try {
-        payload = (
-          await jwtVerify(saved.idToken, createLocalJWKSet(saved.keys), {
-            issuer: config.issuer,
-            audience: config.clientId,
-            algorithms: ['RS256'],
-            requiredClaims: ['exp', 'iat', 'sub'],
-            currentDate: new Date(this.now())
-          })
-        ).payload
-        if ((payload.exp ?? 0) * 1000 - this.now() < 60_000 && saved.refreshToken)
+      let payload: JWTPayload | undefined
+      const trusted = this.cachedKeysTrusted(saved)
+      let issuerRejected = false
+      const signal = AbortSignal.timeout(15_000)
+      if (trusted) {
+        try {
+          payload = await this.verifyIdToken(saved.idToken, saved.keys, config)
+          if ((payload.exp ?? 0) * 1000 - this.now() < 60_000 && saved.refreshToken)
+            payload = undefined
+        } catch {
           payload = undefined
-      } catch {
-        payload = undefined
+        }
+      } else if (idTokenStillValid(saved.idToken, this.now())) {
+        // Stale or unpinned keys are not a signature. Re-fetch the issuer JWKS
+        // and pin whatever that response actually contains.
+        const keys = await this.fetchJwks(config, signal)
+        try {
+          payload = await this.verifyIdToken(saved.idToken, keys, config)
+          session = await this.rememberKeys(keys, saved)
+        } catch {
+          payload = undefined
+          issuerRejected = true
+        }
       }
       if (!payload) {
         if (!saved.refreshToken) {
-          this.deps.sessionStore!.clear()
+          if (trusted || issuerRejected || !idTokenStillValid(saved.idToken, this.now()))
+            this.deps.sessionStore!.clear()
           return
         }
-        const signal = AbortSignal.timeout(15_000)
         const response = await this.request(new URL('oauth/token', config.issuer), {
           method: 'POST',
           redirect: 'error',
@@ -135,27 +214,13 @@ export class AccountOwner {
             (typeof tokens.refresh_token !== 'string' || !tokens.refresh_token))
         )
           throw new Error('Invalid refresh response.')
-        const keysResponse = await this.request(new URL('.well-known/jwks.json', config.issuer), {
-          signal,
-          redirect: 'error'
-        })
-        if (!keysResponse.ok) throw new Error('Signing keys unavailable.')
-        const keys = (await keysResponse.json()) as JSONWebKeySet
-        payload = (
-          await jwtVerify(tokens.id_token, createLocalJWKSet(keys), {
-            issuer: config.issuer,
-            audience: config.clientId,
-            algorithms: ['RS256'],
-            requiredClaims: ['exp', 'iat', 'sub'],
-            currentDate: new Date(this.now())
-          })
-        ).payload
-        session = {
+        const keys = await this.fetchJwks(config, signal)
+        payload = await this.verifyIdToken(tokens.id_token, keys, config)
+        session = await this.rememberKeys(keys, {
           ...saved,
           idToken: tokens.id_token,
-          keys,
           refreshToken: tokens.refresh_token ?? saved.refreshToken
-        }
+        })
       }
       if (
         payload.sub !== saved.subject ||
@@ -192,9 +257,20 @@ export class AccountOwner {
   private readonly deps: Dependencies
 
   constructor(deps: Dependencies) {
-    // Ignore any tenant, session file, or configuration error so login cannot collect an account.
+    // A beta build skips login. Drop the tenant, session, and consent files so it
+    // cannot collect an account or open Auth0.
     this.deps = isDraPrerelease()
-      ? { ...deps, config: undefined, configurationError: false, sessionStore: undefined }
+      ? {
+          ...deps,
+          config: undefined,
+          configurationError: false,
+          sessionStore: undefined,
+          consent: undefined,
+          consentError: false,
+          terms: undefined,
+          termsError: false,
+          consentStore: undefined
+        }
       : deps
     this.now = this.deps.now ?? Date.now
     this.request = this.deps.fetch ?? fetch
@@ -224,17 +300,79 @@ export class AccountOwner {
       membership: this.user
         ? membershipFromVerifiedClaim(this.membershipClaim, this.now())
         : undefined,
-      error: this.deps.configurationError ? 'configuration' : this.error
+      error: this.deps.configurationError
+        ? 'configuration'
+        : this.deps.consentError
+          ? 'consent'
+          : this.deps.termsError
+            ? 'terms'
+            : this.error,
+      consent: this.noticeState('consent'),
+      terms: this.noticeState('terms')
     }
+  }
+
+  private noticesActive(): boolean {
+    return Boolean(
+      this.deps.consent ||
+      this.deps.consentError ||
+      this.deps.terms ||
+      this.deps.termsError ||
+      this.deps.consentStore
+    )
+  }
+
+  private noticeState(kind: 'consent' | 'terms'): AccountState['consent'] {
+    if (!this.deps.config || !this.noticesActive()) return undefined
+    const notice = kind === 'consent' ? this.deps.consent : this.deps.terms
+    const failed = kind === 'consent' ? this.deps.consentError : this.deps.termsError
+    if (failed || !notice) return { required: true }
+    const stored = this.deps.consentStore?.read()
+    const saved = kind === 'consent' ? stored?.consent : stored?.terms
+    const current = saved?.version === notice.version ? saved : undefined
+    return {
+      required: !current,
+      notice,
+      acceptedAt: current?.acceptedAt
+    }
+  }
+
+  private acceptanceForLogin(request: AccountLoginRequest):
+    | {
+        consent: { version: string; acceptedAt: string }
+        terms: { version: string; acceptedAt: string }
+      }
+    | undefined {
+    if (!this.noticesActive()) return undefined
+    if (this.deps.consentError || !this.deps.consent || !this.deps.consentStore)
+      throw new Error('Account consent is unavailable.')
+    if (this.deps.termsError || !this.deps.terms) throw new Error('Account terms are unavailable.')
+    const stored = this.deps.consentStore.read()
+    const consentCurrent =
+      stored?.consent?.version === this.deps.consent.version ? stored.consent : undefined
+    const termsCurrent =
+      stored?.terms?.version === this.deps.terms.version ? stored.terms : undefined
+    if (!consentCurrent && request.consentAccepted !== true)
+      throw new Error('Account consent is required.')
+    if (!termsCurrent && request.termsAccepted !== true)
+      throw new Error('Account terms are required.')
+    const acceptedAt = new Date(this.now()).toISOString()
+    const consent = consentCurrent ?? { version: this.deps.consent.version, acceptedAt }
+    const terms = termsCurrent ?? { version: this.deps.terms.version, acceptedAt }
+    if (!consentCurrent || !termsCurrent) this.deps.consentStore.write({ consent, terms })
+    return { consent, terms }
   }
 
   assertAccess(): void {
     const state = this.snapshot()
-    if (state.required && !state.user) throw new Error('DRA account login required.')
+    if (state.required && (!state.user || state.consent?.required || state.terms?.required))
+      throw new Error('DRA account login required.')
   }
 
   assertFeature(feature: MembershipFeature): void {
     this.assertAccess()
+    // TODO(membership): a signed ID-token claim is not a server-side membership
+    // check. Real enforcement still needs an issuer or API check after beta.
     // Preserve existing offline/local-only deployments. Authenticated distributions enforce plans.
     if (!this.deps.config && !this.deps.configurationError) return
     if (!membershipAllows(this.snapshot().membership ?? { plan: 'free', status: 'free' }, feature))
@@ -301,11 +439,14 @@ export class AccountOwner {
       !config ||
       !request ||
       !this.snapshot().methods.includes(request.method) ||
-      (request.signup !== undefined && typeof request.signup !== 'boolean')
+      (request.signup !== undefined && typeof request.signup !== 'boolean') ||
+      (request.consentAccepted !== undefined && typeof request.consentAccepted !== 'boolean') ||
+      (request.termsAccepted !== undefined && typeof request.termsAccepted !== 'boolean')
     ) {
       throw new Error('Account login method is unavailable.')
     }
     if (this.attempt) return this.snapshot()
+    const acceptance = this.acceptanceForLogin(request)
     this.revision++
     this.error = undefined
     const attempt: Attempt = {
@@ -397,6 +538,12 @@ export class AccountOwner {
       if (request.method !== 'email') {
         url.searchParams.set('connection', config.connections[request.method]!)
       }
+      if (acceptance) {
+        url.searchParams.set('ext-consent_version', acceptance.consent.version)
+        url.searchParams.set('ext-consent_accepted_at', acceptance.consent.acceptedAt)
+        url.searchParams.set('ext-terms_version', acceptance.terms.version)
+        url.searchParams.set('ext-terms_accepted_at', acceptance.terms.acceptedAt)
+      }
       await this.deps.openBrowser(url.href)
     } catch {
       if (this.attempt === attempt) {
@@ -475,7 +622,13 @@ export class AccountOwner {
         email: payload.email,
         name: typeof payload.name === 'string' ? payload.name : undefined
       }
-      this.deps.sessionStore?.write({
+      const refreshToken =
+        'refresh_token' in tokens &&
+        typeof tokens.refresh_token === 'string' &&
+        tokens.refresh_token
+          ? tokens.refresh_token
+          : undefined
+      const stored = await this.rememberKeys(keys, {
         version: 1,
         issuer: config.issuer,
         clientId: config.clientId,
@@ -483,13 +636,11 @@ export class AccountOwner {
         idToken: tokens.id_token,
         nonce: attempt.nonce,
         keys,
-        refreshToken:
-          'refresh_token' in tokens &&
-          typeof tokens.refresh_token === 'string' &&
-          tokens.refresh_token
-            ? tokens.refresh_token
-            : undefined
+        keysFetchedAt: this.now(),
+        pinnedKeyThumbprints: rsaKeyThumbprints(keys),
+        refreshToken
       })
+      this.deps.sessionStore?.write(stored)
       this.error = undefined
       return true
     } catch {

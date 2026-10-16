@@ -7024,6 +7024,8 @@
     "Account could not be loaded": "無法載入帳號",
     "Loading account…": "正在載入帳號…",
     "Account service configuration is invalid.": "帳號服務設定無效。",
+    "The account consent notice could not be loaded.": "無法載入帳號同意說明。",
+    "The terms of use could not be loaded.": "無法載入使用條款。",
     "Verify your email in the browser, then sign in again.": "請在瀏覽器中驗證電子郵件，然後重新登入。",
     "This local research profile belongs to another account. Sign in with its owner account.": "此本機研究設定屬於另一個帳號。請使用所屬帳號登入。",
     "Login timed out. Please try again.": "登入逾時，請重試。",

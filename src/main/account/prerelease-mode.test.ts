@@ -22,7 +22,13 @@ it('does not read a saved session or call Auth0 when login is forced off', async
   vi.stubEnv('DRA_PRERELEASE', '1')
   const request = vi.fn()
   const browser = vi.fn()
-  const store = { read: vi.fn(), write: vi.fn(), clear: vi.fn() }
+  const store = {
+    read: vi.fn(),
+    write: vi.fn(),
+    readPin: vi.fn(),
+    writePin: vi.fn(),
+    clear: vi.fn()
+  }
   const owner = new AccountOwner({
     config: readAccountConfig({
       DRA_AUTH_ISSUER: 'https://tenant.auth0.com/',
@@ -46,5 +52,7 @@ it('does not read a saved session or call Auth0 when login is forced off', async
   expect(browser).not.toHaveBeenCalled()
   expect(store.read).not.toHaveBeenCalled()
   expect(store.write).not.toHaveBeenCalled()
+  expect(store.readPin).not.toHaveBeenCalled()
+  expect(store.writePin).not.toHaveBeenCalled()
   expect(() => owner.assertAccess()).not.toThrow()
 })
