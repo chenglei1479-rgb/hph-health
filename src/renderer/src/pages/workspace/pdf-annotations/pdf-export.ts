@@ -1,5 +1,5 @@
 import { PDFDocument, PDFHexString, PDFName, PDFDict, PDFRef, PDFString } from 'pdf-lib'
-import { PRODUCT_DISPLAY_NAME } from '../../../../shared/product-identity'
+import { PRODUCT_DISPLAY_NAME } from '../../../../../shared/product-identity'
 import {
   PDF_EXPORT_MAX_BYTES,
   PDF_EXPORT_MAX_MARKS,
