@@ -1,7 +1,7 @@
+import { createLogger } from '@aipoch/diagnostics/node'
 import type { SessionPermissionProfileState } from '../../shared/permission-profiles'
 import { SESSION_PLAN_SYSTEM_PROMPT_APPEND } from '../session-plan/guidance'
 import { SESSION_PLAN_FILE_SYSTEM_PROMPT_APPEND } from '../session-plan/plan-context-guidance'
-import { createLogger } from '../logger'
 import { AcpAppContinuationOwner } from './app-continuation-owner'
 import { AcpClientInteractionOwner } from './client-interaction-owner'
 import { AcpContextUsagePolicy } from './context-usage-policy'
@@ -10,8 +10,8 @@ import { AcpElicitationOwner } from './elicitation-owner'
 import { AcpPermissionContext } from './permission-context'
 import { AcpPermissionWaitOwner } from './permission-wait-owner'
 import { ReviewerSessionOwner } from './reviewer-session-owner'
-import type { AcpRuntimeOptions } from './runtime'
 import type { AcpRuntimeBaseOwners } from './runtime-base-composition'
+import type { AcpRuntimeOptions } from './runtime-contract'
 import { AcpRuntimePublicationOwner } from './runtime-publication-owner'
 import type { RuntimeSnapshotProjection } from './runtime-snapshot-owner'
 import { AcpSessionEnvironmentPolicy } from './session-environment-policy'
@@ -209,6 +209,8 @@ const composeAcpRuntimeSessionOwners = (options: AcpRuntimeOptions, base: AcpRun
       currentInteractionSequence: (sessionId) =>
         base.sessionInteractions.current(sessionId)?.sequence,
       mcpServerNamesFor: (sessionId) => base.sessionCapabilities.mcpServerNamesFor(sessionId),
+      authorizeRuntimeBindingAdmission: options.notebook?.authorizeRuntimeBindingAdmission,
+      canOwnRuntimeBindingDecision: options.notebook?.canOwnRuntimeBindingDecision,
       shellRuntimeBindingFor: (sessionId) =>
         base.sessionCapabilities.shellRuntimeBindingFor(sessionId),
       reviewerContextFor: (sessionId) => reviewerSessions.contextFor(sessionId),

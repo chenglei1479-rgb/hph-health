@@ -1,62 +1,83 @@
+import { SkillReleaseInstallConflict as MarketplaceInstallConflict } from '@aipoch/skills'
+import { readFile, stat } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { z } from 'zod'
+import {
+  BootstrapError,
+  bootstrapRequestSchema,
+  type BootstrapResult
+} from '../../shared/bootstrap'
 import type {
   PrivateDestinationRequest,
   PrivateDestinationReview
-} from '../../shared/notebook-network'
-import { ClassificationUsageRecorder } from './classification-usage'
-import { getProjectDbClient } from '../projects/prisma-client'
-import { ClassificationSettingsOwner } from './classification-settings'
-import { ProviderRuntimeHealthOwner } from './provider-runtime-health-owner'
-import { ClaudeCodeSkillMaterializer } from '../skills/materializer'
-import type { SpecialistListItem } from '../../shared/specialist'
-import { homedir } from 'node:os'
-import { z } from 'zod'
-import { MarketplaceInstallConflict } from '../skills/user-skill-repository'
-import { SkillMarketplaceService } from '../skills/marketplace-service'
-import { SkillMarketplaceInstallQueue } from '../skills/marketplace-install-queue'
+} from '../../shared/notebook-network-settings'
 import type {
+  SkillMarketplaceBatchRequest,
   SkillMarketplaceCatalog,
   SkillMarketplaceCatalogRequest,
-  SkillMarketplaceBatchRequest,
   SkillMarketplaceDetail,
   SkillMarketplaceDetailRequest,
   SkillMarketplaceInstallRequest,
   SkillMarketplaceInstallResult,
   SkillMarketplaceResult
 } from '../../shared/skill-marketplace'
-import { readFile, stat } from 'node:fs/promises'
-import { join } from 'node:path'
-import {
-  BootstrapError,
-  bootstrapRequestSchema,
-  type BootstrapResult
-} from '../../shared/bootstrap'
+import type { SpecialistListItem } from '../../shared/specialist'
+import { netFetchWithManualRedirect } from '../network-fetch'
+import { getProjectDbClient } from '../projects/prisma-client'
+import { SkillMarketplaceInstallQueue } from '../skill-marketplace/install-queue'
+import { SkillMarketplaceService } from '../skill-marketplace/service'
+import { attachSkillDiagnostics } from '../skills/diagnostics'
+import { ClaudeCodeSkillMaterializer } from '../skills/materializer'
+import { ClassificationSettingsOwner } from './classification-settings'
+import { ClassificationUsageRecorder } from './classification-usage'
+import { ProviderRuntimeHealthOwner } from './provider-runtime-health-owner'
 
-import type { CloseActionPreference } from '../../shared/window-controls'
+import { createLogger, startDiagnosticOperation, type Logger } from '@aipoch/diagnostics/node'
+import type { BundledSkill, SkillRegistry } from '@aipoch/skills'
 import type {
+  AgentHomeSkillView,
+  SkillBundlePreviewResult,
+  SkillSource
+} from '@aipoch/skills/document'
+import { SAFE_SKILL_NAME, parseFrontmatter } from '@aipoch/skills/document'
+import type { FetchLike, SkillExportArchive } from '@aipoch/skills/sources'
+import { SKILL_IMPORT_LIMITS } from '@aipoch/skills/sources'
+import type { GrantedLocalRoot } from '../../shared/local-fs'
+import type { PackageMirror } from '../../shared/mirror'
+import type { ReasoningEffort } from '../../shared/model-preference-contract'
+import type { NetworkProxySettings } from '../../shared/network-proxy'
+import type { NotebookLanguage } from '../../shared/notebook-language-contract'
+import type { NotebookNetworkStatus } from '../../shared/notebook-network'
+import type { NotebookNetworkSettings } from '../../shared/notebook-network-settings'
+import type { RuntimeEnablement } from '../../shared/notebook-runtime'
+import type { PermissionProfileId } from '../../shared/permission-profiles'
+import type { ResolvedReasoningEffort } from '../../shared/reasoning-effort'
+import type {
+  AddCustomServerRequest,
+  AppIconVariant,
   ClaudeDetectResult,
   ClaudeInstallEvent,
   ClaudeInstallResult,
   ConnectorDetailView,
-  CreateDeviceCredentialRequest,
-  CreateDeviceCredentialResult,
-  DeviceCredentialsSnapshot,
-  DeviceCredentialAuthenticationRequest,
   ConnectorTemplateExportPreview,
   ConnectorTemplatePreview,
   ConnectorsSnapshot,
-  AddCustomServerRequest,
-  RemoveCustomServerRequest,
-  RemoveDeviceCredentialRequest,
-  SetCustomServerEnabledRequest,
-  UpdateCustomServerRequest,
-  UpdateDeviceCredentialRequest,
-  AgentHomeSkillView,
+  CreateDeviceCredentialRequest,
+  CreateDeviceCredentialResult,
   CreateSkillRequest,
   DeleteSkillRequest,
+  DeviceCredentialAuthenticationRequest,
+  DeviceCredentialsSnapshot,
   EnvironmentCheckResult,
   GitHubTokenStatus,
   ImportAgentHomeSkillsRequest,
   ImportAgentHomeSkillsResult,
+  ImportSkillRequest,
+  ImportSkillResult,
+  ImportSkillZipBatchRequest,
+  ImportSkillZipBatchResult,
+  ImportSkillZipRequest,
   InstallClaudeRequest,
   InstallCodeBuddyRequest,
   InstallCodexRequest,
@@ -73,129 +94,120 @@ import type {
   SetOpenAlexCredentialRequest,
   ValidateOpenAlexCredentialRequest,
   OpenAlexCredentialValidation,
-  SetPackageMirrorRequest,
-  SetNetworkProxyRequest,
-  SetNotebookNetworkRequest,
-  SetSkillEnabledRequest,
-  SetSkillsEnabledRequest,
-  SetToolPermissionRequest,
-  SettingsSnapshot,
-  SetAgentRoutingRequest,
-  AppIconVariant,
-  SkillDetailView,
-  SkillView,
-  ImportSkillRequest,
-  ImportSkillResult,
-  ImportSkillZipRequest,
-  ImportSkillZipBatchRequest,
-  ImportSkillZipBatchResult,
   PreviewAgentHomeSkillRequest,
   PreviewGitHubSkillRequest,
   PreviewSkillZipRequest,
   ProjectFilesFilterPreference,
-  ReasoningEffort,
+  ProviderDeletionScenarioModelHandling,
+  ReadinessPreflight,
+  RefreshProviderModelsRequest,
+  RefreshProviderModelsResult,
+  RemoveCustomServerRequest,
+  RemoveDeviceCredentialRequest,
+  ResolveSkillDocumentRequest,
+  ResolvedSkillDocument,
   ReviewerModelConfiguration,
-  SessionDetailsModelConfiguration as SessionDetailsModel,
-  SubagentModelConfiguration,
-  VisionModelConfiguration as VisionModel,
-  SkillBundlePreviewResult,
-  SkillImportPreviewContent,
-  SkillSource,
+  SaveValidatedProviderResult,
   ScanRepoRequest,
   ScanRepoResult,
-  ProviderDeletionScenarioModelHandling,
+  SessionDetailsModelConfiguration as SessionDetailsModel,
+  SetAgentRoutingRequest,
+  SetConnectorAutoAllowRequest,
+  SetConnectorEnabledRequest,
+  SetCustomServerEnabledRequest,
+  SetNcbiCredentialsRequest,
+  SetNetworkProxyRequest,
+  SetNotebookNetworkRequest,
+  SetOpenAlexCredentialRequest,
+  SetPackageMirrorRequest,
+  SetSkillEnabledRequest,
+  SetSkillsEnabledRequest,
+  SetToolPermissionRequest,
+  SettingsSnapshot,
+  SkillDetailView,
+  SkillImportPreviewContent,
+  SkillView,
+  SubagentModelConfiguration,
+  UpdateCustomServerRequest,
+  UpdateDeviceCredentialRequest,
   UpdateSkillRequest,
   UpsertProviderRequest,
+  ValidateOpenAlexCredentialRequest,
   ValidateProviderRequest,
-  SaveValidatedProviderResult,
-  ValidateProviderResult
+  ValidateProviderResult,
+  VisionModelConfiguration as VisionModel
 } from '../../shared/settings'
-import { createLogger, type Logger } from '../logger'
-import { startDiagnosticOperation } from '../diagnostics/operation'
-import type { PackageMirror } from '../../shared/mirror'
-import type { NetworkProxySettings } from '../../shared/network-proxy'
-import type { NotebookNetworkSettings, NotebookNetworkStatus } from '../../shared/notebook-network'
+import type { CloseActionPreference } from '../../shared/window-controls'
 import type {
   InstallMissingWslDependenciesRequest,
   InstallWslDistroRequest,
+  LocalShellRuntimePreference,
   OpenWslTerminalRequest,
   SelectWslProfileRequest,
   SwitchToPowerShellResult,
-  LocalShellRuntimePreference,
   UseWsl2BashResult,
-  WslSelection,
+  Wsl2BashPreviewStatus,
   WslPlatformInstallResult,
+  WslSelection,
+  WslSetupConversationBootstrap,
   WslSetupSnapshot,
   WslSetupStatus,
-  WslSetupConversationBootstrap,
   WslSupportHandoff
 } from '../../shared/wsl-setup'
-import type { Wsl2BashPreviewStatus } from '../../shared/wsl-setup'
-import { wsl2BashPreviewStatus } from '../wsl/wsl2-preview-gate'
-import type { GrantedLocalRoot } from '../../shared/local-fs'
-import type { NotebookLanguage } from '../../shared/notebook'
-import type { RuntimeEnablement } from '../../shared/notebook-runtime'
-import type { ResolvedReasoningEffort } from '../../shared/reasoning-effort'
-import type { PermissionProfileId } from '../../shared/permission-profiles'
-import { resolveConfigRoot } from '../storage-root'
 import {
   DEFAULT_AGENT_FRAMEWORK_ID,
-  type AgentModelChangeTarget,
   type AgentFrameworkId,
+  type AgentModelChangeTarget,
   type ResolvedAgentBackend
 } from '../agent-framework'
-import type { ClaudeDetectDeps } from './claude-detect'
-import type { OpencodeDetectDeps } from './opencode-detect'
-import type { CodeBuddyDetectDeps } from './codebuddy-detect'
-import type { CodexDetectDeps } from './codex-detect'
-import type { InstallManagedOpencodeOptions } from './managed-opencode'
-import type { InstallManagedCodexOptions, ManagedCodexInstallOutcome } from './managed-codex'
-import type { InstallManagedClaudeOptions, ManagedInstallOutcome } from './managed-claude'
-import { isEncryptionAvailable, isCredentialStorageAvailable } from './crypto'
-import { getCredentialStore } from './credential-store-mode'
-import { getUserClaudeConfigDir } from './provider-env'
-import { SettingsRepository } from './repository'
-import type { LocalShellRuntimeMutation } from './local-shell-runtime-mutation'
-import { SettingsPreferencesModule, type SetDataRootOptions } from './preferences'
-import { buildSettingsSnapshot } from './settings-view'
-import { NotebookRuntimeSettingsModule } from './notebook-runtime-settings'
-import { SkillCatalogModule, type SkillCatalogEntry } from './skill-catalog'
-import { ConnectorSettingsModule, type CustomServerSecurityChangeGuard } from './connector-settings'
-import type {
-  CustomServerRuntimeProjectionProvider,
-  DeviceCredentialConsumerMutation
-} from './connector-settings'
-import { DeviceCredentialStore, type ResolvedOAuthDeviceCredential } from './device-credentials'
-import { ProviderAccountsModule } from './provider-accounts'
+import { CONNECTOR_CATALOG } from '../connectors/catalog'
+import { connectorSkillSourceDir } from '../connectors/provision'
+import { ALL_CONNECTOR_IDS } from '../connectors/registry'
+import { renderSkillDoc } from '../connectors/skill-doc'
+import { SkillCatalogModule, type SkillCatalogEntry } from '../skills/catalog'
+import { UserSkillRepository } from '../skills/user-skill-repository'
+import { resolveConfigRoot } from '../storage-root'
+import { wsl2BashPreviewStatus } from '../wsl/wsl2-preview-gate'
 import { AgentRuntimeManager, type ExecuteClaudeProbe } from './agent-runtime-manager'
-import { SettingsInstallCoordinator } from './settings-install-coordinator'
 import {
   AgentBackendResolver,
   type AgentBackendResolutionContext,
   type AgentBackendSelection,
   type ExplicitAgentBackendTarget
 } from './backend-resolver'
-import { SkillRegistry, type BundledSkill } from '../skills/registry'
-import { UserSkillRepository } from '../skills/user-skill-repository'
-import { SAFE_SKILL_NAME } from '../skills/skill-name'
-import { parseFrontmatter } from '../skills/frontmatter'
-import { SKILL_IMPORT_LIMITS } from '../skills/import-limits'
-import { CONNECTOR_CATALOG } from '../connectors/catalog'
-import { ALL_CONNECTOR_IDS } from '../connectors/registry'
-import { renderSkillDoc } from '../connectors/skill-doc'
-import { connectorSkillSourceDir } from '../connectors/provision'
-import type { SkillExportArchive } from '../skills/export'
-import type { FetchLike } from '../skills/github-import'
-import type { StoredConnectors, StoredCustomMcpOAuthState, StoredSettings } from './types'
+import type { ClaudeDetectDeps } from './claude-detect'
+import type { ClaudeIsolatedAuthControllerPort } from './claude-isolated-auth'
+import type { ClaudeSharedAuthControllerPort } from './claude-shared-auth'
+import type { CodeBuddyDetectDeps } from './codebuddy-detect'
 import type { CodexAuthControllerPort } from './codex-auth'
+import type { CodexDetectDeps } from './codex-detect'
+import type {
+  CustomServerRuntimeProjectionProvider,
+  DeviceCredentialConsumerMutation
+} from './connector-settings'
+import { ConnectorSettingsModule, type CustomServerSecurityChangeGuard } from './connector-settings'
+import { getCredentialStore } from './credential-store-mode'
+import { isCredentialStorageAvailable, isEncryptionAvailable } from './crypto'
+import { DeviceCredentialStore, type ResolvedOAuthDeviceCredential } from './device-credentials'
 import { createSettingsIdSequence } from './id-sequence'
-import { ScenarioModelOwner, createScenarioModels } from './scenario-model-owner'
-import type { SystemProxyEnvironment } from './system-proxy'
-import { type ClaudeIsolatedAuthControllerPort } from './claude-isolated-auth'
-import { type ClaudeSharedAuthControllerPort } from './claude-shared-auth'
+import type { LocalShellRuntimeMutation } from './local-shell-runtime-mutation'
+import type { InstallManagedClaudeOptions, ManagedInstallOutcome } from './managed-claude'
+import type { InstallManagedCodexOptions, ManagedCodexInstallOutcome } from './managed-codex'
+import type { InstallManagedOpencodeOptions } from './managed-opencode'
 import { NetworkProxySettingsOwner } from './network-proxy-settings-owner'
 import { NotebookNetworkSettingsOwner } from './notebook-network-settings-owner'
+import { NotebookRuntimeSettingsModule } from './notebook-runtime-settings'
+import type { OpencodeDetectDeps } from './opencode-detect'
 import { PackageMirrorSettingsOwner } from './package-mirror-settings-owner'
+import { SettingsPreferencesModule, type SetDataRootOptions } from './preferences'
+import { ProviderAccountsModule } from './provider-accounts'
+import { getUserClaudeConfigDir } from './provider-env'
+import { SettingsRepository } from './repository'
+import { ScenarioModelOwner, createScenarioModels } from './scenario-model-owner'
+import { SettingsInstallCoordinator } from './settings-install-coordinator'
+import { buildSettingsSnapshot } from './settings-view'
+import type { SystemProxyEnvironment } from './system-proxy'
+import type { StoredConnectors, StoredCustomMcpOAuthState, StoredSettings } from './types'
 
 // Outcome of uninstalling a managed runtime. `activeBackendAffected` is true only when the removed
 // runtime backed the active framework, so the IPC layer reconnects the agent for that case alone —
@@ -294,7 +306,7 @@ export type SettingsServiceOptions = {
 // object shared by the settings IPC handlers and the ACP runtime. Secrets are decrypted here only
 // transiently; nothing that leaves this object (views, spawn config aside) carries plaintext.
 class SettingsService {
-  private readonly skillMarketplace = new SkillMarketplaceService()
+  private readonly skillMarketplace = new SkillMarketplaceService(netFetchWithManualRedirect)
   private readonly skillMarketplaceQueue = new SkillMarketplaceInstallQueue({
     retainSnapshot: (request) => this.skillMarketplace.retainSnapshot(request),
     install: (request, signal) => this.performSkillMarketplaceInstall(request, false, signal),
@@ -485,6 +497,8 @@ class SettingsService {
     return this.installCoordinator.holdAdmission()
   }
 
+  private readonly detachSkillDiagnostics: () => void
+
   async dispose(): Promise<void> {
     const outcomes = await Promise.allSettled([
       this.skillMarketplaceQueue.dispose(),
@@ -492,6 +506,7 @@ class SettingsService {
       this.classification.flushUsage(false),
       this.runtimeManager.dispose()
     ])
+    this.detachSkillDiagnostics()
     for (const outcome of outcomes) {
       if (outcome.status === 'rejected') throw outcome.reason
     }
@@ -557,7 +572,7 @@ class SettingsService {
       userClaudeDir: this.userClaudeDir,
       userCodexDir,
       userAgentsDir: options.userAgentsDir ?? join(homedir(), '.agents'),
-      skillRegistry: options.skillRegistry ?? new SkillRegistry(),
+      skillRegistry: options.skillRegistry,
       userSkills: options.userSkills,
       withUserSkillRecoveryBarrier: options.withUserSkillRecoveryBarrier,
       readMarketplaceSpecialists: options.readMarketplaceSpecialists,
@@ -614,6 +629,7 @@ class SettingsService {
       skillRuntimeMcpEntryPath: options.skillRuntimeMcpEntryPath ?? process.argv[1] ?? '',
       getXaiOAuthAccessToken: (forceRefresh) => this.providers.getXaiOAuthAccessToken(forceRefresh)
     })
+    this.detachSkillDiagnostics = attachSkillDiagnostics()
     this.scenarioModels = createScenarioModels(
       this.repository,
       this.providers,
@@ -1956,6 +1972,6 @@ class SettingsService {
 // Production service rooted at the fixed config root with real detection dependencies.
 const createDefaultSettingsService = (): SettingsService => new SettingsService()
 
+export type { AgentBackendResolutionContext, AgentBackendSelection } from './backend-resolver'
 export { SettingsService, createDefaultSettingsService }
 export type { CustomServerSecurityChangeGuard }
-export type { AgentBackendResolutionContext, AgentBackendSelection } from './backend-resolver'

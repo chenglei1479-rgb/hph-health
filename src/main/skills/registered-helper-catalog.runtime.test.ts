@@ -1,3 +1,4 @@
+import { validateSkillHelper } from './helper-validation'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,17 +7,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const validateNotebookHelperExports = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 
-vi.mock('../notebook/python-command', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../notebook/python-command')>()),
+vi.mock('@aipoch/environment', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@aipoch/environment')>()),
   validateNotebookHelperExports
 }))
 
-import { envPrefix, pythonBin } from '../notebook/runtime-paths'
-import {
-  RegisteredSkillHelperCatalog,
-  type RegisteredSkillPackage
-} from './registered-helper-catalog'
-import { inspectSkillPackage } from './skill-package-inspection'
+import { envPrefix, pythonBin } from '@aipoch/environment'
+import { RegisteredSkillHelperCatalog } from './registered-helper-catalog'
+import type { RegisteredSkillPackage } from '@aipoch/skills'
+import { inspectSkillPackage } from '@aipoch/skills/sources'
 
 const roots: string[] = []
 
@@ -101,7 +100,9 @@ describe('RegisteredSkillHelperCatalog managed Python validation', () => {
     await mkdir(join(prefix, 'bin'), { recursive: true })
     await writeFile(managedPython, '')
 
-    await expect(inspectSkillPackage(packageRoot, { storageRoot })).resolves.toHaveLength(3)
+    await expect(
+      inspectSkillPackage(packageRoot, { storageRoot, validateHelper: validateSkillHelper })
+    ).resolves.toHaveLength(3)
     expect(validateNotebookHelperExports).toHaveBeenCalledWith(
       'managed-helper-function',
       'def public_value():\n    return 1\n',

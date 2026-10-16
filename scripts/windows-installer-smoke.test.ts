@@ -24,10 +24,11 @@ import {
   fetchWithTimeout,
   findSetupInstaller,
   installerVersion,
+  installApplication,
   launchUninstallerLockHolder,
   observeChildClose,
   packagedArtifactSmokeRpcResult,
-  packagedMainEntryPath,
+  packagedMcpRuntime,
   packagedResourcePaths,
   parseArguments,
   parsePackagedAppEndpoint,
@@ -45,6 +46,29 @@ import {
 } from './windows-installer-smoke.mjs'
 
 describe('Windows installer smoke plan', () => {
+  it('bounds installation separately and preserves failures when no files were extracted', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'open-science-install-deadline-'))
+    const installDirectory = join(root, 'installed app 程序')
+    const failure = new Error('installer stalled')
+    const run = vi.fn().mockRejectedValue(failure)
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      await expect(installApplication('setup.exe', installDirectory, {}, run)).rejects.toBe(failure)
+      expect(run).toHaveBeenCalledWith('setup.exe', ['/S', `/D=${installDirectory}`], {
+        env: {},
+        timeoutMs: 300_000
+      })
+      expect(JSON.parse(log.mock.calls[0][0])).toMatchObject({
+        installer: 'setup.exe',
+        installedEntries: [],
+        archiveBytes: 0
+      })
+    } finally {
+      log.mockRestore()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   it('selects one setup executable and rejects ambiguous artifacts', async () => {
     const root = await mkdtemp(join(tmpdir(), 'open-science-installer-artifacts-'))
     await writeFile(join(root, 'portable.zip'), '')
@@ -852,9 +876,9 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
       join(
         installDirectory,
         'resources',
-        'node_modules',
-        '.prisma',
-        'client',
+        'backend',
+        'resources',
+        'prisma-client',
         'query_engine-windows.dll.node'
       )
     ])
@@ -863,7 +887,7 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
   it('requires exactly one native Windows Prisma engine', async () => {
     const installDirectory = await mkdtemp(join(tmpdir(), 'open-science-windows-engine-'))
     const resources = join(installDirectory, 'resources')
-    const prismaClient = join(resources, 'node_modules', '.prisma', 'client')
+    const prismaClient = join(resources, 'backend', 'resources', 'prisma-client')
     await mkdir(prismaClient, { recursive: true })
     await Promise.all([
       writeFile(join(installDirectory, 'medresearch-agent.exe'), ''),
@@ -904,10 +928,34 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
     )
   })
 
-  it('targets the bundled main entry for packaged MCP subprocesses', () => {
-    expect(packagedMainEntryPath(join('smoke', 'app'))).toBe(
-      join('smoke', 'app', 'resources', 'app.asar', 'out', 'main', 'index.js')
-    )
+  it('uses ordinary Node for current MCP helpers and retains released Electron helpers', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'packaged-mcp-runtime-'))
+    const resources = join(root, 'resources')
+    const env = { TEMP: root, ELECTRON_RUN_AS_NODE: '1' }
+    try {
+      await mkdir(resources)
+      await expect(packagedMcpRuntime(root, env)).resolves.toEqual({
+        executable: join(root, 'open-science.exe'),
+        entryPath: join(resources, 'app.asar', 'out', 'main', 'index.js'),
+        env
+      })
+      const entryPath = join(resources, 'backend', 'out', 'backend', 'index.cjs')
+      await mkdir(join(resources, 'backend', 'out', 'backend'), { recursive: true })
+      await writeFile(entryPath, '')
+      // A partially installed current backend must fail, not fall back to the legacy entry.
+      await expect(packagedMcpRuntime(root, env)).rejects.toMatchObject({ code: 'ENOENT' })
+      const executable = join(resources, 'node-runtime', 'node.exe')
+      await mkdir(join(resources, 'node-runtime'))
+      await writeFile(executable, '')
+      await expect(packagedMcpRuntime(root, env)).resolves.toEqual({
+        executable,
+        entryPath,
+        env: { TEMP: root, OPEN_SCIENCE_HOST_PACKAGED: '1' }
+      })
+      expect(env.ELECTRON_RUN_AS_NODE).toBe('1')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   it('builds an isolated profile environment for smoke child processes', () => {

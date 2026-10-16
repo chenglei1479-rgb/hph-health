@@ -1,6 +1,6 @@
-import { availableParallelism, cpus } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { availableParallelism, cpus } from 'node:os'
 import { describe, expect, it } from 'vitest'
 import WindowsTestSequencer from '../../scripts/ci/windows-test-sequencer'
 
@@ -11,13 +11,14 @@ import vitestConfig, {
   FULL_COVERAGE_THRESHOLDS,
   fullSuiteShardAllowsEmptyProjects,
   resolveVitestMaxWorkers,
+  portableTestScopeFor,
   VITEST_ARCHITECTURE_TEST_GLOBS,
   VITEST_COVERAGE_EXCLUDE_PATTERNS,
   VITEST_DATABASE_TEST_GLOBS,
   VITEST_EXCLUDE_PATTERNS,
   VITEST_PORTABLE_CI_EXCLUDE_PATTERNS,
-  vitestExcludePatternsFor,
-  VITEST_PROCESS_TEST_GLOBS
+  VITEST_PROCESS_TEST_GLOBS,
+  vitestExcludePatternsFor
 } from '../../vitest.config'
 
 describe('Vitest discovery boundaries', () => {
@@ -44,6 +45,18 @@ describe('Vitest discovery boundaries', () => {
     expect(vitestExcludePatternsFor({ VITEST_PORTABLE_CI: '1' })).toEqual(
       expect.arrayContaining([...VITEST_PORTABLE_CI_EXCLUDE_PATTERNS])
     )
+  })
+
+  it('limits partition selection to portable CI and rejects unknown scopes', () => {
+    expect(portableTestScopeFor({ OPEN_SCIENCE_CI_PORTABLE_SCOPE: 'host' })).toBeUndefined()
+    for (const scope of ['host', 'packages']) {
+      expect(
+        portableTestScopeFor({ VITEST_PORTABLE_CI: '1', OPEN_SCIENCE_CI_PORTABLE_SCOPE: scope })
+      ).toBe(scope)
+    }
+    expect(() =>
+      portableTestScopeFor({ VITEST_PORTABLE_CI: '1', OPEN_SCIENCE_CI_PORTABLE_SCOPE: 'other' })
+    ).toThrow('Invalid CI portable test scope')
   })
 
   it('assigns the Plan context Shell sandbox check to the native isolation lanes', () => {
@@ -118,13 +131,17 @@ it('keeps a safe default timeout for schema-backed hooks', () => {
 })
 
 it.each([
-  ['0', undefined],
-  ['1', undefined],
-  ['0', '2'],
-  ['1', '2']
+  ['0', undefined, false],
+  ['1', undefined, false],
+  ['0', '2', false],
+  ['1', '2', false],
+  ['0', undefined, true],
+  ['1', undefined, true],
+  ['0', '2', true],
+  ['1', '2', true]
 ])(
-  'resolves real Vitest project budgets with Windows profile %s and worker cap %s',
-  (profile, override) => {
+  'resolves real Vitest project budgets with Windows profile %s, worker cap %s and host-only selection %s',
+  (profile, override, hostOnly) => {
     const probe = spawnSync(
       process.execPath,
       [
@@ -145,6 +162,14 @@ it.each([
         cwd: process.cwd(),
         env: {
           ...process.env,
+          VITEST_PORTABLE_CI: '1',
+          OPEN_SCIENCE_CI_PORTABLE_SCOPE: '',
+          OPEN_SCIENCE_CI_EXCLUDED_PACKAGE_ROOTS: JSON.stringify(
+            hostOnly
+              ? ['packages/resilient-download', 'packages/durable-files', 'packages/compute']
+              : []
+          ),
+          OPEN_SCIENCE_CI_SELECTED_PACKAGE_ROOTS: '[]',
           VITEST_WINDOWS_FULL_TEST: profile,
           OPEN_SCIENCE_TEST_MAX_WORKERS: override
         },
@@ -154,15 +179,22 @@ it.each([
     )
     expect(probe.error).toBeUndefined()
     expect(probe.status, probe.stderr).toBe(0)
-    expect(JSON.parse(probe.stdout)).toEqual(
-      ['default', 'architecture', 'process', 'database'].map((name) => ({
+    expect(JSON.parse(probe.stdout)).toEqual([
+      ...['default', 'architecture', 'process', 'database'].map((name) => ({
         name,
         hookTimeout: profile === '1' ? 60_000 : 30_000,
         maxWorkers:
           profile === '1' || name !== 'default' ? 1 : resolveVitestMaxWorkers(undefined, override),
         testTimeout: 60_000
-      }))
-    )
+      })),
+      ...(hostOnly
+        ? []
+        : ['resilient-download', 'durable-files', 'compute'].map((name) => ({
+            name,
+            hookTimeout: 10000,
+            testTimeout: 60000
+          })))
+    ])
   }
 )
 
@@ -281,3 +313,111 @@ it('accepts an explicit positive worker cap independently of available CPUs', ()
   expect(resolveVitestMaxWorkers(8, '2')).toBe(2)
   expect(resolveVitestMaxWorkers(1, '4')).toBe(4)
 })
+
+it.each([false, true])(
+  'discovers durable-files exactly once with package-owned setup (excluded=%s)',
+  (excluded) => {
+    const probe = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `
+    import { createVitest } from 'vitest/node'
+    const ctx = await createVitest('test', { watch: false })
+    try {
+      const specs = await ctx.globTestSpecifications(['packages/durable-files'])
+      const project = ctx.projects.find(({name}) => name === 'durable-files')
+      console.log(JSON.stringify({
+        specs: specs.map((spec) => ({name: spec.project.name, path: spec.moduleId})),
+        setup: project?.config.setupFiles,
+        workers: project?.config.maxWorkers
+      }))
+    } finally { await ctx.close() }
+  `
+      ],
+      {
+        encoding: 'utf8',
+        timeout: 30000,
+        env: {
+          ...process.env,
+          VITEST_PORTABLE_CI: '1',
+          OPEN_SCIENCE_CI_PORTABLE_SCOPE: '',
+          OPEN_SCIENCE_CI_EXCLUDED_PACKAGE_ROOTS: JSON.stringify(
+            excluded ? ['packages/durable-files'] : []
+          ),
+          OPEN_SCIENCE_CI_SELECTED_PACKAGE_ROOTS: JSON.stringify(
+            excluded ? [] : ['packages/durable-files']
+          )
+        }
+      }
+    )
+    expect(probe.error).toBeUndefined()
+    expect(probe.status, probe.stderr).toBe(0)
+    const result = JSON.parse(probe.stdout)
+    if (excluded) expect(result.specs).toEqual([])
+    else {
+      expect(result.specs).toHaveLength(4)
+      expect(new Set(result.specs.map(({ path }: { path: string }) => path)).size).toBe(4)
+      expect(result.specs.every(({ name }: { name: string }) => name === 'durable-files')).toBe(
+        true
+      )
+      expect(result.setup).toEqual([])
+      expect(result.workers).toBeUndefined()
+    }
+  }
+)
+
+it.each([false, true])(
+  'discovers resilient-download exactly once with package-owned setup (excluded=%s)',
+  (excluded) => {
+    const probe = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `
+    import { createVitest } from 'vitest/node'
+    const ctx = await createVitest('test', { watch: false })
+    try {
+      const specs = await ctx.globTestSpecifications(['packages/resilient-download'])
+      const project = ctx.projects.find(({name}) => name === 'resilient-download')
+      console.log(JSON.stringify({
+        specs: specs.map((spec) => ({name: spec.project.name, path: spec.moduleId})),
+        setup: project?.config.setupFiles,
+        workers: project?.config.maxWorkers
+      }))
+    } finally { await ctx.close() }
+  `
+      ],
+      {
+        encoding: 'utf8',
+        timeout: 30000,
+        env: {
+          ...process.env,
+          VITEST_PORTABLE_CI: '1',
+          OPEN_SCIENCE_CI_PORTABLE_SCOPE: '',
+          OPEN_SCIENCE_CI_EXCLUDED_PACKAGE_ROOTS: JSON.stringify(
+            excluded ? ['packages/resilient-download'] : []
+          ),
+          OPEN_SCIENCE_CI_SELECTED_PACKAGE_ROOTS: JSON.stringify(
+            excluded ? [] : ['packages/resilient-download']
+          )
+        }
+      }
+    )
+    expect(probe.error).toBeUndefined()
+    expect(probe.status, probe.stderr).toBe(0)
+    const result = JSON.parse(probe.stdout)
+    if (excluded) expect(result.specs).toEqual([])
+    else {
+      expect(result.specs).toHaveLength(3)
+      expect(new Set(result.specs.map(({ path }: { path: string }) => path)).size).toBe(3)
+      expect(
+        result.specs.every(({ name }: { name: string }) => name === 'resilient-download')
+      ).toBe(true)
+      expect(result.setup).toEqual([])
+      expect(result.workers).toBeUndefined()
+    }
+  }
+)

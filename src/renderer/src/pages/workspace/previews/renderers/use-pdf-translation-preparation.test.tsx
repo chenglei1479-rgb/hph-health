@@ -1,19 +1,24 @@
 import type { PdfTranslationCheckpoint } from '../../../../../../shared/pdf-translation'
-import { createPdfTranslationSource } from './pdf-translation'
-import { getPdfTranslationLayoutSnapshot } from './pdf-translation-snapshot'
+import {
+  createPdfTranslationSource,
+  getPdfTranslationLayoutSnapshot,
+  extractPdfTranslationSource,
+  type PdfTranslationExtraction,
+  applyCachedPdfTableSources
+} from '@aipoch/pdf-translation/reader'
+
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePdfTranslationPreparation } from './use-pdf-translation-preparation'
-import {
-  extractPdfTranslationSource,
-  type PdfTranslationExtraction
-} from './pdf-translation-extraction'
-import { applyCachedPdfTableSources } from './pdf-translation-table-source'
+
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-vi.mock('./pdf-translation-table-source', () => ({ applyCachedPdfTableSources: vi.fn() }))
-vi.mock('./pdf-translation-extraction', () => ({ extractPdfTranslationSource: vi.fn() }))
+vi.mock('@aipoch/pdf-translation/reader', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@aipoch/pdf-translation/reader')>()),
+  applyCachedPdfTableSources: vi.fn(),
+  extractPdfTranslationSource: vi.fn()
+}))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('reader-owned PDF preparation', () => {
@@ -267,10 +272,10 @@ describe('reader-owned PDF preparation', () => {
     expect(request).toMatchObject({
       extraction: ready,
       document,
-      attachmentVersionId: 'version',
+      sourceId: 'version',
       sourceIdentity
     })
-    await request.readCached({ attachmentVersionId: 'version', page: 1 })
+    await request.readCached({ sourceId: 'version', page: 1 })
     expect(window.api.pdfStructure.readCached).toHaveBeenCalledOnce()
     await act(async () => deferred.resolve(ready))
     await render()

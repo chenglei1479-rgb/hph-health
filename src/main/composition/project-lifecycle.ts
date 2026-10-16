@@ -1,3 +1,5 @@
+import type { ComputeJobOwnerLiveness } from '@aipoch/compute/node'
+import { createLogger, diagnosticErrorFields } from '@aipoch/diagnostics/node'
 import { LIFECYCLE_CHANNELS } from '../../shared/lifecycle-events'
 import { createAcpRuntime } from '../acp/runtime-composition'
 import { SideChatRelayOwner } from '../acp/side-chat-relay-owner'
@@ -9,10 +11,12 @@ import { ArtifactReproducibilityAttemptOwner } from '../artifacts/artifact-repro
 import { ArtifactProvenanceRepository } from '../artifacts/provenance-repository'
 import { BackgroundResultDeliveryOwner } from '../background-result-delivery/owner'
 import { BookmarkRepository } from '../bookmarks/repository'
-import type { ComputeJobOwnerLiveness } from '../compute/job-deletion-owner'
 import { SessionEnabledComputeHostsOwner } from '../compute/session-enabled-hosts-owner'
-import { createLogger, diagnosticErrorFields } from '../logger'
-import { createManagedFileVersionHandlers } from '../managed-file-versions/ipc'
+import { registerSideChatIpcHandlers } from '../desktop-surface-declarations'
+import {
+  createManagedFileVersionCommandOwner,
+  createManagedFileVersionHandlers
+} from '../managed-file-versions/ipc'
 import { ManagedFileVersionService } from '../managed-file-versions/service'
 import type { NotebookRuntimeService } from '../notebook/runtime-service'
 import { createNotificationInboxController } from '../notifications/notification-inbox-controller'
@@ -37,7 +41,8 @@ import {
   createDefaultReviewRepository,
   createDefaultSessionRepository
 } from '../session-persistence/ipc'
-import { registerSideChatIpcHandlers } from '../side-chat/ipc'
+import { createSideChatCommandOwner, type SideChatCommandOwner } from '../side-chat/command-owner'
+
 import { createMainPromptSideChatRelay } from '../side-chat/main-prompt-relay'
 import { SideChatRuntimeOwner } from '../side-chat/runtime-owner'
 import { resolveConfigRoot } from '../storage-root'
@@ -69,6 +74,7 @@ export function composeProjectLifecycle({
   getActiveDelegatedSessions,
   getActiveSideChatSessions,
   sessionPersistenceCoordinator,
+  clearSessionCredentials,
   getNotebookService
 }: {
   applicationEvents: ApplicationEvents
@@ -125,6 +131,7 @@ export function composeProjectLifecycle({
     | 'updateArchive'
   >
   getNotebookService: () => NotebookRuntimeService
+  clearSessionCredentials: (sessionId: string) => void
 }): {
   sideChatRelay: SideChatRelayOwner
   mainPromptSideChatRelay: ReturnType<typeof createMainPromptSideChatRelay>
@@ -137,7 +144,7 @@ export function composeProjectLifecycle({
   visionEvidenceRepository: VisionEvidenceRepository
   projectHandlers: ReturnType<typeof createProjectHandlers>
   projectFilesHandlers: ReturnType<typeof createProjectFilesHandlers>
-  managedFileVersionHandlers: ReturnType<typeof createManagedFileVersionHandlers>
+  managedFileVersionHandlers: ReturnType<typeof createManagedFileVersionCommandOwner>
 } {
   const sideChatRelay = new SideChatRelayOwner({
     targetState: (parentSessionId) => {
@@ -304,6 +311,7 @@ export function composeProjectLifecycle({
     inbox: notificationInbox,
     sessionPersistenceCoordinator,
     onSessionsDeleted: async (sessionIds) => {
+      for (const sessionId of sessionIds) clearSessionCredentials(sessionId)
       await Promise.all([
         sessionEnabledComputeHostsOwnerRef.current?.clear(sessionIds),
         sideChatOwnerRef.current?.invalidateParents(sessionIds),
@@ -338,10 +346,12 @@ export function composeProjectLifecycle({
         file.sourceVersionId
       )
   )
-  const managedFileVersionHandlers = createManagedFileVersionHandlers(managedFileVersionService, {
-    withDataRootWrite,
-    onChanged: (event) => broadcastToRenderers('project-files:changed', event)
-  })
+  const managedFileVersionHandlers = createManagedFileVersionCommandOwner(
+    createManagedFileVersionHandlers(managedFileVersionService, {
+      withDataRootWrite,
+      onChanged: (event) => broadcastToRenderers('project-files:changed', event)
+    })
+  )
   return {
     sideChatRelay,
     mainPromptSideChatRelay,
@@ -382,11 +392,11 @@ export async function composeProjectRecovery({
   }) => Promise<ComputeJobOwnerLiveness>
   projectDeletionCoordinator: ProjectDeletionCoordinator
   archiveCoordinator: ArchiveCoordinator
-  jobDeletionOwner: import('../compute/job-deletion-owner').ComputeJobDeletionOwner
+  jobDeletionOwner: import('@aipoch/compute/node').ComputeJobDeletionOwner
   runtime: ReturnType<typeof createAcpRuntime>
   sideChatRuntime: SideChatRuntimeOwner
   modules: ApplicationModuleBuilder
-}): Promise<void> {
+}): Promise<SideChatCommandOwner> {
   // Recovery quiesces every runtime owner, so do not start its first attempt until ACP, Delegation,
   // Notebook, Side Chat, and the composed quiescence boundary are all initialized. The bounded
   // durable barrier restoration above still runs early enough to block admission during startup.
@@ -422,13 +432,13 @@ export async function composeProjectRecovery({
       await recovery.stop()
     }
   }))
-  declareElectronAdapter('side-chat', () =>
-    registerSideChatIpcHandlers(sideChatRuntime, {
-      loadParentSession: (projectId, sessionId) =>
-        sessionRepository.loadSession(projectId, sessionId),
-      hasLiveParentSession: (projectId, sessionId) => runtime.hasLiveSession(projectId, sessionId),
-      withParentAvailable: (sessionId, operation) =>
-        archiveCoordinator.withSessionAvailableById(sessionId, operation)
-    })
-  )
+  const sideChatCommands = createSideChatCommandOwner(sideChatRuntime, {
+    loadParentSession: (projectId, sessionId) =>
+      sessionRepository.loadSession(projectId, sessionId),
+    hasLiveParentSession: (projectId, sessionId) => runtime.hasLiveSession(projectId, sessionId),
+    withParentAvailable: (sessionId, operation) =>
+      archiveCoordinator.withSessionAvailableById(sessionId, operation)
+  })
+  declareElectronAdapter('side-chat', () => registerSideChatIpcHandlers(sideChatCommands))
+  return sideChatCommands
 }

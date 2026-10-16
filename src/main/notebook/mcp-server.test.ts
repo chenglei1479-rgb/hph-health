@@ -1,3 +1,4 @@
+import { nodeRuntimeEnvironmentEntries } from '../node-process-host'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -8,6 +9,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { Tiktoken } from 'js-tiktoken/lite'
 import cl100kBase from 'js-tiktoken/ranks/cl100k_base'
 import { z } from 'zod'
+
+import {
+  sanitizeAgentUserChoiceRequest,
+  sanitizeAgentUserChoiceAnswer
+} from '../../shared/elicitation'
 
 import { HOST_SDK_SUBAGENT_OPERATION_IDS, hostSdkHelp } from '../host-sdk/help'
 import {
@@ -143,7 +149,7 @@ describe('notebook MCP server config', () => {
       command: '/Applications/DRA.app/Contents/MacOS/DRA',
       args: ['/app/out/main/index.js', '--open-science-notebook-mcp'],
       env: [
-        { name: 'ELECTRON_RUN_AS_NODE', value: '1' },
+        ...nodeRuntimeEnvironmentEntries(),
         { name: 'OPEN_SCIENCE_NOTEBOOK_RPC_ENDPOINT', value: 'http://127.0.0.1:4567' },
         { name: 'OPEN_SCIENCE_NOTEBOOK_RPC_TOKEN', value: 'secret-token' },
         { name: 'OPEN_SCIENCE_NOTEBOOK_PROJECT_ID', value: 'default-project' },
@@ -778,11 +784,13 @@ describe('ask_user_question tool', () => {
         {
           question: 'Which path should I take?',
           header: 'Approach',
+          kind: 'single-select',
           options: [option('Minimal'), option('Expanded')]
         },
         {
           question: 'Which output should I produce?',
           header: 'Output',
+          kind: 'single-select',
           options: [option('Notebook'), option('Report')]
         }
       ]
@@ -792,7 +800,7 @@ describe('ask_user_question tool', () => {
         questions: [
           {
             question: 'Which path?',
-            options: [option('A'), option('B'), option('C'), option('D'), option('E')]
+            options: Array.from({ length: 17 }, (_, index) => option(String(index)))
           }
         ]
       })
@@ -809,6 +817,72 @@ describe('ask_user_question tool', () => {
     ).toThrow()
   })
 
+  it.each([5, 16])(
+    'preserves all %i options and explicit multi-select through the RPC contract',
+    (count) => {
+      const question = {
+        question: 'Which outputs?',
+        kind: 'multi-select' as const,
+        options: Array.from({ length: count }, (_, index) => ({ label: `Option ${index + 1}` }))
+      }
+      const parsed = z.object(tool!.inputSchema).parse({ questions: [question] })
+      expect(parsed).toEqual({ questions: [question] })
+      expect(sanitizeAgentUserChoiceRequest({ sessionId: 'session-1', ...parsed })).toEqual({
+        sessionId: 'session-1',
+        questions: [question]
+      })
+      expect(tool!.description).toContain('2-16')
+      expect(tool!.description).toContain('multi-select only for combinable choices')
+      expect(tool!.description).toContain('never exclusive alternatives')
+    }
+  )
+
+  it('keeps legacy single-choice input unchanged and rejects invalid mode/capacity', () => {
+    const question = { question: 'Which outputs?', options: [{ label: 'A' }, { label: 'B' }] }
+    const request = { sessionId: 'session-1', questions: [question] }
+    expect(sanitizeAgentUserChoiceRequest(request)).toEqual(request)
+    for (const kind of ['text', 'multiple', true, 1, null]) {
+      expect(
+        z.object(tool!.inputSchema).safeParse({ questions: [{ ...question, kind }] }).success
+      ).toBe(false)
+      expect(
+        sanitizeAgentUserChoiceRequest({ ...request, questions: [{ ...question, kind }] })
+      ).toBeUndefined()
+    }
+    expect(
+      sanitizeAgentUserChoiceRequest({
+        ...request,
+        questions: [
+          { ...question, options: Array.from({ length: 17 }, (_, i) => ({ label: String(i) })) }
+        ]
+      })
+    ).toBeUndefined()
+    expect(
+      sanitizeAgentUserChoiceRequest({
+        ...request,
+        questions: [{ ...question, kind: 'single-select' }]
+      })?.questions[0].kind
+    ).toBe('single-select')
+  })
+
+  it('validates multiple answers without losing label boundaries or custom text', () => {
+    const labels = ['A, B', 'A', 'Quote " and newline\nend']
+    const question = {
+      question: 'Which outputs?',
+      kind: 'multi-select' as const,
+      options: labels.map((label) => ({ label }))
+    }
+    expect(sanitizeAgentUserChoiceAnswer(question, [...labels].reverse())).toEqual(labels)
+    expect(sanitizeAgentUserChoiceAnswer(question, [labels[0]])).toEqual([labels[0]])
+    expect(sanitizeAgentUserChoiceAnswer(question, ' Custom answer ')).toBe('Custom answer')
+    for (const value of [[], ['unknown'], [labels[0], labels[0]], [1]]) {
+      expect(sanitizeAgentUserChoiceAnswer(question, value)).toBeUndefined()
+    }
+    expect(
+      sanitizeAgentUserChoiceAnswer({ ...question, kind: 'single-select' }, labels)
+    ).toBeUndefined()
+  })
+
   it('returns only the choice outcome within the shared control-tool result budget', () => {
     expect(
       tool?.mapResult?.(
@@ -822,6 +896,59 @@ describe('ask_user_question tool', () => {
 
 describe('notebook_execute tool', () => {
   const tool = NOTEBOOK_RPC_TOOLS.find((entry) => entry.name === 'notebook_execute')
+
+  it('rejects omitted arguments before execution and accepts a corrected code object', async () => {
+    const server = createNotebookMcpServer({
+      endpoint: 'http://127.0.0.1:4567',
+      token: 'test-token',
+      projectId: 'project-1',
+      sessionId: 'session-1',
+      workspaceCwd: '/workspace'
+    })
+    const client = new ModelContextProtocolClient({ name: 'argument-repro', version: '1.0.0' })
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+    const fetchRpc = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ result: { status: 'success', stdout: '42' } }))
+      )
+    try {
+      await server.connect(serverTransport)
+      await client.connect(clientTransport)
+      const catalog = await client.listTools()
+      expect(
+        catalog.tools.find(({ name }) => name === 'notebook_execute')?.inputSchema
+      ).toMatchObject({
+        type: 'object',
+        properties: { code: { type: 'string' } },
+        required: ['code']
+      })
+
+      const rejected = await client.callTool({ name: 'notebook_execute' })
+      expect(rejected).toMatchObject({
+        isError: true,
+        content: [
+          { type: 'text', text: expect.stringContaining('expected object, received undefined') }
+        ]
+      })
+      expect(fetchRpc).not.toHaveBeenCalled()
+
+      const corrected = await client.callTool({
+        name: 'notebook_execute',
+        arguments: { code: 'print(42)' }
+      })
+      expect(corrected.isError).not.toBe(true)
+      expect(fetchRpc).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(String(fetchRpc.mock.calls[0]?.[1]?.body))).toMatchObject({
+        method: 'execute',
+        params: { code: 'print(42)' }
+      })
+    } finally {
+      fetchRpc.mockRestore()
+      await client.close()
+      await server.close()
+    }
+  })
 
   it('accepts an explicit background mode and documents its durable receipt lifecycle', () => {
     const schema = z.object(tool?.inputSchema ?? {})
@@ -3430,3 +3557,5 @@ describe('compactRestartResult', () => {
     expect(compactRestartResult('x')).toBe('x')
   })
 })
+
+;(await import('../../../test/runtime-metadata')).configureTestRuntimeMetadata()

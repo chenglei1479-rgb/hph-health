@@ -16,6 +16,17 @@ import { createAffectedTestPlan } from './module-test-impact.mjs'
 const readManifest = (): ReturnType<JSON['parse']> =>
   JSON.parse(readFileSync(resolve('scripts/ci/change-impact.json'), 'utf8'))
 
+it.each([
+  'src/main/acp/specialist-switch-recovery.integration.test.ts',
+  'src/main/acp/prompt-turn-workflow.ts',
+  'src/main/agents/claude-code-handoff.ts',
+  'src/main/specialist/session-reconfiguration.ts',
+  'src/main/composition/agent-completion.ts',
+  'src/main/session-persistence/claude-replay.ts'
+])('runs the Windows Specialist recovery contract for %s', (path) => {
+  expect(classifyChanges([{ path, status: 'modified' }]).lanes).toContain('windows_runtime')
+})
+
 const listSourceFiles = (directory: string): string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name)
@@ -24,6 +35,66 @@ const listSourceFiles = (directory: string): string[] =>
 
 const windowsRuntimeSignal =
   /['"]win32['"]|powershell|taskkill(?:\.exe)?|windowsHide|SystemRoot|WINDIR|USERPROFILE|ProgramFiles|LOCALAPPDATA|APPDATA/i
+
+describe('declared test evidence without source ownership', () => {
+  const path = 'scripts/unowned-consumer.test.ts'
+  const moduleManifest = {
+    modules: {
+      host: {
+        ownerPaths: [],
+        testFiles: { owner: [], contract: [], consumer: [path] },
+        fallbackCapability: 'settings_ipc',
+        capabilityOverlays: []
+      },
+      runtime: {
+        ownerPaths: [],
+        testFiles: { owner: [], contract: [path], consumer: [] },
+        fallbackCapability: 'notebook_network_sandbox',
+        capabilityOverlays: []
+      }
+    }
+  }
+
+  it('unions capabilities of all evidence declarations and retains portable tests', () => {
+    const plan = classifyChanges([{ path, status: 'modified' }], readManifest(), {
+      moduleManifest
+    })
+    expect(plan.mode).toBe('selective')
+    expect(plan.roots).toEqual(['module:host', 'module:runtime'])
+    expect(plan.lanes).toEqual(
+      expect.arrayContaining([
+        'unit_macos',
+        'interface_contracts',
+        'linux_runtime',
+        'windows_runtime'
+      ])
+    )
+  })
+
+  it.each(['scripts/unregistered.test.ts', 'scripts/unowned-consumer.mjs'])(
+    'retains unknown fallback for %s',
+    (path) => {
+      const plan = classifyChanges([{ path, status: 'modified' }], readManifest(), {
+        moduleManifest
+      })
+      expect(plan).toMatchObject({ mode: 'full', roots: ['unknown'] })
+    }
+  )
+
+  it('does not let an evidence declaration override a global input rule', () => {
+    const manifest = readManifest()
+    manifest.rules.find((rule: { id: string }) => rule.id === 'global_gate_input').paths.push(path)
+    expect(
+      classifyChanges([{ path, status: 'modified' }], manifest, { moduleManifest })
+    ).toMatchObject({ mode: 'full', roots: ['global_gate_input'] })
+  })
+
+  it('retains full validation for deletion of declared evidence', () => {
+    expect(
+      classifyChanges([{ path, status: 'deleted' }], readManifest(), { moduleManifest })
+    ).toMatchObject({ mode: 'full', roots: ['destructive_change'] })
+  })
+})
 
 describe('pull request change classification', () => {
   it('publishes a Git revision plan for GitHub Actions callers', () => {
@@ -332,7 +403,7 @@ describe('pull request change classification', () => {
     manifest.rules.push({
       id: 'notebook_runtime',
       role: 'owner',
-      paths: ['src/main/notebook/source-file-access-analysis.ts'],
+      paths: ['packages/notebook-analysis/src/source-file-access-analysis.ts'],
       capabilities: ['notebook_runtime']
     })
     manifest.capabilities.notebook_runtime = {
@@ -341,7 +412,12 @@ describe('pull request change classification', () => {
     }
 
     const plan = classifyChanges(
-      [{ path: 'src/main/notebook/source-file-access-analysis.ts', status: 'modified' }],
+      [
+        {
+          path: 'packages/notebook-analysis/src/source-file-access-analysis.ts',
+          status: 'modified'
+        }
+      ],
       manifest
     )
 
@@ -473,12 +549,12 @@ describe('pull request change classification', () => {
     ['Windows runtime', 'src/main/windows.ts'],
     ['Shell search scope', 'src/main/notebook/shell-search-scope.ts'],
     ['PowerShell search parser', 'src/main/notebook/powershell-search-parser.ts'],
-    ['PowerShell', 'src/main/notebook/micromamba-cache-powershell.test.ts'],
+    ['PowerShell', 'packages/environment/src/micromamba-cache-powershell.test.ts'],
     ['path handling', 'src/main/acp/workspace-path.ts'],
-    ['ACL behavior', 'src/main/notebook/micromamba-cache-acl.integration.test.ts'],
-    ['Windows wheel recovery', 'src/main/notebook/pip-wheel-evidence.ts'],
-    ['Windows wheel regression', 'src/main/notebook/pip-wheel-evidence.test.ts'],
-    ['Windows install evidence', 'src/main/notebook/pip-install-evidence.test.ts'],
+    ['ACL behavior', 'packages/environment/src/micromamba-cache-acl.integration.test.ts'],
+    ['Windows wheel recovery', 'packages/environment/src/pip-wheel-evidence.ts'],
+    ['Windows wheel regression', 'packages/environment/src/pip-wheel-evidence.test.ts'],
+    ['Windows install evidence', 'packages/environment/src/pip-install-evidence.test.ts'],
     ['storage', 'src/main/storage/ipc.ts'],
     ['session persistence', 'src/main/session-persistence/ipc.ts'],
     ['delegated process ownership', 'src/main/delegation/process-ownership.ts'],
@@ -505,17 +581,19 @@ describe('pull request change classification', () => {
 
   it('requires a live CDN bundle when the immutable runtime version changes', () => {
     const plan = classifyChanges([
-      { path: 'src/main/notebook/runtime-paths.ts', status: 'modified' }
+      { path: 'packages/environment/src/runtime-paths.ts', status: 'modified' }
     ])
 
     expect(plan.roots).toEqual(expect.arrayContaining(['main_runtime', 'runtime_bundle']))
     expect(plan.lanes).toContain('runtime_bundle')
-    expect(plan.reasonChains).toContain('src/main/notebook/runtime-paths.ts -> runtime_bundle')
+    expect(plan.reasonChains).toContain(
+      'packages/environment/src/runtime-paths.ts -> runtime_bundle'
+    )
   })
 
   it('does not add focused Windows lanes for platform-neutral Main changes', () => {
     const plan = classifyChanges([
-      { path: 'src/main/notebook/source-file-access-analysis.ts', status: 'modified' }
+      { path: 'packages/notebook-analysis/src/source-file-access-analysis.ts', status: 'modified' }
     ])
 
     expect(plan.roots).not.toContain('windows_sensitive')
@@ -711,6 +789,13 @@ describe('pull request change classification', () => {
     'e2e/playwright.accessibility.config.ts',
     'e2e/vite.browser-test.config.ts',
     'scripts/ci/change-impact.json',
+    'scripts/windows-signing-policy.mjs',
+    'scripts/windows-signing-policy.test.ts',
+    'scripts/linux-cli-packages.mjs',
+    'scripts/linux-cli-packages.test.ts',
+    'scripts/publish-linux-cli-packages.mjs',
+    'scripts/publish-linux-cli-packages.test.ts',
+    'scripts/test-linux-cli-package.mjs',
     '.github/workflows/pr-gate.yml'
   ])('selects the declared full plan for global gate input %s', (path) => {
     const plan = classifyChanges([{ path, status: 'modified' }])
@@ -745,7 +830,7 @@ describe('pull request change classification', () => {
 
   it('selects one macOS Module-test lane without duplicate coverage or Renderer lanes', () => {
     const plan = classifyChanges([
-      { path: 'src/main/notebook/source-file-access-analysis.ts', status: 'modified' }
+      { path: 'packages/notebook-analysis/src/source-file-access-analysis.ts', status: 'modified' }
     ])
 
     expect(plan.mode).toBe('selective')
@@ -759,8 +844,10 @@ describe('pull request change classification', () => {
 
   it.each([
     'src/main/notebook/windows-shell.ts',
-    'src/main/notebook/code-risk-analysis.ts',
+    'src/main/settings/claude-cli-process.ts',
+    'packages/notebook-code-risk/src/index.ts',
     'src/main/notebook/runtime-service.ts',
+    'src/main/notebook/environment-resources.ts',
     'src/shared/tool-detail-sanitizer.ts',
     'src/shared/renderer-contract-catalog.ts',
     'src/shared/renderer-contracts/settings-preferences.ts'

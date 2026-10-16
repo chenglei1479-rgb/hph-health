@@ -2,7 +2,7 @@ import {
   AUTOMATIC_CLASSIFICATION_RUN_LIMIT,
   AUTOMATIC_CLASSIFICATION_DAY_LIMIT
 } from '../../../../../shared/classification'
-import { SMART_COLLECTION_RESUME_UNAVAILABLE } from '../../../../../shared/literature-smart-collections'
+import { SMART_COLLECTION_RESUME_UNAVAILABLE } from '@aipoch/literature-screening/contracts'
 import type { SmartCollectionState } from './smart-collection-state'
 import { SmartCollectionIcon } from '@/components/app-icons/custom-glyphs'
 import { formatSmartRule, parseSmartRule } from './smart-rule-fields'
@@ -35,10 +35,7 @@ import { ErrorNotice } from '@/components/error-notice'
 import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog'
 import { ActionMenuProvider, ActionMenuTarget, useActionMenu } from '@/components/action-menu'
 import { useSettingsStore } from '@/stores/settings-store'
-import type {
-  SmartCollectionView,
-  SmartScope
-} from '../../../../../shared/literature-smart-collections'
+import type { SmartCollectionView, SmartScope } from '@aipoch/literature-screening/contracts'
 
 const catalog = {
   bibtex: { labelKey: 'BibTeX', icon: FileText },
@@ -227,7 +224,9 @@ export function SmartCollectionPanel({
         offset: 0,
         collectionId,
         action,
-        ...(action === 'abandon' && targetRunId ? { runId: targetRunId } : {})
+        ...((action === 'abandon' || action === 'resume') && targetRunId
+          ? { runId: targetRunId }
+          : {})
       })
       state.finishWrite(receipt.smart)
       setRefreshFailed(receipt.smartRefreshFailed === true)
@@ -276,7 +275,7 @@ export function SmartCollectionPanel({
     Boolean(view?.automaticPauseRunId) &&
     view?.run?.id === view?.automaticPauseRunId &&
     !view?.run?.abandoned &&
-    Boolean(view?.run && view.run.done < view.run.total) &&
+    Boolean(view?.run && (view.run.done < view.run.total || view.run.failure)) &&
     (view?.run?.state === 'cancelled' ||
       view?.run?.state === 'interrupted' ||
       ((view.automaticPauseReason === 'storage-error' ||
@@ -402,7 +401,11 @@ export function SmartCollectionPanel({
             variant="outline"
             size="sm"
             disabled={disabled}
-            onClick={() => void run('refresh')}
+            onClick={() =>
+              view?.run?.state === 'failed'
+                ? void run('resume', view.run.id)
+                : setRevision((value) => value + 1)
+            }
           >
             {t('Retry')}
           </Button>
@@ -490,7 +493,7 @@ export function SmartCollectionPanel({
                 size="icon-sm"
                 aria-label={t('Resume analysis')}
                 disabled={disabled || (automaticPauseVisible && !view.automaticPauseRunId)}
-                onClick={() => void run('resume')}
+                onClick={() => void run('resume', view.run?.id)}
               >
                 <Play className="size-4" aria-hidden="true" />
               </Button>

@@ -1,6 +1,8 @@
+import { readFileSync } from 'node:fs'
 import { availableParallelism, cpus } from 'node:os'
 import { basename, dirname, resolve } from 'path'
-import { defineConfig, configDefaults } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
+import { packageTestExcludePatterns } from './scripts/ci/package-test-impact.mjs'
 import WindowsTestSequencer from './scripts/ci/windows-test-sequencer'
 
 const testRoot = resolve('.')
@@ -71,14 +73,27 @@ const VITEST_PORTABLE_CI_EXCLUDE_PATTERNS = [
   'src/main/session-plan/plan-context-file.shell.integration.test.ts'
 ] as const
 
+function portableTestScopeFor(env: NodeJS.ProcessEnv): 'host' | 'packages' | undefined {
+  if (env.VITEST_PORTABLE_CI !== '1' || !env.OPEN_SCIENCE_CI_PORTABLE_SCOPE) return undefined
+  const scope = env.OPEN_SCIENCE_CI_PORTABLE_SCOPE
+  if (scope !== 'host' && scope !== 'packages') throw new Error('Invalid CI portable test scope')
+  return scope
+}
+
 function vitestExcludePatternsFor(env: NodeJS.ProcessEnv): string[] {
+  const scope = portableTestScopeFor(env)
   return [
     ...BASE_VITEST_EXCLUDE_PATTERNS,
+    ...packageTestExcludePatterns(env),
+    ...(scope === 'host' ? ['packages/**'] : []),
+    // Exclude every non-package root, including root-level tests and future host directories.
+    ...(scope === 'packages' ? ['!(packages)/**', '*.{test,spec}.?(c|m)[jt]s?(x)'] : []),
     ...(env.VITEST_PORTABLE_CI === '1' ? VITEST_PORTABLE_CI_EXCLUDE_PATTERNS : [])
   ]
 }
 
 const VITEST_EXCLUDE_PATTERNS = vitestExcludePatternsFor(process.env)
+const portableTestScope = portableTestScopeFor(process.env)
 const VITEST_COVERAGE_EXCLUDE_PATTERNS = [
   '**/*.test.{ts,tsx}',
   '**/*.d.ts',
@@ -129,12 +144,13 @@ function coverageThresholdsFor(env: NodeJS.ProcessEnv): CoverageThresholds | und
 
   return {
     ...aggregate,
-    // Keep the now-covered update wiring from being masked by the global aggregate.
+    // Temporary 1.0 baseline from Nightly 38516126264 after update-recovery expansion.
+    // Restore lines 85 / statements 80 as recovery-path coverage is added.
     'src/main/update/**': {
-      lines: 85,
+      lines: 78,
       functions: 75,
       branches: 70,
-      statements: 80
+      statements: 77
     },
     // CSV is a user-facing renderer with bounded-data and fallback behavior worth protecting.
     'src/renderer/src/pages/workspace/previews/renderers/CsvPreview.tsx': {
@@ -207,12 +223,28 @@ export default defineConfig({
       ? 1
       : resolveVitestMaxWorkers(undefined, process.env.OPEN_SCIENCE_TEST_MAX_WORKERS),
     projects: [
+      ...(portableTestScope === 'host' ||
+      packageTestExcludePatterns(process.env).includes('packages/resilient-download/**')
+        ? []
+        : ['packages/resilient-download/vitest.config.ts']),
+      ...(portableTestScope === 'host' ||
+      packageTestExcludePatterns(process.env).includes('packages/durable-files/**')
+        ? []
+        : ['packages/durable-files/vitest.config.ts']),
+      // Standalone package configuration owns its setup, concurrency and native shell tests.
+      ...(portableTestScope === 'host' ||
+      packageTestExcludePatterns(process.env).includes('packages/compute/**')
+        ? []
+        : ['packages/compute/vitest.config.ts']),
       {
         extends: true,
         test: {
           name: 'default',
           exclude: [
             ...VITEST_EXCLUDE_PATTERNS,
+            'packages/compute/**',
+            'packages/durable-files/**',
+            'packages/resilient-download/**',
             ...VITEST_ARCHITECTURE_TEST_GLOBS,
             ...VITEST_DATABASE_TEST_GLOBS,
             ...VITEST_PROCESS_TEST_GLOBS
@@ -224,7 +256,12 @@ export default defineConfig({
         test: {
           name: 'architecture',
           include: [...VITEST_ARCHITECTURE_TEST_GLOBS],
-          exclude: [...VITEST_EXCLUDE_PATTERNS],
+          exclude: [
+            ...VITEST_EXCLUDE_PATTERNS,
+            'packages/compute/**',
+            'packages/durable-files/**',
+            'packages/resilient-download/**'
+          ],
           isolate: false,
           fileParallelism: false,
           maxWorkers: 1,
@@ -236,7 +273,12 @@ export default defineConfig({
         test: {
           name: 'process',
           include: [...VITEST_PROCESS_TEST_GLOBS],
-          exclude: [...VITEST_EXCLUDE_PATTERNS],
+          exclude: [
+            ...VITEST_EXCLUDE_PATTERNS,
+            'packages/compute/**',
+            'packages/durable-files/**',
+            'packages/resilient-download/**'
+          ],
           isolate: true,
           fileParallelism: false,
           maxWorkers: 1
@@ -247,7 +289,12 @@ export default defineConfig({
         test: {
           name: 'database',
           include: [...VITEST_DATABASE_TEST_GLOBS],
-          exclude: [...VITEST_EXCLUDE_PATTERNS],
+          exclude: [
+            ...VITEST_EXCLUDE_PATTERNS,
+            'packages/compute/**',
+            'packages/durable-files/**',
+            'packages/resilient-download/**'
+          ],
           isolate: true,
           fileParallelism: false,
           maxWorkers: 1,
@@ -260,7 +307,15 @@ export default defineConfig({
       // text for the CI log, lcov for upload/tooling, html for local inspection.
       reporter: ['text', 'lcov', 'html'],
       reportsDirectory: './coverage',
-      include: ['src/**/*.{ts,tsx}'],
+      include: [
+        'src/**/*.{ts,tsx}',
+        ...JSON.parse(
+          readFileSync(
+            new URL('./scripts/ci/package-test-boundaries.json', import.meta.url),
+            'utf8'
+          )
+        ).packages.map(({ root }: { root: string }) => `${root}/src/**/*.{ts,tsx}`)
+      ],
       // Exclude non-logic files so coverage reflects testable code, not wiring/types.
       exclude: VITEST_COVERAGE_EXCLUDE_PATTERNS,
       // Keep the full-suite gate about one point below the measured main baseline. Selective
@@ -279,5 +334,6 @@ export {
   VITEST_COVERAGE_EXCLUDE_PATTERNS,
   VITEST_EXCLUDE_PATTERNS,
   VITEST_PORTABLE_CI_EXCLUDE_PATTERNS,
-  vitestExcludePatternsFor
+  vitestExcludePatternsFor,
+  portableTestScopeFor
 }

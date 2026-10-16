@@ -1,8 +1,13 @@
 import { expect, it } from 'vitest'
 
 import {
+  MAC_DITTO_TIMEOUT_MS,
+  MAC_DMG_ATTACH_TIMEOUT_MS,
+  MAC_DMG_DETACH_TIMEOUT_MS,
   WINDOWS_SMOKE_INSTALL_DIR,
   declinedMachineApprovalLine,
+  macDmgAttachArgs,
+  macDmgDetachArgs,
   macQuarantineClearCommand,
   packagedSmokeEnv,
   smokeSettingsJson,
@@ -19,6 +24,24 @@ it('installs the Windows beta on a non-C: path that contains a space', () => {
   expect(command.endsWith(`/S /D=${WINDOWS_SMOKE_INSTALL_DIR}"`)).toBe(true)
   expect(command).not.toContain('"/D=')
   expect(windowsSilentInstallArgs(setup)[3]).toContain('/D=D:\\DRA Test\\medresearch-agent')
+})
+
+it('mounts the dmg on a private path before diskimages-helper can hang the job', () => {
+  expect(macDmgAttachArgs('/tmp/DRA.dmg', '/tmp/dra-smoke-dmg')).toEqual([
+    'attach',
+    '-nobrowse',
+    '-readonly',
+    '-noverify',
+    '-noautoopen',
+    '-mountpoint',
+    '/tmp/dra-smoke-dmg',
+    '/tmp/DRA.dmg'
+  ])
+  expect(macDmgDetachArgs('/tmp/dra-smoke-dmg')).toEqual(['detach', '-force', '/tmp/dra-smoke-dmg'])
+  // Two attach attempts, one copy, and one detach must finish inside the 40-minute smoke job.
+  expect(
+    MAC_DMG_ATTACH_TIMEOUT_MS * 2 + MAC_DITTO_TIMEOUT_MS + MAC_DMG_DETACH_TIMEOUT_MS
+  ).toBeLessThan(40 * 60 * 1000)
 })
 
 it('clears only the quarantine attribute a right-click Open would remove', () => {

@@ -1,4 +1,39 @@
+import type { McpOAuthConfig, McpOAuthState } from '@aipoch/connector-mcp-client'
 import type { ClassificationAdapter, ClassificationBinding } from '../../shared/classification'
+import type { GrantedLocalRoot } from '../../shared/local-fs'
+import type { LanguagePreference } from '../../shared/locale'
+import type { PackageMirror } from '../../shared/mirror'
+import type { ChatApiEndpoint, ReasoningEffort } from '../../shared/model-preference-contract'
+import type { NetworkProxySettings } from '../../shared/network-proxy'
+import type { NotebookLanguage } from '../../shared/notebook-language-contract'
+import type { NotebookNetworkSettings } from '../../shared/notebook-network-settings'
+import type { RuntimeEnablement } from '../../shared/notebook-runtime'
+import type { PermissionProfileId } from '../../shared/permission-profiles'
+import type { OfficialVendorId } from '../../shared/provider-registry'
+import type {
+  CustomReasoningEffortTransport,
+  ReasoningEffortPresetSetting
+} from '../../shared/reasoning-effort'
+import type {
+  AppIconVariant,
+  ClaudeInfo,
+  ClaudeSubscriptionProviderId,
+  CodexInfo,
+  CodexSubscriptionAuthMode,
+  CodexSubscriptionTransport,
+  ProjectFilesFilterPreference,
+  ProviderType,
+  ProviderValidationFailure,
+  ProviderValidationTarget,
+  ReviewerModelConfiguration,
+  SessionDetailsModelConfiguration,
+  SubagentModelConfiguration,
+  VisionModelConfiguration
+} from '../../shared/settings'
+import { SETTINGS_FILE_VERSION } from '../../shared/settings'
+import type { CloseActionPreference } from '../../shared/window-controls'
+import type { LocalShellRuntimePreference, WslSelection } from '../../shared/wsl-setup'
+import type { AgentFrameworkId } from '../agent-framework'
 type StoredClassificationService = {
   id: string
   adapter: ClassificationAdapter
@@ -22,46 +57,6 @@ export type StoredClassificationSettings = {
   skillSelection?: StoredClassificationBinding
   connectorSelection?: StoredClassificationBinding
 }
-import type {
-  AppIconVariant,
-  ChatApiEndpoint,
-  ClaudeSubscriptionProviderId,
-  ClaudeInfo,
-  CodexSubscriptionAuthMode,
-  CodexSubscriptionTransport,
-  CodexInfo,
-  ProjectFilesFilterPreference,
-  ProviderType,
-  ProviderValidationFailure,
-  ProviderValidationTarget,
-  ReasoningEffort,
-  ReviewerModelConfiguration,
-  SessionDetailsModelConfiguration,
-  SubagentModelConfiguration,
-  VisionModelConfiguration
-} from '../../shared/settings'
-import { SETTINGS_FILE_VERSION } from '../../shared/settings'
-import type { OfficialVendorId } from '../../shared/provider-registry'
-import type { PermissionProfileId } from '../../shared/permission-profiles'
-import type { NotebookNetworkSettings } from '../../shared/notebook-network'
-import type {
-  CustomReasoningEffortTransport,
-  ReasoningEffortPresetSetting
-} from '../../shared/reasoning-effort'
-import type { PackageMirror } from '../../shared/mirror'
-import type { NetworkProxySettings } from '../../shared/network-proxy'
-import type { GrantedLocalRoot } from '../../shared/local-fs'
-import type { NotebookLanguage } from '../../shared/notebook'
-import type { RuntimeEnablement } from '../../shared/notebook-runtime'
-import type { CloseActionPreference } from '../../shared/window-controls'
-import type { LanguagePreference } from '../../shared/locale'
-import type { LocalShellRuntimePreference, WslSelection } from '../../shared/wsl-setup'
-import type { AgentFrameworkId } from '../agent-framework'
-import type {
-  OAuthClientInformationMixed,
-  OAuthTokens
-} from '@modelcontextprotocol/sdk/shared/auth.js'
-import type { OAuthDiscoveryState } from '@modelcontextprotocol/sdk/client/auth.js'
 
 // Main-process-only stored shapes for settings.json. These carry the encrypted key reference and a
 // non-secret masked hint; the plaintext key never lives here (only transiently in service memory).
@@ -125,22 +120,12 @@ export type StoredProvider = {
   disconnectedAt?: number
 }
 
-export type StoredCustomMcpOAuthConfig = {
-  clientMetadataUrl?: string
-  authorizationServerUrl?: string
-  scopes?: string[]
-  clientId?: string
-  redirectUri?: string
-}
+export type StoredCustomMcpOAuthConfig = McpOAuthConfig
 
 // The OAuth state is serialized into one encrypted safeStorage value. `oauthState` is a transient
 // main-process projection populated by ConnectorSettingsModule; it is never written to settings.json
 // and never sent to the renderer.
-export type StoredCustomMcpOAuthState = {
-  tokens?: OAuthTokens
-  clientInformation?: OAuthClientInformationMixed
-  discoveryState?: OAuthDiscoveryState
-}
+export type StoredCustomMcpOAuthState = McpOAuthState
 
 export type StoredDeviceCredential =
   | {

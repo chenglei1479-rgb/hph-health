@@ -1,4 +1,3 @@
-import { app, shell } from 'electron'
 import { join } from 'node:path'
 import { AccountOwner } from './owner'
 import { readAccountConfig } from './config'
@@ -10,6 +9,19 @@ import { createAccountSessionStore } from './session-store'
 import { protectedSafeStorage } from '../secure-storage'
 
 let owner: AccountOwner | undefined
+let accountAppPath = (): string => process.cwd()
+let openAccountBrowser = (_url: string): Promise<void> => Promise.resolve()
+
+// The Electron shell installs these. The Node backend must not import Electron.
+export const configureAccountElectronHost = (host: {
+  appPath: () => string
+  openExternal: (url: string) => Promise<void>
+}): void => {
+  accountAppPath = host.appPath
+  openAccountBrowser = host.openExternal
+  owner = undefined
+}
+
 export const getAccountOwner = (): AccountOwner => {
   if (!owner) {
     let config: ReturnType<typeof readAccountConfig>
@@ -17,7 +29,7 @@ export const getAccountOwner = (): AccountOwner => {
     try {
       config = readDeployedAccountConfig([
         join(process.resourcesPath, 'dra-auth.json'),
-        join(app.getAppPath(), 'resources', 'dra-auth.json')
+        join(accountAppPath(), 'resources', 'dra-auth.json')
       ])
     } catch {
       configurationError = true
@@ -26,7 +38,7 @@ export const getAccountOwner = (): AccountOwner => {
       config,
       configurationError,
       profile: process.env.DRA_ACTIVE_PROFILE,
-      openBrowser: (url) => shell.openExternal(url),
+      openBrowser: (url) => openAccountBrowser(url),
       bindOwner: createIdentityBinding(resolveConfigRoot()),
       sessionStore: createAccountSessionStore(resolveConfigRoot(), protectedSafeStorage)
     })

@@ -72,7 +72,7 @@ import { WORKFLOW_MODE_ANALYSIS_LINE } from '../../../../shared/deliverable-next
 import { earliestCurrentDelegatedAttemptStartedAt } from '../../../../shared/delegated-work-projection'
 import { PROJECT_NAME_MAX_LENGTH, type Project } from '../../../../shared/projects'
 import type { EnvironmentCheckItem, EnvironmentCheckResult } from '../../../../shared/settings'
-import { getEnvironmentRepairPanel } from '../settings/settings-navigation'
+import { getEnvironmentRepairPanel } from '@/lib/settings-navigation'
 import {
   isSessionWaitReason,
   projectPresentedSessionActionability,
@@ -159,6 +159,9 @@ const getRunningActivityTimestamp = (session: ChatSession, computeStartedAt?: nu
 const sectionHeadingClassName = cn(homeTitleClassName, 'mb-4 flex items-center gap-2')
 
 const listCardClassName = cn(homeCardClassName, 'p-2')
+
+const emptyStateClassName =
+  'flex min-h-[180px] flex-col items-center justify-center rounded-2xl border border-dashed border-border p-6 text-center'
 
 const rowClassName =
   'group flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm font-medium leading-5 hover:bg-bg-200 sm:px-2'
@@ -500,6 +503,9 @@ const HomePage = ({
     persistedSessions,
     isProjectsLoaded && !loadError && hasCompleteSessionCatalog
   )
+
+  const bothListsEmpty =
+    isProjectsLoaded && !loadError && projectSummaries.length === 0 && recentSessions.length === 0
 
   const showArtifactCounts = hasCompleteSessionCatalog && recentSessions.length === 0
 
@@ -1087,8 +1093,16 @@ const HomePage = ({
             </section>
           ) : null}
 
-          <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-            <section className="min-w-0" aria-label={t('Projects')}>
+          <div
+            className={cn(
+              'grid grid-cols-1 gap-7 sm:gap-8 lg:grid-cols-2',
+              sessionUpdates.length > 0 ? 'mt-8' : 'mt-8 sm:mt-10'
+            )}
+          >
+            <section
+              className={cn('min-w-0', bothListsEmpty && 'lg:flex lg:flex-col')}
+              aria-label={t('Projects')}
+            >
               <h2 className={sectionHeadingClassName}>
                 <GalleryVerticalEnd
                   className="size-4 text-text-300"
@@ -1121,8 +1135,23 @@ const HomePage = ({
                   {t('Loading…')}
                 </div>
               ) : projectSummaries.length === 0 ? (
-                <div className={cn(homeCardClassName, homeMutedClassName, 'px-4 py-8 text-center')}>
-                  {t('No projects yet. Create one to get started.')}
+                <div className={cn(emptyStateClassName, bothListsEmpty && 'lg:flex-1')}>
+                  <h3 className="text-[15px] font-medium leading-5 text-foreground">
+                    {t('Create a project, start a conversation')}
+                  </h3>
+                  <p className="mt-2 text-[13px] leading-5 text-muted-foreground">
+                    {t('Keep your files and conversations together in a project.')}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-5 h-auto min-h-8 max-w-full gap-1.5 rounded-md px-3 py-1.5 text-xs whitespace-normal"
+                    onClick={openCreateDialog}
+                  >
+                    <Plus className="size-3.5" strokeWidth={2} aria-hidden="true" />
+                    {t('New project')}
+                  </Button>
                 </div>
               ) : (
                 <div className={listCardClassName}>
@@ -1310,13 +1339,22 @@ const HomePage = ({
               )}
             </section>
 
-            <section className="min-w-0" aria-label={t('Recent sessions')}>
+            <section
+              className={cn('min-w-0', bothListsEmpty && 'lg:flex lg:flex-col')}
+              aria-label={t('Recent sessions')}
+            >
               <h2 className={sectionHeadingClassName}>
                 <Clock className="size-4 text-text-300" strokeWidth={2} aria-hidden="true" />
                 {t('Recent sessions')}
               </h2>
               {recentSessions.length === 0 ? (
-                <div className={cn(homeCardClassName, homeMutedClassName, 'px-4 py-8 text-center')}>
+                <div
+                  className={cn(
+                    emptyStateClassName,
+                    'text-[13px] leading-5 text-muted-foreground',
+                    bothListsEmpty && 'lg:flex-1'
+                  )}
+                >
                   {t('Sessions you start will appear here.')}
                 </div>
               ) : (

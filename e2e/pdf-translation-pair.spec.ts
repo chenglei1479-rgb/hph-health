@@ -1,24 +1,41 @@
-import { createServer, type Server } from 'node:http'
-import { readFile } from 'node:fs/promises'
-import type { ElectronApplication, Page } from 'playwright'
+import { literatureItemInputSchema } from '@aipoch/literature-library/contracts'
 import { expect } from '@playwright/test'
+import { createHash } from 'node:crypto'
+import { readFile, readdir, stat } from 'node:fs/promises'
+import { createServer, type Server } from 'node:http'
+import { join } from 'node:path'
 import {
-  PDFDocument,
   PDFDict,
+  PDFDocument,
   PDFName,
   StandardFonts,
   concatTransformationMatrix,
   degrees,
   rgb
 } from 'pdf-lib'
-import { literatureItemInputSchema } from '../src/shared/literature'
+import type { ElectronApplication, Page } from 'playwright'
 import { test } from './fixtures/electron-app'
+import { openAllReferences } from './fixtures/library'
 
 const openReadingView = async (page: Page): Promise<void> => {
   const trigger = page.getByRole('button', { name: 'Reading view', exact: true })
   if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
 }
-const selectRendition = async (page: Page, name: string): Promise<void> => {
+const selectRendition = async (
+  page: Page,
+  name: 'Original' | 'Translation' | 'Compare'
+): Promise<void> => {
+  const sidebar = page.locator('[data-pdf-translation-sidebar]')
+  if (await sidebar.isVisible()) {
+    // Floating translation covers the reader toolbar on the CI-sized window.
+    const label = {
+      Original: 'Original PDF',
+      Translation: 'View translated PDF',
+      Compare: 'Compare PDFs'
+    }[name]
+    await sidebar.getByRole('button', { name: label, exact: true }).click()
+    return
+  }
   await openReadingView(page)
   await page
     .getByRole('group', { name: 'PDF rendition' })
@@ -61,6 +78,8 @@ for (const variant of [
     await app.page.evaluate(() => window.api.locale.setPreference({ preference: 'en' }))
     await app.completeOnboarding()
     const page = await app.configureFakeAgent()
+    // Exercise floating sidebars even when the developer's display is wider than CI.
+    await app.setMainWindowSize(1100, 720)
     const settingsBefore = await page.evaluate(() => window.api.settings.getSettings())
     let agentProviderId: string | undefined
     if (variant === 'agent-model') {
@@ -347,8 +366,7 @@ for (const variant of [
       },
       { item, bytes }
     )
-    await page.getByRole('button', { name: 'Library', exact: true }).click()
-    await page.getByRole('button', { name: 'All references', exact: true }).click()
+    await openAllReferences(page)
     await page.getByRole('button', { name: 'Preview paired-reading.pdf', exact: true }).click()
     await page.getByRole('button', { name: 'Full-text translation', exact: true }).click()
     await page.getByRole('button', { name: 'Prepare full text', exact: true }).click()
@@ -473,9 +491,7 @@ for (const variant of [
       await details.scrollIntoViewIfNeeded()
       await page.screenshot({ path: testInfo.outputPath('provider-error-details.png') })
       await panel.getByRole('button', { name: 'Retry', exact: true }).click()
-      await expect(
-        panel.getByRole('button', { name: 'New translation', exact: true })
-      ).toBeVisible()
+      await expect(panel.getByRole('button', { name: '4 Translated', exact: true })).toBeVisible()
       expect(paragraphRequests).toBe(5)
       await expect(panel.getByText('Translation paused', { exact: true })).toBeHidden()
       await expect(details).toHaveCount(0)
@@ -483,11 +499,8 @@ for (const variant of [
     }
     if (variant === 'streaming-reading') {
       await expect(panel).toContainText('1 / 5')
-      await openReadingView(page)
       await expect(
-        page
-          .getByRole('group', { name: 'PDF rendition' })
-          .getByRole('button', { name: 'Translation', exact: true })
+        panel.getByRole('button', { name: 'View translated PDF', exact: true })
       ).toBeEnabled({ timeout: 60000 })
       await expect(originalCanvas).toHaveAttribute('data-stable-original', 'true')
       expect(await originalCanvas.evaluate((node: HTMLCanvasElement) => node.toDataURL())).toBe(
@@ -574,7 +587,7 @@ for (const variant of [
         if (done < 5) await expect(panel).toContainText(`${done} / 5`)
         else
           await expect(
-            panel.getByRole('button', { name: 'New translation', exact: true })
+            panel.getByRole('button', { name: '5 Translated', exact: true })
           ).toBeVisible()
         // Progress must not destroy, clear or replace the displayed canvas.
         await expect(
@@ -611,13 +624,18 @@ for (const variant of [
             '测量受控实验室培养物中的细胞生长。'
           )
           await expect(second.locator('[data-pdf-text-layer]')).toContainText('Cell growth')
-          await canvas.scrollIntoViewIfNeeded()
+          // Offscreen canvases unmount; scroll the persistent page row back into view first.
+          await page.locator('[data-page-number="1"]').scrollIntoViewIfNeeded()
           await expect(
             page
               .locator('[data-pdf-translated-page]')
               .first()
               .locator('[data-pdf-page-ready="true"]')
           ).toBeVisible()
+          // A remounted canvas starts at 0x0 before its retained ready state is refreshed.
+          await expect
+            .poll(() => canvas.evaluate((node: HTMLCanvasElement) => node.width))
+            .toBeGreaterThan(0)
           pixels = await canvas.evaluate((node: HTMLCanvasElement) => {
             node.dataset.stableTranslation = 'true'
             return node.toDataURL()
@@ -673,13 +691,14 @@ for (const variant of [
       expect(directRequests).toHaveLength(requestsBeforeRetry + 1)
       await expect(review).toBeVisible()
       expect(await oldCanvas!.evaluate((node) => node.isConnected)).toBe(true)
+      // This page is complete, so retranslation automatically publishes its replacement.
+      // The refresh control may briefly be busy before disappearing; do not race that transition.
       await expect(
         panel.getByRole('button', { name: 'Update PDF preview', exact: true })
-      ).toBeVisible()
-      await panel.getByRole('button', { name: 'Update PDF preview', exact: true }).click()
+      ).toBeHidden({ timeout: 60000 })
       await expect(
         page.locator('[data-pdf-translated-page]').first().locator('[data-pdf-text-layer]')
-      ).toContainText(replacementText)
+      ).toContainText(replacementText, { timeout: 60000 })
       expect(directRequests).toHaveLength(requestsBeforeRetry + 1)
       await page.screenshot({ path: testInfo.outputPath('paragraph-retranslated.png') })
       return
@@ -742,9 +761,7 @@ for (const variant of [
       holdTranslation = false
       for (const release of heldTranslations) release()
       await expect(confirmation).toBeHidden({ timeout: 60000 })
-      await expect(
-        panel.getByRole('button', { name: 'New translation', exact: true })
-      ).toBeVisible()
+      await expect(panel.getByRole('button', { name: '4 Translated', exact: true })).toBeVisible()
       await closePreview.click()
       await expect(page.locator('[data-slot="file-preview-dialog"]')).toBeHidden()
       await expect(confirmation).toBeHidden()
@@ -758,8 +775,7 @@ for (const variant of [
       const promptsBeforeResume = (await app.readFakeAgentPrompts()).filter((entry) =>
         entry.prompt.includes('PAIR_PDF_ACCEPTANCE')
       ).length
-      await restoredPage.getByRole('button', { name: 'Library', exact: true }).click()
-      await restoredPage.getByRole('button', { name: 'All references', exact: true }).click()
+      await openAllReferences(restoredPage)
       await restoredPage
         .getByRole('button', { name: 'Preview paired-reading.pdf', exact: true })
         .click()
@@ -776,11 +792,8 @@ for (const variant of [
       await restoredPage.screenshot({ path: testInfo.outputPath('restored-partial.png') })
       await restoredPanel.getByRole('button', { name: 'Continue translation', exact: true }).click()
       await expect(
-        restoredPanel.getByRole('button', { name: 'New translation', exact: true })
-      ).toBeVisible({ timeout: 60000 })
-      await expect(
         restoredPanel.getByRole('button', { name: '4 Translated', exact: true })
-      ).toBeVisible()
+      ).toBeVisible({ timeout: 60000 })
       await expect(
         restoredPanel.getByRole('button', { name: 'View translated PDF', exact: true })
       ).toBeEnabled()
@@ -825,7 +838,7 @@ for (const variant of [
           Promise.allSettled(requests)
       }, bytes)
     }
-    await expect(panel.getByRole('button', { name: 'New translation', exact: true })).toBeVisible({
+    await expect(panel.getByRole('button', { name: '4 Translated', exact: true })).toBeVisible({
       timeout: 60000
     })
     await expect(panel.getByText('Preparing translated PDF…', { exact: true })).toBeHidden({
@@ -835,23 +848,22 @@ for (const variant of [
       timeout: 60000
     })
     const updatePreview = panel.getByRole('button', { name: 'Update PDF preview', exact: true })
-    // Automatic generation may consume the update between observation and click.
-    await expect(async () => {
-      if (await updatePreview.isVisible()) await updatePreview.click({ timeout: 1000 })
-    }).toPass({ timeout: 5000 })
+    if (variant === 'busy') {
+      await expect(async () => {
+        if (await updatePreview.isVisible()) await updatePreview.click({ timeout: 1000 })
+      }).toPass({ timeout: 5000 })
+    } else {
+      // Completing the page automatically publishes the PDF. Wait for publication
+      // before using the reader or requesting an explicit layout retry.
+      await expect(updatePreview).toBeHidden({ timeout: 60000 })
+    }
     const failure = panel.getByRole('alert')
     let promptsBeforeRetry: Awaited<ReturnType<typeof app.readFakeAgentPrompts>> | undefined
     if (variant === 'busy') {
       await expect(failure).toContainText(
         'PDF generation is busy. Retry after another document finishes.'
       )
-      await openReadingView(page)
-      await expect(
-        page
-          .getByRole('group', { name: 'PDF rendition' })
-          .getByRole('button', { name: 'Compare', exact: true })
-      ).toBeEnabled()
-      await page.keyboard.press('Escape')
+      await expect(panel.getByRole('button', { name: 'Compare PDFs', exact: true })).toBeEnabled()
       await panel.getByRole('button', { name: 'Close translation', exact: true }).click()
       await expect(panel).toBeHidden()
       await expect(page.getByRole('alert')).toHaveCount(0)
@@ -897,6 +909,8 @@ for (const variant of [
       await expect(panel).not.toContainText('PRIVATE_')
       await expect(panel).not.toContainText('<think>')
       await page.screenshot({ path: testInfo.outputPath('clean-translation-sidebar.png') })
+      const settings = panel.getByRole('button', { name: /^Translation settings(?: |$)/ })
+      if ((await settings.getAttribute('aria-expanded')) !== 'true') await settings.click()
       await panel.getByRole('button', { name: 'New translation', exact: true }).click()
       const newTranslation = page.getByRole('dialog', { name: 'New translation', exact: true })
       await newTranslation.getByRole('combobox', { name: 'Translation method' }).click()
@@ -993,6 +1007,8 @@ for (const variant of [
       const currentSettings = await page.evaluate(() => window.api.settings.getSettings())
       expect(currentSettings.activeProviderId).toBe(settingsBefore.activeProviderId)
       expect(currentSettings.activeModel).toBe(settingsBefore.activeModel)
+      const settings = panel.getByRole('button', { name: /^Translation settings(?: |$)/ })
+      if ((await settings.getAttribute('aria-expanded')) !== 'true') await settings.click()
       await panel.getByRole('button', { name: 'New translation', exact: true }).click()
       const dialog = page.getByRole('dialog', { name: 'New translation', exact: true })
       await expect(dialog.getByRole('combobox', { name: 'Model', exact: true })).toContainText(
@@ -1213,6 +1229,9 @@ for (const variant of [
     }
     await assertAligned()
     if (variant === 'standard') {
+      // Shared resizing is a docked-sidebar contract; narrow readers use floating sidebars.
+      const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))
+      await page.setViewportSize({ width: 1440, height: 900 })
       const translationToggle = page.getByRole('button', {
         name: 'View translation',
         exact: true
@@ -1273,6 +1292,7 @@ for (const variant of [
       await page.keyboard.press('Escape')
       await expect(markers).toHaveCount(0)
       await expect(scroll.locator('[data-translation-source]')).toHaveCount(0)
+      await page.setViewportSize(viewport)
     }
     if (
       ['links', 'inline-link', 'multiline-link', 'reflow-link', 'cropped', 'rotated'].includes(
@@ -1362,9 +1382,14 @@ for (const variant of [
         ''
       )
     }
+    // Link checks finish on page two; start the alignment gesture on a mounted first page.
+    await scroll.evaluate((node) => {
+      node.scrollTop = 0
+    })
+    await expect(first.locator('canvas')).toHaveCount(2)
     const bounds = await first.locator('[data-pdf-translated-page]').boundingBox()
     await page.mouse.move(bounds!.x + 40, bounds!.y + 100)
-    await page.mouse.wheel(0, 400)
+    await page.mouse.wheel(0, 150)
     await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBeGreaterThan(100)
     await assertAligned()
     const beforeZoom = await first
@@ -1432,6 +1457,8 @@ for (const variant of [
         .getByRole('textbox', { name: 'Search translation', exact: true })
         .fill('previous translation only')
       await expect(panel.getByText('No translation matches', { exact: true })).toBeVisible()
+      const settings = panel.getByRole('button', { name: /^Translation settings(?: |$)/ })
+      if ((await settings.getAttribute('aria-expanded')) !== 'true') await settings.click()
       await panel.getByRole('button', { name: 'New translation', exact: true }).click()
       const dialog = page.getByRole('dialog', { name: 'New translation', exact: true })
       await expect(
@@ -1444,19 +1471,17 @@ for (const variant of [
       ).toHaveLength(5)
       await page.screenshot({ path: testInfo.outputPath('new-translation-ready.png') })
       await dialog.getByRole('button', { name: 'Translate document', exact: true }).click()
-      await expect(panel.getByRole('button', { name: 'New translation', exact: true })).toBeVisible(
-        { timeout: 60000 }
-      )
+      await expect(panel.getByRole('button', { name: '4 Translated', exact: true })).toBeVisible({
+        timeout: 60000
+      })
       await panel.getByRole('button', { name: 'Search translation', exact: true }).click()
       await expect(
         panel.getByRole('textbox', { name: 'Search translation', exact: true })
       ).toHaveValue('')
       await expect(panel.getByText('No translation matches', { exact: true })).toHaveCount(0)
-      await openReadingView(page)
-      await expect(modes.getByRole('button', { name: 'Original', exact: true })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      )
+      await expect(
+        panel.getByRole('button', { name: 'Original PDF', exact: true })
+      ).toHaveAttribute('aria-pressed', 'true')
       expect(
         (await app.readFakeAgentPrompts()).filter((entry) =>
           entry.prompt.includes('PAIR_PDF_ACCEPTANCE')
@@ -1503,7 +1528,11 @@ for (const variant of [
           })
         )
         .toBe(true)
-      await page.getByRole('searchbox', { name: 'Search document', exact: true }).press('Enter')
+      const search = page.getByRole('searchbox', { name: 'Search document', exact: true })
+      // The find bar publishes the first match before all pages finish searching.
+      await expect(search.locator('..').getByText('1/4', { exact: true })).toBeVisible()
+      await search.press('Enter')
+      await expect(search.locator('..').getByText('2/4', { exact: true })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Page 2 of 4', exact: true })).toBeVisible()
       await page.screenshot({ path: testInfo.outputPath('translated-search.png') })
       await page.keyboard.press('Escape')
@@ -1566,10 +1595,28 @@ for (const variant of [
       await expect(usagePage.locator('[data-slot="translation-usage"]')).toContainText('560')
       await usagePage.screenshot({ path: testInfo.outputPath('translation-usage-accounting.png') })
     }
-    if (variant === 'standard') {
+    if (variant === 'standard' || variant === 'direct-api') {
+      const dataRoot = await app.page.evaluate(
+        async () => (await window.api.storage.getInfo()).dataRoot
+      )
+      const cacheRoot = join(dataRoot, 'literature', 'pdf-translation-cache')
+      const cacheSnapshot = async (): Promise<unknown[]> =>
+        Promise.all(
+          (await readdir(cacheRoot))
+            .filter((name) => name.endsWith('.pdfcache'))
+            .sort()
+            .map(async (name) => ({
+              name,
+              digest: createHash('sha256')
+                .update(await readFile(join(cacheRoot, name)))
+                .digest('hex'),
+              modified: (await stat(join(cacheRoot, name))).mtimeMs
+            }))
+        )
+      const savedPdfs = await cacheSnapshot()
+      expect(savedPdfs.length).toBeGreaterThan(0)
       const resumedPage = await app.restart()
-      await resumedPage.getByRole('button', { name: 'Library', exact: true }).click()
-      await resumedPage.getByRole('button', { name: 'All references', exact: true }).click()
+      await openAllReferences(resumedPage)
       await resumedPage
         .getByRole('button', { name: 'Preview paired-reading.pdf', exact: true })
         .click()
@@ -1583,13 +1630,17 @@ for (const variant of [
       await expect(
         restoredPanel.getByRole('button', { name: 'View translated PDF', exact: true })
       ).toBeEnabled()
-      expect(
-        (await app.readFakeAgentPrompts()).filter((entry) =>
-          entry.prompt.includes('PAIR_PDF_ACCEPTANCE')
-        )
-      ).toHaveLength(10)
+      if (variant === 'standard') {
+        expect(
+          (await app.readFakeAgentPrompts()).filter((entry) =>
+            entry.prompt.includes('PAIR_PDF_ACCEPTANCE')
+          )
+        ).toHaveLength(10)
+      }
       await selectRendition(resumedPage, 'Compare')
       await expect(resumedPage.locator('[data-page-number="1"] canvas')).toHaveCount(2)
+      // Restore the already-published PDF; neither translating nor regenerating is recovery.
+      expect(await cacheSnapshot()).toEqual(savedPdfs)
       await resumedPage.screenshot({ path: testInfo.outputPath('restored-translation.png') })
     }
   })

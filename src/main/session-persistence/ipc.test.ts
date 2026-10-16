@@ -1,28 +1,29 @@
-import { RuntimeWriterOwner } from './runtime-writer'
+import { createComputeExecution } from '@aipoch/compute/node'
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
+import { configureTestElectronHost } from '../../../test/runtime-host'
 import { ELECTRON_APPLICATION_COMMAND_CHANNELS } from '../../shared/renderer-contract-catalog'
 import { registerApplicationCommandElectronAdapter } from '../application-command-electron-adapter'
-import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
+import { RuntimeWriterOwner } from './runtime-writer'
 
+import type { Logger } from '@aipoch/diagnostics/node'
+import type { ComputeJob } from '../../shared/compute'
 import {
   createEmptySessionManifest,
   materializeSessionConversationGraph,
+  SessionDeletionCommittedError,
   SessionRevisionConflictError,
   SessionSizeLimitError,
-  SessionDeletionCommittedError,
-  type PersistedChatSession,
-  type LoadAllSessionsResult
+  type LoadAllSessionsResult,
+  type PersistedChatSession
 } from '../../shared/session-persistence'
-import type { Logger } from '../logger'
+import type { ComputeJobRepository } from '../compute/job-repository'
+import type { ComputeHostRepository } from '../compute/repository'
 import {
   ProjectDeletionCoordinator,
   type ProjectDeletionRepository,
   type ProjectSessionDeletion
 } from '../projects/deletion-coordinator'
 import type { ReviewRepository } from '../reviewer/repository'
-import { ConcurrencyManager } from '../compute/concurrency-manager'
-import type { ComputeJobRepository } from '../compute/job-repository'
-import type { ComputeHostRepository } from '../compute/repository'
-import type { ComputeJob } from '../../shared/compute'
 
 const { broadcastLifecycleEvent, getLifecycleClientId, ipcHandlers, registrationFailure } =
   vi.hoisted(() => ({
@@ -53,6 +54,8 @@ vi.mock('../lifecycle-broadcast', () => ({
   getLifecycleClientId
 }))
 
+import { SessionDeletionOwner } from '../session-deletion/owner'
+import { beginMigration, clearMigrationPending } from '../storage/migration-state'
 import {
   canReconcileSessionAbsences,
   coordinateSessionPersistenceWithProjectDeletions,
@@ -65,9 +68,7 @@ import {
   type SessionPersistenceBackend,
   type SessionPersistenceHandlers
 } from './ipc'
-import { beginMigration, clearMigrationPending } from '../storage/migration-state'
 import { MainMessageAttributionAuthority } from './message-attribution-authority'
-import { SessionDeletionOwner } from '../session-deletion/owner'
 
 beforeEach(() => {
   ipcHandlers.clear()
@@ -519,8 +520,8 @@ describe('session persistence IPC handlers', () => {
         status: 'queued'
       } as ComputeJob
       const dispatch = vi.fn(async () => undefined)
-      const manager = new ConcurrencyManager(
-        {
+      const manager = createComputeExecution().createQueue({
+        jobs: {
           findQueuedJobs: async () => (job.status === 'queued' ? [job] : []),
           countActiveBySession: async () => activeCount,
           findSessionConcurrencyJobs: async () => [job],
@@ -530,19 +531,16 @@ describe('session persistence IPC handlers', () => {
             return job
           }
         } as unknown as ComputeJobRepository,
-        { get: async () => ({ concurrencyLimit: 20 }) } as unknown as ComputeHostRepository,
-        dispatch,
-        undefined,
-        undefined,
-        undefined,
-        {
+        hosts: { get: async () => ({ concurrencyLimit: 20 }) } as unknown as ComputeHostRepository,
+        dispatch: dispatch,
+        sessionPolicy: {
           resolve: async () =>
             corrupt
               ? { status: 'blocked', reason: 'unavailable' }
               : { status: 'ready', limit: 1, revision: 0 },
           save: async () => undefined
         }
-      )
+      })
       const handlers = createSessionPersistenceHandlersWithAttributionAuthority(
         {
           loadAll: async () => catalog(),
@@ -1410,3 +1408,5 @@ describe('session persistence IPC handlers', () => {
     expect(broadcastLifecycleEvent).toHaveBeenCalledOnce()
   })
 })
+
+await configureTestElectronHost(await import('electron'))

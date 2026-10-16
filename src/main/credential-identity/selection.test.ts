@@ -19,8 +19,8 @@ describe('credential identity selection', () => {
   const statuses = ['exists', 'not-found', 'access-blocked', 'error', 'unsupported'] as const
   it.each([true, false])('selects sequentially for all status pairs (packaged=%s)', (packaged) => {
     const suffix = packaged ? '' : ' (DEV)'
-    const current = `MedResearch Agent${suffix}`
-    const legacy = `MedResearch Agent${suffix}`
+    const current = `Open-Science${suffix}`
+    const legacy = `Open Science${suffix}`
     for (const preferred of statuses) {
       for (const previous of statuses) {
         const { selection, probe } = choose([preferred, previous], packaged)
@@ -48,21 +48,21 @@ describe('credential identity selection', () => {
         .mockImplementationOnce(() => ({ status: 'exists' }))
     expect(selectCredentialIdentity({ platform: 'darwin', packaged: true, probe })).toEqual({
       backend: 'mac-keychain',
-      appName: legacyExists ? 'MedResearch Agent' : 'MedResearch Agent',
+      appName: legacyExists ? 'Open Science' : 'Open-Science',
       exists: legacyExists
     })
-    expect(probe.mock.calls).toEqual([['MedResearch Agent'], ['MedResearch Agent']])
+    expect(probe.mock.calls).toEqual([['Open-Science'], ['Open Science']])
   })
 
   it('does not cache a legacy selection across launches', () => {
-    expect(choose(['not-found', 'exists']).selection.appName).toBe('MedResearch Agent')
-    expect(choose(['exists']).selection.appName).toBe('MedResearch Agent')
+    expect(choose(['not-found', 'exists']).selection.appName).toBe('Open Science')
+    expect(choose(['exists']).selection.appName).toBe('Open-Science')
   })
 
   it('keeps Windows on the same profile-scoped DPAPI backend without macOS item queries', () => {
     const probe = vi.fn()
     const selection = selectCredentialIdentity({ platform: 'win32', packaged: true, probe })
-    expect(selection).toEqual({ backend: 'windows-dpapi', appName: 'MedResearch Agent' })
+    expect(selection).toEqual({ backend: 'windows-dpapi', appName: 'Open-Science' })
     expect(probe).not.toHaveBeenCalled()
   })
 
@@ -78,12 +78,12 @@ describe('credential identity selection', () => {
         credentialStore: 'file',
         probe
       })
-    ).toEqual({ backend: 'file', appName: 'MedResearch Agent' })
+    ).toEqual({ backend: 'file', appName: 'Open-Science' })
     const linuxProbe = vi.fn(() => ({ status: 'exists' as const }))
     expect(
       selectCredentialIdentity({ platform: 'linux', packaged: true, probe, linuxProbe })
-    ).toEqual({ backend: 'linux-secret-service', appName: 'MedResearch Agent', exists: true })
-    expect(linuxProbe).toHaveBeenCalledExactlyOnceWith('MedResearch Agent')
+    ).toEqual({ backend: 'linux-secret-service', appName: 'Open Science', exists: true })
+    expect(linuxProbe).toHaveBeenCalledExactlyOnceWith('Open Science')
     expect(probe).not.toHaveBeenCalled()
   })
 })

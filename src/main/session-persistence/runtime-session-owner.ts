@@ -1,27 +1,28 @@
-import { setTurnOutcome } from '../../shared/session-persistence'
+import { createLogger, diagnosticErrorFields } from '@aipoch/diagnostics/node'
 import { isDeepStrictEqual } from 'node:util'
-import type { AcpPermissionRequest, AcpRuntimeEvent } from '../../shared/acp'
+import type { AcpRuntimeEvent } from '../../shared/acp'
+import type { AcpPermissionRequest } from '../../shared/acp-permission-contract'
 import type { ArtifactFile } from '../../shared/artifacts'
 import {
   resolveActiveConversationActivities,
   resolveActiveConversationMessages
 } from '../../shared/conversation-graph'
-import {
-  materializeSessionConversationGraph,
-  type MessageAttribution,
-  type PersistedActiveRun,
-  type PersistedChatSession
-} from '../../shared/session-persistence'
-import type { AgentFrameworkId } from '../../shared/settings'
 import { hasDurableRuntimeSessionAdmission } from '../../shared/runtime-session-admission'
 import {
   applyRuntimeSessionEvents,
   attachRuntimeSessionArtifacts,
   type RuntimeSessionScope
 } from '../../shared/runtime-session-projection'
+import {
+  INTERRUPTED_TURN_ERROR,
+  materializeSessionConversationGraph,
+  setTurnOutcome,
+  type MessageAttribution,
+  type PersistedActiveRun,
+  type PersistedChatSession
+} from '../../shared/session-persistence'
+import type { AgentFrameworkId } from '../../shared/settings'
 import { matchPlanDelivery } from '../session-plan/plan-delivery'
-import { createLogger, diagnosticErrorFields } from '../logger'
-import { INTERRUPTED_TURN_ERROR } from '../../shared/session-persistence'
 
 const log = createLogger('session-persistence')
 
@@ -705,11 +706,7 @@ export class RuntimeSessionOwner {
       }
       if (next.promptPreparation?.promptMessageId === scope.promptMessageId)
         delete next.promptPreparation
-      const rejectedPlanDelivery =
-        admission.planDeliveryCommandId &&
-        next.runtimeContext?.plan?.approval === 'rejected' &&
-        next.runtimeContext.plan.originatingPromptMessageId === scope.promptMessageId
-      if (!rejectedPlanDelivery) next = setTurnOutcome(next, scope.promptMessageId, undefined)
+      next = setTurnOutcome(next, scope.promptMessageId, undefined)
       if (next.resumeRecovery?.promptMessageId === scope.promptMessageId) {
         delete next.resumeRecovery
       }

@@ -1,15 +1,15 @@
-import { isSensitiveDiagnosticKey, redactSensitiveText } from '../diagnostic-redaction'
-import { ConnectorHttpError, ParserEngine } from './engine'
-import { ALL_CONNECTOR_IDS, getDescriptor, validateToolArguments } from './registry'
+import { isSensitiveDiagnosticKey, redactSensitiveText } from '@aipoch/diagnostics'
+import { ConnectorHttpError, ParserEngine } from '@aipoch/connector-core'
+import type { ConnectorRegistry } from '@aipoch/connector-core'
 import {
   classifyCustomMcpFailure,
   hasUsableCustomMcpCredentials,
   isCustomMcpServerRouteSafe,
   toCustomMcpConfig,
   type CustomMcpFailureAvailability
-} from './custom-mcp'
-import { McpToolCallError, type CustomMcpServerConfig } from './custom-mcp'
-import type { ConnectorCredentialId, ConnectorCredentials, ToolDescriptor } from './types'
+} from './custom-mcp-config'
+import { McpToolCallError, type CustomMcpServerConfig } from '@aipoch/connector-mcp-client'
+import type { ConnectorCredentials, ToolDescriptor } from '@aipoch/connector-core'
 import type { StoredConnectors, StoredCustomMcpServer } from '../settings/types'
 import { customServerSecurityFingerprint } from '../settings/custom-server-identity'
 import type { PermissionGrantRegistry } from '../permission-grants/registry'
@@ -19,9 +19,17 @@ import type { PermissionGrantScope } from '../../shared/permission-grants'
 import type { ApprovalDecision, ConnectorApprovalScope } from '../../shared/settings'
 import {
   CONNECTOR_TOOL_PATTERN_MAX_LENGTH,
-  CONNECTOR_TOOL_RULE_MAX_COUNT,
-  type SpecialistView
-} from '../../shared/specialist'
+  CONNECTOR_TOOL_RULE_MAX_COUNT
+} from '@aipoch/specialists'
+import { type SpecialistView } from '../../shared/specialist'
+import { refuseConnectorQueryArgs, refuseConnectorQueryUrl } from '../phi/gate'
+import { assertOutboundEndpointRegistered } from '../../shared/outbound-endpoints'
+import {
+  isPoliteHost,
+  readPoliteCache,
+  reservePoliteSlot,
+  writePoliteCache
+} from './polite-fetch'
 
 type McpClientManagerLike = {
   listTools(config: CustomMcpServerConfig, signal?: AbortSignal): Promise<Array<{ name: string }>>
@@ -34,6 +42,7 @@ type McpClientManagerLike = {
 }
 
 type ConnectorServiceDeps = {
+  registry: ConnectorRegistry
   engine?: ParserEngine
   mcpClientManager?: McpClientManagerLike
   getConnectors: () => StoredConnectors | undefined
@@ -60,7 +69,7 @@ type ConnectorServiceDeps = {
   ) => Promise<ApprovalDecision>
   requestCredential?: (
     info: {
-      credentialId: ConnectorCredentialId
+      credentialId: 'openalex'
       connector: string
       method: string
       sessionId?: string
@@ -88,6 +97,22 @@ type ConnectorServiceDeps = {
     serverId: string,
     availability: CustomMcpFailureAvailability | undefined
   ) => void
+}
+
+export const CONNECTOR_USER_AGENT =
+  'Mozilla/5.0 (compatible; DRA/1.0; +https://github.com/chenglei1479-rgb/hph-health)'
+
+// Installed on the packaged connector engine. Package tests construct ParserEngine without this
+// policy so they do not need the desktop PHI vault or the egress registry.
+export const draConnectorFetchPolicy = {
+  guardQueryArgs: refuseConnectorQueryArgs,
+  guardQueryUrl: refuseConnectorQueryUrl,
+  assertOutboundHost: assertOutboundEndpointRegistered,
+  isPoliteHost,
+  readPoliteCache,
+  reservePoliteSlot,
+  writePoliteCache,
+  politeUserAgent: CONNECTOR_USER_AGENT
 }
 
 // Optional routing context for a connector call. Present for calls that originate inside a session
@@ -238,7 +263,13 @@ export class ConnectorService {
     }
   >()
   constructor(private readonly deps: ConnectorServiceDeps) {
-    this.engine = deps.engine ?? new ParserEngine()
+    this.engine =
+      deps.engine ??
+      new ParserEngine({
+        redactDiagnosticText: redactSensitiveText,
+        userAgent: CONNECTOR_USER_AGENT,
+        policy: draConnectorFetchPolicy
+      })
     this.permissionBroker = new ConnectorPermissionBroker(
       deps.permissionGrantRegistry,
       deps.requestApproval
@@ -297,8 +328,9 @@ export class ConnectorService {
     signal?: AbortSignal
   ): Promise<unknown> {
     signal?.throwIfAborted()
-    const descriptor = getDescriptor(connector, method)
-    const isBundled = descriptor !== undefined || ALL_CONNECTOR_IDS.includes(connector)
+    const descriptor = this.deps.registry.getDescriptor(connector, method)
+    const isBundled =
+      descriptor !== undefined || this.deps.registry.connectorIds.includes(connector)
     if (isBundled) {
       const access = await this.resolveAccess(connector, method, context, [connector], signal)
       return this.callBundled(connector, method, args, descriptor, context, access, signal)
@@ -402,7 +434,7 @@ export class ConnectorService {
         unknownConnectorToolMessage(connector, method)
       )
 
-    validateToolArguments(descriptor, args)
+    this.deps.registry.validateToolArguments(descriptor, args)
 
     let authorization = access.bypassMainPolicy
       ? undefined
@@ -471,7 +503,7 @@ export class ConnectorService {
         throw new ConnectorGateError('credential_required')
       }
     }
-    return this.callDescriptorWithOptionalOpenAlexCredential(
+    return this.callDescriptorWithOptionalCredential(
       descriptor,
       connector,
       method,
@@ -484,7 +516,7 @@ export class ConnectorService {
     )
   }
 
-  private async callDescriptorWithOptionalOpenAlexCredential(
+  private async callDescriptorWithOptionalCredential(
     descriptor: ToolDescriptor,
     connector: string,
     method: string,
@@ -510,10 +542,10 @@ export class ConnectorService {
             ? (error as { status?: unknown }).status
             : undefined
       if (
-        descriptor.connector !== 'literature' ||
-        !descriptor.id.startsWith('openalex_') ||
-        credentials.openAlexApiKey ||
-        httpStatus !== 429 ||
+        !descriptor.optionalCredential ||
+        descriptor.optionalCredential.id !== 'openalex' ||
+        credentials[descriptor.optionalCredential.key] ||
+        httpStatus !== descriptor.optionalCredential.retryStatus ||
         !this.deps.requestCredential
       ) {
         throw error
@@ -521,7 +553,7 @@ export class ConnectorService {
 
       const configured = await this.deps.requestCredential(
         {
-          credentialId: 'openalex',
+          credentialId: descriptor.optionalCredential.id,
           connector,
           method,
           ...(context.sessionId ? { sessionId: context.sessionId } : {})
@@ -962,7 +994,9 @@ export class ConnectorService {
     if (!credentialId || this.hasCredential(credentials, credentialId)) {
       return { credentials, prompted: false }
     }
-    if (!this.deps.requestCredential) throw new ConnectorGateError('credential_required')
+    if (credentialId !== 'openalex' || !this.deps.requestCredential) {
+      throw new ConnectorGateError('credential_required')
+    }
 
     const configured = await this.deps.requestCredential(
       {
@@ -983,7 +1017,7 @@ export class ConnectorService {
     return { credentials, prompted: true }
   }
 
-  private hasCredential(credentials: ConnectorCredentials, id: ConnectorCredentialId): boolean {
+  private hasCredential(credentials: ConnectorCredentials, id: string): boolean {
     return id === 'openalex' && Boolean(credentials.openAlexApiKey)
   }
 

@@ -11,7 +11,7 @@ import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 import { DEFAULT_APP_ICON_VARIANT, type AppIconVariant } from '../shared/settings'
 import type { ActiveSessionInfo } from '../shared/storage'
 import { englishNativeTranslator, type NativeTranslator } from './locale/main-process-messages'
-import { createLogger } from './logger'
+import { createLogger } from '@aipoch/diagnostics/node'
 import {
   buildTrayNavigationSections,
   type TrayNavigationSession,

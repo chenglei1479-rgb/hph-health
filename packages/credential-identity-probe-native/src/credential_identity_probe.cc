@@ -18,8 +18,7 @@ struct ProbeResult {
 
 bool IsAllowedIdentity(const std::string& identity) {
   return identity == "Open Science" || identity == "Open Science (DEV)" ||
-         identity == "Open-Science" || identity == "Open-Science (DEV)" ||
-         identity == "MedResearch Agent" || identity == "MedResearch Agent (DEV)";
+         identity == "Open-Science" || identity == "Open-Science (DEV)";
 }
 
 std::string SerializeResult(const std::string& platform, const std::string& identity,

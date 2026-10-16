@@ -1,12 +1,14 @@
+import { configureTestRuntimeMetadata } from '../../../test/runtime-metadata'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, posix, win32 } from 'node:path'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi, type Mock } from 'vitest'
 import { NotebookBackgroundRunError } from '../../shared/notebook'
 import { NotebookExecutionStopError } from '../../shared/notebook-execution-error'
-import { EnvironmentLeaseManager } from './environment-lease-manager'
+import { EnvironmentLeaseManager } from '@aipoch/environment'
+import { markTrustedNotebookBindingPermissionPrompts } from './runtime-binding-admission'
 
 import type {
   NotebookExecutionRequest,
@@ -27,36 +29,33 @@ import {
   RuntimeOperationJournal,
   operationJournalPath,
   recordSpawnIntentSync
-} from './operation-journal'
-import { DefaultRuntimeProvisioner } from './provisioner'
-import * as environmentDiscovery from './environment-discovery'
+} from '@aipoch/environment'
+import { DefaultRuntimeProvisioner } from '@aipoch/environment'
+import * as environmentDiscovery from '@aipoch/environment'
 import {
   EnvironmentManifestPublicationError,
   type EnvironmentStateTracker
-} from './environment-state-tracker'
-import { CHILD_UNCONFIRMED } from './provisioner-runtime'
+} from '@aipoch/environment'
+import { CHILD_UNCONFIRMED } from '@aipoch/environment'
 import type {
   InstallDeps as InstallDepsForTest,
-  InstallRequest as InstallRequestForTest,
   InstallResult as InstallResultForTest
-} from './package-manager'
-import type { EnvironmentInfo, ProvisionProgress } from '../../shared/notebook-env'
+} from '@aipoch/environment'
+import type { InstallRequest as InstallRequestForTest } from '../../shared/notebook-env'
+import type { EnvironmentInfo, ProvisionProgress } from '@aipoch/environment/contracts'
+import { type NotebookEnvironmentPackageChange } from '@aipoch/environment/contracts'
+import { type NotebookEnvironmentManifest } from '../../shared/notebook'
 import {
   NOTEBOOK_STATE_HISTORY_FRAME_ID_LIMIT_BYTES,
   NOTEBOOK_STATE_HISTORY_PAGE_LIMIT,
   NOTEBOOK_STATE_TARGET_RUN_LIMIT,
-  type NotebookEnvironmentPackageChange,
-  type NotebookEnvironmentManifest,
   type NotebookEnvironmentStatus,
   type NotebookLanguage,
   type NotebookRunInputFile,
   type NotebookRunProvenanceContext
 } from '../../shared/notebook'
-import type {
-  DiscoveredInterpreter,
-  RuntimeEnablement,
-  RuntimeTargetReceipt
-} from '../../shared/notebook-runtime'
+import type { DiscoveredInterpreter } from '@aipoch/environment/contracts'
+import type { RuntimeEnablement, RuntimeTargetReceipt } from '../../shared/notebook-runtime'
 import {
   CompletionGateCoordinator,
   createCompletionGatedControlToolInterceptor
@@ -76,12 +75,12 @@ import {
   repairRegistryPath,
   writeReadyMarker,
   writeRReadyMarker
-} from './runtime-paths'
+} from '@aipoch/environment'
 import type { NotebookShellProcess } from './shell-process'
 import * as windowsNotebookRuntime from './windows-notebook-runtime'
 import { NOTEBOOK_CODE_LIMIT_BYTES } from './content-limits'
-import type { RuntimeDiagnosticLogger } from './runtime-diagnostics'
-import { projectNotebookDependencies, type AnalyzedNotebookRun } from './dependency-analysis'
+import type { RuntimeDiagnosticLogger } from '@aipoch/diagnostics/node'
+import { projectNotebookDependencies, type AnalyzedNotebookRun } from '@aipoch/notebook-analysis'
 import { NotebookRuntimeBindingOwner } from './runtime-binding'
 import type { NotebookEnvironmentManager } from './environment-management'
 
@@ -8243,7 +8242,11 @@ describe('notebook runtime service', () => {
     async (reaped) => {
       const root = await createStorageRoot()
       const cleanup = Promise.withResolvers<{ reaped: boolean }>()
-      const shutdown = vi.fn(() => cleanup.promise)
+      const shutdownStarted = Promise.withResolvers<void>()
+      const shutdown = vi.fn(() => {
+        shutdownStarted.resolve()
+        return cleanup.promise
+      })
       const restart = vi.fn(async () => undefined)
       const service = new NotebookRuntimeService({
         configRoot: root,
@@ -8262,7 +8265,8 @@ describe('notebook runtime service', () => {
       })
       const request = { sessionId: 'session-1', workspaceCwd: root }
       const restarting = service.restart(request)
-      await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce())
+      await shutdownStarted.promise
+      expect(shutdown).toHaveBeenCalledOnce()
       expect(restart).not.toHaveBeenCalled()
       await expect(service.executeShell({ ...request, command: 'echo blocked' })).rejects.toThrow(
         'admission is closed'
@@ -9718,6 +9722,7 @@ describe('notebook runtime service', () => {
     it('blocks a package install on the same language until an in-flight run finishes (G2)', async () => {
       const root = await createStorageRoot()
       const events: string[] = []
+      const runStarted = Promise.withResolvers<void>()
       let releaseRun: (() => void) | undefined
       const service = new NotebookRuntimeService({
         configRoot: root,
@@ -9740,6 +9745,7 @@ describe('notebook runtime service', () => {
             events.push('run:start')
             await new Promise<void>((resolve) => {
               releaseRun = resolve
+              runStarted.resolve()
             })
             events.push('run:end')
             return {
@@ -9765,7 +9771,7 @@ describe('notebook runtime service', () => {
         code: '1',
         language: 'python'
       })
-      await vi.waitFor(() => expect(releaseRun).toBeDefined())
+      await runStarted.promise
 
       const install = service.managePackages({ language: 'python', packages: ['numpy'] })
       // The install (exclusive writer) must not start while the run holds the python env read lock.
@@ -12226,6 +12232,530 @@ describe('v4 runtime bindings & agent tools', () => {
       })
     })
   }
+
+  describe.each(['python', 'r'] as const)('%s host-owned default binding admission', (language) => {
+    const makeApprovalHarness = async (
+      multiple = false
+    ): Promise<{
+      root: string
+      service: NotebookRuntimeService
+      repository: NotebookRunRepository
+      managed: DiscoveredInterpreter
+      external: DiscoveredInterpreter
+      discovered: DiscoveredInterpreter[]
+      enablement: RuntimeEnablement
+      executions: NotebookExecutionRequest[]
+      terminations: string[]
+      request: {
+        projectId: string
+        sessionId: string
+        workspaceCwd: string
+        language: NotebookLanguage
+        runtimeId: string
+      }
+      code: string
+      discovery: Mock<(language: NotebookLanguage) => Promise<DiscoveredInterpreter[]>>
+    }> => {
+      const root = await createStorageRoot()
+      const managed = { ...(language === 'r' ? managedR : managedPy) }
+      const external = { ...(language === 'r' ? userR : userPyA) }
+      const discovered = multiple ? [managed, external] : [managed]
+      const enablement: RuntimeEnablement = {
+        enabled: { [external.envId]: true },
+        installAuthorized: {}
+      }
+      const executions: NotebookExecutionRequest[] = []
+      const terminations: string[] = []
+      const repository = new NotebookRunRepository(root)
+      const discovery = vi.fn(async (language: NotebookLanguage) =>
+        discovered.filter((runtime) => runtime.language === language)
+      )
+      const service = bindingService(root, {
+        discovered,
+        enablement,
+        executions,
+        terminations,
+        repository,
+        discoverRuntimes: discovery
+      })
+      const request = {
+        projectId: 'default-project',
+        sessionId: 'admission',
+        workspaceCwd: root,
+        language,
+        runtimeId: managed.envId
+      }
+      const code = language === 'r' ? 'print(1)' : 'print(1)'
+      return {
+        root,
+        service,
+        repository,
+        managed,
+        external,
+        discovered,
+        enablement,
+        executions,
+        terminations,
+        request,
+        code,
+        discovery
+      }
+    }
+    const waitingApproval = (): {
+      approve: Mock<() => Promise<boolean>>
+      requested: Promise<void>
+      respond: (approved: boolean) => void
+    } => {
+      let markRequested!: () => void
+      const requested = new Promise<void>((resolve) => {
+        markRequested = resolve
+      })
+      let respond!: (approved: boolean) => void
+      const decision = new Promise<boolean>((resolve) => {
+        respond = resolve
+      })
+      const approve = vi.fn(() => {
+        markRequested()
+        return decision
+      })
+      return { approve, requested, respond }
+    }
+
+    it('does not probe the other language before first execution', async () => {
+      const h = await makeApprovalHarness()
+      const pending = waitingApproval()
+      h.service.setRuntimeBindingApproval(pending.approve)
+      const operation = h.service.execute({ ...h.request, code: h.code })
+      await pending.requested
+      const probedLanguages = h.discovery.mock.calls.map(([language]) => language)
+      pending.respond(false)
+      await operation.catch(() => undefined)
+      const beforeRun = await h.service.state(h.request)
+      expect(beforeRun.cells.some((cell) => cell.code === h.code)).toBe(true)
+      expect(probedLanguages).not.toContain(language === 'python' ? 'r' : 'python')
+    })
+
+    it.each([false, true])(
+      'Auto admits the verified default with multiple=%s and preserves the other binding',
+      async (multiple) => {
+        const h = await makeApprovalHarness(multiple)
+        const approval = vi.fn(async (request) => request.defaultManagedFirstBinding)
+        h.service.setRuntimeBindingApproval(approval)
+        const other = language === 'r' ? managedPy : managedR
+        h.discovered.push(other)
+        await h.service.bindRuntime({
+          ...h.request,
+          language: other.language,
+          runtimeId: other.envId
+        })
+        approval.mockClear()
+        const write = vi.spyOn(h.repository, 'setRuntimeBindings')
+        expect(await h.service.canOwnRuntimeBindingDecision(h.request)).toBe(true)
+        expect(write).not.toHaveBeenCalled()
+        expect(
+          await h.service.bindRuntime(h.request, undefined, { requireHostDecision: true })
+        ).toHaveProperty('bound.runtimeId', h.managed.envId)
+        expect(approval).toHaveBeenCalledTimes(1)
+        expect(approval).toHaveBeenCalledWith(
+          expect.objectContaining({ defaultManagedFirstBinding: true })
+        )
+        const bindings = (await h.service.listRuntimes(h.request)).bindings
+        expect(bindings[other.language]?.runtimeId).toBe(other.envId)
+        expect(h.terminations).toEqual([])
+      }
+    )
+
+    it.each(['explicit', 'implicit'] as const)(
+      'Ask waits once before %s binding and resumes without another environment approval',
+      async (entry) => {
+        const h = await makeApprovalHarness()
+        const pending = waitingApproval()
+        h.service.setRuntimeBindingApproval(pending.approve)
+        const codeApproval = vi.fn(async () => false)
+        h.service.setExecutionApproval(codeApproval)
+        const operation =
+          entry === 'implicit'
+            ? h.service.execute({ ...h.request, code: h.code })
+            : h.service.bindRuntime(h.request, undefined, { requireHostDecision: true })
+        await pending.requested
+        expect(pending.approve).toHaveBeenCalledTimes(1)
+        expect(
+          (await h.repository.findExisting(h.request.projectId, h.request.sessionId))
+            ?.runtimeBindings?.[language]
+        ).toBeUndefined()
+        expect(h.executions).toEqual([])
+        pending.respond(true)
+        await operation
+        await h.service.execute({ ...h.request, code: h.code })
+        expect(pending.approve).toHaveBeenCalledTimes(1)
+        expect(codeApproval).not.toHaveBeenCalled()
+        expect((await h.service.listRuntimes(h.request)).bindings[language]?.runtimeId).toBe(
+          h.managed.envId
+        )
+        expect(h.executions.length).toBe(entry === 'implicit' ? 2 : 1)
+        expect(h.terminations).toEqual([])
+      }
+    )
+
+    it('Ask asks once for an explicit default even with another enabled candidate', async () => {
+      const h = await makeApprovalHarness(true)
+      const approval = vi.fn(async () => true)
+      const legacy = vi.fn(async () => true)
+      h.service.setRuntimeBindingApproval(approval)
+      h.service.setExecutionApproval(legacy)
+      await h.service.bindRuntime(h.request)
+      expect(approval).toHaveBeenCalledTimes(1)
+      expect(legacy).not.toHaveBeenCalled()
+    })
+
+    it('reuses a live and persisted binding without persistence, approval or kernel stop', async () => {
+      const h = await makeApprovalHarness()
+      const approval = vi.fn(async () => true)
+      h.service.setRuntimeBindingApproval(approval)
+      await h.service.bindRuntime(h.request)
+      await h.service.execute({ ...h.request, code: h.code })
+      approval.mockClear()
+      const write = vi.spyOn(h.repository, 'setRuntimeBindings')
+      await h.service.bindRuntime(h.request)
+      expect(write).not.toHaveBeenCalled()
+      expect(approval).not.toHaveBeenCalled()
+      const restored = bindingService(h.root, {
+        discovered: h.discovered,
+        enablement: h.enablement,
+        repository: h.repository,
+        terminations: h.terminations
+      })
+      restored.setRuntimeBindingApproval(approval)
+      expect(await restored.canOwnRuntimeBindingDecision(h.request)).toBe(true)
+      await restored.bindRuntime(h.request, undefined, { requireHostDecision: true })
+      expect(approval).not.toHaveBeenCalled()
+      expect(h.terminations).toEqual([])
+      await h.service.shutdownAll()
+      await restored.shutdownAll()
+    })
+
+    it.each(['deny', 'cancel', 'delete'] as const)(
+      'does not commit or execute after Ask %s, even after late Allow',
+      async (action) => {
+        const h = await makeApprovalHarness()
+        const pending = waitingApproval()
+        const controller = new AbortController()
+        h.service.setRuntimeBindingApproval(pending.approve)
+        const operation = h.service.execute({ ...h.request, code: h.code }, controller.signal)
+        const rejected = expect(operation).rejects.toThrow(
+          action === 'deny' ? 'declined' : action === 'cancel' ? 'cancelled approval' : 'deleted'
+        )
+        await pending.requested
+        expect(pending.approve).toHaveBeenCalledTimes(1)
+        if (action === 'deny') pending.respond(false)
+        if (action === 'cancel') controller.abort(new Error('cancelled approval'))
+        if (action === 'delete') await h.service.shutdownSession(h.request.sessionId)
+        await rejected
+        pending.respond(true)
+        expect(
+          (await h.repository.findExisting(h.request.projectId, h.request.sessionId))
+            ?.runtimeBindings?.[language]
+        ).toBeUndefined()
+        expect(h.executions).toEqual([])
+        expect(h.terminations).toEqual([])
+      }
+    )
+
+    it.each(['disable', 'remove', 'provenance', 'path', 'default-name', 'unrunnable'] as const)(
+      'rejects old approval after target %s changes',
+      async (change) => {
+        const h = await makeApprovalHarness()
+        const pending = waitingApproval()
+        h.service.setRuntimeBindingApproval(pending.approve)
+        const operation = h.service.bindRuntime(h.request)
+        await pending.requested
+        expect(pending.approve).toHaveBeenCalledTimes(1)
+        if (change === 'disable') h.enablement.enabled[h.managed.envId] = false
+        if (change === 'remove') h.discovered.splice(0)
+        if (change === 'provenance') h.managed.provenance = 'agent-created'
+        if (change === 'path') h.managed.interpreterPath += '-replacement'
+        if (change === 'default-name') h.managed.condaEnv = undefined
+        if (change === 'unrunnable') h.managed.runnable = false
+        pending.respond(true)
+        expect(await operation).toMatchObject({ ok: false, bindingChanged: false })
+        expect((await h.service.listRuntimes(h.request)).bindings[language]).toBeUndefined()
+        expect(h.terminations).toEqual([])
+      }
+    )
+
+    it('rejects a correlated handoff if default ownership changes before actual bind', async () => {
+      const h = await makeApprovalHarness()
+      const approval = vi.fn(async () => true)
+      h.service.setRuntimeBindingApproval(approval)
+      expect(await h.service.canOwnRuntimeBindingDecision(h.request)).toBe(true)
+      h.managed.provenance = 'user-own'
+      h.enablement.enabled[h.managed.envId] = true
+      expect(
+        await h.service.bindRuntime(h.request, undefined, { requireHostDecision: true })
+      ).toMatchObject({ ok: false, bindingChanged: false })
+      expect(approval).not.toHaveBeenCalled()
+      expect((await h.service.listRuntimes(h.request)).bindings[language]).toBeUndefined()
+    })
+
+    it('serializes concurrent identical binds and does not repeat approval or commit', async () => {
+      const h = await makeApprovalHarness()
+      const pending = waitingApproval()
+      h.service.setRuntimeBindingApproval(pending.approve)
+      const write = vi.spyOn(h.repository, 'setRuntimeBindings')
+      const first = h.service.bindRuntime(h.request)
+      const second = h.service.bindRuntime(h.request)
+      await pending.requested
+      expect(pending.approve).toHaveBeenCalledTimes(1)
+      pending.respond(true)
+      expect(await first).toHaveProperty('bound.runtimeId', h.managed.envId)
+      expect(await second).toHaveProperty('bound.runtimeId', h.managed.envId)
+      expect(pending.approve).toHaveBeenCalledTimes(1)
+      expect(write).toHaveBeenCalledTimes(1)
+      expect(h.terminations).toEqual([])
+    })
+
+    it('cancels one binding and makes the next request require its own decision', async () => {
+      const h = await makeApprovalHarness()
+      const firstApproval = waitingApproval()
+      const nextApproval = waitingApproval()
+      h.service.setRuntimeBindingApproval(
+        vi
+          .fn()
+          .mockImplementationOnce(firstApproval.approve)
+          .mockImplementationOnce(nextApproval.approve)
+      )
+      const controller = new AbortController()
+      const first = h.service.bindRuntime(h.request, controller.signal)
+      await firstApproval.requested
+      expect(firstApproval.approve).toHaveBeenCalledTimes(1)
+      controller.abort(new Error('cancelled first binding'))
+      expect(await first).toMatchObject({ ok: false, bindingChanged: false })
+      const second = h.service.bindRuntime(h.request)
+      await nextApproval.requested
+      expect(nextApproval.approve).toHaveBeenCalledTimes(1)
+      firstApproval.respond(true)
+      expect((await h.service.listRuntimes(h.request)).bindings[language]).toBeUndefined()
+      nextApproval.respond(false)
+      expect(await second).toMatchObject({ ok: false, bindingChanged: false })
+    })
+
+    it('leaves dangerous code under a separate approval after Auto binding', async () => {
+      const h = await makeApprovalHarness()
+      h.service.setRuntimeBindingApproval(async (request) => request.defaultManagedFirstBinding)
+      const codeApproval = vi.fn(async () => false)
+      h.service.setExecutionApproval(codeApproval)
+      await h.service.bindRuntime(h.request)
+      const code =
+        language === 'r' ? 'unlink("sentinel.txt")' : 'import os\nos.unlink("sentinel.txt")'
+      await expect(h.service.execute({ ...h.request, code })).rejects.toThrow('one-time approval')
+      expect(codeApproval).toHaveBeenCalledTimes(1)
+      expect(h.executions).toEqual([])
+      expect((await h.service.listRuntimes(h.request)).bindings[language]?.runtimeId).toBe(
+        h.managed.envId
+      )
+    })
+
+    it('does not add an environment decision to manual execution', async () => {
+      const h = await makeApprovalHarness()
+      const approval = vi.fn(async () => false)
+      h.service.setRuntimeBindingApproval(approval)
+      await h.service.execute({ ...h.request, code: h.code, source: 'user' })
+      expect(approval).not.toHaveBeenCalled()
+      expect(h.executions).toHaveLength(1)
+    })
+
+    it.each(['explicit', 'implicit', 'background'] as const)(
+      'carries trusted no-interaction policy to %s binding and ends Ask without waiting',
+      async (entry) => {
+        const h = await makeApprovalHarness()
+        const approval = vi.fn(async (request) => request.permissionPrompts !== 'none')
+        h.service.setRuntimeBindingApproval(approval)
+        const request = markTrustedNotebookBindingPermissionPrompts(
+          { ...h.request, code: h.code },
+          'none'
+        )
+        if (entry === 'explicit') {
+          expect(await h.service.bindRuntime(request)).toMatchObject({
+            ok: false,
+            bindingChanged: false
+          })
+        } else if (entry === 'implicit') {
+          await expect(h.service.execute(request)).rejects.toThrow('declined')
+        } else {
+          await expect(h.service.executeBackground(request)).rejects.toThrow('declined')
+        }
+        expect(approval).toHaveBeenCalledTimes(1)
+        expect(approval).toHaveBeenCalledWith(
+          expect.objectContaining({ permissionPrompts: 'none', defaultManagedFirstBinding: true })
+        )
+        expect((await h.service.listRuntimes(h.request)).bindings[language]).toBeUndefined()
+        expect(h.executions).toEqual([])
+      }
+    )
+
+    it('keeps missing-default creation disabled even when the host Auto decision is installed', async () => {
+      const root = await createStorageRoot()
+      const execute = vi.fn(
+        async (request: NotebookExecutionRequest): Promise<NotebookExecutionResult> => ({
+          status: 'completed',
+          stdout: '',
+          stderr: '',
+          traceback: '',
+          cwdAfter: request.cwd,
+          outputs: []
+        })
+      )
+      const service = new NotebookRuntimeService({
+        configRoot: root,
+        dataRoot: root,
+        projectId: 'default-project',
+        discoverRuntimes: async () => [],
+        getAgentEnvironmentCreationEnabled: async () => false,
+        executorFactory: () => ({ execute, shutdown: async () => ({ reaped: true }) })
+      })
+      const approval = vi.fn(async () => true)
+      const provision = vi.fn(async () => undefined)
+      service.setRuntimeBindingApproval(approval)
+      service.setDefaultEnvProvisioner({ provisionPython: provision, provisionR: provision })
+      const run = await service.execute({
+        sessionId: 'missing',
+        workspaceCwd: root,
+        language,
+        code: 'print(1)'
+      })
+      expect(run).toMatchObject({ status: 'failed', kernelDispatched: false })
+      expect(run.text.stderr).toContain('AGENT_ENVIRONMENT_CREATION_DISABLED')
+      expect(approval).not.toHaveBeenCalled()
+      expect(provision).not.toHaveBeenCalled()
+      expect(execute).not.toHaveBeenCalled()
+      await service.shutdownAll()
+    })
+
+    it('forwards no-interaction legacy binding decisions so Full can keep its existing bypass', async () => {
+      const h = await makeApprovalHarness(true)
+      const legacyApproval = vi.fn(async () => true)
+      h.service.setRuntimeBindingApproval(async () => true)
+      h.service.setExecutionApproval(legacyApproval)
+      const externalRequest = markTrustedNotebookBindingPermissionPrompts(
+        { ...h.request, runtimeId: h.external.envId },
+        'none'
+      )
+      expect(await h.service.bindRuntime(externalRequest)).toHaveProperty(
+        'bound.runtimeId',
+        h.external.envId
+      )
+      expect(legacyApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ permissionPrompts: 'none' })
+      )
+      const switchRequest = markTrustedNotebookBindingPermissionPrompts({ ...h.request }, 'none')
+      expect(await h.service.switchRuntime(switchRequest)).toHaveProperty(
+        'bound.runtimeId',
+        h.managed.envId
+      )
+      expect(legacyApproval).toHaveBeenCalledTimes(2)
+    })
+
+    it('lets Auto use a ready default with trusted no-interaction policy', async () => {
+      const h = await makeApprovalHarness()
+      const approval = vi.fn(async (request) => request.defaultManagedFirstBinding)
+      h.service.setRuntimeBindingApproval(approval)
+      const request = markTrustedNotebookBindingPermissionPrompts(
+        { ...h.request, code: h.code },
+        'none'
+      )
+      await h.service.execute(request)
+      expect(approval).toHaveBeenCalledWith(
+        expect.objectContaining({ permissionPrompts: 'none', defaultManagedFirstBinding: true })
+      )
+      expect(h.executions).toHaveLength(1)
+    })
+
+    it('reads Auto to Ask at the final decision and keeps the displayed Ask pending after Auto', async () => {
+      const h = await makeApprovalHarness()
+      const pending = waitingApproval()
+      let mode: 'auto' | 'ask' = 'auto'
+      h.service.setRuntimeBindingApproval((request) => {
+        if (mode === 'auto' && request.defaultManagedFirstBinding) return Promise.resolve(true)
+        return pending.approve()
+      })
+      let releaseDiscovery!: () => void
+      let markDiscoveryEntered!: () => void
+      const discoveryEntered = new Promise<void>((resolve) => {
+        markDiscoveryEntered = resolve
+      })
+      const discoveryBarrier = new Promise<void>((resolve) => {
+        releaseDiscovery = resolve
+      })
+      h.discovery.mockImplementationOnce(async () => {
+        markDiscoveryEntered()
+        await discoveryBarrier
+        return h.discovered
+      })
+      const operation = h.service.bindRuntime(h.request)
+      await discoveryEntered
+      expect(h.discovery).toHaveBeenCalledTimes(1)
+      mode = 'ask'
+      releaseDiscovery()
+      await pending.requested
+      expect(pending.approve).toHaveBeenCalledTimes(1)
+      mode = 'auto'
+      expect((await h.service.listRuntimes(h.request)).bindings[language]).toBeUndefined()
+      pending.respond(true)
+      expect(await operation).toHaveProperty('bound.runtimeId', h.managed.envId)
+      await h.service.bindRuntime({ ...h.request, sessionId: 'later-session' })
+      expect(pending.approve).toHaveBeenCalledTimes(1)
+    })
+
+    it('refuses default repair and unavailable persisted binding without replacing the target', async () => {
+      const h = await makeApprovalHarness()
+      const approval = vi.fn(async () => true)
+      h.service.setRuntimeBindingApproval(approval)
+      await h.service.bindRuntime(h.request)
+      h.enablement.enabled[h.managed.envId] = false
+      await h.service.revokeRuntime(language, h.managed.envId)
+      h.enablement.enabled[h.managed.envId] = true
+      expect(await h.service.canOwnRuntimeBindingDecision(h.request)).toBe(false)
+      approval.mockClear()
+      expect(
+        await h.service.bindRuntime(h.request, undefined, { requireHostDecision: true })
+      ).toMatchObject({ ok: false, bindingChanged: false })
+      expect(approval).not.toHaveBeenCalled()
+      expect((await h.service.listRuntimes(h.request)).bindings[language]?.status).toBe(
+        'unavailable'
+      )
+      addRepairRequired(
+        getRuntimeRoot(h.root),
+        language === 'r' ? DEFAULT_R_ENV : DEFAULT_PY_ENV,
+        'protected-identity-change'
+      )
+      const repairRequest = { ...h.request, sessionId: 'repair-session' }
+      expect(await h.service.canOwnRuntimeBindingDecision(repairRequest)).toBe(false)
+      expect(await h.service.bindRuntime(repairRequest)).toMatchObject({
+        ok: false,
+        bindingChanged: false
+      })
+      expect(approval).not.toHaveBeenCalled()
+    })
+
+    it.each(['external', 'agent-created', 'nondefault', 'missing-default-name'] as const)(
+      'does not delegate first %s identity or grant it the default exception',
+      async (kind) => {
+        const h = await makeApprovalHarness()
+        const approval = vi.fn(async () => true)
+        h.service.setRuntimeBindingApproval(approval)
+        if (kind === 'external') h.managed.provenance = 'user-own'
+        if (kind === 'agent-created') h.managed.provenance = 'agent-created'
+        if (kind === 'nondefault') h.managed.condaEnv = 'custom-environment'
+        if (kind === 'missing-default-name') h.managed.condaEnv = undefined
+        h.enablement.enabled[h.managed.envId] = true
+        expect(await h.service.canOwnRuntimeBindingDecision(h.request)).toBe(false)
+        expect(
+          await h.service.bindRuntime(h.request, undefined, { requireHostDecision: true })
+        ).toMatchObject({ ok: false, bindingChanged: false })
+        expect(approval).not.toHaveBeenCalled()
+      }
+    )
+  })
 
   it.each(
     [
@@ -17111,3 +17641,5 @@ it('AUDIT: removal cannot overtake a managed binding whose durable commit is in 
     lease.mockRestore()
   }
 })
+
+configureTestRuntimeMetadata()

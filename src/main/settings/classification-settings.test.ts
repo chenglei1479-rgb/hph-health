@@ -9,7 +9,7 @@ import { SettingsRepository } from './repository'
 import { ClassificationSettingsOwner } from './classification-settings'
 import { classificationSettingsSchema } from './classification-config'
 import { SETTINGS_FILE_VERSION } from '../../shared/settings'
-import { flushLogs, initLogger } from '../logger'
+import { flushLogs, initLogger } from '@aipoch/diagnostics/node'
 
 vi.mock('./crypto', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./crypto')>()),
@@ -17,7 +17,7 @@ vi.mock('./crypto', async (importOriginal) => ({
   maskKey: (value: string) => `••••${value.slice(-4)}`,
   tryDecryptKey: (value: string) => Buffer.from(value.slice(4), 'base64').toString()
 }))
-vi.mock('../skills/net-fetch', () => ({ netFetchStandard: vi.fn() }))
+vi.mock('../network-fetch', () => ({ netFetchStandard: vi.fn() }))
 let dir: string
 let repository: SettingsRepository
 let owner: ClassificationSettingsOwner

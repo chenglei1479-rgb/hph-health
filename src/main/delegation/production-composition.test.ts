@@ -1,3 +1,4 @@
+import { configureTestRuntimeMetadata } from '../../../test/runtime-metadata'
 import { EventEmitter } from 'node:events'
 import { access, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
@@ -3559,6 +3560,21 @@ describe('production delegated-work composition', () => {
       ]
     })
 
+    // Windows may need longer than the default assertion deadline to publish the next Turn handoff.
+    const openExecution = turns.openExecution.bind(turns)
+    vi.spyOn(turns, 'openExecution').mockImplementationOnce(async (request) => {
+      await new Promise((resolve) => setTimeout(resolve, 1_200))
+      return openExecution(request)
+    })
+
+    const continuationStarted = Promise.withResolvers<void>()
+    const run = execution.run.bind(execution)
+    vi.spyOn(execution, 'run').mockImplementationOnce((...args) => {
+      const running = run(...args)
+      continuationStarted.resolve()
+      return running
+    })
+
     const continued = await harness.composition.host.sendMessage(
       {
         ...harness.caller,
@@ -3571,7 +3587,8 @@ describe('production delegated-work composition', () => {
     )
     expect(continued.disposition).toBe('continued')
     if (continued.disposition !== 'continued') throw new Error('expected terminal continuation')
-    await expect.poll(() => execution.controls()).toHaveLength(2)
+    await continuationStarted.promise
+    expect(execution.controls()).toHaveLength(2)
     const continuationControl = execution.control(continued.continuation_attempt_id)
     const continuationTurn = turns.handleForExecution(continued.continuation_attempt_id)
     await turns.write(continuationTurn, {
@@ -4301,24 +4318,45 @@ describe('unreaped delegated execution lifecycle', () => {
     ).resolves.toMatchObject([{ status: 'completed', response: 'Published result' }])
   })
 
-  it.each([
-    'deleteSession',
-    'deleteProject',
-    'shutdown',
-    'stopAll',
-    'shutdownForQuit',
-    'shutdownForUpdateGate'
-  ] as const)(
-    'keeps the cleanup failure visible to %s after terminal history is written',
-    async (operation) => {
+  it.each(
+    (
+      [
+        'deleteSession',
+        'deleteProject',
+        'shutdown',
+        'stopAll',
+        'shutdownForQuit',
+        'shutdownForUpdateGate'
+      ] as const
+    ).flatMap((operation) => [0, 1200].map((startupDelayMs) => ({ operation, startupDelayMs })))
+  )(
+    'keeps the cleanup failure visible to $operation after terminal history is written (startup delay: $startupDelayMs ms)',
+    async ({ operation, startupDelayMs }) => {
       root = await mkdtemp(join(tmpdir(), 'delegated-unreaped-lifecycle-'))
       const harness = await createCompositionHarness(root, 'codex')
+      if (startupDelayMs > 0) {
+        // Exercise startup beyond expect.poll's default 1 s budget, as on a busy Windows runner.
+        const startAttemptRuntime = harness.commands.startAttemptRuntime.bind(harness.commands)
+        vi.spyOn(harness.commands, 'startAttemptRuntime').mockImplementation(async (...args) => {
+          await new Promise((resolve) => setTimeout(resolve, startupDelayMs))
+          return startAttemptRuntime(...args)
+        })
+      }
+      const executionStarted = Promise.withResolvers<void>()
+      const startExecution = harness.execution.run.bind(harness.execution)
+      vi.spyOn(harness.execution, 'run').mockImplementation((...args) => {
+        const handle = startExecution(...args)
+        executionStarted.resolve()
+        return handle
+      })
       const receipt = await harness.composition.host.delegate(
         harness.caller,
         { task: 'Retain process-owned evidence', name: 'Retain evidence' },
         { wait: false }
       )
-      await expect.poll(() => harness.execution.controls()).toHaveLength(1)
+      // Readiness is bounded by the test timeout, not expect.poll's shorter default budget.
+      await executionStarted.promise
+      expect(harness.execution.controls()).toHaveLength(1)
       const control = harness.execution.controls()[0]
       control.accept()
       control.fail(new DelegateExecutionCleanupError('process cleanup could not be confirmed'))
@@ -4435,3 +4473,5 @@ it.each(
     await expect.soft(readFile(evidence, 'utf8')).resolves.toBe('process-owned evidence')
   }
 )
+
+configureTestRuntimeMetadata()

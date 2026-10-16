@@ -11,9 +11,9 @@ import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js'
 import { OAuthCallbackServer, PersistentOAuthClientProvider } from './oauth-client'
 import type { StoredCustomMcpOAuthState } from '../../settings/types'
 import { augmentedPathEnv } from '../../settings/shell-path'
-import { netFetchStandard } from '../../skills/net-fetch'
-import { redactSensitiveText } from '../../diagnostic-redaction'
-import { createLogger } from '../../logger'
+import { netFetchStandard } from '../../network-fetch'
+import { redactSensitiveText } from '@aipoch/diagnostics'
+import { createLogger } from '@aipoch/diagnostics/node'
 import { assertSecureCustomMcpUrl } from './url'
 
 const log = createLogger('connectors:mcp-client')

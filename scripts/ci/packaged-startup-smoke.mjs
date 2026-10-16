@@ -7,7 +7,9 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
-  writeFileSync
+  rmSync,
+  writeFileSync,
+  writeSync
 } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -58,6 +60,26 @@ export const macQuarantineClearCommand = (target) => [
   target
 ]
 
+// macos-14 can leave diskimages-helper wedged, and hdiutil attach then never returns.
+// A private mountpoint plus -noverify avoids the /Volumes arbitration dialog. The timeouts
+// stay under the 40-minute smoke job so a hang fails with a log instead of a cancellation.
+export const MAC_DMG_ATTACH_TIMEOUT_MS = 180_000
+export const MAC_DMG_DETACH_TIMEOUT_MS = 30_000
+export const MAC_DITTO_TIMEOUT_MS = 12 * 60_000
+
+export const macDmgAttachArgs = (dmg, mountpoint) => [
+  'attach',
+  '-nobrowse',
+  '-readonly',
+  '-noverify',
+  '-noautoopen',
+  '-mountpoint',
+  mountpoint,
+  dmg
+]
+
+export const macDmgDetachArgs = (mountpoint) => ['detach', '-force', mountpoint]
+
 export const packagedSmokeEnv = (base, paths) => {
   const env = {}
   for (const [key, value] of Object.entries(base)) {
@@ -94,12 +116,48 @@ const findArtifact = (directory, suffix) => {
   return matches[0]
 }
 
+const note = (message) => {
+  writeSync(1, `${message}\n`)
+}
+
 const run = (command, args, options = {}) => {
   const result = spawnSync(command, args, { stdio: 'inherit', ...options })
   if (result.error) throw result.error
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(' ')} exited ${result.status ?? 'null'}.`)
   }
+}
+
+const runBounded = (command, args, timeoutMs) => {
+  note(`+ ${command} ${args.join(' ')}`)
+  const started = Date.now()
+  const result = spawnSync(command, args, {
+    encoding: 'utf8',
+    timeout: timeoutMs,
+    killSignal: 'SIGKILL'
+  })
+  note(
+    `- ${command} status ${result.status ?? 'null'} signal ${result.signal ?? 'none'} in ${Date.now() - started}ms`
+  )
+  if (result.error && result.error.code !== 'ETIMEDOUT') throw result.error
+  if (result.error || result.status !== 0) {
+    const detail = `${result.stderr || ''}${result.stdout || ''}`.trim()
+    const why =
+      result.error?.code === 'ETIMEDOUT'
+        ? `timed out after ${timeoutMs}ms`
+        : `exited ${result.status ?? 'null'}`
+    throw new Error(`${command} ${why}.${detail ? ` ${detail}` : ''}`)
+  }
+  return result
+}
+
+const releaseDiskImages = (mountpoint) => {
+  spawnSync('pkill', ['-9', 'diskimages-helper'], { stdio: 'ignore' })
+  spawnSync('hdiutil', macDmgDetachArgs(mountpoint), {
+    stdio: 'ignore',
+    timeout: MAC_DMG_DETACH_TIMEOUT_MS,
+    killSignal: 'SIGKILL'
+  })
 }
 
 const clearQuarantine = (target) => {
@@ -232,18 +290,22 @@ const macSmokePaths = () => {
   }
 }
 
-const attachDmg = (dmg) => {
-  const result = spawnSync('hdiutil', ['attach', '-nobrowse', '-readonly', dmg], {
-    encoding: 'utf8'
-  })
-  if (result.status !== 0) {
-    throw new Error(result.stderr || result.stdout || 'hdiutil attach failed.')
+const attachDmg = (dmg, mountpoint) => {
+  let lastError = new Error('hdiutil attach failed.')
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    rmSync(mountpoint, { recursive: true, force: true })
+    mkdirSync(mountpoint, { recursive: true })
+    try {
+      note(`Attaching ${dmg} at ${mountpoint} (attempt ${attempt}).`)
+      runBounded('hdiutil', macDmgAttachArgs(dmg, mountpoint), MAC_DMG_ATTACH_TIMEOUT_MS)
+      return mountpoint
+    } catch (error) {
+      lastError = error
+      note(`hdiutil attach failed: ${error instanceof Error ? error.message : String(error)}`)
+      releaseDiskImages(mountpoint)
+    }
   }
-  const mounts = result.stdout.match(/\/Volumes\/[^\n\r]+/g)
-  if (!mounts || mounts.length === 0) {
-    throw new Error(`hdiutil did not report a volume.\n${result.stdout}`)
-  }
-  return mounts[mounts.length - 1].trim()
+  throw lastError
 }
 
 const assertMacArchitecture = (binary) => {
@@ -263,15 +325,21 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   mkdirSync(dirname(paths.app), { recursive: true })
   mkdirSync(paths.configRoot, { recursive: true })
   clearQuarantine(dmg)
-  const mount = attachDmg(dmg)
+  const mount = join(process.env.RUNNER_TEMP || tmpdir(), 'dra-smoke-dmg')
+  attachDmg(dmg, mount)
   try {
     const mountedApp = readdirSync(mount).find((name) => name.endsWith('.app'))
     if (!mountedApp) throw new Error(`The disk image has no application bundle: ${mount}`)
     paths.app = join(homedir(), 'Applications', 'DRA Test', mountedApp)
     mkdirSync(dirname(paths.app), { recursive: true })
-    run('ditto', [join(mount, mountedApp), paths.app])
+    runBounded('ditto', [join(mount, mountedApp), paths.app], MAC_DITTO_TIMEOUT_MS)
   } finally {
-    spawnSync('hdiutil', ['detach', mount], { stdio: 'inherit' })
+    try {
+      runBounded('hdiutil', macDmgDetachArgs(mount), MAC_DMG_DETACH_TIMEOUT_MS)
+    } catch (error) {
+      note(`hdiutil detach failed: ${error instanceof Error ? error.message : String(error)}`)
+      releaseDiskImages(mount)
+    }
   }
   clearQuarantine(paths.app)
   const macOsDir = join(paths.app, 'Contents', 'MacOS')
@@ -282,6 +350,7 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   writeSmokeSettings(paths.configRoot, paths.dataRoot)
   mkdirSync(paths.userData, { recursive: true })
   seedDeclinedMachineApproval(paths.userData)
+  note(`Launching ${binary}.`)
   const child = launchPackagedApp(binary, packagedSmokeEnv(process.env, paths))
   return finish({
     child,

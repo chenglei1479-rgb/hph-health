@@ -1,3 +1,4 @@
+import { captureDiagnosticLogs } from '../diagnostics/integration-test-helpers'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -53,12 +54,12 @@ it.each([
   if (!fresh) writeFileSync(settingsPath, settings)
   const identities = new Set(
     ['legacy identity', 'blocked new with legacy', 'uncertain absence'].includes(scenario)
-      ? ['MedResearch Agent']
+      ? ['Open Science']
       : ['fresh', 'orphaned ciphertext'].includes(scenario)
         ? []
         : scenario === 'both identities'
-          ? ['MedResearch Agent', 'MedResearch Agent']
-          : ['MedResearch Agent']
+          ? ['Open-Science', 'Open Science']
+          : ['Open-Science']
   )
   let later = false
   native.run.mockImplementation((_file: string, args: string[]) => {
@@ -67,7 +68,7 @@ it.each([
     const status =
       changed ||
       ['uncertain absence', 'uncertain fresh'].includes(scenario) ||
-      (scenario === 'blocked new with legacy' && identity === 'MedResearch Agent')
+      (scenario === 'blocked new with legacy' && identity === 'Open-Science')
         ? 'access-blocked'
         : scenario === 'key unavailable' && native.run.mock.calls.length > 1
           ? 'not-found'
@@ -112,7 +113,7 @@ it.each([
   const recover = vi.fn()
   const start = (): void => {
     const identity = selectStartupCredentialIdentity({ platform: 'darwin', packaged: true })
-    expect(identity.appName).toBe(selectedLegacy ? 'MedResearch Agent' : 'MedResearch Agent')
+    expect(identity.appName).toBe(selectedLegacy ? 'Open Science' : 'Open-Science')
     prepareCredentialValidation(identity, paths)(cipher, recover)
   }
   if (
@@ -142,9 +143,10 @@ it.each([
       later = true
       expect(() => credentialCipher(cipher).encryptString('replacement')).toThrow(/recovery/i)
       expect(cipher.encryptString).not.toHaveBeenCalled()
-      const { formatLine } = await import('../logger')
       const error = recover.mock.calls[0][0]
-      const line = formatLine('error', 'credentials', 'recovery', { identityProbe: error.probe })
+      const [line] = await captureDiagnosticLogs((log) =>
+        log.error('recovery', { identityProbe: error.probe })
+      )
       expect(JSON.parse(line).data.identityProbe.reason).toBe('keychain-search-list-changed')
       expect(line).not.toContain('never-log-raw-response')
     } else expect(cipher.decryptString).toHaveBeenCalledWith(Buffer.from('v10original'))
@@ -163,12 +165,12 @@ it.each([
     ? 2
     : 1
   expect(queried.slice(0, selectionCount)).toEqual(
-    selectionCount === 2 ? ['MedResearch Agent', 'MedResearch Agent'] : ['MedResearch Agent']
+    selectionCount === 2 ? ['Open-Science', 'Open Science'] : ['Open-Science']
   )
   // Later secret access rechecks only the chosen identity, never retries another key.
   expect(
     queried
       .slice(selectionCount)
-      .every((name) => name === (selectedLegacy ? 'MedResearch Agent' : 'MedResearch Agent'))
+      .every((name) => name === (selectedLegacy ? 'Open Science' : 'Open-Science'))
   ).toBe(true)
 })

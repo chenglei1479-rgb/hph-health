@@ -1,15 +1,11 @@
-import { createLogger } from '../logger'
+import { createLogger } from '@aipoch/diagnostics/node'
+import type { KWalletProbeResult } from './kwallet-probe-contract'
+import type { LinuxCredentialBackend, LinuxKWalletBackend } from './linux-backend-contract'
 import { safeCredentialProbeResult } from './probe'
-import type { LinuxCredentialBackend, LinuxKWalletBackend } from './linux-backend'
-import type { KWalletProbeResult } from './linux-kwallet'
+import type { IdentityProbeResult } from './probe-contract'
+export type { IdentityProbeResult } from './probe-contract'
 
 const log = createLogger('credential-identity')
-
-export type IdentityProbeResult = Readonly<{
-  status: 'exists' | 'not-found' | 'access-blocked' | 'error' | 'unsupported'
-  reason?: string
-  osStatus?: number
-}>
 
 export type CredentialIdentity = Readonly<
   | { backend: 'mac-keychain' | 'linux-secret-service'; appName: string; exists: boolean }
@@ -49,10 +45,9 @@ export const selectCredentialIdentity = (options: {
   linuxPasswordStore?: string
 }): CredentialIdentity => {
   const suffix = options.packaged ? '' : ' (DEV)'
-  // Pinned keychain and secret-service name. app.setName(this value) runs before
-  // ready so safeStorage keeps the existing item. Do not follow the display name.
-  const current = `MedResearch Agent${suffix}`
-  const legacy = `MedResearch Agent${suffix}`
+  // These names are the published credential helper allowlist. Do not follow the display name.
+  const current = `Open-Science${suffix}`
+  const legacy = `Open Science${suffix}`
   if (options.platform === 'win32') {
     // Windows OSCrypt belongs to Local State + the DPAPI user context, not an app-name item.
     return Object.freeze({ backend: 'windows-dpapi', appName: current })

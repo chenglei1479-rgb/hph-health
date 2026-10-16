@@ -19,6 +19,7 @@ export const validateWindowsKey = (ciphertext: Buffer): WindowsKeyValidation => 
       input: ciphertext,
       encoding: 'utf8',
       timeout: 10_000,
+      killSignal: 'SIGKILL',
       maxBuffer: 4096,
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'ignore']

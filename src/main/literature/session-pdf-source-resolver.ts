@@ -1,7 +1,7 @@
 import type { SessionPdfSourceKind } from '../../shared/session-persistence'
-import { createArtifactVersionLocator } from '../../shared/artifact-provenance'
+import { createArtifactVersionLocator } from '../../shared/artifact-version-locator'
 import { createUploadVersionReference } from '../../shared/uploads'
-import { sanitizePdfDocumentSource, type PdfDocumentSource } from '../../shared/pdf-bookmarks'
+import { sanitizePdfDocumentSource, type PdfDocumentSource } from '../../shared/pdf-document-source'
 import type {
   ImmutableInputAuthority,
   ImmutableInputContentLease

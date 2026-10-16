@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import type { RemoteAccessSnapshot } from '../shared/remote-access'
-import { RENDERER_CONTRACT_GROUPS } from '../shared/renderer-contract-catalog'
+import {
+  RENDERER_CONTRACT_GROUPS,
+  RENDERER_CONTRACT_CATALOG
+} from '../shared/renderer-contract-catalog'
 import type { UpdateStatus } from '../shared/update'
 import {
   createApplicationCommandRouter,
@@ -59,6 +62,23 @@ const remoteSnapshot: RemoteAccessSnapshot = {
 const updateStatus: UpdateStatus = { state: 'idle', current: '1.0.0' }
 
 const createDependencies = (): HostApplicationCommandDependencies => ({
+  completionHandoff: {
+    getEvents: vi.fn(async () => []),
+    retry: vi.fn(async () => undefined),
+    cancel: vi.fn(async () => undefined)
+  },
+  locale: {
+    initialize: vi.fn(async () => ({ preference: 'ja' as const, locale: 'ja' as const })),
+    setPreference: vi.fn(async () => ({ preference: 'en' as const, locale: 'en' as const }))
+  },
+  network: {
+    getInfo: vi.fn(async () => ({ connectionType: 'unknown' as const, ipAddress: null })),
+    checkConnectivity: vi.fn(async () => true)
+  },
+  backgroundResults: {
+    sessionActivity: vi.fn(async () => ({ active: [] as const, awaitingAgent: [] })),
+    projectActivity: vi.fn(async () => ({ items: [], truncated: false }))
+  },
   pdfStructure: {
     readCached: vi.fn(async () => undefined),
     parse: vi.fn(async () => ({
@@ -110,7 +130,7 @@ const createDependencies = (): HostApplicationCommandDependencies => ({
       truncated: false
     })),
     removeGrantedRoot: vi.fn(async () => []),
-    revealInFolder: vi.fn(() => undefined),
+    revealInFolder: vi.fn(async () => undefined),
     setGrantedRootAccess: vi.fn(async () => [])
   },
   machineApproval: {
@@ -133,6 +153,8 @@ const createDependencies = (): HostApplicationCommandDependencies => ({
     revealInFolder: vi.fn(async () => ({ revealed: true }))
   },
   notifications: {
+    getDesktopAvailability: vi.fn(() => 'supported' as const),
+    sendTest: vi.fn(async () => 'shown' as const),
     getSnapshot: vi.fn(async () => ({
       revision: 1,
       unreadCount: 0,
@@ -205,6 +227,8 @@ const createDependencies = (): HostApplicationCommandDependencies => ({
     getAppInfo: vi.fn(() => ({ name: 'DRA', version: '1.0.0', copyright: 'Aipoch' })),
     getStatus: vi.fn(() => updateStatus),
     check: vi.fn(async () => updateStatus),
+    recheck: vi.fn(async () => updateStatus),
+    recover: vi.fn(async () => updateStatus),
     download: vi.fn(async () => updateStatus),
     cancel: vi.fn(async () => updateStatus),
     apply: vi.fn(async () => updateStatus)
@@ -235,7 +259,7 @@ const commandByName = (name: string): ApplicationCommand<string, readonly unknow
 }
 
 describe('Host application commands', () => {
-  it('defines the exact 68 Electron request channels in their existing capability groups', () => {
+  it('defines the exact 79 desktop request channels in their existing capability groups', () => {
     const expected = RENDERER_CONTRACT_GROUPS.filter(({ capability }) =>
       HOST_CAPABILITIES.includes(capability as (typeof HOST_CAPABILITIES)[number])
     ).map(({ capability, contracts }) => {
@@ -255,11 +279,39 @@ describe('Host application commands', () => {
       }
     })
 
-    expect(expected.flatMap(({ channels }) => channels)).toHaveLength(68)
+    expected.push({
+      capability: 'background-result-delivery',
+      channels: RENDERER_CONTRACT_CATALOG.filter(
+        ({ capability, kind }) => capability === 'background-result-delivery' && kind === 'method'
+      ).map(({ channel }) => channel!)
+    })
+    expected.push({
+      capability: 'network',
+      channels: ['network:get-info', 'network:check-connectivity']
+    })
+    expected.push(
+      {
+        capability: 'locale',
+        channels: ['locale:initialize', 'locale:set-preference']
+      },
+      {
+        capability: 'completion-handoff',
+        channels: [
+          'specialist:get-handoff-events',
+          'specialist:retry-handoff',
+          'specialist:cancel-handoff'
+        ]
+      }
+    )
+    expected
+      .find(({ capability }) => capability === 'notifications')!
+      .channels.push('notifications:get-desktop-availability', 'notifications:send-test')
+    for (const group of expected) group.channels.sort()
+    expect(expected.flatMap(({ channels }) => channels)).toHaveLength(79)
     expect(
       hostApplicationCommandGroups.map(({ name, commands }) => ({
         capability: name,
-        channels: commands.map(({ name: commandName }) => commandName)
+        channels: commands.map(({ name: commandName }) => commandName).sort()
       }))
     ).toEqual(expected)
   })
@@ -271,7 +323,7 @@ describe('Host application commands', () => {
       {} as HostApplicationCommandDependencies
     )
 
-    expect(router.dispatcher.commandNames()).toHaveLength(68)
+    expect(router.dispatcher.commandNames()).toHaveLength(79)
     installation.uninstall()
     expect(router.dispatcher.commandNames()).toEqual([])
   })
@@ -324,6 +376,11 @@ describe('Host application commands', () => {
       hostApplicationCommands.localFs.setGrantedRootAccess,
       invocation([{ id: 'root-1', access: 'rw' }])
     )
+    await router.dispatcher.invoke(
+      hostApplicationCommands.notifications.getDesktopAvailability,
+      invocation([])
+    )
+    await router.dispatcher.invoke(hostApplicationCommands.notifications.sendTest, invocation([]))
     await router.dispatcher.invoke(hostApplicationCommands.logs.getStatus, invocation([]))
     await router.dispatcher.invoke(hostApplicationCommands.logs.openFile, invocation([]))
     await router.dispatcher.invoke(hostApplicationCommands.logs.revealInFolder, invocation([]))
@@ -447,10 +504,41 @@ describe('Host application commands', () => {
     )
     await router.dispatcher.invoke(hostApplicationCommands.update.getAppInfo, invocation([]))
     await router.dispatcher.invoke(hostApplicationCommands.update.getStatus, invocation([]))
+    await router.dispatcher.invoke(hostApplicationCommands.update.recheck, invocation([]))
+    await router.dispatcher.invoke(hostApplicationCommands.update.recover, invocation([]))
 
+    await router.dispatcher.invoke(
+      hostApplicationCommands.locale.initialize,
+      invocation([{ cachedPreference: 'ja' }])
+    )
+    await router.dispatcher.invoke(
+      hostApplicationCommands.locale.setPreference,
+      invocation([{ preference: 'en' }])
+    )
+    expect(dependencies.locale.initialize).toHaveBeenCalledWith('ja')
+    expect(dependencies.locale.setPreference).toHaveBeenCalledWith('en')
+    await router.dispatcher.invoke(hostApplicationCommands.network.getInfo, invocation([]))
+    await router.dispatcher.invoke(
+      hostApplicationCommands.network.checkConnectivity,
+      invocation([])
+    )
     for (const command of Object.values(hostApplicationCommands.localModels)) {
       await router.dispatcher.invoke(command, invocation([]))
     }
+    await router.dispatcher.invoke(
+      hostApplicationCommands.backgroundResults.sessionActivity,
+      invocation([{ sessionId: 'session' }])
+    )
+    await router.dispatcher.invoke(
+      hostApplicationCommands.backgroundResults.projectActivity,
+      invocation([{ projectId: 'project' }])
+    )
+    expect(dependencies.backgroundResults.sessionActivity).toHaveBeenCalledWith({
+      sessionId: 'session'
+    })
+    expect(dependencies.backgroundResults.projectActivity).toHaveBeenCalledWith({
+      projectId: 'project'
+    })
     expect(dependencies.localFs.listDir).toHaveBeenCalledWith('/data')
     expect(dependencies.localFs.readPreview).toHaveBeenCalledWith(previewRequest)
     expect(dependencies.notifications.takePendingOpenSession).toHaveBeenCalledWith(7)
@@ -515,6 +603,18 @@ describe('Host application commands', () => {
       pdfRequest,
       parseInvocation.callerContext,
       parseInvocation.callerLease
+    )
+    await router.dispatcher.invoke(
+      hostApplicationCommands.completionHandoff.getEvents,
+      invocation(['session'])
+    )
+    await router.dispatcher.invoke(
+      hostApplicationCommands.completionHandoff.retry,
+      invocation([{ id: 'handoff', sessionId: 'session' }])
+    )
+    await router.dispatcher.invoke(
+      hostApplicationCommands.completionHandoff.cancel,
+      invocation([{ id: 'handoff', sessionId: 'session' }])
     )
     const ownerMethods = Object.values(dependencies).flatMap((owner) => Object.values(owner))
     expect(
@@ -644,6 +744,67 @@ describe('Host application commands', () => {
     expect(dependencies.logs.getStatus).not.toHaveBeenCalled()
     expect(dependencies.logs.openFile).not.toHaveBeenCalled()
     expect(dependencies.logs.revealInFolder).not.toHaveBeenCalled()
+  })
+
+  it('keeps the persisted desktop locale behind desktop caller authority', async () => {
+    const dependencies = createDependencies()
+    const router = createApplicationCommandRouter()
+    registerHostApplicationCommands(router.registrar, dependencies)
+    for (const location of ['local', 'remote'] as const) {
+      const caller = createWebCallerContext('browser', { location })
+      await expect(
+        router.dispatcher.invoke(
+          hostApplicationCommands.locale.initialize,
+          invocation([{ cachedPreference: 'ja' }], caller)
+        )
+      ).rejects.toThrow('desktop app')
+      await expect(
+        router.dispatcher.invoke(
+          hostApplicationCommands.locale.setPreference,
+          invocation([{ preference: 'en' }], caller)
+        )
+      ).rejects.toThrow('desktop app')
+    }
+    expect(dependencies.locale.initialize).not.toHaveBeenCalled()
+    expect(dependencies.locale.setPreference).not.toHaveBeenCalled()
+  })
+
+  it('does not let browser callers send native desktop notifications', async () => {
+    const dependencies = createDependencies()
+    const router = createApplicationCommandRouter()
+    registerHostApplicationCommands(router.registrar, dependencies)
+    for (const location of ['local', 'remote'] as const) {
+      const caller = createWebCallerContext('browser', { location })
+      for (const command of [
+        hostApplicationCommands.notifications.getDesktopAvailability,
+        hostApplicationCommands.notifications.sendTest
+      ]) {
+        await expect(router.dispatcher.invoke(command, invocation([], caller))).rejects.toThrow(
+          'desktop app'
+        )
+      }
+    }
+    expect(dependencies.notifications.sendTest).not.toHaveBeenCalled()
+  })
+
+  it('does not expose desktop network probes to browser callers', async () => {
+    const dependencies = createDependencies()
+    const router = createApplicationCommandRouter()
+    registerHostApplicationCommands(router.registrar, dependencies)
+    for (const location of ['local', 'remote'] as const) {
+      const caller = createWebCallerContext('browser', { location })
+      await expect(
+        router.dispatcher.invoke(hostApplicationCommands.network.getInfo, invocation([], caller))
+      ).rejects.toThrow('desktop app')
+      await expect(
+        router.dispatcher.invoke(
+          hostApplicationCommands.network.checkConnectivity,
+          invocation([], caller)
+        )
+      ).rejects.toThrow('desktop app')
+    }
+    expect(dependencies.network.getInfo).not.toHaveBeenCalled()
+    expect(dependencies.network.checkConnectivity).not.toHaveBeenCalled()
   })
 
   it('keeps the read-only Remote Access probe available only to local callers', async () => {
@@ -872,4 +1033,23 @@ describe('Host application commands', () => {
     expect(dependencies.notifications.markAllRead).not.toHaveBeenCalled()
     expect(dependencies.notifications.markSessionCompletionsRead).not.toHaveBeenCalled()
   })
+})
+
+it('requires desktop authority for completion handoff and forwards the unchanged scoped request', async () => {
+  const dependencies = createDependencies()
+  const router = createApplicationCommandRouter()
+  registerHostApplicationCommands(router.registrar, dependencies)
+  const request = { id: 'handoff', sessionId: 'session' }
+  const channels = hostApplicationCommands.completionHandoff
+  for (const command of [channels.retry, channels.cancel]) {
+    await expect(
+      router.dispatcher.invoke(command, invocation([request], createWebCallerContext('web')))
+    ).rejects.toThrow('desktop app')
+    await router.dispatcher.invoke(command, invocation([request]))
+  }
+  expect(dependencies.completionHandoff.retry).toHaveBeenCalledExactlyOnceWith(request)
+  expect(dependencies.completionHandoff.cancel).toHaveBeenCalledExactlyOnceWith(request)
+  await router.dispatcher.invoke(channels.getEvents, invocation(['session']))
+  expect(dependencies.completionHandoff.getEvents).toHaveBeenCalledExactlyOnceWith('session')
+  router.dispose()
 })

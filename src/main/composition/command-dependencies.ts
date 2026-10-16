@@ -1,3 +1,11 @@
+import { createSessionRecoveryFolderCommand } from '../session-persistence/ipc'
+import { createCompletionHandoffCommands } from '../agents/completion-handoff-ipc'
+import type { composeAgentCompletion } from './agent-completion'
+import type { UploadTransferProgress } from '../../shared/uploads'
+import type { LocalePreferenceOwner } from '../locale/owner'
+import { createNetworkCommandOwner } from '../network-ipc'
+import type { SideChatCommandOwner } from '../side-chat/command-owner'
+import { desktopFileInteraction } from '../desktop-interaction'
 import { SessionReadingOwner } from '../session-replay/session-reading'
 import type { createDefaultUploadRepository } from '../uploads/ipc'
 import type { ApplicationEvents } from '../application-events'
@@ -5,14 +13,12 @@ import { SessionReplayRepository } from '../session-replay/repository'
 import { SessionReplayService } from '../session-replay/service'
 import { getProjectDbClient } from '../projects/prisma-client'
 import { resolveConfigRoot } from '../storage-root'
-import { BrowserWindow, dialog, webContents, type WebContents } from 'electron'
 import { createAcpRuntime } from '../acp/runtime-composition'
 import { type ApplicationCommandCompositionDependencies } from '../application-command-composition'
-import type { ApplicationInvocation } from '../application-command-router'
 import { createCliCommandOwner } from '../cli-install/ipc'
 import { createGithubCommandOwner } from '../github-ipc'
 import { createLiteratureCommandOwner } from '../literature/command-owner'
-import { errorLogFields } from '../logger'
+import { createLogger, diagnosticErrorFields, errorLogFields } from '@aipoch/diagnostics/node'
 import { createLogsCommandOwner } from '../logs-ipc'
 import { createMachineApprovalCommandOwner } from '../phi/approval-ipc'
 import { ManagedFileVersionService } from '../managed-file-versions/service'
@@ -45,6 +51,9 @@ import type { composeSettingsEffects } from './settings-effects'
 import type { composeStorageStartup } from './storage-startup'
 
 export function composeCommandDependencies({
+  localeOwner,
+  reportUploadProgress,
+  sideChatCommands,
   applicationEvents,
   settingsBootstrap,
   storageStartup,
@@ -59,15 +68,19 @@ export function composeCommandDependencies({
   notebookRuntime,
   researchCatalog,
   taskNotifications,
+  notificationDelivery,
   connectors,
   computeServices,
   computeAdmission,
   delegation,
+  officePreviewCommands,
+  fileSaveCommands,
   cliCommandOwner,
   githubCommandOwner,
   logsCommandOwner,
   machineApprovalCommandOwner,
   agentRuntime,
+  agentCompletion,
   agentWorkflows,
   handoff,
   settingsEffects,
@@ -84,6 +97,9 @@ export function composeCommandDependencies({
   statisticianReview,
   variableDefinition
 }: {
+  reportUploadProgress: ((clientId: string, progress: UploadTransferProgress) => void) | undefined
+  localeOwner: LocalePreferenceOwner
+  sideChatCommands: SideChatCommandOwner
   applicationEvents: ApplicationEvents
   settingsBootstrap: Awaited<ReturnType<typeof composeSettingsBootstrap>>
   storageStartup: Awaited<ReturnType<typeof composeStorageStartup>>
@@ -99,15 +115,19 @@ export function composeCommandDependencies({
   notebookRuntime: Awaited<ReturnType<typeof composeNotebookRuntime>>
   researchCatalog: Awaited<ReturnType<typeof composeResearchCatalog>>
   taskNotifications: TaskNotificationService
+  notificationDelivery: import('../notifications/desktop-delivery').DesktopNotificationDelivery
   connectors: Awaited<ReturnType<typeof composeConnectors>>
   computeServices: ReturnType<typeof composeComputeServices>
   computeAdmission: Awaited<ReturnType<typeof composeComputeAdmission>>
   delegation: ReturnType<typeof composeDelegation>
+  officePreviewCommands: import('../office-preview/application-commands').OfficePreviewCommands
+  fileSaveCommands: import('../file-save').FileSaveCommands
   cliCommandOwner: ReturnType<typeof createCliCommandOwner>
   githubCommandOwner: ReturnType<typeof createGithubCommandOwner>
   logsCommandOwner: ReturnType<typeof createLogsCommandOwner>
   machineApprovalCommandOwner: ReturnType<typeof createMachineApprovalCommandOwner>
   agentRuntime: Awaited<ReturnType<typeof composeAgentRuntime>>
+  agentCompletion: Awaited<ReturnType<typeof composeAgentCompletion>>
   agentWorkflows: Awaited<ReturnType<typeof composeAgentWorkflows>>
   handoff: Awaited<ReturnType<typeof composeHandoff>>
   settingsEffects: Awaited<ReturnType<typeof composeSettingsEffects>>
@@ -124,17 +144,6 @@ export function composeCommandDependencies({
   statisticianReview: ApplicationCommandCompositionDependencies['statisticianReview']
   variableDefinition: ApplicationCommandCompositionDependencies['variableDefinition']
 }): { applicationCommandDependencies: ApplicationCommandCompositionDependencies } {
-  const electronSenderFor = (
-    invocation: ApplicationInvocation<readonly unknown[]>
-  ): WebContents => {
-    const senderId = Number(invocation.callerContext.clientId)
-    const sender =
-      Number.isSafeInteger(senderId) && senderId > 0 ? webContents.fromId(senderId) : null
-    if (!sender || sender.isDestroyed()) {
-      throw new Error('Electron command caller is no longer available.')
-    }
-    return sender
-  }
   const sessionReplay = new SessionReplayService(
     new SessionReplayRepository(() => getProjectDbClient(resolveConfigRoot())),
     {
@@ -150,7 +159,10 @@ export function composeCommandDependencies({
       sessionAuthority.sessionPersistenceCoordinator
     )
   )
+  const openRecoveryFolder = createSessionRecoveryFolderCommand(sessionFoundation.sessionRepository)
   const applicationCommandDependencies: ApplicationCommandCompositionDependencies = {
+    sideChat: sideChatCommands,
+    pdfTranslation: documentReading.pdfTranslationOwner,
     sessionReplay,
     specialist: sessionSurfaces.specialistApplicationOwner,
     bookmarks: documentReading.bookmarkService,
@@ -174,7 +186,9 @@ export function composeCommandDependencies({
     notebookRuntime: {
       workflows: runtimeWorkflows,
       pickInterpreter: async () => {
-        const result = await dialog.showOpenDialog({ properties: ['openFile'] })
+        const result = await desktopFileInteraction().chooseFiles({
+          properties: ['openFile']
+        })
         return result.filePaths[0] ?? null
       }
     },
@@ -188,10 +202,12 @@ export function composeCommandDependencies({
       listAppIconPreviews
     },
     settingsIntegration: {
+      files: settingsEffects.settingsFileCommands,
       skills: settingsEffects.settingsWorkflows.skills,
       connectors: settingsEffects.settingsWorkflows.connectors,
       snapshotCommits: settingsBootstrap.settingsSnapshotCommits,
       connectorApprovals: connectors.approvalBroker,
+      connectorCredentials: connectors.credentialRequestBroker,
       skillImportApprovals: connectors.skillImportApprovalBroker
     },
     settingsRuntime: {
@@ -242,9 +258,14 @@ export function composeCommandDependencies({
       clearAll: () => researchCatalog.memoryService.clearAll()
     },
     dataContent: {
+      officePreviewCommands,
+      fileSaveCommands,
+      reproducibility: artifactSurfaces.reproducibilityCommands,
+      managedFileVersions: projectLifecycle.managedFileVersionHandlers,
       runtimeWriter: artifactSurfaces.runtimeWriter,
       artifacts: artifactSurfaces.artifactHandlers,
       electron: {
+        openRecoveryFolder: (invocation) => openRecoveryFolder(invocation.args[0]),
         inspectSessionDiagnostics: (invocation) =>
           sessionFoundation.sessionDiagnosticsDesktop.inspect(invocation.args[0]),
         exportSessionDiagnostics: (invocation) =>
@@ -261,26 +282,27 @@ export function composeCommandDependencies({
         exportSessionPackage: (invocation) =>
           sessionPackageSurfaces.sessionPackageDesktop.export(
             invocation.args[0],
-            BrowserWindow.fromWebContents(electronSenderFor(invocation)) ?? undefined
+            invocation.callerContext.clientId
           ),
         importSessionPackage: (invocation) =>
           sessionPackageSurfaces.sessionPackageDesktop.import(
-            BrowserWindow.fromWebContents(electronSenderFor(invocation)) ?? undefined,
+            invocation.callerContext.clientId,
             invocation.callerContext.lifecycleClientId,
             invocation.args[0],
             invocation.args[1]
           ),
-        exportConversationFromInvokingWindow: (invocation) => {
-          const sender = electronSenderFor(invocation)
-          return sessionPackageSurfaces.conversationExportService.exportConversation(
+        exportConversationFromInvokingWindow: (invocation) =>
+          sessionPackageSurfaces.conversationExportService.exportConversation(
             invocation.args[0],
-            BrowserWindow.fromWebContents(sender) ?? undefined
-          )
-        },
+            invocation.callerContext.clientId
+          ),
         stageLocalFileWithProgress: (invocation) => {
-          const sender = electronSenderFor(invocation)
+          if (!reportUploadProgress) throw new Error('Desktop upload progress is unavailable.')
           return projectLifecycle.uploadCommandOwner.stageLocalFile(invocation, {
-            report: (progress) => sender.send('uploads:transfer-progress', progress)
+            report: (progress) => {
+              if (!invocation.callerLease.signal.aborted && invocation.callerLease.isCurrent())
+                reportUploadProgress(invocation.callerContext.clientId, progress)
+            }
           })
         }
       },
@@ -370,6 +392,13 @@ export function composeCommandDependencies({
               )
             : await sessionSurfaces.sessionPersistenceHandlers.saveSession(session, options)
           sessionSurfaces.sessionDetailsOwner.afterSessionSaved(result.session)
+          // Wake outside save completion: delivery may need the caller's data-root write gate.
+          void delegation.delegatedWork.root.wakeMessages?.(result.session.id).catch((error) => {
+            createLogger('delegation:messages').warn(
+              'message wake after Session activation failed',
+              diagnosticErrorFields(error)
+            )
+          })
           return result
         },
         deleteSession: (request) => artifactSurfaces.sessionDeletionOwner.delete(request)
@@ -378,6 +407,12 @@ export function composeCommandDependencies({
       withDataRootWrite
     },
     host: {
+      completionHandoff: createCompletionHandoffCommands(
+        agentCompletion.completionHandoffLifecycle
+      ),
+      locale: localeOwner,
+      network: createNetworkCommandOwner(),
+      backgroundResults: settingsEffects.backgroundResultActivity,
       localModels: documentReading.localModels,
       pdfStructure: documentReading.pdfStructureReader,
       cli: cliCommandOwner,
@@ -386,6 +421,8 @@ export function composeCommandDependencies({
       logs: logsCommandOwner,
       machineApproval: machineApprovalCommandOwner,
       notifications: {
+        getDesktopAvailability: () => notificationDelivery.getAvailability(),
+        sendTest: () => notificationDelivery.sendTest(),
         getSnapshot: () => storageStartup.notificationInbox.getSnapshot(),
         markRead: (request) => storageStartup.notificationInbox.markRead(request.ids),
         markAllRead: (request) =>

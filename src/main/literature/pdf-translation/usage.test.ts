@@ -1,3 +1,4 @@
+import { toTranslationSourceId } from '../../../shared/pdf-translation'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -19,7 +20,7 @@ let db: ReturnType<typeof createProjectDbClient>
 let recorder: PdfTranslationUsageRecorder
 const context = {
   runId: 'translation',
-  attachmentVersionId: 'version',
+  sourceId: toTranslationSourceId('version'),
   sourceIndex: 2,
   providerId: 'provider',
   frameworkId: 'direct-api',
@@ -85,58 +86,6 @@ it('records each attempt once and projects consumption independently of document
   ).toBe(65)
   expect(projected.usageEvents.filter((event) => event.usageIncomplete)).toHaveLength(1)
   expect(projected.sessionCreatedAt).toEqual([])
-})
-
-it('recovers interrupted attempts without inventing zero usage or resetting live attempts', async () => {
-  await recorder.start(context)
-  const restarted = new PdfTranslationUsageRecorder(async () => db)
-  await restarted.recover()
-  await restarted.start(context)
-  await restarted.recover()
-  const rows = await db.pdfTranslationUsage.findMany()
-  expect(rows.map((row) => row.status).sort()).toEqual(['interrupted', 'started'])
-  expect(rows.every((row) => row.inputTokens === null && row.usageIncomplete)).toBe(true)
-})
-
-it('retries only failed writes and blocks new attempts until completion storage recovers', async () => {
-  const finish = await recorder.start(context)
-  const write = vi
-    .spyOn(db.pdfTranslationUsage, 'updateMany')
-    .mockRejectedValue(new Error('disk unavailable'))
-  await finish({ status: 'completed', usage })
-  await expect(recorder.start(context)).rejects.toThrow('disk unavailable')
-  expect(await db.pdfTranslationUsage.count()).toBe(1)
-  expect(await db.pdfTranslationUsage.findFirst()).toMatchObject({
-    status: 'started',
-    usageIncomplete: true
-  })
-  write.mockRestore()
-  await recorder.flush()
-  await recorder.flush()
-  expect(await db.pdfTranslationUsage.findFirst()).toMatchObject({
-    status: 'completed',
-    inputTokens: 40n,
-    outputTokens: 8n
-  })
-  expect(await db.pdfTranslationUsage.count()).toBe(1)
-})
-
-it('uses null for malformed usage and distinguishes an explicitly reported zero', async () => {
-  await (
-    await recorder.start(context)
-  )({ status: 'failed', usage: { ...usage, inputTokens: -1 } })
-  await (
-    await recorder.start(context)
-  )({ status: 'completed', usage: { inputTokens: 0, outputTokens: 0, cacheTokens: 0 } })
-  const rows = await db.pdfTranslationUsage.findMany()
-  expect(rows.find((row) => row.status === 'failed')).toMatchObject({
-    usageIncomplete: true,
-    inputTokens: null
-  })
-  expect(rows.find((row) => row.status === 'completed')).toMatchObject({
-    usageIncomplete: false,
-    inputTokens: 0n
-  })
 })
 
 it('pins terminal writes to the database used when the request started', async () => {

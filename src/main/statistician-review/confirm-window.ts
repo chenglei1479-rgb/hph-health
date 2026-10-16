@@ -9,12 +9,40 @@ import {
 
 const DISMISSED: PhiConfirmDecision = { confirmed: false }
 
+type ConfirmBrowserWindow = {
+  isDestroyed: () => boolean
+  close: () => void
+  show: () => void
+  loadURL: (url: string) => Promise<void>
+  webContents: {
+    executeJavaScript: (code: string) => Promise<unknown>
+    on: (event: string, listener: (...args: unknown[]) => void) => void
+  }
+  on: (event: string, listener: () => void) => void
+}
+
+type ConfirmBrowserWindowType = {
+  getFocusedWindow: () => ConfirmBrowserWindow | null
+  getAllWindows: () => ConfirmBrowserWindow[]
+  new (options: object): ConfirmBrowserWindow
+}
+
+let ConfirmBrowserWindowCtor: ConfirmBrowserWindowType | undefined
+
+// Electron installs the window constructor. The Node backend has no window.
+export const configureStatisticianConfirmWindow = (
+  browserWindow: ConfirmBrowserWindowType
+): void => {
+  ConfirmBrowserWindowCtor = browserWindow
+}
+
 // Reuses the shared de-identification review page. Closing the window exports nothing.
 export const createStatisticianExportConfirmer = (
   translate: NativeTranslator = englishNativeTranslator
 ): PhiConfirmer => {
   return async (preview: PhiPreview): Promise<PhiConfirmDecision> => {
-    const { BrowserWindow } = await import('electron')
+    const BrowserWindow = ConfirmBrowserWindowCtor
+    if (!BrowserWindow) return DISMISSED
     const parent = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
     const win = new BrowserWindow({
       parent,

@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 
-import { app } from 'electron'
+import { getUserDataPath } from '../user-data-path'
 
 import type {
   MachineApprovalStatus,
@@ -45,7 +45,7 @@ const readRequest = (value: unknown): SetMachineApprovalRequest => {
 }
 
 export function createMachineApprovalCommandOwner(
-  filePath = machineApprovalLogPath(join(app.getPath('userData'), 'phi-vault'))
+  filePath = machineApprovalLogPath(join(getUserDataPath(), 'phi-vault'))
 ): MachineApprovalCommandOwner {
   const log = createMachineApprovalLog(filePath)
   return {

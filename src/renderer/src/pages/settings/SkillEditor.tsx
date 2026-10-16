@@ -8,21 +8,15 @@ import { Dialog, RadioGroup } from 'radix-ui'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
-import type {
-  SkillDetailView,
-  SkillPackageFileInfo,
-  SkillReference
-} from '../../../../shared/settings'
-import { serializePersonalSkillDocument } from '../../../../shared/personal-skill-document'
-import {
-  isSkillPackageBudgetedPath,
-  SKILL_IMPORT_LIMITS
-} from '../../../../shared/skill-import-limits'
-import { parseSkillDocument } from '../../../../shared/skill-frontmatter'
+import type { SkillDetailView } from '../../../../shared/settings'
+import type { SkillPackageFileInfo, SkillReference } from '@aipoch/skills/document'
+import { serializePersonalSkillDocument } from '@aipoch/skills/document'
+import { isSkillPackageBudgetedPath, SKILL_IMPORT_LIMITS } from '@aipoch/skills/document'
+import { parseSkillDocument } from '@aipoch/skills/document'
 import { ErrorNotice } from '@/components/error-notice'
 import { FileDropOverlay } from '@/components/FileDropOverlay'
 import { Button } from '@/components/ui/button'
-import { isSafeSkillReferenceName } from '../../../../shared/skill-reference-name'
+import { isSafeSkillReferenceName } from '@aipoch/skills/document'
 import { Input } from '@/components/ui/input'
 import {
   dialogBodyClassName,

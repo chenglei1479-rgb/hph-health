@@ -1,35 +1,36 @@
-import { createPdfTranslationLocalRuntime } from '../literature/pdf-translation/local'
-import { PDF_TRANSLATION_MODEL_REVISIONS } from '../local-models/catalog'
-import { PdfTranslationCheckpoints } from '../literature/pdf-translation/checkpoints'
-import { PdfTranslationOwner } from '../literature/pdf-translation/index'
-import { capturePdfTranslationApiTarget } from '../literature/pdf-translation/api-target'
-import { capturePdfTranslationAgentTarget } from '../literature/pdf-translation/agent-target'
-import { ProviderTextGenerationService } from '../settings/provider-text-generation'
-import { PdfTranslationUsageRecorder } from '../literature/pdf-translation/usage'
-import { registerPdfTranslationIpc } from '../literature/pdf-translation/ipc'
-import { RestrictedInferenceRunner } from '../acp/restricted-inference-runner'
-import type { SettingsService } from '../settings/service'
-import { app } from 'electron'
 import { realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { PENDING_UPLOAD_SESSION_ID } from '../../shared/uploads'
+import { RestrictedInferenceRunner } from '../acp/restricted-inference-runner'
 import { isPathInsideWorkspace } from '../acp/workspace-path'
 import type { ApplicationEvents } from '../application-events'
 import { type ApplicationModuleBuilder } from '../application-runtime'
 import { BookmarkRepository } from '../bookmarks/repository'
 import { BookmarkService } from '../bookmarks/service'
+import { registerLocalModelIpcHandlers } from '../desktop-surface-declarations'
 import { LiteratureAttachmentAuthority } from '../literature/attachment-authority'
 import { LiteratureDocumentReader } from '../literature/document-reader'
-import { LiteratureFullTextIndex } from '../literature/full-text-index'
+import { literatureIndex } from '../literature/full-text-index'
 import { PdfElementAgentReader } from '../literature/pdf-structure/agent-reader'
 import { createPdfStructureEngine } from '../literature/pdf-structure/engine'
 import { createPdfStructureOwner } from '../literature/pdf-structure/owner'
 import { PdfStructureReader } from '../literature/pdf-structure/reader'
 import { PdfStructureSourceAuthority } from '../literature/pdf-structure/source'
+import { capturePdfTranslationAgentTarget } from '../literature/pdf-translation/agent-target'
+import { capturePdfTranslationApiTarget } from '../literature/pdf-translation/api-target'
+import { PdfTranslationCheckpoints } from '../literature/pdf-translation/checkpoints'
+import { PdfTranslationOwner } from '../literature/pdf-translation/index'
+import { createPdfTranslationLocalRuntime } from '../literature/pdf-translation/local'
+import { PdfTranslationUsageRecorder } from '../literature/pdf-translation/usage'
 import { SessionPdfSourceResolver } from '../literature/session-pdf-source-resolver'
-import { createLocalModelApi, registerLocalModelIpcHandlers } from '../local-models/ipc'
+import { PDF_TRANSLATION_MODEL_REVISIONS } from '../local-models/catalog'
+import { createLocalModelApi } from '../local-models/owner'
+import { runtimeMetadata } from '../runtime-metadata'
+import { ProviderTextGenerationService } from '../settings/provider-text-generation'
+import type { SettingsService } from '../settings/service'
+
+import { createLogger, errorLogFields } from '@aipoch/diagnostics/node'
 import { createLocalModelOwner } from '../local-models/owner'
-import { createLogger, errorLogFields } from '../logger'
 import { PdfAnnotationRepository } from '../pdf-annotations/repository'
 import { PdfAnnotationService } from '../pdf-annotations/service'
 import { getProjectDbClient } from '../projects/prisma-client'
@@ -82,6 +83,7 @@ export async function composeDocumentReading({
   sessionPdfContextOwner: SessionPdfContextOwner
   literatureContextLog: ReturnType<typeof createLogger>
   localModelOwner: ReturnType<typeof createLocalModelOwner>
+  pdfTranslationOwner: PdfTranslationOwner
   localModels: ReturnType<typeof createLocalModelApi>
   pdfStructureReader: PdfStructureReader
   pdfElementReader: PdfElementAgentReader
@@ -157,8 +159,7 @@ export async function composeDocumentReading({
     name: 'literature-index-retention',
     capability: undefined,
     start: () => {
-      stopLiteratureIndexRetention = LiteratureFullTextIndex.startRetentionSweep(
-        resolveDataRoot(),
+      stopLiteratureIndexRetention = literatureIndex(resolveDataRoot()).startRetentionSweep(
         (error) => {
           literatureContextLog.error('Literature index maintenance failed', errorLogFields(error))
         }
@@ -193,13 +194,7 @@ export async function composeDocumentReading({
   const pdfStructureOwner = createPdfStructureOwner({
     models: localModelOwner,
     sources: pdfStructureSources,
-    engine: createPdfStructureEngine(
-      join(
-        app.getAppPath().replace(/app\.asar$/, 'app.asar.unpacked'),
-        'resources',
-        'pdf-structure'
-      )
-    )
+    engine: createPdfStructureEngine()
   })
   const pdfStructureReader = new PdfStructureReader(pdfStructureOwner)
   await modules.add({ pdfStructureOwner }, ({ pdfStructureOwner: owner }) => ({
@@ -232,14 +227,14 @@ export async function composeDocumentReading({
       apiRunner: new ProviderTextGenerationService(),
       localRunner: createPdfTranslationLocalRuntime(
         join(
-          app.getAppPath().replace(/app\.asar$/, 'app.asar.unpacked'),
+          runtimeMetadata().applicationPath.replace(/app\.asar$/, 'app.asar.unpacked'),
           'resources',
           'pdf-translation-local'
         ),
         localTranslationModels
       ),
       runner: new RestrictedInferenceRunner({
-        appVersion: app.getVersion(),
+        appVersion: runtimeMetadata().version,
         configRoot: resolveConfigRoot(),
         profileNamespace: 'pdf-translation',
         resolveTarget: (target, context) =>
@@ -253,7 +248,6 @@ export async function composeDocumentReading({
       dispose: () => owner.shutdown()
     }
   })
-  declareElectronAdapter('pdf-translation', () => registerPdfTranslationIpc(pdfTranslationOwner))
   return {
     bookmarkService,
     pdfAnnotationTagEvents,
@@ -263,6 +257,7 @@ export async function composeDocumentReading({
     literatureContextLog,
     localModelOwner,
     localModels,
+    pdfTranslationOwner,
     pdfStructureReader,
     pdfElementReader,
     literatureDocumentReader

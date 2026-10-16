@@ -1,11 +1,6 @@
-import type { AcpPermissionRequest } from '../../../../shared/acp'
+import type { AcpPermissionRequest } from '../../../../shared/acp-permission-contract'
 import { PRODUCT_DISPLAY_NAME } from '../../../../shared/product-identity'
 
-import {
-  matchNotebookControlTool,
-  resolveNotebookLanguage,
-  resolveNotebookRunToolName
-} from './notebook-tool-names'
 import {
   buildLiteratureToolSummary,
   getLiteratureLibraryToolAction,
@@ -13,6 +8,11 @@ import {
   isLiteratureLibraryPdfReadTool,
   isLiteratureReadDocumentTool
 } from './literature-tool-presentation'
+import {
+  matchNotebookControlTool,
+  resolveNotebookLanguage,
+  resolveNotebookRunToolName
+} from './notebook-tool-names'
 
 type NotebookRuntime = 'python' | 'r' | 'js' | 'bash'
 
@@ -386,7 +386,8 @@ const describePermissionRequest = (request: AcpPermissionRequest): PermissionPre
     return {
       actionTitle: 'Confirm Notebook kernel and environment',
       categoryLabel: 'Notebook',
-      description: 'This selects an environment. It does not approve future destructive code.',
+      description:
+        'Later Notebook runs use this environment. Approval does not cover package changes or code execution.',
       hideToolIdentity: true
     }
   }

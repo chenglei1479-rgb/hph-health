@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { PdfTranslationControls } from './PdfTranslationControls'
-import { createPdfTranslationSource } from './pdf-translation'
+import { createPdfTranslationSource } from '@aipoch/pdf-translation/reader'
 import type { PdfTranslationJob } from './use-pdf-translation-job'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { ProviderView } from '../../../../../../shared/settings'
@@ -1202,10 +1202,14 @@ it('shows local download progress with cancellation and download errors with ret
     transferredBytes: 50,
     updateAvailable: false
   }
+  // Polling must observe the same state returned by cancel/install, including under load.
+  let current: typeof snapshot & { error?: string } = snapshot
   const api = {
-    getSnapshot: vi.fn(async () => snapshot),
-    install: vi.fn(async () => ({ ...snapshot, availability: 'error', error: 'integrity' })),
-    cancel: vi.fn(async () => ({ ...snapshot, availability: 'notInstalled' })),
+    getSnapshot: vi.fn(async () => current),
+    install: vi.fn(
+      async () => (current = { ...snapshot, availability: 'error', error: 'integrity' })
+    ),
+    cancel: vi.fn(async () => (current = { ...snapshot, availability: 'notInstalled' })),
     remove: vi.fn()
   }
   vi.stubGlobal('api', { localModels: api })

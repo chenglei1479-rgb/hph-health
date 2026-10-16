@@ -3,6 +3,7 @@ import {
   type ChildProcess,
   type ChildProcessWithoutNullStreams
 } from 'node:child_process'
+import * as childProcess from 'node:child_process'
 import { existsSync, realpathSync } from 'node:fs'
 import {
   chmod,
@@ -32,7 +33,7 @@ import {
   pythonBin,
   rBin,
   rScriptBin
-} from './runtime-paths'
+} from '@aipoch/environment'
 import { terminateProcessTree } from '../process-tree'
 import { TimeoutController } from './timeout-controller'
 import type { NotebookProcessSandbox } from './process-sandbox'
@@ -45,7 +46,12 @@ import { KernelProcessLifecycleOwner } from './kernel-process-lifecycle.windows-
 import { verifyReplayCapture } from './scientific-replay.test-support'
 import * as windowsNotebookRuntime from './windows-notebook-runtime'
 import { shellNpmPaths } from './shell-npm-environment'
-import { prepareNotebookWorkloadCache } from './notebook-workload-cache-paths'
+import { prepareNotebookWorkloadCache } from '@aipoch/environment'
+
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>()
+  return { ...actual, spawn: vi.fn(actual.spawn) }
+})
 
 // -- TimeoutController: pure state machine, driven with fake timers + a signal recorder. ------------
 
@@ -253,11 +259,16 @@ const processIsAlive = (pid: number): boolean => {
 const stubEnvPython = async (
   runtimeRootDir: string,
   name: string,
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = 'linux'
 ): Promise<void> => {
   const bin = pythonBin(envPrefix(runtimeRootDir, name, platform), platform)
   await mkdir(dirname(bin), { recursive: true })
   await symlink(python3 as string, bin)
+  // Windows CreateProcess needs an .exe sibling when the emulated POSIX command has no suffix.
+  // Keep the extensionless entry too: it is the interpreter path selected by the resolver under test.
+  if (process.platform === 'win32' && platform !== 'win32') {
+    await symlink(python3 as string, `${bin}.exe`)
+  }
 }
 
 const stubEnvR = async (runtimeRootDir: string, name: string): Promise<void> => {
@@ -271,7 +282,7 @@ const stubEnvR = async (runtimeRootDir: string, name: string): Promise<void> => 
 // readiness gate and spawns the fake loop under an on-disk env interpreter (never a system python).
 const makeDefaultEnvCwd = async (
   prefix: string,
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = 'linux'
 ): Promise<string> => {
   const dir = await mkdtemp(join(tmpdir(), prefix))
   await stubEnvPython(join(dir, 'runtime'), DEFAULT_PY_ENV, platform)
@@ -491,6 +502,11 @@ gate('NotebookKernelExecutor failed-cell output capture', () => {
 })
 
 beforeEach(() => {
+  // A linked Windows python.exe searches its new executable directory for Python's DLLs.
+  // Only this test process inherits the installed test interpreter's DLL directory.
+  if (process.platform === 'win32' && python3) {
+    vi.stubEnv('PATH', `${dirname(python3)};${process.env.PATH ?? ''}`)
+  }
   // OS-adapter tests simulate Windows on every host. Native runtime isolation is covered by
   // windows-notebook-runtime.integration.test.ts; these protocol children use the test host Node.
   vi.spyOn(windowsNotebookRuntime, 'resolveWindowsNotebookRuntime').mockReturnValue({
@@ -501,11 +517,62 @@ beforeEach(() => {
 })
 
 afterEach(async () => {
+  vi.unstubAllEnvs()
   if (cwdDir) {
     await rm(cwdDir, { recursive: true, force: true })
     cwdDir = undefined
   }
 })
+
+it.each([false, true])(
+  'hides Windows kernel consoles with durable ownership %s while preserving execution and cleanup',
+  async (owned) => {
+    cwdDir = await mkdtemp(join(tmpdir(), 'os-kernel-hidden-console-'))
+    const lifecycle = new KernelProcessLifecycleOwner({ storageRoot: cwdDir })
+    await lifecycle.ensureReady()
+    const spawn = vi.mocked(childProcess.spawn)
+    spawn.mockClear()
+    const executor = new NotebookKernelExecutor({
+      replLoopPath: REPL_LOOP,
+      platform: 'win32',
+      processLifecycle: owned ? lifecycle : undefined,
+      laneKey: owned ? '["project","session","root",null,null]' : undefined,
+      processSandbox: {
+        resolveWindowsRuntime: async () => null,
+        wrap: async (invocation) => ({
+          ...invocation,
+          annotateStderr: (stderr) => stderr,
+          cleanup: async (_reason, outcome) => ({
+            processesTerminated: outcome.processesTerminated,
+            networkClosed: true,
+            temporaryResourcesRemoved: true
+          })
+        })
+      }
+    })
+    try {
+      const result = await executor.execute({
+        ...baseRequest(cwdDir),
+        kind: 'repl',
+        code: 'console.log("CONSOLE_TEST_READY")',
+        sessionId: 'session',
+        projectId: 'project'
+      })
+      expect(result.status, result.stderr || result.traceback).toBe('completed')
+      expect(result.stdout).toContain('CONSOLE_TEST_READY')
+      expect(spawn).toHaveBeenCalledWith(
+        process.execPath,
+        expect.arrayContaining([
+          expect.stringContaining(owned ? 'kernel_process_host.js' : 'repl_loop.js')
+        ]),
+        expect.objectContaining({ windowsHide: true, detached: false })
+      )
+    } finally {
+      await expect(executor.shutdown()).resolves.toEqual({ reaped: true })
+    }
+    if (owned) expect(await readdir(join(cwdDir, 'runtime', 'kernel-processes'))).toEqual([])
+  }
+)
 
 it('executes an x64-only managed R through the public kernel boundary', async () => {
   cwdDir = await mkdtemp(join(tmpdir(), 'os-managed-r-x64-'))
@@ -942,7 +1009,7 @@ gate('NotebookKernelExecutor (fake loop)', () => {
       const written = await executor.execute({
         ...request,
         cwd: otherDir,
-        code: 'with open("generated.csv", "w") as output: output.write("x,y\\n1,2\\n")'
+        code: 'with open("generated.csv", "w", newline="\\n") as output: output.write("x,y\\n1,2\\n")'
       })
       expect(written.status).toBe('completed')
       expect(await readFile(join(firstDir, 'generated.csv'), 'utf8')).toBe('x,y\n1,2\n')
@@ -1539,7 +1606,7 @@ gate('NotebookKernelExecutor (fake loop)', () => {
   )
 
   it('durably binds the OS process to its lane and Kernel epoch until shutdown reaps it', async () => {
-    cwdDir = await makeDefaultEnvCwd('os-kernel-durable-owner-')
+    cwdDir = await makeDefaultEnvCwd('os-kernel-durable-owner-', process.platform)
     const owner = new KernelProcessLifecycleOwner({
       storageRoot: cwdDir,
       ownerInstanceId: 'test-owner'
@@ -1693,6 +1760,59 @@ gate('NotebookKernelExecutor (fake loop)', () => {
       await executor.shutdown()
     }
   })
+
+  it.skipIf(process.platform === 'win32').each(['timeout', 'cancelled'] as const)(
+    'does not trust non-execution evidence from a loop response after %s',
+    async (status) => {
+      cwdDir = await makeDefaultEnvCwd('os-kernel-interrupted-evidence-')
+      const loopPath = join(cwdDir, 'interrupt-evidence.py')
+      const readyPath = join(cwdDir, 'waiting')
+      await writeFile(
+        loopPath,
+        [
+          'import json, os, sys, time',
+          'for line in sys.stdin:',
+          '    request = json.loads(line)',
+          '    if request["code"] == "wait":',
+          '        try:',
+          `            open(${JSON.stringify(readyPath)}, "w").close()`,
+          '            time.sleep(60)',
+          '        except KeyboardInterrupt:',
+          '            pass',
+          '    print(json.dumps({"req_id": request["req_id"], "stdout": "loop responded", "error": "interrupted", "execution_started": False, "cwd": os.getcwd()}), flush=True)'
+        ].join('\n')
+      )
+      const executor = new NotebookKernelExecutor({
+        pythonBin: python3,
+        pythonLoopPath: loopPath,
+        platform: 'linux'
+      })
+      const cancellation = new AbortController()
+      try {
+        const request = baseRequest(cwdDir)
+        await expect(executor.execute({ ...request, code: 'warm' })).resolves.toMatchObject({
+          status: 'failed',
+          executionStarted: false
+        })
+        const run = executor.execute({
+          ...request,
+          code: 'wait',
+          signal: cancellation.signal,
+          timeoutMs: status === 'timeout' ? 1_000 : undefined
+        })
+        if (status === 'cancelled') {
+          await vi.waitFor(() => expect(existsSync(readyPath)).toBe(true))
+          cancellation.abort()
+        }
+        const result = await run
+        expect(result).toMatchObject({ status, kernelDispatched: true, stdout: 'loop responded' })
+        expect(result).not.toHaveProperty('executionStarted')
+      } finally {
+        await executor.shutdown()
+      }
+    },
+    15_000
+  )
 
   it('soft-interrupts a long run with SIGINT and reports a timeout', async () => {
     cwdDir = await makeDefaultEnvCwd('os-kernel-soft-')
@@ -4089,7 +4209,7 @@ describe('NotebookKernelExecutor spawn env', () => {
     const buildEnv = (executor as unknown as { buildEnv: BuildEnvFn }).buildEnv.bind(executor)
 
     const replEnv = buildEnv('repl', request, '/tmp/figs')
-    expect(replEnv.ELECTRON_RUN_AS_NODE).toBe('1')
+    expect(replEnv.ELECTRON_RUN_AS_NODE).toBe(process.versions.electron ? '1' : undefined)
     expect(replEnv.OPEN_SCIENCE_MCP_RPC_ENDPOINT).toBe('http://127.0.0.1:9/x')
     expect(replEnv.OPEN_SCIENCE_MCP_RPC_SOCKET_PATH).toBe('\\\\.\\pipe\\open-science-notebook')
     expect(replEnv.OPEN_SCIENCE_MCP_RPC_TOKEN).toBe('tok')
@@ -4694,8 +4814,12 @@ describe('NotebookKernelExecutor repl kind (real repl_loop.js)', () => {
       }
       const ledger = join(cwdDir, 'runtime', 'kernel-processes')
       try {
-        await executor.execute({ ...request, code: "console.log('warm')" })
-        const [oldReceipt] = await readdir(ledger)
+        await expect(
+          executor.execute({ ...request, code: "console.log('warm')" })
+        ).resolves.toMatchObject({ status: 'completed', stdout: expect.stringContaining('warm') })
+        const receipts = await readdir(ledger)
+        expect(receipts).toHaveLength(1)
+        const [oldReceipt] = receipts
         await expect(executor.restart()).rejects.toThrow('persistent process tree was not reaped')
         await expect(executor.execute(request)).rejects.toThrow('process tree could not be stopped')
         expect(await readdir(ledger)).toEqual([oldReceipt])
@@ -4767,6 +4891,90 @@ describe('NotebookKernelExecutor repl kind (real repl_loop.js)', () => {
       }
     }
   )
+
+  it('retains Windows ownership until the native supervisor host has exited', async () => {
+    cwdDir = await mkdtemp(join(tmpdir(), 'os-kernel-supervisor-exit-'))
+    const lifecycle = new KernelProcessLifecycleOwner({ storageRoot: cwdDir })
+    await lifecycle.ensureReady()
+    const complete = vi.spyOn(lifecycle, 'complete')
+    const confirm = vi.fn(async () => true)
+    const cleanup = vi.fn(async () => ({
+      processesTerminated: true,
+      networkClosed: true,
+      temporaryResourcesRemoved: true
+    }))
+    const terminateTree = vi.fn(terminateProcessTree)
+    const executor = new NotebookKernelExecutor({
+      replLoopPath: REPL_LOOP,
+      platform: 'win32',
+      processLifecycle: lifecycle,
+      laneKey: '["project","session","root",null,null]',
+      terminateTree,
+      processSandbox: {
+        resolveWindowsRuntime: async () => null,
+        wrap: async (invocation) => ({
+          ...invocation,
+          confirmProcessTreeTermination: confirm,
+          confirmProcessState: async () => 'started-and-reaped',
+          requestProcessTreeTermination: async () => true,
+          annotateStderr: (stderr) => stderr,
+          cleanup
+        })
+      }
+    })
+    let child: ChildProcessWithoutNullStreams | undefined
+    let shutdown: Promise<unknown> | undefined
+    try {
+      await executor.execute({
+        ...baseRequest(cwdDir),
+        kind: 'repl',
+        code: 'return 1',
+        sessionId: 'session',
+        projectId: 'project'
+      })
+      child = procFor(executor, 'repl')!.child
+      shutdown = executor.shutdown()
+      await vi.waitFor(() => expect(confirm).toHaveBeenCalled())
+      await new Promise<void>((resolve) => setImmediate(resolve))
+      // Job containment can already be empty while its native supervisor is restoring ACLs.
+      // Neither filesystem cleanup nor durable ownership settlement may outrun that host.
+      expect(child.exitCode).toBeNull()
+      expect(complete).not.toHaveBeenCalled()
+      expect(cleanup).not.toHaveBeenCalled()
+      expect(terminateTree).not.toHaveBeenCalled()
+      expect((await readdir(join(cwdDir, 'runtime', 'kernel-processes'))).length).toBeGreaterThan(0)
+      // Model the desktop caller's unchanged 15-second budget while the host is held alive.
+      // The transport suite separately exercises that budget over the authenticated socket.
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      try {
+        const bounded = Promise.race([
+          shutdown.then(() => 'cleaned'),
+          new Promise<string>((resolve) => setTimeout(() => resolve('budget-expired'), 15_000))
+        ])
+        await vi.advanceTimersByTimeAsync(15_000)
+        expect(await bounded).toBe('budget-expired')
+        expect(child.exitCode).toBeNull()
+        expect(complete).not.toHaveBeenCalled()
+        expect(cleanup).not.toHaveBeenCalled()
+        expect(terminateTree).not.toHaveBeenCalled()
+        expect((await readdir(join(cwdDir, 'runtime', 'kernel-processes'))).length).toBeGreaterThan(
+          0
+        )
+        expect(confirm).toHaveBeenCalledOnce()
+      } finally {
+        vi.useRealTimers()
+      }
+      await terminateProcessTree(child)
+      await expect(shutdown).resolves.toEqual({ reaped: true })
+      expect(complete).toHaveBeenCalledWith(expect.anything(), true)
+      expect(cleanup).toHaveBeenCalled()
+      expect(await readdir(join(cwdDir, 'runtime', 'kernel-processes'))).toEqual([])
+    } finally {
+      if (child) await terminateProcessTree(child)
+      await shutdown
+      await executor.shutdown()
+    }
+  })
 
   it('retains native termination proof when durable receipt settlement must retry', async () => {
     cwdDir = await mkdtemp(join(tmpdir(), 'os-kernel-native-receipt-retry-'))
@@ -5710,3 +5918,5 @@ describe('NotebookKernelExecutor readiness gate', () => {
     }
   })
 })
+
+;(await import('../../../test/runtime-metadata')).configureTestRuntimeMetadata()

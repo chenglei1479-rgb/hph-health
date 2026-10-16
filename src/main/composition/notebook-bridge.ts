@@ -1,10 +1,11 @@
+import { runtimeMetadata } from '../runtime-metadata'
+import { bindNotebookApprovals } from './notebook-approvals'
 import { ReviewRepository } from '../reviewer/repository'
 import { readLinkedSession } from '../notebook/host-session-reading'
 import { SessionReplayRepository } from '../session-replay/repository'
 import { NotebookRunRepository } from '../notebook/repository'
 import { getProjectDbClient } from '../projects/prisma-client'
-import { app } from 'electron'
-import { resolveEffectiveSpecialistSkills } from '../../shared/specialist'
+import { resolveEffectiveSpecialistSkills } from '@aipoch/specialists'
 import { ImageInputCompatibilityOwner } from '../acp/image-input-compatibility-owner'
 import { RestrictedInferenceRunner } from '../acp/restricted-inference-runner'
 import { createAcpRuntime } from '../acp/runtime-composition'
@@ -15,9 +16,9 @@ import { type ApplicationModuleBuilder } from '../application-runtime'
 import { ArtifactProvenanceRepository } from '../artifacts/provenance-repository'
 import { AgentComputeService } from '../compute/agent-compute-service'
 import { createProductionDelegatedWorkComposition } from '../delegation/production-composition'
-import { type DiagnosticOperation } from '../diagnostics/operation'
+import { type DiagnosticOperation } from '@aipoch/diagnostics/node'
 import { ImmutableInputAuthority } from '../immutable-input-authority'
-import { createLogger, diagnosticErrorFields } from '../logger'
+import { createLogger, diagnosticErrorFields } from '@aipoch/diagnostics/node'
 import { ManagedFileVersionService } from '../managed-file-versions/service'
 import { MemoryService } from '../memory/service'
 import {
@@ -39,7 +40,8 @@ import { type SessionAuxiliaryTurnUsageRecord } from '../session-persistence/aux
 import type { SessionPersistenceCommands } from '../session-persistence/coordinator'
 import { createDefaultSessionRepository } from '../session-persistence/ipc'
 import { SettingsService } from '../settings/service'
-import { HostSkillsService, type HostSkillsCatalog } from '../skills/host-skills-service'
+import { HostSkillsService } from '../skills/host-skills-service'
+import type { SkillAuthoringCatalog } from '@aipoch/skills'
 import { SpecialistService } from '../specialist/service'
 import { resolveConfigRoot, resolveDataRoot } from '../storage-root'
 import { TagService } from '../tags/service'
@@ -114,7 +116,7 @@ export async function composeNotebookBridge({
   notebookRpcServer: NotebookLocalRpcServer
   imageInputCompatibility: ImageInputCompatibilityOwner
 }> {
-  const hostSkillsCatalog: HostSkillsCatalog = {
+  const hostSkillsCatalog: SkillAuthoringCatalog = {
     list: () => settingsService.listHostSkills(),
     withSkillRead: (id, read) => settingsService.withHostSkillRead(id, read),
     publishPersonalDirectory: (name, sourcePath, overwrite) =>
@@ -160,7 +162,7 @@ export async function composeNotebookBridge({
       }
     },
     runner: new RestrictedInferenceRunner({
-      appVersion: app.getVersion(),
+      appVersion: runtimeMetadata().version,
       configRoot,
       profileNamespace: 'host-llm',
       resolveTarget: (target, context) =>
@@ -201,14 +203,7 @@ export async function composeNotebookBridge({
       ? { projectId: summary.projectId }
       : undefined
   }
-  notebookService.setExecutionApproval(async (request) => {
-    const runtime = runtimeRef.current
-    if (!runtime) throw new Error('ACP runtime is not initialized.')
-    // Full remains the user's explicit bypass mode. Auto still reviews destructive code once.
-    if (runtime.getState().permissionProfiles[request.sessionId]?.selectedProfile === 'full')
-      return true
-    return runtime.requestAppApproval(request)
-  })
+  bindNotebookApprovals(notebookService, () => runtimeRef.current)
   const notebookRpcServer = await modules.add(
     new NotebookLocalRpcServer(notebookLocalRpc, {
       // The Notebook REPL runs in a process sandbox whose only TCP egress is the approval gateway.
@@ -384,7 +379,7 @@ export async function composeNotebookBridge({
       hostLlmLog.error('stale host.llm profile cleanup failed', diagnosticErrorFields(error))
     )
   const visionInferenceRunner = new RestrictedInferenceRunner({
-    appVersion: app.getVersion(),
+    appVersion: runtimeMetadata().version,
     configRoot,
     profileNamespace: 'vision-evidence',
     resolveTarget: (target, context) =>

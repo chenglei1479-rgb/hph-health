@@ -1,3 +1,4 @@
+import { configureTestElectronHost } from '../../../test/runtime-host'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { NotebookRuntimeService } from './runtime-service'
@@ -7,8 +8,8 @@ const { ipcHandlers, log } = vi.hoisted(() => ({
   log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }))
 
-vi.mock('../logger', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../logger')>()),
+vi.mock('@aipoch/diagnostics/node', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@aipoch/diagnostics/node')>()),
   createLogger: () => log
 }))
 
@@ -283,3 +284,5 @@ describe('notebook IPC handlers', () => {
     expect(logged).not.toContain('kernel connection closed')
   })
 })
+
+await configureTestElectronHost(await import('electron'))

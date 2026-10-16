@@ -1,3 +1,4 @@
+import { nodeRuntimeEnvironment } from '../node-process-host'
 import { execFile } from 'node:child_process'
 import { constants } from 'node:fs'
 import { access, mkdir } from 'node:fs/promises'
@@ -48,8 +49,8 @@ import {
   syncConnectorSkillDocs,
   syncMaterializedCustomServerSkillDocs
 } from '../connectors/provision'
-import { createLogger } from '../logger'
-import type { SkillDirectoryLayout } from '../skills/materializer'
+import { createLogger } from '@aipoch/diagnostics/node'
+import type { SkillDirectoryLayout } from '@aipoch/skills/projection'
 import { writeAgentConfigFiles } from './agent-config-files'
 import { createDefaultDetectDeps, detectClaude, type ClaudeDetectDeps } from './claude-detect'
 import {
@@ -116,7 +117,7 @@ import { buildProviderEnv, type ResolvedProvider } from './provider-env'
 import { resolveSystemProxyEnvironment, type SystemProxyEnvironment } from './system-proxy'
 import type { ProviderAccountsModule } from './provider-accounts'
 import type { SettingsRepository } from './repository'
-import type { SkillCatalogModule } from './skill-catalog'
+import type { SkillCatalogModule } from '../skills/catalog'
 import type { ConnectorSettingsModule } from './connector-settings'
 import type { StoredCodexInfo, StoredSettings } from './types'
 
@@ -160,7 +161,7 @@ const runCodexAdapterVersion = async (
 
   try {
     const { stdout } = await execFileAsync(process.execPath, [adapterPath, '--version'], {
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', NO_BROWSER: '1' },
+      env: { ...process.env, ...nodeRuntimeEnvironment(), NO_BROWSER: '1' },
       timeout: 5_000,
       windowsHide: true,
       signal
@@ -425,7 +426,12 @@ export class AgentRuntimeManager {
       getAdapterVersion: (path, signal) =>
         runCodexAdapterVersion(path, baseOpencodeDetectDeps.getVersion, signal),
       getCodexVersion: baseOpencodeDetectDeps.getVersion,
-      smokeInitialize: runAcpInitializeSmoke(baseOpencodeDetectDeps.platform),
+      smokeInitialize: async (path, opts, signal) => {
+        signal?.throwIfAborted()
+        if (path === managedAdapterPath) await ensureManagedCodexContextUsage(path)
+        signal?.throwIfAborted()
+        return runAcpInitializeSmoke(baseOpencodeDetectDeps.platform)(path, opts, signal)
+      },
       resolveNpmBinDirs: baseOpencodeDetectDeps.resolveNpmBinDirs,
       extraDirs: [dirname(managedAdapterPath)],
       managedAdapterPath,

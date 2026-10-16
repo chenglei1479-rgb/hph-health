@@ -2,6 +2,8 @@ import { expect } from '@playwright/test'
 import { test } from './fixtures/electron-app'
 import type { PersistedChatSession } from '../src/shared/session-persistence'
 import type { NotebookRunRecord } from '../src/shared/notebook'
+import { createProjectViaUi } from './fixtures/project'
+import { submitPromptViaUi } from './fixtures/conversation'
 
 const scenarios = [
   { action: 'approve', restart: true },
@@ -22,18 +24,14 @@ for (const { action, restart } of scenarios) {
     test.setTimeout(180_000)
     await app.completeOnboarding()
     let page = await app.configureFakeAgent()
-    await page.getByRole('button', { name: 'New project' }).click()
-    const dialog = page.getByRole('dialog', { name: 'New project' })
-    await dialog.getByLabel('Name').fill(`Restart ${action}`)
-    await dialog.getByRole('button', { name: 'Create project' }).click()
+    await createProjectViaUi(page, `Restart ${action}`)
     const permission = action === 'permission-allow' || action === 'permission-deny'
     const prompt = permission
       ? 'Request restart verification permission.'
       : action === 'question'
         ? 'Ask a restart verification question.'
         : 'Create a restart verification Plan.'
-    await page.getByRole('textbox', { name: 'Ask anything' }).fill(prompt)
-    await page.getByRole('button', { name: 'Send message' }).click()
+    await submitPromptViaUi(page, prompt)
     if (permission) await expect(page.getByTestId('permission-card')).toBeVisible()
     else if (action === 'question')
       await expect(
@@ -239,8 +237,7 @@ for (const { action, restart } of scenarios) {
         })
       )
       .toEqual([{ status: 'idle', active: false }])
-    await page.getByRole('textbox', { name: 'Ask anything' }).fill('Verify interaction follow-up.')
-    await page.getByRole('button', { name: 'Send message' }).click()
+    await submitPromptViaUi(page, 'Verify interaction follow-up.')
     await expect(page.getByText('Interaction follow-up completed.', { exact: false })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('after-response.png') })
   })
@@ -253,13 +250,9 @@ for (const secondDecision of ['allow', 'deny'] as const) {
     test.setTimeout(240_000)
     await app.completeOnboarding()
     let page = await app.configureFakeAgent()
-    await page.getByRole('button', { name: 'New project' }).click()
-    const dialog = page.getByRole('dialog', { name: 'New project' })
-    await dialog.getByLabel('Name').fill(`Permission handoff ${secondDecision}`)
-    await dialog.getByRole('button', { name: 'Create project' }).click()
+    await createProjectViaUi(page, `Permission handoff ${secondDecision}`)
     const prompt = 'Verify consecutive permissions after restart.'
-    await page.getByRole('textbox', { name: 'Ask anything' }).fill(prompt)
-    await page.getByRole('button', { name: 'Send message' }).click()
+    await submitPromptViaUi(page, prompt)
     await expect(page.getByTestId('permission-card')).toBeVisible()
     const readSession = async (): Promise<PersistedChatSession> =>
       page.evaluate(async () => (await window.api.sessions.loadAll()).sessions[0])
@@ -270,6 +263,7 @@ for (const secondDecision of ['allow', 'deny'] as const) {
     expect(initial.runtimeContext?.permission?.request.rawInput).toMatchObject({
       code: 'return { marker: "permission-handoff-first" }'
     })
+    expect(initial.runtimeContext?.permission?.request.isMcp).toBe(true)
     const firstRequestId = initial.runtimeContext!.permission!.request.requestId
 
     page = await app.restart()
@@ -280,16 +274,14 @@ for (const secondDecision of ['allow', 'deny'] as const) {
     await expect(page.getByTestId('permission-card')).toBeVisible()
     expect((await readSession()).runtimeContext?.permission?.request.requestId).toBe(firstRequestId)
     const allowOnce = async (): Promise<void> => {
-      await page.getByTestId('permission-actions').getByTestId('scope-chevron').click()
-      await page.getByRole('menuitemradio', { name: 'Once This call only', exact: true }).click()
       const approval = page.getByTestId('permission-actions').getByTestId('allow-primary')
-      await expect(approval).toHaveText('Allow once')
+      await expect(approval).toHaveText('Allow')
       await approval.click()
     }
     await allowOnce()
 
     // Reproduce the production failure: the restored exact call succeeds, then a different
-    // app-owned MCP call asks within the same continuation instead of silently being cancelled.
+    // provider-owned MCP call asks within the same continuation instead of silently being cancelled.
     await expect
       .poll(async () => (await readSession()).runtimeContext?.permission?.request.rawInput, {
         timeout: 40_000
@@ -371,14 +363,8 @@ test('keeps a committed Artifact Version when cancelled and immediately followed
   test.setTimeout(180_000)
   await app.completeOnboarding()
   const page = await app.configureFakeAgent()
-  await page.getByRole('button', { name: 'New project' }).click()
-  const dialog = page.getByRole('dialog', { name: 'New project' })
-  await dialog.getByLabel('Name').fill('Cancellation publication')
-  await dialog.getByRole('button', { name: 'Create project' }).click()
-  await page
-    .getByRole('textbox', { name: 'Ask anything' })
-    .fill('Publish then wait for cancellation.')
-  await page.getByRole('button', { name: 'Send message' }).click()
+  await createProjectViaUi(page, 'Cancellation publication')
+  await submitPromptViaUi(page, 'Publish then wait for cancellation.')
   await expect(
     page.getByText('Artifact published; waiting for cancellation.', { exact: false })
   ).toBeVisible({ timeout: 60_000 })
@@ -407,8 +393,7 @@ test('keeps a committed Artifact Version when cancelled and immediately followed
     message.artifactIds?.includes(artifact.id)
   )!
   expect(owner).toBeDefined()
-  await page.getByRole('textbox', { name: 'Ask anything' }).fill('Verify interaction follow-up.')
-  await page.getByRole('button', { name: 'Send message' }).click()
+  await submitPromptViaUi(page, 'Verify interaction follow-up.')
   await expect(page.getByText('Interaction follow-up completed.', { exact: false })).toBeVisible()
   await expect
     .poll(async () =>

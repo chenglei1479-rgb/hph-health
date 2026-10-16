@@ -1,89 +1,56 @@
-import { createLogger } from '../logger'
-import { prepareReplCellBindings, type ReplCellBindings } from './repl-cell-bindings'
-import {
-  resolveWindowsNotebookRuntime,
-  type WindowsNotebookRuntime,
-  windowsNotebookRuntimeEnvironment
-} from './windows-notebook-runtime'
-import { prepareShellNpmEnvironment } from './shell-npm-environment'
-import {
-  NotebookExecutionStopError,
-  markNotebookKernelExitCleanedUp,
-  NotebookKernelExitError,
-  notebookErrorRecovery
-} from '../../shared/notebook-execution-error'
+import { createLogger } from '@aipoch/diagnostics/node'
+import { resolveExternalRLibrary } from '@aipoch/environment'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdtempSync, realpathSync } from 'node:fs'
 import { readFile, rm, stat, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
-import { diagnoseKernelExit } from './kernel-exit-diagnostics'
-import { kernelExecutableReadRoot } from './kernel-executable-read-root'
-import { resolveExternalRLibrary } from './external-r-library'
 import { createInterface, type Interface } from 'node:readline'
 import { Transform, type TransformCallback } from 'node:stream'
+import {
+  NotebookExecutionStopError,
+  NotebookKernelExitError,
+  markNotebookKernelExitCleanedUp,
+  notebookErrorRecovery
+} from '../../shared/notebook-execution-error'
+import { nodeRuntimeEnvironment } from '../node-process-host'
+import { runtimeMetadataIfConfigured } from '../runtime-metadata'
+import { kernelExecutableReadRoot } from './kernel-executable-read-root'
+import { diagnoseKernelExit } from './kernel-exit-diagnostics'
+import { prepareReplCellBindings, type ReplCellBindings } from './repl-cell-bindings'
+import { prepareShellNpmEnvironment } from './shell-npm-environment'
+import {
+  resolveWindowsNotebookRuntime,
+  windowsNotebookRuntimeEnvironment,
+  type WindowsNotebookRuntime
+} from './windows-notebook-runtime'
 
+import { boundedRuntimeDiagnostic } from '@aipoch/diagnostics/node'
 import {
-  createPosixProcessTreeOwnership,
-  assertProcessTreeSupport,
-  trackOwnedPosixProcessTree,
-  terminateProcessTree,
-  type ProcessTreeKillResult
-} from '../process-tree'
-import {
-  KERNEL_FIGURES_DIR_ENV,
-  frameRNamespaceRequest,
-  frameRRequest,
-  framePythonNamespaceRequest,
-  framePythonRequest,
-  parseLoopResponse,
-  type KernelLoopFigure,
-  type KernelLoopResponse
-} from './kernel-protocol'
-import { mapLoopOutputs, type MappedFigure } from './loop-output-mapper'
-import { protectManagedRuntimeWrites } from './managed-runtime-guard'
-import {
+  DEFAULT_R_ENV,
   buildManagedRuntimeProcessEnvironment,
   buildNotebookKernelEnvironment,
+  condaActivatedPath,
+  envPrefix,
+  environmentPathRoots,
   normalizeRProcessLocale,
-  environmentPathRoots
-} from './process-environment'
-import {
-  NotebookRuntimeAccessCancelledError,
-  type NotebookProcessSandbox,
-  type NotebookRuntimeAccessAdmission,
-  type NotebookSandboxCleanupReason,
-  type NotebookSandboxCleanupResult,
-  type NotebookSandboxProcessOutcome,
-  withNotebookSandboxProcessState
-} from './process-sandbox'
-import {
   notebookWorkloadCacheEnv,
   notebookWorkloadCacheRoot,
-  prepareNotebookWorkloadCache
-} from './notebook-workload-cache-paths'
-import {
-  condaActivatedPath,
-  DEFAULT_R_ENV,
-  envPrefix,
+  prepareNotebookWorkloadCache,
   pythonBin,
   rBin,
   rScriptBin,
+  readProcessStartToken,
   resolveEnvName
-} from './runtime-paths'
-import { boundedRuntimeDiagnostic } from './runtime-diagnostics'
-import type {
-  NotebookSessionNamespaceRequest,
-  NotebookSessionNamespaceResult
-} from './session-aggregate'
-import type {
-  NotebookExecutionRequest,
-  NotebookExecutionResult,
-  NotebookExecutor
-} from './runtime-service'
-import { TimeoutController } from './timeout-controller'
-import { startWorkingFileObservation, type WorkingFileObservation } from './working-file-observer'
+} from '@aipoch/environment'
+import {
+  assertProcessTreeSupport,
+  createPosixProcessTreeOwnership,
+  terminateProcessTree,
+  trackOwnedPosixProcessTree,
+  type ProcessTreeKillResult
+} from '../process-tree'
 import {
   NOTEBOOK_FIGURE_COUNT_LIMIT,
   NOTEBOOK_FIGURE_COUNT_LIMIT_ENV,
@@ -101,17 +68,48 @@ import {
   NOTEBOOK_TEXT_LIMIT_BYTES,
   NOTEBOOK_TEXT_LIMIT_ENV
 } from './content-limits'
+import type {
+  NotebookExecutionRequest,
+  NotebookExecutionResult,
+  NotebookExecutor
+} from './execution-contract'
 import {
   notebookHelperInitializationCode,
   type NotebookHelperModuleInjection
 } from './helper-module-host'
-import { notebookInterpreterIdentity } from './session-aggregate'
 import type {
   KernelProcessLifecycleOwner,
   KernelProcessReceipt,
   KernelProcessSpawnIntent
 } from './kernel-process-lifecycle.windows-posix'
-import { readProcessStartToken } from './operation-recovery'
+import {
+  KERNEL_FIGURES_DIR_ENV,
+  framePythonNamespaceRequest,
+  framePythonRequest,
+  frameRNamespaceRequest,
+  frameRRequest,
+  parseLoopResponse,
+  type KernelLoopFigure,
+  type KernelLoopResponse
+} from './kernel-protocol'
+import { mapLoopOutputs, type MappedFigure } from './loop-output-mapper'
+import { protectManagedRuntimeWrites } from './managed-runtime-guard'
+import {
+  NotebookRuntimeAccessCancelledError,
+  withNotebookSandboxProcessState,
+  type NotebookProcessSandbox,
+  type NotebookRuntimeAccessAdmission,
+  type NotebookSandboxCleanupReason,
+  type NotebookSandboxCleanupResult,
+  type NotebookSandboxProcessOutcome
+} from './process-sandbox'
+import type {
+  NotebookSessionNamespaceRequest,
+  NotebookSessionNamespaceResult
+} from './session-aggregate'
+import { notebookInterpreterIdentity } from './session-aggregate'
+import { TimeoutController } from './timeout-controller'
+import { startWorkingFileObservation, type WorkingFileObservation } from './working-file-observer'
 
 // Driver-internal process kind. 'python'/'r' are the data kernels selected by the agent-facing
 // NotebookLanguage; 'repl' is the control-plane Node kernel reached only via the control path. The
@@ -383,31 +381,38 @@ class NotebookExecutionCancelledError extends Error {
   }
 }
 
+// Plain-Node hosts (runtime certification, SDK consumers) configure no host entry; the
+// repo-relative candidates below resolve the loops directly instead of throwing.
+const hostResourcesPath = (): string | undefined => runtimeMetadataIfConfigured()?.resourcesPath
+
 // Resolves the packaged/dev location of python_loop.py; an env override wins (tests, dev), then the
 // packaged resources dir, then the repo-relative dev path.
 const defaultPythonLoopPath = (): string => {
   if (process.env.OPEN_SCIENCE_PYTHON_LOOP) return process.env.OPEN_SCIENCE_PYTHON_LOOP
-  if (process.resourcesPath) return join(process.resourcesPath, 'notebook', 'python_loop.py')
+  const resourcesPath = hostResourcesPath()
+  if (resourcesPath) return join(resourcesPath, 'notebook', 'python_loop.py')
   return join(__dirname, '../../../resources/notebook/python_loop.py')
 }
 
 // Resolves the packaged/dev location of r_loop.R, mirroring defaultPythonLoopPath.
 const defaultRLoopPath = (): string => {
   if (process.env.OPEN_SCIENCE_R_LOOP) return process.env.OPEN_SCIENCE_R_LOOP
-  if (process.resourcesPath) return join(process.resourcesPath, 'notebook', 'r_loop.R')
+  const resourcesPath = hostResourcesPath()
+  if (resourcesPath) return join(resourcesPath, 'notebook', 'r_loop.R')
   return join(__dirname, '../../../resources/notebook/r_loop.R')
 }
 
 // Resolves the packaged/dev location of repl_loop.js, mirroring defaultPythonLoopPath.
 const defaultReplLoopPath = (): string => {
   if (process.env.OPEN_SCIENCE_REPL_LOOP) return process.env.OPEN_SCIENCE_REPL_LOOP
-  if (process.resourcesPath) return join(process.resourcesPath, 'notebook', 'repl_loop.js')
+  const resourcesPath = hostResourcesPath()
+  if (resourcesPath) return join(resourcesPath, 'notebook', 'repl_loop.js')
   return join(__dirname, '../../../resources/notebook/repl_loop.js')
 }
 
 const defaultProcessHostPath = (): string => {
-  if (process.resourcesPath)
-    return join(process.resourcesPath, 'notebook', 'kernel_process_host.js')
+  const resourcesPath = hostResourcesPath()
+  if (resourcesPath) return join(resourcesPath, 'notebook', 'kernel_process_host.js')
   return join(__dirname, '../../../resources/notebook/kernel_process_host.js')
 }
 
@@ -714,6 +719,9 @@ class NotebookKernelExecutor implements NotebookExecutor {
       return {
         status,
         kernelDispatched,
+        ...(!timedOut && !cancelled && response.executionStarted !== undefined
+          ? { executionStarted: response.executionStarted }
+          : {}),
         stdout: mapped.stdout,
         stderr: mapped.stderr,
         traceback: cancelled ? '' : mapped.traceback,
@@ -1266,6 +1274,20 @@ class NotebookKernelExecutor implements NotebookExecutor {
           } else if (!result.reaped && (await nativeTerminationProof?.().catch(() => false))) {
             result = { reaped: true }
           }
+          if (
+            result.reaped &&
+            this.platform === 'win32' &&
+            nativeTerminationProof &&
+            child.pid !== undefined &&
+            child.exitCode === null &&
+            child.signalCode === null
+          ) {
+            // The native Job proof covers the workload, but precedes ACL restoration and the
+            // supervisor's exit. Keep this exact ChildProcess and its ownership receipt until the
+            // host exits; killing it here could interrupt ACL restoration. The caller's existing
+            // shutdown budget still applies and must not turn an unfinished drain into success.
+            await new Promise<void>((resolve) => child.once('exit', () => resolve()))
+          }
           log.info('kernel process termination proof', {
             sessionId: request.sessionId,
             projectId: request.projectId,
@@ -1380,7 +1402,7 @@ class NotebookKernelExecutor implements NotebookExecutor {
       ...processTreeOwnership.env,
       ...(ownershipIntent
         ? {
-            ELECTRON_RUN_AS_NODE: '1',
+            ...nodeRuntimeEnvironment(),
             OPEN_SCIENCE_KERNEL_INHERITED_FDS: rpcTokenFileDescriptor ? '1' : '0'
           }
         : {})
@@ -1394,6 +1416,8 @@ class NotebookKernelExecutor implements NotebookExecutor {
       child = spawn(spawnExecutable, spawnArgs, {
         cwd: spawnCwd,
         env: effectiveSpawnEnv,
+        // The desktop's Node backend has no console to inherit; hide the outer host too.
+        windowsHide: true,
         // Persistent kernels own a private POSIX process group. This gives teardown a stable OS-level
         // container that remains addressable even when the loop leader exits before its descendants.
         // Windows descendants are contained by the sandbox host's kill-on-close Job Object and the
@@ -1558,7 +1582,7 @@ class NotebookKernelExecutor implements NotebookExecutor {
       ...(kind === 'repl' && request.workspaceCwd
         ? { OPEN_SCIENCE_NOTEBOOK_WORKSPACE_CWD: request.workspaceCwd }
         : {}),
-      ...(kind === 'repl' ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+      ...(kind === 'repl' ? { ...nodeRuntimeEnvironment() } : {}),
       ...(rEnvPrefix ? { OPEN_SCIENCE_R_ENV_PREFIX: rEnvPrefix } : {})
     }
 

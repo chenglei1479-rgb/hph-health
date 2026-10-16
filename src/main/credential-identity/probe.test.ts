@@ -62,6 +62,7 @@ it('resolves the real package entry without loading or executing a native bindin
     ['MedResearch Agent'],
     expect.objectContaining({
       timeout: 10000,
+      killSignal: 'SIGKILL',
       maxBuffer: 4096,
       stdio: ['ignore', 'pipe', 'ignore']
     })
@@ -119,6 +120,41 @@ it.each(['access-blocked', 'error', 'not-found'] as const)(
   }
 )
 
+it('fails closed when the helper redacts a name outside its allowlist', async () => {
+  fixture.spawn.mockReturnValue({
+    status: 0,
+    signal: null,
+    error: undefined,
+    stdout: JSON.stringify({
+      schemaVersion: 1,
+      platform: 'darwin',
+      identity: '',
+      status: 'error',
+      reason: 'invalid-identity',
+      osStatus: 0
+    })
+  })
+  const { probeCredentialIdentity } = await import('./probe')
+  expect(probeCredentialIdentity('MedResearch Agent')).toEqual({ status: 'error' })
+})
+
+it('fails closed when a blank identity is not an allowlist rejection', async () => {
+  fixture.spawn.mockReturnValue({
+    status: 0,
+    signal: null,
+    error: undefined,
+    stdout: JSON.stringify({
+      schemaVersion: 1,
+      platform: 'darwin',
+      identity: '',
+      status: 'error',
+      reason: 'metadata-query-failed'
+    })
+  })
+  const { probeCredentialIdentity } = await import('./probe')
+  expect(probeCredentialIdentity('MedResearch Agent')).toEqual({ status: 'error' })
+})
+
 it('blocks MAS and timed-out helpers rather than inventing an absent credential', async () => {
   const { probeCredentialIdentity } = await import('./probe')
   Object.defineProperty(process, 'mas', { value: true, configurable: true })
@@ -150,7 +186,12 @@ it('passes only DPAPI ciphertext over stdin to the separate Windows key-read exe
   expect(fixture.spawn).toHaveBeenCalledWith(
     fixture.overridePath.replace('app.asar\\', 'app.asar.unpacked\\'),
     [],
-    expect.objectContaining({ input: ciphertext, stdio: ['pipe', 'pipe', 'ignore'] })
+    expect.objectContaining({
+      input: ciphertext,
+      timeout: 10000,
+      killSignal: 'SIGKILL',
+      stdio: ['pipe', 'pipe', 'ignore']
+    })
   )
 })
 

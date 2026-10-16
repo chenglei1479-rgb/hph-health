@@ -23,6 +23,13 @@ export default defineConfig({
   // The journal import worker uses split modules in browser tests as it does in the web build.
   worker: { format: 'es' },
   build: {
+    commonjsOptions: {
+      include: [
+        /node_modules/,
+        /packages[\\/](?:connector-(?:core|builtins|mcp-client)|diagnostics|skills)[\\/]dist/,
+        /packages[\\/](?:notebook-analysis|environment|compute|reproducibility|specialists)[\\/]dist/
+      ]
+    },
     outDir: resolve('out/browser-tests'),
     emptyOutDir: true,
     rollupOptions: {

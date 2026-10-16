@@ -40,11 +40,9 @@ describe('app display branding', () => {
       resolve(projectRoot, 'src/renderer/web/public/manifest.webmanifest'),
       'utf8'
     )
-    expect(webHtmlSource).toContain(`<title>${displayName}</title>`)
-    expect(webHtmlSource).toContain(`content="${displayName}"`)
-    expect(webHtmlSource).toContain(
-      `<div class="open-science-connection-name">${displayName}</div>`
-    )
+    // The remote connection shell is a protocol surface. The desktop wordmark stays on the manifest.
+    expect(webHtmlSource).toContain('<title>Open-Science Remote</title>')
+    expect(webHtmlSource).not.toContain('open-science-connection-name')
     expect(manifestSource).toContain(`"short_name": "${displayName}"`)
   })
 
@@ -64,14 +62,15 @@ describe('app display branding', () => {
       productName: string
     }
 
-    expect(mainSource).toContain('app.setName(credentialIdentity.appName)')
-    expect(mainSource).not.toContain('app.setName(app.isPackaged ? APP_NAME')
-    expect(mainSource).toContain('label: APP_NAME')
-    expect(mainSource).toContain('applicationName: APP_NAME')
+    expect(mainSource).toContain('app.setName(identity.appName)')
+    expect(mainSource).toContain('app.setName(app.isPackaged ? APP_NAME : `${APP_NAME} (DEV)`)')
+    expect(mainSource).toContain("{ role: 'appMenu' }")
     expect(profileSource).toContain('MedResearch Agent')
     expect(profileSource).not.toContain('PRODUCT_DISPLAY_NAME')
-    expect(selectionSource).toContain('MedResearch Agent')
+    expect(selectionSource).toContain('`Open-Science${suffix}`')
+    expect(selectionSource).toContain('`Open Science${suffix}`')
     expect(selectionSource).not.toContain('PRODUCT_DISPLAY_NAME')
+    expect(selectionSource).not.toContain(displayName)
     expect(builderSource).toContain(`appId: ${appId}`)
     expect(builderSource).toContain('executableName: medresearch-agent')
     expect(builderSource).toContain('name: DRA Session package')

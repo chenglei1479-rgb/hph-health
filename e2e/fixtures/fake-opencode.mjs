@@ -12,6 +12,21 @@ import { Readable, Writable } from 'node:stream'
 import { researchPrompt, runResearchAnalysis } from './research-analysis.mjs'
 
 const autoReviewResumeCounts = new Map()
+// A provider-boundary fault used by the Resume recovery journey. Application state and IPC stay real.
+const failResumeAttachmentWhenRequested = async (cwd) => {
+  let message
+  try {
+    message = await readFile(join(cwd, '.e2e-resume-attachment-failure'), 'utf8')
+  } catch (error) {
+    if (error.code === 'ENOENT') return
+    throw error
+  }
+  throw acp.RequestError.internalError({}, message)
+}
+const planRecoveryScenarios = new Set()
+const PLAN_DISMISS_PROMPT = 'Create the live dismissal regression Plan.'
+const PLAN_RECOVERY_PROMPT = 'Create the feedback Stop Resume regression Plan.'
+const PLAN_RECOVERY_FEEDBACK = 'Revise this Plan for the feedback Stop Resume regression.'
 const VERSION = '1.0.0'
 const WSL_SETUP_DIAGNOSTICS_PROMPT = 'Verify WSL setup diagnostic tools.'
 const WSL_SETUP_UNAVAILABLE_PROMPT = 'Verify WSL setup tools are unavailable.'
@@ -355,6 +370,101 @@ const withMcpClient = async (sessionId, serverName, operation) => {
   }
 }
 
+// Deterministic provider; discovery, binding admission and Python/R execution remain production code.
+const verifyRuntimeApproval = async (context, prompt) =>
+  withMcpClient(context.params.sessionId, 'open-science-notebook', async (client) => {
+    const language = prompt.includes(' R ') ? 'r' : 'python'
+    const continued = prompt.includes('continued')
+    const implicit = prompt.includes('implicit')
+    if (prompt.includes('risky')) {
+      try {
+        const result = toolResult(
+          'notebook_execute',
+          await client.callTool(
+            {
+              name: 'notebook_execute',
+              arguments: {
+                language,
+                code:
+                  language === 'python'
+                    ? "import os\nos.remove('runtime-approval-protected.txt')"
+                    : "unlink('runtime-approval-protected.txt')"
+              }
+            },
+            undefined,
+            { timeout: 120_000 }
+          )
+        )
+        if (result.kernelDispatched === false) return 'Risky code denied before execution.'
+        throw new Error(`Unexpected dangerous-code result: ${JSON.stringify(result)}`)
+      } catch (error) {
+        if (String(error).includes('Notebook execution declined'))
+          return 'Risky code denied before execution.'
+        throw error
+      }
+    }
+    const call = async (name, args = {}) =>
+      toolResult(
+        name,
+        await client.callTool({ name, arguments: args }, undefined, { timeout: 120_000 })
+      )
+    const listed = await call('list_notebook_runtimes')
+    const target = listed.runtimes.find(
+      (runtime) =>
+        runtime.language === language && runtime.provenance === 'app-managed' && runtime.runnable
+    )
+    if (!target) throw new Error(`No ready default ${language}: ${JSON.stringify(listed)}`)
+    if (!implicit) {
+      const toolCall = {
+        toolCallId: `runtime-binding-${randomUUID()}`,
+        title: 'open_science_notebook_notebook_bind_runtime',
+        kind: 'other',
+        rawInput: { language, runtimeId: target.runtimeId },
+        _meta: { toolName: 'open_science_notebook_notebook_bind_runtime' }
+      }
+      await context.client.notify(acp.methods.client.session.update, {
+        sessionId: context.params.sessionId,
+        update: { sessionUpdate: 'tool_call', ...toolCall, status: 'pending' }
+      })
+      const permission = await context.client.request(
+        acp.methods.client.session.requestPermission,
+        {
+          sessionId: context.params.sessionId,
+          toolCall,
+          options: [
+            { kind: 'allow_once', name: 'Allow once', optionId: 'allow-once' },
+            { kind: 'allow_always', name: 'Allow for this conversation', optionId: 'allow-always' },
+            { kind: 'reject_once', name: 'Deny', optionId: 'deny-once' }
+          ]
+        }
+      )
+      if (!['allow-once', 'allow-always'].includes(permission.outcome.optionId))
+        return 'Runtime binding denied.'
+      await call('notebook_bind_runtime', toolCall.rawInput)
+      await context.client.notify(acp.methods.client.session.update, {
+        sessionId: context.params.sessionId,
+        update: {
+          sessionUpdate: 'tool_call_update',
+          toolCallId: toolCall.toolCallId,
+          status: 'completed'
+        }
+      })
+    }
+    const code =
+      language === 'python'
+        ? continued
+          ? 'runtime_approval_value += 1\nprint(runtime_approval_value)'
+          : 'runtime_approval_value = 41\nprint(runtime_approval_value)'
+        : continued
+          ? 'runtime_approval_value <- runtime_approval_value + 1; cat(runtime_approval_value)'
+          : 'runtime_approval_value <- 41; cat(runtime_approval_value)'
+    const run = await call('notebook_execute', { language, code })
+    if (run.status !== 'completed' || !run.stdout?.includes(continued ? '42' : '41')) {
+      throw new Error(`Runtime execution failed: ${JSON.stringify(run)}`)
+    }
+    return `Runtime ${language} ${continued ? 'continued' : 'first'} cell verified: ${continued ? '42' : '41'}.`
+  })
+
 const executeControlCode = async (sessionId, code) =>
   withMcpClient(sessionId, 'open-science-notebook', async (client) =>
     toolResult(
@@ -367,7 +477,7 @@ const executeControlCode = async (sessionId, code) =>
   )
 
 // Keep only this deterministic provider task's progress across real process restarts. The calls
-// themselves still use the production app-owned MCP, durable permission, and Notebook paths.
+// themselves still use production durable provider permission and Notebook execution paths.
 const permissionHandoffTask = async (context, prompt) => {
   const sessionId = context.params.sessionId
   const captureRoot = process.env.OPEN_SCIENCE_E2E_HANDOFF_CAPTURE_ROOT
@@ -394,7 +504,9 @@ const permissionHandoffTask = async (context, prompt) => {
   const executeApprovedCode = async (code) => {
     const toolCall = {
       toolCallId: `permission-handoff-${randomUUID()}`,
-      title: `${frameworkServerName('open-science-notebook')}_repl_execute`,
+      // Notebook execution is admitted by the host; use a provider-owned fixture tool to
+      // exercise durable provider approval independently of Notebook code-risk review.
+      title: 'mcp__e2e-permission__execute',
       kind: 'other',
       rawInput: { code, timeoutMs: 120_000 }
     }
@@ -404,9 +516,7 @@ const permissionHandoffTask = async (context, prompt) => {
     })
     const permission = await context.client.request(acp.methods.client.session.requestPermission, {
       sessionId,
-      // OpenCode sends the executable arguments on tool_call; its permission request is sparse.
-      // Exercise the production input-restoration path consistently before and after restart.
-      toolCall: { ...toolCall, rawInput: {} },
+      toolCall,
       options: [
         { kind: 'allow_once', name: 'Allow once', optionId: 'allow-once' },
         { kind: 'reject_once', name: 'Deny', optionId: 'deny-once' }
@@ -473,6 +583,123 @@ const waitForSessionCancellation = (sessionId) =>
   new Promise((resolve) => {
     sessionCancellationResolvers.set(sessionId, resolve)
   })
+
+const planRecoveryJourney = async (context, prompt) => {
+  const sessionId = context.params.sessionId
+  const notify = async (update) =>
+    context.client.notify(acp.methods.client.session.update, { sessionId, update })
+  const say = async (text) =>
+    notify({
+      sessionUpdate: 'agent_message_chunk',
+      messageId: `e2e-plan-lifecycle-message-${randomUUID()}`,
+      content: { type: 'text', text }
+    })
+  if (prompt.includes('Continue the interrupted turn from where it stopped.')) {
+    await notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'e2e-plan-recovery-continued',
+      title: 'Finish pending approved Plan work',
+      kind: 'other',
+      status: 'in_progress',
+      rawInput: { checkpoint: 'after-completed-tool' }
+    })
+    await notify({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'e2e-plan-recovery-continued',
+      status: 'completed'
+    })
+    await say('Plan recovery: continued the pending execution without repeating the checkpoint.')
+    return { stopReason: 'end_turn' }
+  }
+  if (prompt.includes('The user rejected the pending Session Plan.')) {
+    await say('Plan dismissal acknowledged; the rejected Plan was not executed.')
+    return { stopReason: 'end_turn' }
+  }
+  if (prompt.includes('The user approved the pending Session Plan.')) {
+    await notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'e2e-plan-recovery-checkpoint',
+      title: 'Read approved Plan checkpoint',
+      kind: 'read',
+      status: 'in_progress',
+      rawInput: { checkpoint: 'approved-plan' }
+    })
+    await notify({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'e2e-plan-recovery-checkpoint',
+      status: 'completed'
+    })
+    await notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'e2e-plan-recovery-pending',
+      title: 'Continue approved Plan execution',
+      kind: 'other',
+      status: 'in_progress',
+      rawInput: { checkpoint: 'after-completed-tool' }
+    })
+    await say('Plan recovery: the checkpoint is complete and execution is running; ready for Stop.')
+    await waitForSessionCancellation(sessionId)
+    return { stopReason: 'cancelled' }
+  }
+
+  const revised = prompt.includes(PLAN_RECOVERY_FEEDBACK)
+  const argumentsForPlan = {
+    task_summary: revised ? 'Revised feedback recovery Plan' : 'Session Plan lifecycle regression',
+    phases: [
+      {
+        name: 'Verification',
+        delegations: [
+          {
+            name: 'Main',
+            steps: [
+              {
+                title: 'Verify approved execution',
+                description: 'Complete a checkpoint, then continue the pending execution.'
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    desired_outputs: ['Plan lifecycle confirmation'],
+    feasibility: { confidence: 'high', rationale: 'Deterministic local regression fixture.' }
+  }
+  const toolCallId = revised ? 'e2e-plan-recovery-revised' : 'e2e-plan-recovery-initial'
+  await notify({
+    sessionUpdate: 'tool_call',
+    toolCallId,
+    title: 'open_science_plan_generate_plan',
+    kind: 'other',
+    status: 'in_progress',
+    rawInput: argumentsForPlan
+  })
+  // A healthy MCP wait stays live. Initial cancellation leaves a durable pending Plan so
+  // feedback can start independently; Approve/Dismiss can also return through this live wait.
+  const outcome = await Promise.race([
+    withMcpClient(sessionId, 'open-science-plan', async (client) =>
+      toolResult(
+        'generate_plan',
+        await client.callTool({ name: 'generate_plan', arguments: argumentsForPlan })
+      )
+    ).then((result) => ({ kind: 'reviewed', result })),
+    waitForSessionCancellation(sessionId).then(() => ({ kind: 'cancelled' }))
+  ])
+  sessionCancellationResolvers.delete(sessionId)
+  await notify({
+    sessionUpdate: 'tool_call_update',
+    toolCallId,
+    status: outcome.kind === 'cancelled' ? 'failed' : 'completed'
+  })
+  if (outcome.kind === 'cancelled') return { stopReason: 'cancelled' }
+  if (outcome.result.decision === 'rejected') {
+    await say('Plan dismissal acknowledged; the rejected Plan was not executed.')
+    return { stopReason: 'end_turn' }
+  }
+  if (outcome.result.decision === 'approved') {
+    return planRecoveryJourney(context, 'The user approved the pending Session Plan.')
+  }
+  throw new Error('The Plan regression fixture expected an explicit review decision.')
+}
 
 const captureDelegatedHandoff = async (sessionId, task) => {
   const captureRoot = process.env.OPEN_SCIENCE_E2E_HANDOFF_CAPTURE_ROOT
@@ -1313,6 +1540,7 @@ if (process.argv.includes('--version')) {
     }))
     .onRequest(acp.methods.agent.authenticate, () => ({}))
     .onRequest(acp.methods.agent.session.new, async (context) => {
+      await failResumeAttachmentWhenRequested(context.params.cwd)
       const sessionId = `e2e-session-${fixtureInstanceId}${nextSessionId++}`
       const mcpServers = context.params.mcpServers ?? []
       sessionRoutes.set(sessionId, {
@@ -1326,6 +1554,7 @@ if (process.argv.includes('--version')) {
       configOptions: inlineThinkingModelOptions()
     }))
     .onRequest(acp.methods.agent.session.resume, async (context) => {
+      await failResumeAttachmentWhenRequested(context.params.cwd)
       const mcpServers = context.params.mcpServers ?? []
       sessionRoutes.set(context.params.sessionId, {
         cwd: context.params.cwd,
@@ -1347,6 +1576,31 @@ if (process.argv.includes('--version')) {
       )
       const prompt = controlStart >= 0 ? rawPrompt.slice(controlStart) : rawPrompt
       await captureProviderPrompt(context.params.sessionId, prompt)
+      if (prompt.includes('Run the framework Resume acceptance journey.')) {
+        const resumed = prompt.includes('Continue the interrupted turn from where it stopped.')
+        await context.client.notify(acp.methods.client.session.update, {
+          sessionId: context.params.sessionId,
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            messageId: `e2e-message-${fixtureInstanceId}${nextMessageId++}`,
+            content: {
+              type: 'text',
+              text: resumed ? 'Framework Resume completed.' : 'Framework execution ready for Stop.'
+            }
+          }
+        })
+        if (!resumed) await waitForSessionCancellation(context.params.sessionId)
+        return { stopReason: resumed ? 'end_turn' : 'cancelled' }
+      }
+      if (
+        !prompt.includes('Generate Session metadata only from the following JSON data:') &&
+        (prompt.includes(PLAN_DISMISS_PROMPT) || prompt.includes(PLAN_RECOVERY_PROMPT))
+      ) {
+        planRecoveryScenarios.add(context.params.sessionId)
+      }
+      if (planRecoveryScenarios.has(context.params.sessionId)) {
+        return planRecoveryJourney(context, prompt)
+      }
       if (prompt.includes('Cold recovery held child.')) {
         await waitForSessionCancellation(context.params.sessionId)
         return { stopReason: 'cancelled' }
@@ -1650,6 +1904,53 @@ if (process.argv.includes('--version')) {
         const handoffReply = await permissionHandoffTask(context, prompt)
         if (handoffReply) {
           reply = handoffReply
+        } else if (
+          prompt.includes('Continue the original user task as ') &&
+          prompt.includes('Run specialist switch regression:')
+        ) {
+          // Execute through the real Notebook bridge after provider reconfiguration. A text-only
+          // continuation would miss a broken replacement runtime.
+          const target = prompt.match(/Continue the original user task as ([^.]+)\./u)?.[1]
+          const executed = controlResultValue(
+            await executeControlCode(
+              context.params.sessionId,
+              `return { marker: "specialist-switch-executed", target: ${JSON.stringify(target)} }`
+            )
+          )
+          if (executed.marker !== 'specialist-switch-executed')
+            throw new Error('Continuation did not execute.')
+          reply = `Specialist switch execution completed: ${executed.target}`
+        } else if (
+          prompt.includes('Run specialist switch regression:') &&
+          !prompt.includes('Generate Session metadata only from the following JSON data:')
+        ) {
+          const target = prompt.match(
+            /Run specialist switch regression: (SPECIALIST_SWITCH_FIXTURE|Main Agent)/u
+          )?.[1]
+          if (!target) throw new Error('Missing specialist switch regression target.')
+          const outcome = await Promise.race([
+            executeControlCode(
+              context.params.sessionId,
+              `return await host.agents.switch(${target === 'Main Agent' ? 'null' : JSON.stringify(target)})`
+            ).then(() => 'completed'),
+            waitForSessionCancellation(context.params.sessionId).then(() => 'cancelled')
+          ])
+          sessionCancellationResolvers.delete(context.params.sessionId)
+          if (outcome === 'cancelled') return { stopReason: 'cancelled' }
+          reply = 'Specialist switch outer tool completed.'
+        } else if (
+          prompt.includes('Verify specialist switch runtime remains usable.') &&
+          !prompt.includes('Generate Session metadata only from the following JSON data:')
+        ) {
+          const executed = controlResultValue(
+            await executeControlCode(
+              context.params.sessionId,
+              'return { marker: "specialist-switch-runtime-usable" }'
+            )
+          )
+          if (executed.marker !== 'specialist-switch-runtime-usable')
+            throw new Error('Final Notebook execution did not complete.')
+          reply = 'Specialist switch runtime remains usable.'
         } else if (prompt.includes('WORKSPACE_TRANSLATION_PDF_BASE64:')) {
           const content = prompt.match(/WORKSPACE_TRANSLATION_PDF_BASE64:([A-Za-z0-9+/=]+)/u)?.[1]
           if (!content) throw new Error('Missing workspace translation PDF fixture.')
@@ -2155,6 +2456,9 @@ if (process.argv.includes('--version')) {
           }
 
           await streamSegment(1, 12)
+          // Let scroll-intent tests release the remaining stream after real reader input.
+          if (prompt.includes('Release file: '))
+            await waitForReleaseFile(JSON.parse(prompt.split('Release file: ')[1]))
           await context.client.notify(acp.methods.client.session.update, {
             sessionId: context.params.sessionId,
             update: {
@@ -2248,6 +2552,8 @@ if (process.argv.includes('--version')) {
             }
           })
           reply = 'Compaction preview complete.'
+        } else if (prompt.includes('Verify Runtime approval ')) {
+          reply = await verifyRuntimeApproval(context, prompt)
         } else if (prompt.includes(PROVIDER_BRIDGE_PROMPT)) {
           reply = verifyProviderBridge()
         } else if (
@@ -2767,6 +3073,10 @@ if (process.argv.includes('--version')) {
             await delay(1_000)
           } finally {
             await restoreWrites()
+            await writeFile(
+              join(process.env.OPEN_SCIENCE_E2E_HANDOFF_CAPTURE_ROOT, 'post-fence-released'),
+              'released'
+            )
           }
           await context.client.notify(acp.methods.client.session.update, {
             sessionId: context.params.sessionId,

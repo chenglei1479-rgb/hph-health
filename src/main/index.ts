@@ -1,78 +1,121 @@
-import { PackageFileOpenRelay, packagePathsFromArgv } from './session-package/file-open'
-import { configureCredentialStore, getCredentialStore } from './settings/credential-store-mode'
+import type { ChildProcess } from 'node:child_process'
+import {
+  assertInstallationChannelCertified,
+  installationChannelFor,
+  usesSupervisedInstall
+} from './update/channel-certification'
+import { verifyDesktopRecoveryReadiness } from './desktop-recovery-readiness'
+import {
+  DesktopRuntimeStartupError,
+  connectDesktopRuntimeForStartup,
+  resolveDesktopInstallationStartup
+} from './desktop-startup-recovery'
+import { RUNTIME_STARTUP_CHANNELS, type RuntimeStartupState } from '../shared/runtime-startup'
+import { projectDiagnosticError } from './session-diagnostics/detail'
+import { DesktopBackendStartupError } from './backend-startup'
+import { recoverDesktopBackendStartup } from './backend-startup-recovery'
+import { createDesktopRecoveryEventBuffer } from './desktop-recovery-event-buffer'
+import { createDesktopRuntimeRecovery } from './desktop-runtime-recovery'
+import { DESKTOP_RUNTIME_RECOVERY_CHANNELS } from '../shared/desktop-runtime-recovery'
+import { deliverDesktopEvent } from './desktop-event-delivery'
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  Notification,
+  crashReporter,
+  dialog,
+  ipcMain,
+  shell,
+  nativeImage,
+  nativeTheme,
+  net,
+  powerMonitor,
+  protocol,
+  session
+} from 'electron'
+import type { BaseWindow, MenuItem, MenuItemConstructorOptions, WebContents } from 'electron'
+import { join } from 'node:path'
+import type { InterfaceScaleShortcut } from '../shared/interface-scale'
+import type { DatabaseStartupState } from '../shared/database-startup'
+import { DATABASE_STARTUP_CHANNELS } from '../shared/database-startup'
+import type { SettingsSnapshot } from '../shared/settings'
+import type { LocalePreferenceSnapshot } from '../shared/locale'
+import { acquireRuntimeDirectorySync, type RuntimeDirectoryLease } from './runtime-ownership'
+import { createDesktopUpdateIntegration } from './desktop-update-integration'
+import { prefetchSystemBootIdentity } from './system-boot-identity'
+import { installationRootForEntry } from './update/installation-protection'
+import {
+  discardPreparedMacInstallation,
+  prepareSupervisedMacInstallation,
+  prepareSupervisedAppImageInstallation,
+  prepareSupervisedDebInstallation,
+  launchPreparedMacInstaller,
+  type PreparedMacInstallation
+} from './update/installation-executor'
+import { cancelDebSystemdGate, inspectDebSystemdGate } from './update/deb-systemd-gate'
+import { UpdateLifecycleError } from '../shared/update'
+import type { RuntimeStartupOptions } from './desktop-runtime-info'
+import { CredentialIdentityError } from './credential-identity/selection'
+import { credentialRecoveryMessage } from './credential-identity/recovery'
+import { currentApplicationShutdownTrigger } from './application-shutdown-trigger'
+import { configureRuntimeMetadata } from './runtime-metadata'
+import { configureIpcHandlerRegistry, ipcMainHandle } from './ipc-handler-registry'
+import { configureAccountElectronHost } from './account/runtime'
+import { configureUserDataPath } from './user-data-path'
+import { configureStatisticianConfirmWindow } from './statistician-review/confirm-window'
 import { configureAccountProfile } from './account/profile-bootstrap'
 import { installMainPrereleaseLockdown } from './prerelease/lockdown'
-import { recordPackagedStartupFailure } from './startup-ready-marker'
+import { ensureMachineApprovalDeclaration } from './phi/approval-window'
+import { createElectronPhiConfirmer } from './phi/confirm-window'
+import { installPhiConfirmer } from './phi/gate'
+import { machineApprovalLogPath } from './phi/production-gate'
+import { configureCredentialStore, getCredentialStore } from './settings/credential-store-mode'
 import {
   selectStartupCredentialIdentity,
   prepareCredentialValidation
 } from './credential-identity/bootstrap'
-import { CredentialIdentityError } from './credential-identity/selection'
-import { credentialRecoveryMessage } from './credential-identity/recovery'
-import { parseWebModeOptions } from './web-service/options'
-import { createRequire } from 'node:module'
-import { basename, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { initializeNodeWindowsProfileKey } from './credential-identity/node-cipher'
 import { resolveBootstrapConfigRoot, resolveElectronProfile } from './storage/electron-profile'
-import { APP } from '../shared/app-config'
+import { startOrAttachDesktopBackend, desktopBackendPaths } from './desktop-runtime-launcher'
+import { connectDesktopRuntime, type DesktopRuntimeClient } from './desktop-runtime-client'
+import { installDesktopRuntimeElectronAdapter } from './desktop-runtime-electron-adapter'
+import { createDesktopNativeHandler } from './desktop-native-electron'
+import { parseWebModeOptions } from './web-service/options'
+import { createDesktopPreviewProxy } from './desktop-preview-proxy'
+import type { DesktopShutdownWork } from './desktop-runtime-lifecycle'
+import { PackageFileOpenRelay, packagePathsFromArgv } from './session-package/file-open'
+import { MANAGED_PREVIEW_SCHEME } from './managed-preview-resources'
 import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
-
-// Only lightweight, Electron-free bootstrap modules are imported statically here. The MCP server
-// modules (and their heavy SDK graph) remain lazy inside the matching execution branch.
 import {
-  ARTIFACT_MCP_SERVER_ARG,
-  NOTEBOOK_MCP_SERVER_ARG,
-  PLAN_MCP_SERVER_ARG,
-  REVIEWER_MCP_PROXY_ARG,
-  SKILL_IMPORT_MCP_SERVER_ARG,
-  SKILL_RUNTIME_MCP_SERVER_ARG
-} from './mcp-server-args'
-import { createApplicationLifecycleShutdown } from './application-runtime'
-import { installChildProcessGoneLogging, startLocalCrashReporting } from './crash-diagnostics'
-import type { DiagnosticOperation } from './diagnostics/operation'
+  OFFICE_PREVIEW_RUNTIME_SCHEME_CONFIG,
+  registerOfficePreviewRuntimeProtocol
+} from './office-preview/office-preview-runtime-protocol'
+import { createNativeI18n } from './locale/main-process-messages'
+import {
+  createLogger,
+  diagnosticErrorFields,
+  flushLogs,
+  writeFatalLogSync
+} from '@aipoch/diagnostics/node'
 import {
   initializeApplicationDiagnostics,
   reportApplicationStartupFailure
 } from './diagnostics/startup'
-import {
-  createLogger,
-  diagnosticErrorFields,
-  errorLogFields,
-  flushLogs,
-  writeFatalLogSync
-} from './logger'
-import { MANAGED_PREVIEW_SCHEME } from './managed-preview-resources'
-import { OFFICE_PREVIEW_RUNTIME_SCHEME_CONFIG } from './office-preview/office-preview-runtime-protocol'
+import { installChildProcessGoneLogging, startLocalCrashReporting } from './crash-diagnostics'
 import {
   createRendererFailureReporter,
   registerRendererDiagnosticsIpc
 } from './renderer-diagnostics'
-import type {
-  BaseWindow,
-  BrowserWindow,
-  Menu,
-  MenuItem,
-  MenuItemConstructorOptions
-} from 'electron'
-import type { InterfaceScaleShortcut } from '../shared/interface-scale'
+import type { DiagnosticOperation } from '@aipoch/diagnostics/node'
 
 const APP_NAME = PRODUCT_DISPLAY_NAME
 const APP_USER_MODEL_ID = 'com.dra-hph.desktop'
-const STARTUP_IMPORTS_TIMING = 'open-science:startup-imports'
-const shouldRunArtifactMcpServer = process.argv.includes(ARTIFACT_MCP_SERVER_ARG)
-const shouldRunNotebookMcpServer = process.argv.includes(NOTEBOOK_MCP_SERVER_ARG)
-const shouldRunReviewerMcpProxy = process.argv.includes(REVIEWER_MCP_PROXY_ARG)
-const shouldRunSkillImportMcpServer = process.argv.includes(SKILL_IMPORT_MCP_SERVER_ARG)
-const shouldRunSkillRuntimeMcpServer = process.argv.includes(SKILL_RUNTIME_MCP_SERVER_ARG)
-const shouldRunPlanMcpServer = process.argv.includes(PLAN_MCP_SERVER_ARG)
-const bootstrapLog = createLogger('bootstrap')
-let credentialRecoveryPresented = false
-let electronInitializationStarted = false
-let preparingLocations = false
-let bootstrapPhase = 'electron-bootstrap'
+const bootstrapLog = createLogger('desktop-bootstrap')
+const webServiceLog = createLogger('web-service')
 let startupDiagnostics: DiagnosticOperation | undefined
-let startupFlush: import('./diagnostics/flush').DiagnosticFlush = flushLogs
-
+let cleanupStartupClient: (() => Promise<void>) | undefined
+let bootstrapPhase = 'credential-preflight'
 const shortcutForZoomMenuRole = (role: string | undefined): InterfaceScaleShortcut | undefined => {
   switch (role?.toLowerCase()) {
     case 'zoomin':
@@ -153,259 +196,171 @@ const buildZoomSafeApplicationMenu = (
   return MenuConstructor.buildFromTemplate(template)
 }
 
-if (shouldRunArtifactMcpServer) {
-  // Reuse the packaged entry point as a Node stdio MCP server; import it only in this mode.
-  void import('./artifacts/mcp-server')
-    .then(({ runArtifactMcpServer }) => runArtifactMcpServer())
-    .catch((error: unknown) => {
-      bootstrapLog.error('artifact MCP server failed', error)
-      process.exitCode = 1
-    })
-} else if (shouldRunNotebookMcpServer) {
-  // Keep notebook MCP mode as a Node stdio process that proxies to the app-owned runtime.
-  void import('./notebook/mcp-server')
-    .then(({ runNotebookMcpServer }) => runNotebookMcpServer())
-    .catch((error: unknown) => {
-      bootstrapLog.error('notebook MCP server failed', error)
-      process.exitCode = 1
-    })
-} else if (shouldRunReviewerMcpProxy) {
-  void import('./reviewer/mcp-stdio-proxy')
-    .then(({ runReviewerMcpStdioProxy }) => runReviewerMcpStdioProxy())
-    .catch((error: unknown) => {
-      bootstrapLog.error('reviewer MCP proxy failed', error)
-      process.exitCode = 1
-    })
-} else if (shouldRunSkillImportMcpServer) {
-  void import('./skills/mcp-server')
-    .then(({ runSkillImportMcpServer }) => runSkillImportMcpServer())
-    .catch((error: unknown) => {
-      bootstrapLog.error('skill import MCP server failed', error)
-      process.exitCode = 1
-    })
-} else if (shouldRunSkillRuntimeMcpServer) {
-  void import('./skills/runtime-mcp-server')
-    .then(({ runSkillRuntimeMcpServer }) => runSkillRuntimeMcpServer())
-    .catch((error: unknown) => {
-      bootstrapLog.error('skill runtime MCP server failed', error)
-      process.exitCode = 1
-    })
-} else if (shouldRunPlanMcpServer) {
-  void import('./session-plan/plan-mcp-server')
-    .then(({ runPlanMcpServer }) => runPlanMcpServer())
-    .catch((error: unknown) => {
-      bootstrapLog.error('plan MCP server failed', error)
-      process.exitCode = 1
-    })
-} else {
-  void startElectronApp(fileURLToPath(import.meta.url)).catch(async (error: unknown) => {
-    // Emit before native recovery UI: pre-ready failures may never reach a window or file sink.
-    // Reuse the bounded secret-redacting formatter, while retaining the credential reason code.
-    bootstrapLog.error('application startup failed', {
-      ...diagnosticErrorFields(error),
-      ...errorLogFields(error),
-      phase: bootstrapPhase,
-      ...(error instanceof CredentialIdentityError
-        ? {
-            recoveryReason: error.reason,
-            ...(error.diagnosticCode ? { recoveryDiagnosticCode: error.diagnosticCode } : {}),
-            ...(error.probe ? { identityProbe: error.probe } : {})
-          }
-        : {})
-    })
-    const { app, dialog } = createRequire(import.meta.url)('electron') as typeof import('electron')
-    if (error instanceof CredentialIdentityError) {
-      if (!credentialRecoveryPresented) {
-        credentialRecoveryPresented = true
-        const message = credentialRecoveryMessage(error, app.getPreferredSystemLanguages())
-        // A headless launch (web service, packaged smoke) has no one to dismiss a modal; a
-        // blocking box hangs an unattended run instead of failing it, so recovery goes to stderr.
-        // The smoke log is written first so a blocking box cannot hide the failure from CI.
-        recordPackagedStartupFailure(message)
-        if (parseWebModeOptions(process.argv).headless)
-          process.stderr.write(`${APP_NAME}: ${message}\n`)
-        else dialog.showErrorBox(APP_NAME, message)
-      }
-      // Do not yield to Electron's profile/key initialization after a failed pre-ready probe.
-      app.exit(1)
-      return
-    }
-    // Location/configuration failures happen before file diagnostics and the renderer. Present
-    // recovery before awaiting diagnostics; neither message wording nor a working file sink gates it.
-    if (preparingLocations) {
-      const message = error instanceof Error ? error.message : String(error)
-      recordPackagedStartupFailure(message)
-      dialog.showErrorBox(APP_NAME, message)
-    }
-    if (!electronInitializationStarted) {
-      // Preflight failures must not yield to OSCrypt initialization, even for a configuration error.
-      app.exit(1)
-      return
-    }
-    // A failure after the window exists used to die inside rollback's destroyed-window listener,
-    // so the dialog showed "Object has been destroyed" instead of this error. Headless launches
-    // must not block on a modal.
-    if (!preparingLocations) {
-      const detail = error instanceof Error ? error.message.trim() : String(error).trim()
-      const message = detail
-        ? `${APP_NAME} could not finish starting.\n\n${detail}`
-        : `${APP_NAME} could not finish starting.`
-      recordPackagedStartupFailure(message)
-      if (parseWebModeOptions(process.argv).headless) process.stderr.write(`${message}\n`)
-      else dialog.showErrorBox(APP_NAME, message)
-    }
-    await reportApplicationStartupFailure({
-      operation: startupDiagnostics,
-      error,
-      flush: startupFlush
-    })
-    app.exit(1)
+async function startDesktop(): Promise<void> {
+  const { headless } = parseWebModeOptions(process.argv)
+  configureRuntimeMetadata(() => ({
+    version: app.getVersion(),
+    locale: app.getLocale(),
+    packaged: app.isPackaged,
+    applicationPath: app.getAppPath(),
+    homePath: app.getPath('home'),
+    downloadsPath: app.getPath('downloads'),
+    resourcesPath: process.resourcesPath
+  }))
+  configureAccountElectronHost({
+    appPath: () => app.getAppPath(),
+    openExternal: (url) => shell.openExternal(url)
   })
-}
-
-// Boots the Electron app only in normal UI mode, keeping artifact MCP mode free of Electron imports.
-async function startElectronApp(mainEntryPath: string): Promise<void> {
-  const {
-    app,
-    BrowserWindow,
-    crashReporter,
-    ipcMain,
-    nativeImage,
-    nativeTheme,
-    powerMonitor,
-    protocol,
-    safeStorage,
-    dialog
-  } = createRequire(import.meta.url)('electron') as typeof import('electron')
-
-  let reportPackageOverflow = (): void => undefined
-  const packageFiles = new PackageFileOpenRelay(() => reportPackageOverflow())
-  app.on('open-file', (event, path) => {
-    event.preventDefault()
-    packageFiles.receive(path)
-  })
-
-  // Electron accepts privileged schemes only before app ready. Keep this in the synchronous UI
-  // bootstrap before any awaited import can yield to the ready event.
+  configureUserDataPath(() => app.getPath('userData'))
+  configureStatisticianConfirmWindow(BrowserWindow)
+  configureAccountProfile(process.argv, app.getPath('appData'))
+  installMainPrereleaseLockdown(net)
+  configureIpcHandlerRegistry(ipcMain)
   protocol.registerSchemesAsPrivileged([
     MANAGED_PREVIEW_SCHEME,
     OFFICE_PREVIEW_RUNTIME_SCHEME_CONFIG
   ])
-
-  // Establish identity and single-writer ownership before opening main.log. A secondary launch must
-  // never rotate or append to the primary process's file sink. These two modules are lightweight; all
-  // backend imports remain behind the lock.
-  // Electron captures the OSCrypt identity immediately after the synchronous main entry. The
-  // metadata probe must finish before the first await, profile initialization, or secret access.
-  bootstrapPhase = 'credential-store-mode'
-  configureAccountProfile(process.argv, app.getPath('appData'))
-  installMainPrereleaseLockdown()
-  const webMode = parseWebModeOptions(process.argv)
-  configureCredentialStore(process.argv, process.platform, webMode.headless)
-  bootstrapPhase = 'credential-identity'
-  const credentialIdentity = selectStartupCredentialIdentity({
-    platform: process.platform,
-    packaged: app.isPackaged,
-    credentialStore: getCredentialStore(),
-    ...(process.platform === 'linux'
-      ? { linuxPasswordStore: app.commandLine?.getSwitchValue('password-store') }
-      : {})
+  const initialBackendPaths = desktopBackendPaths({
+    applicationPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+    packaged: app.isPackaged
   })
-  // safeStorage reads app.getName() for the keychain service. Keep the pinned
-  // credential identity for the life of the process. The menu and about panel
-  // use PRODUCT_DISPLAY_NAME without changing this name.
-  app.setName(credentialIdentity.appName)
-  preparingLocations = true
-  bootstrapPhase = 'configuration-root'
-  const configRoot = resolveBootstrapConfigRoot(app.getPath('home'), app.isPackaged)
-  bootstrapPhase = 'electron-profile'
+  let initialRecoveryError: DesktopRuntimeStartupError | undefined
+  let installationStartup: Awaited<ReturnType<typeof resolveDesktopInstallationStartup>>
+  try {
+    installationStartup = await resolveDesktopInstallationStartup({
+      installationRoot: installationRootForEntry(initialBackendPaths.entry),
+      allowedProcessIds: () => [process.pid, ...app.getAppMetrics().map((metric) => metric.pid)],
+      version: app.getVersion()
+    })
+  } catch (error) {
+    if (!(error instanceof DesktopRuntimeStartupError)) throw error
+    initialRecoveryError = error
+  }
+  const completeVerifiedStartup = installationStartup?.completeAfterReady
+  const verifiedStartupOutcome = installationStartup?.outcome
+  let preservedStartupOptions = installationStartup?.startupOptions
+  const credentialArgs = preservedStartupOptions
+    ? [
+        `--credential-store=${preservedStartupOptions.credentialStore}`,
+        ...(preservedStartupOptions.passwordStore
+          ? [`--password-store=${preservedStartupOptions.passwordStore}`]
+          : [])
+      ]
+    : process.argv.filter(
+        (arg) => arg.startsWith('--credential-store=') || arg.startsWith('--password-store=')
+      )
+  if (preservedStartupOptions?.passwordStore)
+    app.commandLine.appendSwitch('password-store', preservedStartupOptions.passwordStore)
+  configureCredentialStore(credentialArgs, process.platform, false)
+  const configRoot =
+    preservedStartupOptions?.configRoot ??
+    resolveBootstrapConfigRoot(app.getPath('home'), app.isPackaged)
   const profilePath = resolveElectronProfile({
     appData: app.getPath('appData'),
     configRoot,
-    packaged: app.isPackaged
+    packaged: app.isPackaged,
+    ...(preservedStartupOptions
+      ? { env: { ...process.env, OPEN_SCIENCE_USER_DATA: preservedStartupOptions.profilePath } }
+      : {})
   })
   app.setPath('userData', profilePath)
   app.setPath('sessionData', profilePath)
-  const isolated = Boolean(
-    process.env.OPEN_SCIENCE_USER_DATA ||
-    process.env.OPEN_SCIENCE_CONFIG_ROOT ||
-    process.env.OPEN_SCIENCE_E2E_STORAGE_ROOT ||
-    (!app.isPackaged && process.env.OPEN_SCIENCE_STORAGE_ROOT)
-  )
-  const allowMultiInstance =
-    !app.isPackaged && process.env.OPEN_SCIENCE_ALLOW_MULTI_INSTANCE === '1'
-  const pendingSecondInstances: Array<[string[], string]> = []
-  let relaySecondInstance = (argv: string[], cwd: string): void => {
-    pendingSecondInstances.push([argv, cwd])
-  }
-  if (!allowMultiInstance && !app.requestSingleInstanceLock()) {
+  if (
+    !(!app.isPackaged && process.env.OPEN_SCIENCE_ALLOW_MULTI_INSTANCE === '1') &&
+    !app.requestSingleInstanceLock()
+  ) {
     app.quit()
     return
   }
-  app.on('second-instance', (_event, argv, cwd) => relaySecondInstance(argv, cwd))
-  bootstrapPhase = 'credential-validation-preflight'
-  const validateCredentials = prepareCredentialValidation(credentialIdentity, {
-    configRoot,
-    profilePath
+  // Verified handoff configuration selects the credential identity before Chromium starts.
+  // An incomplete installation opens only the recovery shell and never reads application secrets.
+  if (!initialRecoveryError) {
+    const bootstrapLease = acquireRuntimeDirectorySync(
+      join(app.getPath('home'), '.open-science-credential-bootstrap')
+    )
+    try {
+      const identity = selectStartupCredentialIdentity({
+        platform: process.platform,
+        packaged: app.isPackaged,
+        credentialStore: getCredentialStore(),
+        linuxPasswordStore: app.commandLine.getSwitchValue('password-store')
+      })
+      app.setName(identity.appName)
+      prepareCredentialValidation(identity, { configRoot, profilePath })
+      if (identity.backend === 'windows-dpapi') initializeNodeWindowsProfileKey(profilePath)
+    } finally {
+      bootstrapLease.release()
+    }
+  }
+  const BLOCKED_QUIT_DEADLINE_MS = 8_000
+  let startupQuitRequested = false
+  let startupBlocked = false
+  // The backend this Desktop spawned (detached) while startup is not yet attached; a blocked-page quit
+  // must stop it, otherwise it keeps the runtime lock after the app is gone.
+  let startedBackend: ChildProcess | undefined
+  let blockedExit: Promise<void> | undefined
+  const exitFromBlockedStartup = (): Promise<void> =>
+    (blockedExit ??= (async () => {
+      try {
+        const child = startedBackend
+        if (client) {
+          await Promise.race([
+            client.quit().then((lease) => retainShutdownLease(lease)),
+            new Promise((resolve) => setTimeout(resolve, BLOCKED_QUIT_DEADLINE_MS).unref())
+          ])
+        } else if (child && child.exitCode === null && child.signalCode === null) {
+          await new Promise<void>((resolve) => {
+            const timer = setTimeout(resolve, BLOCKED_QUIT_DEADLINE_MS)
+            timer.unref()
+            child.once('exit', () => resolve())
+            child.kill('SIGTERM')
+          })
+        }
+      } catch {
+        // Quit must always complete; a failed stop is reported by the next launch's recovery.
+      } finally {
+        app.exit(0)
+      }
+    })())
+  const holdStartupQuit = (event: Electron.Event): void => {
+    event.preventDefault()
+    startupQuitRequested = true
+    if (startupBlocked) void exitFromBlockedStartup()
+  }
+  app.on('before-quit', holdStartupQuit)
+  const packageFiles = new PackageFileOpenRelay(() => {
+    void client?.invokeHost('desktop:open-package', [null]).catch(reportError)
   })
-  // A real secret-read phase may request OS authorization. It is not part of the silent probe.
-  // No settings recovery, database migration, or BrowserWindow can run before it succeeds.
-  electronInitializationStarted = true
+  app.on('open-file', (event, path) => {
+    event.preventDefault()
+    packageFiles.receive(path)
+  })
+  let showMainWindow: (() => BrowserWindow) | undefined = undefined
+  let secondInstancePending = false
+  app.on('second-instance', (_event, argv, cwd) => {
+    for (const path of packagePathsFromArgv(argv, cwd)) packageFiles.receive(path)
+    if (showMainWindow) showMainWindow()
+    else secondInstancePending = true
+  })
+  for (const path of packagePathsFromArgv(process.argv, process.cwd())) packageFiles.receive(path)
+  let client: DesktopRuntimeClient | undefined = undefined
+  const reportError = (error: unknown): void => {
+    bootstrapLog.error('desktop operation failed', {
+      error: projectDiagnosticError(error, { configRoot, home: app.getPath('home') })
+    })
+    dialog.showErrorBox(APP_NAME, error instanceof Error ? error.message : String(error))
+  }
   bootstrapPhase = 'electron-ready'
   await app.whenReady()
-  bootstrapPhase = 'credential-ciphertext-validation'
-  validateCredentials(safeStorage, (error) => {
-    if (!credentialRecoveryPresented) {
-      bootstrapLog.error('credential access failed', {
-        recoveryReason: error.reason,
-        ...(error.diagnosticCode ? { recoveryDiagnosticCode: error.diagnosticCode } : {}),
-        ...(error.probe ? { identityProbe: error.probe } : {})
-      })
-      credentialRecoveryPresented = true
-      const message = credentialRecoveryMessage(error, app.getPreferredSystemLanguages())
-      // Same headless rule as the pre-ready recovery path: never block an unattended launch.
-      recordPackagedStartupFailure(message)
-      if (webMode.headless) process.stderr.write(`${APP_NAME}: ${message}\n`)
-      else dialog.showErrorBox(APP_NAME, message)
-    }
-    app.exit(1)
-  })
-  bootstrapPhase = 'application-initialization'
-  app.setAppLogsPath(
-    process.platform === 'darwin' && !isolated
-      ? join(app.getPath('home'), 'Library', 'Logs', basename(profilePath))
-      : join(profilePath, 'logs')
-  )
-  const [
-    {
-      createSecondInstanceRelay,
-      createStartupWindowCloseOptions,
-      createStartupWindowSecondInstanceHandler,
-      orchestrateAppStartup,
-      prepareVisibleStartupRuntime,
-      waitForStartupShell
-    },
-    { installSystemLifecycleAdapters }
-  ] = await Promise.all([import('./app-startup'), import('./system-lifecycle-adapters')])
-  const preStartupSecondInstanceRelay = createSecondInstanceRelay()
-  relaySecondInstance = (argv, cwd) => {
-    for (const path of packagePathsFromArgv(argv, cwd)) packageFiles.receive(path)
-    preStartupSecondInstanceRelay.signal(argv)
-  }
-  for (const [argv, cwd] of pendingSecondInstances) relaySecondInstance(argv, cwd)
-  for (const path of packagePathsFromArgv(process.argv, process.cwd())) packageFiles.receive(path)
-  const { prepareApplicationLocations } = await import('./storage/initialize-location')
-  bootstrapPhase = 'initialize-application-locations'
-  const bootstrapLocations = await prepareApplicationLocations(configRoot)
-  preparingLocations = false
-  let bindSystemShutdownWindow = (window: InstanceType<typeof BrowserWindow>): void => {
-    void window
-  }
-  let installPowerMonitorListeners = (): void => {}
-
-  // Initialize the file sink after credential validation but before assets and the backend graph
-  // so later packaged startup failures remain locally diagnosable.
-  bootstrapPhase = 'application-diagnostics'
+  if (process.platform === 'win32')
+    prefetchSystemBootIdentity().catch((error: unknown) =>
+      bootstrapLog.warn('boot identity prefetch failed', { error: String(error) })
+    )
+  app.setName(app.isPackaged ? APP_NAME : `${APP_NAME} (DEV)`)
+  const { installProductionPhiGate } = await import('./phi/production-gate')
+  installProductionPhiGate(join(app.getPath('userData'), 'phi-vault'))
+  app.setAppLogsPath(join(profilePath, 'desktop-logs'))
   const diagnostics = initializeApplicationDiagnostics({
     logDir: app.getPath('logs'),
     version: app.getVersion(),
@@ -416,27 +371,11 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
     nodeVersion: process.versions.node,
     cpuUsage: process.cpuUsage
   })
-  const { log } = diagnostics
   startupDiagnostics = diagnostics.operation
-  startupFlush = diagnostics.flush
-  // Disk classification is diagnostic only. Do not await it on the path to failure capture,
-  // bootstrap assets, or the first window; log the result whenever the probe settles.
-  void import('./diagnostics/startup-storage-probe')
-    .then(({ timedStartupStorageProbe }) =>
-      timedStartupStorageProbe({ probeDir: app.getPath('logs') }, 1_500)
-    )
-    .then((storageProbe) => {
-      log.info('startup storage probe', storageProbe)
-    })
-    .catch(() => undefined)
-
-  // Register process-level failure capture before loading the application modules. Keep renderer
-  // diagnostics on a separate, one-way channel while the central IPC registry is being refactored.
-  installChildProcessGoneLogging((listener) => app.on('child-process-gone', listener), log)
-  // Observe fatal JavaScript failures without consuming Node's default non-zero termination. A
-  // consuming uncaughtException/unhandledRejection listener would leave Electron serving IPC and
-  // mutating durable state after application invariants became unknown. The monitor also receives
-  // unhandled rejections promoted by Node's default `throw` mode, preserving their distinct origin.
+  installChildProcessGoneLogging(
+    (listener) => app.on('child-process-gone', listener),
+    diagnostics.log
+  )
   process.on('uncaughtExceptionMonitor', (error, origin) =>
     writeFatalLogSync('main', origin, diagnosticErrorFields(error))
   )
@@ -444,14 +383,19 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
     ipcMain,
     createRendererFailureReporter({ log: createLogger('renderer') })
   )
-
-  startupDiagnostics.phase('load-bootstrap-modules')
+  startLocalCrashReporting({
+    platform: process.platform,
+    productName: APP_NAME,
+    companyName: 'DRA',
+    appVersion: app.getVersion(),
+    start: (options) => crashReporter.start(options)
+  })
   const [
     { electronApp },
-    { default: appIconPng },
-    { default: appIconDarkPng },
-    { default: appIconIco },
-    { default: appIconDarkIco },
+    { default: icon },
+    { default: iconDark },
+    { default: iconWindows },
+    { default: iconDarkWindows },
     { default: trayMacTemplate },
     { default: trayLightWindows },
     { default: trayDarkWindows },
@@ -468,812 +412,1299 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
     import('../../resources/tray.png?asset')
   ])
 
-  // Light and dark surfaces use the same dotted-ring mark on theme-matched backgrounds.
+  // Windows gets multi-resolution ICOs for title-bar and Alt-Tab fidelity; the macOS runtime Dock
+  // Theme override and Linux use matching lossless 1024px PNGs. The installed macOS icon itself is
+  // build/icon.icon (electron-builder.yml), not either runtime PNG.
   const iconVariantPaths =
     process.platform === 'win32'
-      ? { light: appIconIco, dark: appIconDarkIco }
-      : { light: appIconPng, dark: appIconDarkPng }
+      ? { light: iconWindows, dark: iconDarkWindows }
+      : { light: icon, dark: iconDark }
+  // The static fallback on Windows stays the dark tile: it is byte-identical to the legacy tray.ico,
+  // so a missing/unreadable variant asset degrades to the pre-change appearance.
   const trayIconPath =
-    process.platform === 'win32'
-      ? trayLightWindows
-      : process.platform === 'linux'
-        ? trayLinux
-        : appIconPng
+    process.platform === 'win32' ? trayDarkWindows : process.platform === 'linux' ? trayLinux : icon
+  // Windows keeps one tray tile per app-icon variant so the tray glyph can follow the variant the
+  // user picks in settings (setTrayIconVariant); other platforms use a single static tray icon.
   const trayVariantIconPaths =
-    process.platform === 'win32'
-      ? { light: trayLightWindows, dark: trayDarkWindows }
-      : process.platform === 'linux'
-        ? { light: appIconPng, dark: appIconDarkPng }
-        : undefined
+    process.platform === 'win32' ? { light: trayLightWindows, dark: trayDarkWindows } : undefined
 
-  // Ordered startup: the single-instance lock is acquired FIRST (UI path only — the MCP stdio server
-  // modes never reach startElectronApp), so a secondary launch quits before prepare() imports any
-  // backend module or spawns a duplicate process tree. prepare() then does the heavy post-lock work and
-  // returns the handles the migration guard and lifecycle need; the guard is installed before the
-  // lifecycle so its before-quit runs first. A second launch that arrives mid-startup is recorded by the
-  // relay and surfaced once the window exists.
-  let openPackageWindow: (() => void) | undefined
-  let forwardSecondInstanceDuringStartup: ((argv: string[]) => void) | undefined
-  bootstrapPhase = 'application-startup'
-  await orchestrateAppStartup({
-    diagnostics: startupDiagnostics,
-    // The OS lock is already held. Bind the orchestrator's relay to the pre-logger relay so any
-    // second-instance signal received during bootstrap is preserved until the lifecycle is ready.
-    acquireSingleInstanceLock: ({ onSecondInstance }) => {
-      forwardSecondInstanceDuringStartup = onSecondInstance
-      preStartupSecondInstanceRelay.bind(onSecondInstance)
-      return true
-    },
-    quit: () => app.quit(),
-    forceExit: () => app.exit(0),
-    installSystemShutdownListeners: (requestSystemShutdown) => {
-      const adapters = installSystemLifecycleAdapters({
-        windowSessionEndEvents: process.platform === 'win32',
-        powerShutdownEvent: process.platform !== 'win32',
-        headless: webMode.headless,
-        signalSource: process,
-        powerMonitor,
-        getWindows: () => BrowserWindow.getAllWindows(),
-        requestSystemShutdown
-      })
-      bindSystemShutdownWindow = adapters.bindWindow
-      installPowerMonitorListeners = adapters.installPowerMonitorListeners
-    },
-    prepare: async () => {
-      // Start local-only Crashpad after the single-instance lock but before any BrowserWindow can
-      // create a renderer. Upload stays disabled: dumps remain local for explicit support collection.
-      // Without this initialization, native failures can terminate a process without leaving the dump
-      // needed to distinguish a renderer, utility, or main-process crash.
-      const crashReporting = startLocalCrashReporting({
-        platform: process.platform,
-        productName: APP_NAME,
-        companyName: 'aipoch',
-        appVersion: app.getVersion(),
-        start: (options) => crashReporter.start(options)
-      })
-      startupDiagnostics?.phase('crash-reporting', { enabled: crashReporting.enabled })
-
-      startupDiagnostics?.phase('electron-ready')
-      await app.whenReady()
-      const { installProductionPhiGate } = await import('./phi/production-gate')
-      const phiDirectory = join(app.getPath('userData'), 'phi-vault')
-      installProductionPhiGate(phiDirectory)
-      // Electron created its default menu before ready using the selected credential identity.
-      // Rebuild standard roles after the display brand is known.
-      const { Menu } = createRequire(import.meta.url)('electron') as typeof import('electron')
-      installPowerMonitorListeners()
-
-      startupDiagnostics?.phase('load-startup-shell-modules')
-      const [
-        { createManagedPreviewProtocolBridge },
-        { configureMainWindow, createMainWindow, isMainWindow },
-        { LocalePreferenceOwner },
-        { registerLocalePreferenceIpc },
-        { applyInterfaceScaleShortcut, installWindowShortcuts },
-        { registerWindowZoomIpcHandler },
-        { registerWindowsTitleBarIpc },
-        { registerNetworkIpcHandlers },
-        { createDatabaseStartupLogging },
-        { createDatabaseStartupOwner },
-        { installDatabaseStartupQuitGuard, registerDatabaseStartupIpc },
-        { buildStartupDiagnostics },
-        { getProjectDbClient },
-        { resolveConfigRoot },
-        { initializeDataLocation }
-      ] = await Promise.all([
-        import('./managed-preview-protocol'),
-        import('./windows'),
-        import('./locale/owner'),
-        import('./locale/ipc'),
-        import('./window-shortcuts'),
-        import('./window-ipc'),
-        import('./windows-titlebar'),
-        import('./network-ipc'),
-        import('./database/database-startup-logging'),
-        import('./database/database-startup-owner'),
-        import('./database/database-startup-ipc'),
-        import('./database/startup-diagnostics'),
-        import('./projects/prisma-client'),
-        import('./storage-root'),
-        import('./storage/initialize-location')
+  startupDiagnostics?.phase('load-native-shell')
+  const { createMainWindow, configureMainWindow, isMainWindow } = await import('./windows')
+  const { applyInterfaceScaleShortcut, installWindowShortcuts } = await import('./window-shortcuts')
+  const { registerWindowZoomIpcHandler, registerWindowCloseIpcHandler } =
+    await import('./window-ipc')
+  const { registerWindowsTitleBarIpc } = await import('./windows-titlebar')
+  const { registerWindowFindIpcHandlers } = await import('./window-find-ipc')
+  const { createAppIconController, buildAppIconPreviews } = await import('./app-icon')
+  const { createAppTray, refreshAppTrayLocale, refreshAppTrayNavigation, setTrayIconVariant } =
+    await import('./tray')
+  const { createDesktopNotificationHandler } = await import('./notifications/electron-wiring')
+  const { createDesktopAttentionController } = await import('./notifications/desktop-attention')
+  const { createDesktopBadgeAdapter, createWindowsBadgeBitmap } =
+    await import('./notifications/desktop-badge')
+  const { registerUnreadTaskIpc } = await import('./notifications/unread-task-ipc')
+  const { createElectronCloseConfirm } = await import('./window-close-confirm')
+  const { installAppLifecycle } = await import('./app-lifecycle')
+  const {
+    createElectronSessionPersistenceFlush,
+    notifyRendererSessionPersistenceFlushAborted,
+    rendererSessionPersistenceFlushBlocksShutdown
+  } = await import('./session-persistence/renderer-flush')
+  const { installSystemLifecycleAdapters } = await import('./system-lifecycle-adapters')
+  if (process.platform === 'darwin')
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([
+        { role: 'appMenu' },
+        { role: 'fileMenu' },
+        { role: 'editMenu' },
+        { role: 'viewMenu' },
+        { role: 'windowMenu' },
+        { role: 'help', submenu: [] }
       ])
-
-      if (process.platform === 'darwin') {
-        // The process name stays the credential identity. The menu title and
-        // About panel are the only macOS surfaces that should show the product.
-        if (typeof app.setAboutPanelOptions === 'function') {
-          app.setAboutPanelOptions({
-            applicationName: APP_NAME,
-            applicationVersion: app.getVersion(),
-            copyright: APP.copyright
-          })
-        }
-        Menu.setApplicationMenu(
-          Menu.buildFromTemplate([
-            {
-              label: APP_NAME,
-              submenu: [
-                { role: 'about' },
-                { type: 'separator' },
-                { role: 'services' },
-                { type: 'separator' },
-                { role: 'hide' },
-                { role: 'hideOthers' },
-                { role: 'unhide' },
-                { type: 'separator' },
-                { role: 'quit' }
-              ]
-            },
-            { role: 'fileMenu' },
-            { role: 'editMenu' },
-            { role: 'viewMenu' },
-            { role: 'windowMenu' },
-            { role: 'help', submenu: [] }
-          ])
-        )
-      }
-
-      const zoomSafeApplicationMenu = buildZoomSafeApplicationMenu(
-        Menu.getApplicationMenu?.() ?? null,
-        Menu,
-        isMainWindow,
-        applyInterfaceScaleShortcut
-      )
-      if (zoomSafeApplicationMenu) Menu.setApplicationMenu(zoomSafeApplicationMenu)
-
-      startupDiagnostics?.phase('prepare-shell')
-      // The bridge is lightweight, but its protocol handler must exist before the first BrowserWindow
-      // creates the default session. macOS otherwise treats later managed-preview requests as an
-      // unknown scheme even though the privileged scheme itself was registered before app ready.
-      const managedPreviewProtocolBridge = createManagedPreviewProtocolBridge(protocol)
-      // Create the settings document owner before any native surface. The startup locale repository
-      // and the later application Settings repository share this store, so every settings.json
-      // mutation uses one serialization queue and one atomic-write implementation.
-      const settingsStore = bootstrapLocations.settingsStore
-      const startupSettingsRepository = bootstrapLocations.repository
-      await initializeDataLocation(startupSettingsRepository)
-      const startupSettings = await startupSettingsRepository.getSettings()
-      const localeOwner = new LocalePreferenceOwner(
-        app.getPreferredSystemLanguages(),
-        startupSettingsRepository,
-        startupSettings.localePreference
-      )
-      const translate = localeOwner.t.bind(localeOwner)
-      const { createElectronPhiConfirmer } = await import('./phi/confirm-window')
-      const { installMachineApprovalTranslator, installPhiConfirmer } = await import('./phi/gate')
-      const { ensureMachineApprovalDeclaration } = await import('./phi/approval-window')
-      const { machineApprovalLogPath } = await import('./phi/production-gate')
-      installPhiConfirmer(createElectronPhiConfirmer(translate))
-      installMachineApprovalTranslator(translate)
-      await ensureMachineApprovalDeclaration(machineApprovalLogPath(phiDirectory), translate)
-      const disposeLocalePreferenceIpc = registerLocalePreferenceIpc(localeOwner)
-
-      // Set app user model id for windows
-      electronApp.setAppUserModelId(APP_USER_MODEL_ID)
-
-      // Main-window zoom shortcuts share Settings' Electron zoom factor; secondary windows retain
-      // their native menu accelerators. The optimizer still handles its other standard shortcuts.
-      installWindowShortcuts(app, undefined, isMainWindow)
-      // The renderer applies its persisted interface scale before the full application runtime is
-      // composed. Install this small handler before creating the first BrowserWindow so that the
-      // initial renderer call cannot race the desktop utility surface.
-      registerWindowZoomIpcHandler()
-      registerWindowsTitleBarIpc({ isMainWindow })
-
-      const databaseStartupLogging = createDatabaseStartupLogging(log, app.getVersion())
-      const databaseStartupOwner = createDatabaseStartupOwner({
-        reportBlocked: databaseStartupLogging.reportBlocked,
-        buildDiagnostics: (error) =>
-          buildStartupDiagnostics(error, {
-            configRoot: resolveConfigRoot(),
-            dataRoot: startupSettings.dataRoot
-          }),
-        environment: {
-          appVersion: app.getVersion(),
-          platform: process.platform,
-          arch: process.arch,
-          electron: process.versions.electron ?? 'unknown',
-          node: process.versions.node ?? 'unknown'
-        },
-        verifyDatabase: async (onProgress) => {
-          await getProjectDbClient(
-            resolveConfigRoot(),
-            databaseStartupLogging.migrationOptions(onProgress)
-          )
-        }
+    )
+  const menu = buildZoomSafeApplicationMenu(
+    Menu.getApplicationMenu(),
+    Menu,
+    isMainWindow,
+    applyInterfaceScaleShortcut
+  )
+  if (menu) Menu.setApplicationMenu(menu)
+  electronApp.setAppUserModelId(APP_USER_MODEL_ID)
+  installWindowShortcuts(app, undefined, isMainWindow)
+  registerWindowZoomIpcHandler()
+  registerWindowsTitleBarIpc({ isMainWindow })
+  registerWindowCloseIpcHandler()
+  registerWindowFindIpcHandlers()
+  startupDiagnostics?.phase('native-shell-configured')
+  let requestSystemShutdown = (): void => app.quit()
+  const system = installSystemLifecycleAdapters({
+    windowSessionEndEvents: process.platform === 'win32',
+    powerShutdownEvent: process.platform !== 'win32',
+    headless: true,
+    signalSource: process,
+    powerMonitor,
+    getWindows: () => BrowserWindow.getAllWindows(),
+    requestSystemShutdown: () => requestSystemShutdown()
+  })
+  system.installPowerMonitorListeners()
+  const isApplicationWindow = (sender: WebContents): boolean => {
+    const window = BrowserWindow.fromWebContents(sender)
+    return Boolean(window && isMainWindow(window))
+  }
+  let getMainWindow = (): BrowserWindow | undefined => undefined
+  let isMainWindowHidden = (): boolean => false
+  let relay: ReturnType<typeof installDesktopRuntimeElectronAdapter> | undefined
+  let plannedRelaunch = false
+  let relaunchConfirmation: Promise<void> | undefined
+  let updateCommitted = false
+  let runtimeStopped = false
+  let shutdownLease: RuntimeDirectoryLease | undefined
+  const retainShutdownLease = (lease: RuntimeDirectoryLease | undefined): void => {
+    if (lease) shutdownLease = lease
+  }
+  app.once('will-quit', () => shutdownLease?.release())
+  let preview: Awaited<ReturnType<typeof createDesktopPreviewProxy>> | undefined
+  let tray: ReturnType<typeof createAppTray>
+  let icons: ReturnType<typeof createAppIconController> | undefined = undefined
+  const i18n = createNativeI18n('en')
+  const localeOwner = i18n
+  const translate = localeOwner.t.bind(localeOwner)
+  const phiDirectory = join(app.getPath('userData'), 'phi-vault')
+  installPhiConfirmer(createElectronPhiConfirmer(translate))
+  void ensureMachineApprovalDeclaration(machineApprovalLogPath(phiDirectory), translate)
+  const staleWindows = new Set<number>()
+  const markStale = (sender: WebContents): void => {
+    if (sender.isDestroyed()) return
+    staleWindows.add(sender.id)
+    try {
+      sender.send(DESKTOP_RUNTIME_RECOVERY_CHANNELS.stateChanged, {
+        ...recovery?.state(),
+        phase: 'disconnected',
+        epoch: (recovery?.state().epoch ?? 0) + 1,
+        closing: false
       })
-      const startupWindowCloseOptions = createStartupWindowCloseOptions(() => app.quit())
-      // The renderer probes connectivity as soon as it mounts, before the full application runtime
-      // is composed. Install these handlers before creating the first BrowserWindow so that startup
-      // probe cannot race the desktop utility adapter installation.
-      registerNetworkIpcHandlers()
-      const disposeDatabaseStartupIpc = registerDatabaseStartupIpc({
-        ipcMain,
-        owner: databaseStartupOwner,
-        quit: startupWindowCloseOptions.requestQuit,
-        getWindows: () => BrowserWindow.getAllWindows()
-      })
-      const databaseStartupQuitGuard = installDatabaseStartupQuitGuard({
-        app,
-        owner: databaseStartupOwner
-      })
-      const startupWindow = webMode.headless
+    } catch {
+      /* A destroyed document has no recovery surface. */
+    }
+  }
+  const broadcast = (channel: string, payload: unknown): void => {
+    deliverDesktopEvent(
+      BrowserWindow.getAllWindows(),
+      isMainWindow,
+      channel,
+      payload,
+      channel === DESKTOP_RUNTIME_RECOVERY_CHANNELS.stateChanged
         ? undefined
-        : createMainWindow(startupWindowCloseOptions, translate)
-      if (startupWindow) bindSystemShutdownWindow(startupWindow)
-      // Yield the main-process event loop until Chromium has painted the startup shell. Evaluating the
-      // 5 MB backend chunk immediately after BrowserWindow construction can otherwise delay
-      // ready-to-show even though the window no longer depends on that chunk.
-      const startupShellRendered = startupWindow
-        ? waitForStartupShell(startupWindow, { diagnostics: startupDiagnostics })
-        : Promise.resolve()
-      if (startupWindow) {
-        void startupShellRendered
-          .then(async () => {
-            const { isReadOnlyMacInstallation, showMacInstallationGuidance } =
-              await import('./mac-installation')
-            if (isReadOnlyMacInstallation()) void showMacInstallationGuidance('startup')
-          })
-          .catch(() => {})
-        if (!forwardSecondInstanceDuringStartup) {
-          throw new Error('Second-instance startup relay is not initialized.')
-        }
-        preStartupSecondInstanceRelay.bind(
-          createStartupWindowSecondInstanceHandler(
-            startupWindow,
-            forwardSecondInstanceDuringStartup
-          )
-        )
+        : (window) => markStale(window.webContents)
+    )
+  }
+  startupDiagnostics?.phase('notification-projection')
+  const visibility = registerUnreadTaskIpc({
+    getMainWindow: () => getMainWindow(),
+    controller: {
+      syncViewState: async (state) => client?.notificationView('view', state.visibleSessionId)
+    },
+    onError: reportError
+  })
+  const badge = createDesktopBadgeAdapter({
+    platform: process.platform,
+    setBadgeCount: (count) => app.setBadgeCount(count),
+    isUnityRunning: () => app.isUnityRunning(),
+    getMainWindow: () => getMainWindow(),
+    createWindowsOverlay: (label) =>
+      nativeImage.createFromBitmap(createWindowsBadgeBitmap(label), {
+        width: 16,
+        height: 16,
+        scaleFactor: 1
+      }),
+    onError: reportError
+  })
+  const attention = createDesktopAttentionController({
+    platform: process.platform,
+    headless,
+    isAppFocused: () => BrowserWindow.getAllWindows().some((window) => window.isFocused()),
+    isMainWindowHidden: () => isMainWindowHidden(),
+    getMainWindow: () => getMainWindow(),
+    ...(process.platform === 'darwin' ? { dock: app.dock } : {}),
+    onError: reportError
+  })
+  const makeNotifications = (): ReturnType<typeof createDesktopNotificationHandler> =>
+    createDesktopNotificationHandler({
+      delivery: {
+        notificationCtor: Notification,
+        liveNotifications: new Set(),
+        log: diagnostics.log,
+        headless,
+        translate
+      },
+      isAppFocused: () => BrowserWindow.getAllWindows().some((window) => window.isFocused()),
+      isMainWindowFocused: () => getMainWindow()?.isFocused() ?? false,
+      confirmSessionVisible: visibility.confirmSessionVisible,
+      setBadgeCount: (count) => badge.setCount(count),
+      requestAttention: () => attention.request(),
+      clearAttention: () => attention.clear(),
+      activate: () => {
+        showMainWindow?.().webContents.send('notifications:open-session')
+      },
+      onAction: (token, action) => client?.notificationAction(token, action)
+    })
+  let notifications = makeNotifications()
+  let reconcileWait:
+    | {
+        epoch: number
+        pending: Map<number, WebContents['mainFrame']>
+        resolve(): void
+        reject(error: Error): void
       }
-
-      startupDiagnostics?.phase('database-and-application-modules')
-      const initialDatabaseAttempt = databaseStartupOwner.start()
-      return prepareVisibleStartupRuntime({
-        // The shell and its first BrowserWindow already exist before this orchestration begins. The
-        // async seam keeps the ordering explicit and lets database verification and backend loading
-        // start together on the next step.
-        prepareShell: async () => undefined,
-        verifyDatabase: async () => {
-          if (webMode.headless) {
-            const state = await initialDatabaseAttempt
-            if (state.phase === 'blocked') {
-              throw Object.assign(new Error(state.error.message), state.error)
-            }
-            return
-          }
-          await Promise.race([
-            databaseStartupOwner.whenVerified(),
-            initialDatabaseAttempt.then((state) =>
-              state.phase === 'blocked' ? new Promise<void>(() => undefined) : undefined
-            )
-          ])
-        },
-        loadApplicationModules: async () => {
-          await startupShellRendered
-          startupDiagnostics?.phase('load-application-modules')
-          const startedAt = performance.now()
-          try {
-            const loaded = await Promise.all([
-              import('./ipc'),
-              import('./storage/migration-state'),
-              import('./tray'),
-              import('./app-lifecycle'),
-              import('./ipc-handler-registry'),
-              import('./web-service'),
-              import('./second-instance-router'),
-              import('./window-close-confirm'),
-              import('./session-persistence/renderer-flush'),
-              import('./app-icon'),
-              import('./remote-access'),
-              import('./notifications/desktop-attention'),
-              import('./notifications/desktop-badge'),
-              import('./notifications/notification-inbox-controller'),
-              import('./notifications/unread-task-ipc')
-            ])
-            startupDiagnostics?.phase('application-modules-loaded')
-            return loaded
-          } finally {
-            try {
-              performance.measure(STARTUP_IMPORTS_TIMING, { start: startedAt })
-            } catch {
-              // Diagnostics must not change startup import failure behavior.
-            }
-          }
-        },
-        composeRuntime: async (
-          _,
-          [
-            { registerIpcHandlers },
-            { installMigrationQuitGuard, isMigrationInProgress },
-            { createAppTray, refreshAppTrayLocale, refreshAppTrayNavigation, setTrayIconVariant },
-            { installAppLifecycle },
-            { disposeIpcHandlerRegistry },
-            { createWebServiceController, buildAuthenticatedWebUrl },
-            { routeSecondInstance },
-            { createElectronCloseConfirm },
-            {
-              createElectronSessionPersistenceFlush,
-              notifyRendererSessionPersistenceFlushAborted,
-              rendererSessionPersistenceFlushBlocksShutdown
-            },
-            { createAppIconController, buildAppIconPreviews },
-            { RemoteAccessService, registerRemoteAccessIpcHandlers },
-            { createDesktopAttentionController, wireDesktopAttention },
-            { createDesktopBadgeAdapter, createWindowsBadgeBitmap },
-            { wireNotificationInboxController },
-            { registerUnreadTaskIpc }
-          ]
-        ) => {
-          startupDiagnostics?.phase('compose-runtime')
-          // Retain ownership before the complete context can be handed to the lifecycle.
-          let disposePartialRuntime:
-            Awaited<ReturnType<typeof registerIpcHandlers>>['dispose'] | undefined
-          let partialRemoteAccess:
-            Awaited<ReturnType<typeof RemoteAccessService.create>> | undefined
-          let partialWebController: ReturnType<typeof createWebServiceController> | undefined
-          let disposeTrayLocaleSubscription: (() => void) | undefined
-          let disposeTrayNavigationSubscription: (() => void) | undefined
-
-          // The controller must exist before its IPC responder, while the responder calls back into the
-          // controller. This box breaks that startup cycle without exposing unread ownership to renderer.
-          const visibilityProbeBox: {
-            current: ReturnType<typeof registerUnreadTaskIpc> | undefined
-          } = { current: undefined }
-
-          try {
-            startupDiagnostics?.phase('register-application-ipc')
-            // Held in a box (not a bare let) so the settings IPC callback registered below can reach the icon
-            // controller, which itself needs the persisted variant that only exists once settingsService is
-            // constructed. The change callback only fires on a user action (well after startup), so the
-            // controller is always set by then. Mirrors the trayBox late-binding pattern in app-lifecycle.ts.
-            const appIconControllerBox: {
-              current: ReturnType<typeof createAppIconController> | undefined
-            } = { current: undefined }
-            // Late-bound tray handle so the settings IPC below can restyle the tray when the user switches
-            // the app icon variant — the tray only exists once the lifecycle is installed (assigned in the
-            // createTray callback). Mirrors the trayBox late-binding pattern in app-lifecycle.ts.
-            const appTrayBox: { current: ReturnType<typeof createAppTray> } = { current: undefined }
-            disposeTrayLocaleSubscription = localeOwner.subscribe(() =>
-              refreshAppTrayLocale(appTrayBox.current)
-            )
-            // Unread state restores before the main-window lifecycle is installed. Late-bind its getter so
-            // restoration remains window-independent while later badge/probe calls always target the live window.
-            const mainWindowGetterBox: {
-              current: (() => InstanceType<typeof BrowserWindow> | undefined) | undefined
-            } = { current: undefined }
-
-            // Pass the concrete main entry path so ACP can launch the artifact MCP server from the same bundle.
-            const {
-              openSessionPackageFile,
-              applicationCommands,
-              applicationEvents,
-              permissionApprovalPresence,
-              bindRemoteAccess,
-              taskNotifications,
-              notificationInbox,
-              settingsService,
-              commitClosePreference,
-              taskAgent,
-              taskControls,
-              computePreferences,
-              detectActiveSessions,
-              listTrayNavigationSessions,
-              hasActiveReviewerWork,
-              getActiveSettingsInstallId,
-              holdSettingsInstallAdmission,
-              prepareForQuit,
-              abortQuitPreparation,
-              dispose: disposeRuntime
-            } = await registerIpcHandlers({
-              mainEntryPath,
-              settingsStore,
-              translate,
-              managedPreviewProtocol: managedPreviewProtocolBridge.registrar,
-              handoffRuntime: 'production',
-              headless: webMode.headless,
-              confirmRendererDurability: async (policy) => {
-                const getWindow = (): InstanceType<typeof BrowserWindow> | undefined =>
-                  mainWindowGetterBox.current?.()
-                const outcome = await createElectronSessionPersistenceFlush(getWindow)()
-                if (!rendererSessionPersistenceFlushBlocksShutdown(outcome, policy)) {
-                  return true
-                }
-                notifyRendererSessionPersistenceFlushAborted(getWindow)
-                return false
-              },
-              notifyRendererDurabilityAborted: () =>
-                notifyRendererSessionPersistenceFlushAborted(() => mainWindowGetterBox.current?.()),
-              onAppIconVariantChanged: (variant) => {
-                appIconControllerBox.current?.setVariant(variant)
-              },
-              listAppIconPreviews: () => buildAppIconPreviews(nativeImage, iconVariantPaths)
-            })
-            const disposeApplicationRuntime = (): ReturnType<typeof disposeRuntime> => {
-              visibilityProbeBox.current?.dispose()
-              return disposeRuntime()
-            }
-            disposePartialRuntime = disposeApplicationRuntime
-            let trayRefreshTimer: ReturnType<typeof setTimeout> | undefined
-            const unsubscribeTrayNavigation = applicationEvents.subscribe(({ channel }) => {
-              if (
-                !channel.startsWith('session:') &&
-                !channel.startsWith('project:') &&
-                channel !== 'acp:state' &&
-                channel !== 'side-chat:event' &&
-                channel !== 'notebook:changed'
-              )
-                return
-              if (trayRefreshTimer) return
-              trayRefreshTimer = setTimeout(() => {
-                trayRefreshTimer = undefined
-                refreshAppTrayNavigation(appTrayBox.current)
-              }, 100)
-            })
-            disposeTrayNavigationSubscription = () => {
-              unsubscribeTrayNavigation()
-              clearTimeout(trayRefreshTimer)
-            }
-            startupDiagnostics?.phase('compose-desktop-surfaces')
-
-            notificationInbox.configureDesktop({
-              // Only the main conversation window can acknowledge a visible session. A focused preview
-              // window must not clear unread state for the conversation underneath it.
-              isAppFocused: () => mainWindowGetterBox.current?.()?.isFocused() ?? false,
-              confirmSessionVisible: (sessionId) =>
-                visibilityProbeBox.current?.confirmSessionVisible(sessionId) ??
-                Promise.resolve(false),
-              badge: createDesktopBadgeAdapter({
-                platform: process.platform,
-                setBadgeCount: (count) => app.setBadgeCount(count),
-                isUnityRunning: () => app.isUnityRunning(),
-                getMainWindow: () => mainWindowGetterBox.current?.(),
-                createWindowsOverlay: (label) =>
-                  nativeImage.createFromBitmap(createWindowsBadgeBitmap(label), {
-                    width: 16,
-                    height: 16,
-                    scaleFactor: 1
-                  }),
-                onError: (error) => log.warn('desktop unread badge failed', error)
-              })
-            })
-            visibilityProbeBox.current = registerUnreadTaskIpc({
-              getMainWindow: () => mainWindowGetterBox.current?.(),
-              controller: notificationInbox,
-              onError: (error) => log.warn('message center visibility IPC failed', error)
-            })
-            // Start with the OS day/night icon, then use the app's resolved theme after the renderer reports it.
-            const initialVariant = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
-            appIconControllerBox.current = createAppIconController({
-              electron: {
-                app,
-                getAllWindows: () => BrowserWindow.getAllWindows(),
-                nativeImage,
-                nativeTheme
-              },
-              variantPaths: iconVariantPaths,
-              initialVariant,
-              onVariantChanged: (variant) => {
-                if (appTrayBox.current && trayVariantIconPaths) {
-                  setTrayIconVariant(appTrayBox.current, trayVariantIconPaths, variant)
-                }
-              }
-            })
-            startupDiagnostics?.phase('compose-remote-access')
-            const remoteAccess = await RemoteAccessService.create()
-            partialRemoteAccess = remoteAccess
-            bindRemoteAccess(remoteAccess)
-            const webController = createWebServiceController({
-              applicationCommands,
-              requestQuit: () => app.quit(),
-              externalAccess: remoteAccess.webAccess,
-              applicationEvents,
-              permissionApprovalPresence,
-              taskAgent,
-              taskControls,
-              computePreferences,
-              detectActiveSessions
-            })
-            partialWebController = webController
-            remoteAccess.attachWebController(webController)
-            registerRemoteAccessIpcHandlers(remoteAccess)
-            // A launch that itself requested serving (a dedicated headless daemon, or an explicit --serve) is
-            // not attached: stopping it quits the process. On-demand starts for a running instance are attached.
-            if (webMode.enabled)
-              await webController.ensureStarted(webMode.port, { attached: false })
-            // Restore a persisted remote-access preference only after the normal IPC/web surfaces exist.
-            // A missing or signed-out third-party remote-access installation must never delay the desktop window.
-            void remoteAccess.restore()
-
-            const disposeApplicationIpcHandlers = (): void => {
-              const failures: unknown[] = []
-              for (const cleanup of [
-                () => visibilityProbeBox.current?.dispose(),
-                () => disposeTrayLocaleSubscription?.(),
-                () => disposeTrayNavigationSubscription?.(),
-                disposeLocalePreferenceIpc,
-                () => managedPreviewProtocolBridge.dispose(),
-                disposeDatabaseStartupIpc,
-                disposeIpcHandlerRegistry
-              ]) {
-                try {
-                  cleanup()
-                } catch (error) {
-                  failures.push(error)
-                }
-              }
-              if (failures.length > 0) {
-                throw new AggregateError(failures, 'Application IPC cleanup failed.')
-              }
-            }
-            const shutdownApplicationSurfaces = createApplicationLifecycleShutdown({
-              disposeApplicationRuntime,
-              remoteAccess,
-              webController,
-              disposeIpcHandlers: disposeApplicationIpcHandlers,
-              log
-            })
-
-            return {
-              openSessionPackageFile,
-              installMigrationQuitGuard,
-              isMigrationInProgress,
-              createMainWindow: (options: Parameters<typeof createMainWindow>[0]) =>
-                createMainWindow(options, translate),
-              configureMainWindow,
-              startupWindow,
-              createAppTray,
-              translate,
-              buildAuthenticatedWebUrl,
-              routeSecondInstance,
-              taskNotifications,
-              notificationInbox,
-              mainWindowGetterBox,
-              settingsService,
-              appIconControllerBox,
-              appTrayBox,
-              // Read through the controller (not a snapshot) so a tray created after a settings change —
-              // e.g. a headless web client flipping the variant mid-startup — starts on the live value.
-              getAppIconVariant: () => appIconControllerBox.current?.getVariant() ?? initialVariant,
-              disposeApplicationRuntime,
-              detectActiveSessions,
-              listTrayNavigationSessions,
-              hasActiveReviewerWork,
-              getActiveSettingsInstallId,
-              holdSettingsInstallAdmission,
-              prepareForQuit,
-              abortQuitPreparation,
-              createSessionPersistenceFlush: (
-                getWindow: () => InstanceType<typeof BrowserWindow> | undefined
-              ) => createElectronSessionPersistenceFlush(getWindow),
-              notifySessionPersistenceFlushAborted: (
-                getWindow: () => InstanceType<typeof BrowserWindow> | undefined,
-                reason?: Parameters<typeof notifyRendererSessionPersistenceFlushAborted>[1]
-              ) => notifyRendererSessionPersistenceFlushAborted(getWindow, reason),
-              createConfirmClose: (
-                getWindow: () => InstanceType<typeof BrowserWindow> | undefined
-              ) =>
-                createElectronCloseConfirm(
-                  getWindow,
-                  {
-                    get: () => settingsService.getClosePreference(),
-                    set: async (preference) => {
-                      await commitClosePreference(preference)
-                    }
-                  },
-                  translate
-                ),
-              installAppLifecycle,
-              createDesktopAttentionController,
-              wireDesktopAttention,
-              wireNotificationInboxController,
-              log,
-              webMode,
-              webController,
-              remoteAccess,
-              shutdownApplicationSurfaces,
-              databaseStartupOwner,
-              databaseStartupQuitGuard
-            }
-          } catch (error) {
-            // Invalidate caller leases immediately if composition fails after registering IPC. The
-            // outer shell rollback destroys the window and quits, but renderer calls can still arrive
-            // while that shutdown is in flight.
-            for (const invalidate of [
-              () => visibilityProbeBox.current?.dispose(),
-              disposeIpcHandlerRegistry,
-              () => managedPreviewProtocolBridge.dispose()
-            ]) {
-              try {
-                invalidate()
-              } catch {
-                // Preserve the startup error and still stop all acquired services.
-              }
-            }
-            await createApplicationLifecycleShutdown({
-              disposeApplicationRuntime: () => disposePartialRuntime?.(),
-              remoteAccess: { shutdown: () => partialRemoteAccess?.shutdown() },
-              webController: { dispose: () => partialWebController?.dispose() },
-              disposeIpcHandlers: () => {
-                disposeTrayLocaleSubscription?.()
-                disposeTrayNavigationSubscription?.()
-              },
-              log
-            })()
-            throw error
-          }
-        },
-        rollbackShell: async () => {
-          // Module loading can fail while verification is actively migrating. Keep the quit guard
-          // installed until that attempt settles so app.quit cannot interrupt database writes.
-          await databaseStartupOwner.whenAttemptSettled()
-          for (const cleanup of [
-            disposeLocalePreferenceIpc,
-            () => databaseStartupQuitGuard.dispose(),
-            () => managedPreviewProtocolBridge.dispose(),
-            disposeDatabaseStartupIpc,
-            () => {
-              if (startupWindow && !startupWindow.isDestroyed()) startupWindow.destroy()
-            },
-            () => app.quit()
-          ]) {
-            try {
-              cleanup()
-            } catch (error) {
-              log.warn('Startup shell cleanup failed', diagnosticErrorFields(error))
-            }
-          }
-        }
-      })
-    },
-    // Warn (rather than silently tear down) if the user tries to quit mid data-root migration. Installed
-    // BEFORE the lifecycle so its before-quit runs first: a migration it cancels leaves
-    // event.defaultPrevented set, which the lifecycle's quit cleanup honors.
-    installMigrationQuitGuard: (ctx) =>
-      ctx.installMigrationQuitGuard(app, undefined, ctx.translate),
-    // Install the tray, first window, and the quit/activate/window-all-closed handlers. shutdownBackends
-    // is bound with the live backend handles; the agent teardown latches shutting-down and awaits the
-    // process tree so a Windows taskkill /T completes before app.exit.
-    installAppLifecycle: (ctx) => {
-      const lifecycle = ctx.installAppLifecycle({
-        app,
-        createMainWindow: ctx.createMainWindow,
-        configureMainWindow: ctx.configureMainWindow,
-        initialWindow: ctx.startupWindow,
-        createTray: (handlers) => {
-          const webPort = ctx.webController.runningPort()
-          const headlessWeb = ctx.webMode.headless && webPort !== undefined
-          const tray = ctx.createAppTray({
-            iconPath: trayIconPath,
-            variantIconPaths: trayVariantIconPaths,
-            initialVariant:
-              ctx.appIconControllerBox.current?.getVariant() ?? ctx.getAppIconVariant(),
-            translate: ctx.translate,
-            templateIconPath: process.platform === 'darwin' ? trayMacTemplate : undefined,
-            ...handlers,
-            getNavigationSessions: ctx.listTrayNavigationSessions,
-            getRunningSessions: ctx.detectActiveSessions,
-            onOpenSession: (sessionId) => {
-              handlers.onShow()
-              ctx.taskNotifications.setPendingOpenSession(sessionId)
-              ctx.mainWindowGetterBox.current?.()?.webContents.send('notifications:open-session')
-            },
-            ...(headlessWeb
-              ? {
-                  headless: true,
-                  onOpenWeb: async () => {
-                    const { shell } = await import('electron')
-                    await shell.openExternal(await ctx.buildAuthenticatedWebUrl(webPort))
-                  },
-                  onCopyWebUrl: async () => {
-                    const { clipboard } = await import('electron')
-                    clipboard.writeText(await ctx.buildAuthenticatedWebUrl(webPort))
-                  }
-                }
-              : {})
-          })
-          // Publish the tray so a later settings change can restyle it (onAppIconVariantChanged).
-          ctx.appTrayBox.current = tray
-          return tray
-        },
-        isMigrationInProgress: ctx.isMigrationInProgress,
-        beforeExit: async () => {
-          const { completeMacInstallationHandoff } = await import('./mac-installation')
-          completeMacInstallationHandoff()
-        },
-        quit: () => app.quit(),
-        countWindows: () => BrowserWindow.getAllWindows().length,
-        createInitialWindow: !ctx.webMode.headless,
-        bindSystemShutdownWindow,
-        detectActiveSessions: ctx.detectActiveSessions,
-        hasActiveReviewerWork: ctx.hasActiveReviewerWork,
-        getActiveSettingsInstallId: ctx.getActiveSettingsInstallId,
-        holdSettingsInstallAdmission: ctx.holdSettingsInstallAdmission,
-        prepareForQuit: ctx.prepareForQuit,
-        abortQuitPreparation: (reason) => {
-          ctx.abortQuitPreparation()
-          ctx.notifySessionPersistenceFlushAborted(
-            () => ctx.mainWindowGetterBox.current?.(),
-            reason
+    | undefined
+  const recoveryEvents = createDesktopRecoveryEventBuffer()
+  const native = createDesktopNativeHandler((id) => relay?.documentFor(id), isApplicationWindow)
+  let state: DatabaseStartupState = { phase: 'checking' }
+  let ready = false
+  let acceptStartupEvents = false
+  let readiness: Promise<void> = Promise.resolve()
+  const nativeChannels = new Set([
+    'settings:list-app-icons',
+    'cli:get-status',
+    'cli:install',
+    'cli:uninstall',
+    'update:get-app-info',
+    'update:get-status',
+    'update:check',
+    'update:download',
+    'update:cancel',
+    'update:apply',
+    'update:recheck',
+    'update:recover'
+  ])
+  const recoveryReadChannels = new Set([
+    'sessions:list',
+    'sessions:load-all',
+    'sessions:load-one',
+    'sessions:list-runtime-terminal-failures',
+    'projects:list',
+    'projects:list-deletion-cleanup',
+    'settings:get-settings',
+    'settings:is-encryption-available',
+    'settings:get-preflight',
+    'settings:is-npm-available',
+    'lifecycle:client-id',
+    'acp:get-state',
+    'compute:jobs:list',
+    'compute:list',
+    'notebook:state'
+  ])
+  const installRelay = (): void => {
+    relay?.uninstall()
+    const attached = client!
+    relay = installDesktopRuntimeElectronAdapter(
+      {
+        commandNames: () => attached.commandNames().filter((name) => !nativeChannels.has(name)),
+        invoke: (...args) => {
+          if (
+            ((recovery && recovery.state().phase !== 'connected') ||
+              staleWindows.has(relay?.documentFor(args[0])?.id ?? -1)) &&
+            !recoveryReadChannels.has(args[1])
           )
+            return Promise.reject(
+              new Error('Desktop is recovering. This operation was not submitted.')
+            )
+          return attached.invoke(...args)
         },
-        flushSessionPersistence: ctx.createSessionPersistenceFlush(() =>
-          ctx.mainWindowGetterBox.current?.()
-        ),
-        createConfirmClose: ctx.createConfirmClose,
-        onAppearanceChanged: (appearance) =>
-          ctx.appIconControllerBox.current?.setAppearance(appearance),
-        log: ctx.log,
-        flushLogs,
-        // Application composition owns the one bounded ACP/Notebook shutdown. Startup failures
-        // after composition and ordinary lifecycle shutdown reuse this exact ordered owner.
-        shutdownBackends: ctx.shutdownApplicationSurfaces
+        release: (id) => attached.release(id)
+      },
+      isApplicationWindow
+    )
+  }
+  const publishStartup = (next: DatabaseStartupState): void => {
+    readiness = readiness
+      .then(async () => {
+        if (next.phase === 'ready' && !ready) {
+          preview = await createDesktopPreviewProxy(configRoot, client!.processId())
+          installRelay()
+          ready = true
+          // The web service lives in the Node backend (#3358) and logs to its own file; packaged
+          // certification parses the app stdout for this readiness line, so main re-publishes it.
+          webServiceLog.info(`Open-Science Web: http://127.0.0.1:${preview.port}/`, {
+            host: '127.0.0.1',
+            port: preview.port,
+            source: 'node-backend'
+          })
+          const settings = (await client!.invokeHost('settings:get-settings')) as SettingsSnapshot
+          icons?.setVariant(settings.appIconVariant)
+          packageFiles.bind((path) => {
+            showMainWindow?.()
+            void client!.invokeHost('desktop:open-package', [path]).catch(reportError)
+          })
+        }
+        state = next
+        broadcast(DATABASE_STARTUP_CHANNELS.stateChanged, state)
       })
-      const { showMainWindow, getMainWindow, isMainWindowHidden, onSystemShutdown } = lifecycle
-      openPackageWindow = showMainWindow
-
-      // Window lifecycle now exists: expose it to the restored controller, reapply any Windows
-      // overlay to the first window, then attach completion/focus/window-recreation events.
-      ctx.mainWindowGetterBox.current = getMainWindow
-      ctx.notificationInbox.refreshBadge()
-
-      const desktopAttention = ctx.createDesktopAttentionController({
-        platform: process.platform,
-        headless: ctx.webMode.headless,
-        isAppFocused: () => BrowserWindow.getAllWindows().some((window) => window.isFocused()),
-        isMainWindowHidden,
-        getMainWindow,
-        ...(process.platform === 'darwin' ? { dock: app.dock } : {}),
-        onError: (error) => ctx.log.warn('desktop attention failed', error)
-      })
-      ctx.wireNotificationInboxController({
-        app,
-        controller: ctx.notificationInbox
-      })
-      ctx.wireDesktopAttention({
-        app,
-        taskNotifications: ctx.taskNotifications,
-        controller: desktopAttention
-      })
-
-      // Clicking a task notification surfaces the app and records which conversation to open. The
-      // renderer pulls the target once its sessions are hydrated (take-pending-open-session), so a
-      // click that recreates the window cannot lose the navigation — the send below is only a
-      // nudge for an already-running renderer and may safely be lost otherwise.
-      ctx.taskNotifications.setActivationHandler((sessionId) => {
-        const window = showMainWindow()
-        if (!sessionId) return
-
-        // The renderer pulls the click target once its sessions are hydrated.
-        ctx.taskNotifications.setPendingOpenSession(sessionId)
-        window.webContents.send('notifications:open-session')
-      })
-
-      // Route each second launch by its forwarded argv (see second-instance-router): a CLI
-      // `open-science start` forwards --serve/--open-science-headless → start the web service on demand
-      // here (attached); a plain re-launch (double-click) → surface the existing window as before.
-      const onSecondInstance = (argv: string[]): void =>
-        ctx.routeSecondInstance(argv, {
-          ensureWebService: ctx.webController.ensureStarted,
-          showMainWindow,
-          onError: (error) => ctx.log.error('on-demand web service start failed', error)
-        })
-      preStartupSecondInstanceRelay.bind(onSecondInstance)
-      return { onSecondInstance, onSystemShutdown }
-    },
-    cleanupAfterStartupFailure: async (ctx) => {
-      await ctx.shutdownApplicationSurfaces()
-    },
-    markReady: (ctx) => {
-      ctx.databaseStartupOwner.complete()
-      ctx.databaseStartupQuitGuard.release()
-      reportPackageOverflow = () => ctx.openSessionPackageFile(null)
-      packageFiles.bind((path) => {
-        openPackageWindow?.()
-        ctx.openSessionPackageFile(path)
+      .catch(reportError)
+  }
+  let runtimeStartupState: RuntimeStartupState = { phase: 'idle' }
+  let startupWindow: BrowserWindow | undefined
+  let startupFailure: DesktopRuntimeStartupError | undefined
+  let continueStartup: (() => void) | undefined
+  let startupAction: Promise<RuntimeStartupState> | undefined
+  const requireStartupFrame = (event: Electron.IpcMainInvokeEvent): void => {
+    if (
+      !isApplicationWindow(event.sender) ||
+      !event.senderFrame ||
+      event.senderFrame !== event.sender.mainFrame
+    )
+      throw new Error('Startup recovery requires the main application frame.')
+  }
+  const publishRuntimeStartup = (next: RuntimeStartupState): void => {
+    runtimeStartupState = next
+    broadcast(RUNTIME_STARTUP_CHANNELS.onStateChanged, next)
+  }
+  const waitForStartupRetry = async (failure: DesktopRuntimeStartupError): Promise<void> => {
+    startupBlocked = true
+    startupFailure = failure
+    publishRuntimeStartup({ phase: 'blocked', issue: failure.issue })
+    if (!startupWindow) {
+      const window = createMainWindow(undefined, translate)
+      startupWindow = window
+      window.once('closed', () => {
+        if (startupWindow === window) void exitFromBlockedStartup()
       })
     }
+    showMainWindow = () => {
+      startupWindow!.show()
+      return startupWindow!
+    }
+    await new Promise<void>((resolve) => {
+      continueStartup = resolve
+    })
+    continueStartup = undefined
+  }
+  const validatePreservedConfiguration = (config: RuntimeStartupOptions): void => {
+    if (
+      config.configRoot !== configRoot ||
+      config.profilePath !== profilePath ||
+      config.credentialStore !== getCredentialStore() ||
+      (config.passwordStore ?? '') !== app.commandLine.getSwitchValue('password-store')
+    )
+      throw new Error(
+        'The running service uses a different credential profile. Reopen Desktop with the original configuration before stopping it.'
+      )
+  }
+  ipcMainHandle(RUNTIME_STARTUP_CHANNELS.getState, (event) => {
+    requireStartupFrame(event)
+    return runtimeStartupState
   })
+  const performStartupAction = (recover: boolean): Promise<RuntimeStartupState> => {
+    if (startupAction) return startupAction
+    const failure = startupFailure
+    if (!failure) return Promise.resolve(runtimeStartupState)
+    startupAction = (async () => {
+      publishRuntimeStartup({ phase: recover ? 'recovering' : 'stopping', issue: failure.issue })
+      try {
+        if (recover) await failure.recover()
+        else {
+          if (failure.startupOptions) validatePreservedConfiguration(failure.startupOptions)
+          await failure.stopAndContinue()
+          preservedStartupOptions = failure.startupOptions
+        }
+        if (initialRecoveryError) {
+          app.relaunch()
+          app.exit(0)
+        } else continueStartup?.()
+      } catch (error) {
+        startupFailure =
+          error instanceof DesktopRuntimeStartupError
+            ? error
+            : new DesktopRuntimeStartupError(
+                {
+                  ...failure.issue,
+                  reason:
+                    failure.issue.reason === 'legacy-service'
+                      ? 'legacy-service'
+                      : 'startup-recovery-required',
+                  canStop: failure.issue.reason === 'legacy-service' && failure.issue.canStop,
+                  canRecover:
+                    (recover || failure.issue.reason === 'legacy-service') &&
+                    failure.issue.canRecover,
+                  diagnostics: JSON.stringify(
+                    projectDiagnosticError(error, { configRoot, home: app.getPath('home') })
+                  )
+                },
+                'Startup recovery was not confirmed.',
+                failure.issue.reason === 'legacy-service'
+                  ? () => failure.stopAndContinue()
+                  : undefined,
+                recover || failure.issue.reason === 'legacy-service'
+                  ? () => failure.recover()
+                  : undefined
+              )
+        publishRuntimeStartup({ phase: 'blocked', issue: startupFailure.issue })
+      }
+      return runtimeStartupState
+    })().finally(() => {
+      startupAction = undefined
+    })
+    return startupAction
+  }
+  ipcMainHandle(RUNTIME_STARTUP_CHANNELS.stopAndContinue, (event) => {
+    requireStartupFrame(event)
+    return performStartupAction(false)
+  })
+  ipcMainHandle(RUNTIME_STARTUP_CHANNELS.recover, (event) => {
+    requireStartupFrame(event)
+    return performStartupAction(true)
+  })
+  ipcMainHandle(RUNTIME_STARTUP_CHANNELS.quit, (event) => {
+    requireStartupFrame(event)
+    app.exit(0)
+  })
+  startupDiagnostics?.phase('launch-node-runtime')
+  let launch!: Awaited<ReturnType<typeof startOrAttachDesktopBackend>>
+  // Shared by the first launch and the startup replacement of a stopping Runtime, so a replacement
+  // keeps the preserved service port and credential arguments of the original launch.
+  const launchInitialBackend = async (): Promise<void> => {
+    launch = await startOrAttachDesktopBackend({
+      onStatus: (status) => bootstrapLog.info('backend startup status', status),
+      configRoot,
+      profilePath,
+      version: app.getVersion(),
+      ...initialBackendPaths,
+      packaged: app.isPackaged,
+      args: [
+        ...credentialArgs,
+        ...(preservedStartupOptions ? [`--serve=${preservedStartupOptions.port}`] : [])
+      ]
+    })
+    startedBackend = launch.startedProcess
+  }
+  while (true) {
+    try {
+      if (initialRecoveryError) throw initialRecoveryError
+      await installationStartup?.completeBeforeLaunch()
+      installationStartup = undefined
+      await launchInitialBackend()
+      startupBlocked = false
+      break
+    } catch (error) {
+      if (!(error instanceof DesktopRuntimeStartupError)) throw error
+      startupFailure = error
+      if (error.startupOptions) {
+        try {
+          validatePreservedConfiguration(error.startupOptions)
+        } catch (configurationError) {
+          startupFailure = new DesktopRuntimeStartupError(
+            { ...error.issue, canStop: false, diagnostics: String(configurationError) },
+            error.message
+          )
+        }
+      }
+      await waitForStartupRetry(startupFailure)
+    }
+  }
+  // Let Node finish credential validation before Chromium opens its cookie databases. On Windows
+  // native sessions lock those files, preventing the backend's fail-closed inventory snapshot.
+  // Both protocol handlers must still be installed before the first preview window can exist.
+  startupDiagnostics?.phase('preview-protocols')
+  for (const target of [session.defaultSession, session.fromPartition('reviewer-paged-preview')]) {
+    target.protocol.handle(MANAGED_PREVIEW_SCHEME.scheme, (request) =>
+      preview
+        ? preview.fetch(request)
+        : Promise.resolve(new Response('Runtime unavailable', { status: 503 }))
+    )
+    registerOfficePreviewRuntimeProtocol(
+      {
+        runtimeHtmlPath: join(__dirname, '../renderer/office-preview.html'),
+        devServerUrl: process.env.ELECTRON_RENDERER_URL,
+        fetchRuntime: (url) => net.fetch(url, { bypassCustomProtocolHandlers: true })
+      },
+      target.protocol
+    )
+  }
+  startupDiagnostics?.phase('connect-node-runtime')
+  const deliverRuntimeEvent = ({
+    channel,
+    payload
+  }: {
+    channel: string
+    payload: unknown
+  }): void => {
+    if (channel === 'locale:changed') {
+      void i18n
+        .changeLanguage((payload as LocalePreferenceSnapshot).locale)
+        .then(() => refreshAppTrayLocale(tray))
+    }
+    if (channel === 'settings:changed') {
+      const variant = (payload as SettingsSnapshot).appIconVariant
+      icons?.setVariant(variant)
+      if (tray && trayVariantIconPaths) setTrayIconVariant(tray, trayVariantIconPaths, variant)
+    }
+    broadcast(channel, payload)
+    if (/^(session:|project:|acp:state|side-chat:event|notebook:changed)/.test(channel))
+      refreshAppTrayNavigation(tray)
+  }
+  const attach = async (signal?: AbortSignal): Promise<DesktopRuntimeClient> => {
+    const attached = await connectDesktopRuntime({
+      ...launch,
+      signal,
+      onStartupState: (next) => {
+        if (acceptStartupEvents && attached === client) publishStartup(next)
+      },
+      onNativeResponseSent: (request, result) => {
+        if (
+          request.request.operation !== 'runtime-relaunch' ||
+          result !== true ||
+          attached !== client ||
+          !plannedRelaunch
+        )
+          return
+        relaunchConfirmation = attached
+          .waitForStopped()
+          .then((lease) => {
+            retainShutdownLease(lease)
+            app.relaunch()
+            app.exit(0)
+          })
+          .catch((error) => {
+            plannedRelaunch = false
+            recovery?.setClosing(false)
+            attached.close()
+            recovery?.disconnect(attached)
+            reportError(error)
+          })
+          .finally(() => {
+            relaunchConfirmation = undefined
+          })
+      },
+      onNativeRequest: async (request, signal) => {
+        signal.throwIfAborted()
+        if (request.request.operation === 'runtime-relaunch') {
+          if (attached !== client || !attached.ownsRuntime() || plannedRelaunch) return false
+          plannedRelaunch = true
+          recovery?.setClosing(true)
+          return true
+        }
+        if (request.request.operation === 'renderer-flush') {
+          const outcome = await createElectronSessionPersistenceFlush(() => getMainWindow())()
+          const blocked = rendererSessionPersistenceFlushBlocksShutdown(
+            outcome,
+            request.request.policy
+          )
+          if (blocked) notifyRendererSessionPersistenceFlushAborted(() => getMainWindow())
+          return !blocked
+        }
+        if (request.request.operation === 'renderer-flush-aborted') {
+          notifyRendererSessionPersistenceFlushAborted(() => getMainWindow())
+          return null
+        }
+        return request.request.operation.startsWith('notification-')
+          ? notifications.handle(request, signal)
+          : native(request, signal)
+      },
+      onDocumentEvent: (event) => {
+        if (attached === client)
+          relay?.documentFor(event.clientId)?.send(event.channel, event.payload)
+      },
+      onUploadProgress: (id, progress) => {
+        if (attached === client) relay?.documentFor(id)?.send('uploads:transfer-progress', progress)
+      },
+      onEvent: ({ channel, payload }) => {
+        if (attached !== client) return
+        if (recovery?.state().phase === 'reconciling') {
+          try {
+            recoveryEvents.push({ channel, payload })
+          } catch (error) {
+            reconcileWait?.reject(error as Error)
+          }
+          return
+        }
+        deliverRuntimeEvent({ channel, payload })
+      },
+      onDeliveryFailure: (failure) => {
+        if (attached !== client || !attached) return
+        const sender = failure.clientId ? relay?.documentFor(failure.clientId) : undefined
+        if (sender) markStale(sender)
+        else
+          for (const window of BrowserWindow.getAllWindows())
+            if (isMainWindow(window)) markStale(window.webContents)
+      },
+      onDisconnect: () => {
+        if (attached !== client || !attached) return
+        if (!ready) reportError(new Error('Desktop connection was lost during startup.'))
+        preview?.dispose()
+        notifications.dispose()
+        reconcileWait?.reject(new Error('Desktop disconnected during recovery.'))
+        if (plannedRelaunch && !relaunchConfirmation) {
+          plannedRelaunch = false
+          recovery?.setClosing(false)
+          recovery?.disconnect(attached)
+          reportError(
+            new Error('The Runtime disconnected before its relaunch response could be delivered.')
+          )
+        } else if (!plannedRelaunch && !runtimeStopped && !updateCommitted)
+          recovery?.disconnect(attached)
+      }
+    })
+    return attached
+  }
+  while (true) {
+    try {
+      client = await connectDesktopRuntimeForStartup({
+        connect: attach,
+        version: app.getVersion(),
+        // The old Runtime is waited out (or stopped after identity proof) by the launcher.
+        replaceRuntime: launchInitialBackend
+      })
+      startupBlocked = false
+      startupFailure = undefined
+      break
+    } catch (error) {
+      if (!(error instanceof DesktopRuntimeStartupError)) throw error
+      await waitForStartupRetry(error)
+    }
+  }
+  const makeRecovery = (): ReturnType<typeof createDesktopRuntimeRecovery> =>
+    createDesktopRuntimeRecovery({
+      client: client!,
+      startedProcess: launch.startedProcess,
+      connect: attach,
+      activate: async (candidate, signal, readyForSnapshots) => {
+        preview?.dispose()
+        notifications.dispose()
+        client = candidate
+        notifications = makeNotifications()
+        const candidatePreview = await createDesktopPreviewProxy(configRoot, candidate.processId())
+        if (signal.aborted) {
+          candidatePreview.dispose()
+          throw new Error('Desktop recovery canceled.')
+        }
+        preview = candidatePreview
+        installRelay()
+        const [locale, settings] = await Promise.all([
+          candidate.invokeHost('locale:snapshot') as Promise<LocalePreferenceSnapshot>,
+          candidate.invokeHost('settings:get-settings') as Promise<SettingsSnapshot>
+        ])
+        if (signal.aborted) throw new Error('Desktop recovery canceled.')
+        await i18n.changeLanguage(locale.locale)
+        signal.throwIfAborted()
+        deliverRuntimeEvent({ channel: 'locale:changed', payload: locale })
+        deliverRuntimeEvent({ channel: 'settings:changed', payload: settings })
+        recoveryEvents.clear()
+        const epoch = recovery!.state().epoch
+        await new Promise<void>((resolve, reject) => {
+          const windows = BrowserWindow.getAllWindows().filter(
+            (window) => !window.isDestroyed() && isMainWindow(window)
+          )
+          const pending = new Map(
+            windows.map((window) => [window.webContents.id, window.webContents.mainFrame])
+          )
+          const removals: (() => void)[] = []
+          const cleanup = (): void => {
+            for (const remove of removals) remove()
+          }
+          const aborted = (): void => {
+            cleanup()
+            reject(new Error('Desktop recovery canceled.'))
+          }
+          signal.addEventListener('abort', aborted, { once: true })
+          removals.push(() => signal.removeEventListener('abort', aborted))
+          reconcileWait = {
+            epoch,
+            pending,
+            resolve: () => {
+              cleanup()
+              resolve()
+            },
+            reject: (error) => {
+              cleanup()
+              reject(error)
+            }
+          }
+          for (const window of windows) {
+            const sender = window.webContents
+            const id = sender.id
+            const closed = (): void => {
+              pending.delete(id)
+              if (pending.size === 0 && reconcileWait?.epoch === epoch) reconcileWait.resolve()
+            }
+            sender.once('destroyed', closed)
+            removals.push(() => sender.removeListener('destroyed', closed))
+          }
+          readyForSnapshots()
+          if (pending.size === 0) reconcileWait.resolve()
+        }).finally(() => {
+          if (reconcileWait?.epoch === epoch) reconcileWait = undefined
+        })
+        // Old snapshot failures are repaired; new replay failures must remain invalidated.
+        staleWindows.clear()
+        await recoveryEvents.drain({
+          load: candidate.loadSessionForEvent,
+          deliver: deliverRuntimeEvent,
+          signal
+        })
+        candidate.notificationView('window-created')
+        refreshAppTrayNavigation(tray)
+      },
+      discard: (candidate) => {
+        if (client !== candidate) return
+        preview?.dispose()
+        notifications.dispose()
+        relay?.uninstall()
+      },
+      onState: (next) => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!isMainWindow(window) || window.webContents.isDestroyed()) continue
+          const sender = window.webContents
+          try {
+            sender.send(
+              DESKTOP_RUNTIME_RECOVERY_CHANNELS.stateChanged,
+              next.phase === 'connected' && staleWindows.has(sender.id)
+                ? { ...next, phase: 'disconnected', epoch: next.epoch + 1 }
+                : next
+            )
+          } catch {
+            markStale(sender)
+          }
+        }
+      }
+    })
+  let recovery = makeRecovery()
+  if (client.ownsRuntime())
+    launch.startedProcess?.once('exit', () => {
+      if (headless && !updateCommitted && !plannedRelaunch) app.exit(0)
+      else if (client && !updateCommitted && !plannedRelaunch) recovery!.disconnect(client)
+    })
+  const requireRecoveryFrame = (event: import('electron').IpcMainInvokeEvent): void => {
+    if (
+      !isApplicationWindow(event.sender) ||
+      !event.senderFrame ||
+      event.senderFrame !== event.sender.mainFrame
+    )
+      throw new Error('Desktop recovery requires the main application frame.')
+  }
+  ipcMainHandle(DESKTOP_RUNTIME_RECOVERY_CHANNELS.getState, (event) => {
+    requireRecoveryFrame(event)
+    const state = recovery!.state()
+    return state.phase === 'connected' && staleWindows.has(event.sender.id)
+      ? { ...state, phase: 'disconnected', epoch: state.epoch + 1 }
+      : state
+  })
+  ipcMainHandle(DESKTOP_RUNTIME_RECOVERY_CHANNELS.reconnect, (event) => {
+    requireRecoveryFrame(event)
+    if (staleWindows.has(event.sender.id) && recovery!.state().phase === 'connected') {
+      client!.close()
+      recovery!.disconnect(client!)
+    }
+    return recovery!.reconnect()
+  })
+  ipcMainHandle(
+    DESKTOP_RUNTIME_RECOVERY_CHANNELS.reconciled,
+    (event, epoch: number, success: boolean) => {
+      requireRecoveryFrame(event)
+      const waiting = reconcileWait
+      if (
+        !waiting ||
+        waiting.epoch !== epoch ||
+        waiting.pending.get(event.sender.id) !== event.senderFrame
+      )
+        return
+      if (success !== true) {
+        waiting.reject(new Error('Desktop state refresh failed.'))
+        return
+      }
+      waiting.pending.delete(event.sender.id)
+      if (waiting.pending.size === 0) waiting.resolve()
+    }
+  )
+  let disconnectedQuit: Promise<void> | undefined
+  const quitDisconnected = (): Promise<void> =>
+    (disconnectedQuit ??= Promise.resolve()
+      .then(async () => {
+        recovery.setClosing(true)
+        const result = await dialog.showMessageBox({
+          type: 'warning',
+          buttons: [translate('Cancel'), translate('Quit app')],
+          defaultId: 0,
+          cancelId: 0,
+          message: translate('Quit while disconnected?'),
+          detail: translate(
+            'Unsaved changes may be lost. Submitted operations may have completed. The backend will not be stopped.'
+          )
+        })
+        if (result.response !== 1) {
+          // Match ordinary quit cancellation: a no-tray desktop must retain a reachable window.
+          if (process.platform !== 'darwin' && !tray && getMainWindow()?.isDestroyed())
+            showMainWindow?.()
+          return
+        }
+        client?.close()
+        app.exit(0)
+      })
+      .finally(() => {
+        disconnectedQuit = undefined
+        recovery.setClosing(false)
+      }))
+  ipcMainHandle(DESKTOP_RUNTIME_RECOVERY_CHANNELS.quit, (event) => {
+    requireRecoveryFrame(event)
+    if (
+      !disconnectedQuit &&
+      recovery.state().phase === 'connected' &&
+      !staleWindows.has(event.sender.id)
+    ) {
+      app.quit()
+      return
+    }
+    return quitDisconnected().catch(reportError)
+  })
+  cleanupStartupClient = async () => {
+    retainShutdownLease(await client!.quit())
+  }
+  if (startupQuitRequested) {
+    retainShutdownLease(await client.quit())
+    cleanupStartupClient = undefined
+    app.exit(0)
+    return
+  }
+  const locale = (await client.invokeHost('locale:snapshot')) as LocalePreferenceSnapshot
+  await i18n.changeLanguage(locale.locale)
+  installRelay()
+  ipcMainHandle('settings:list-app-icons', () =>
+    buildAppIconPreviews(nativeImage, iconVariantPaths)
+  )
+  icons = createAppIconController({
+    electron: { app, getAllWindows: () => BrowserWindow.getAllWindows(), nativeImage, nativeTheme },
+    variantPaths: iconVariantPaths,
+    initialVariant: 'light'
+  })
+  ipcMainHandle(DATABASE_STARTUP_CHANNELS.getState, () => state)
+  ipcMainHandle(DATABASE_STARTUP_CHANNELS.retry, async () => {
+    await client!.retryStartup()
+    await readiness
+    return state
+  })
+  ipcMainHandle(DATABASE_STARTUP_CHANNELS.quit, () => app.quit())
+  const { createCliCommandOwner, registerCliInstallIpcHandlers } = await import('./cli-install/ipc')
+  const backendPaths = desktopBackendPaths({
+    applicationPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+    packaged: app.isPackaged
+  })
+  const cliOwner = createCliCommandOwner(() => ({
+    platform: process.platform,
+    appExecPath: process.execPath,
+    nodeExecPath: backendPaths.command,
+    cliEntryPath: app.isPackaged
+      ? join(process.resourcesPath, 'backend', 'cli.mjs')
+      : join(app.getAppPath(), 'cli', 'index.mjs'),
+    appImagePath: process.env.APPIMAGE,
+    packaged: app.isPackaged,
+    homeDir: app.getPath('home'),
+    userDataDir: profilePath,
+    pathVar: process.env.PATH ?? ''
+  }))
+  registerCliInstallIpcHandlers(cliOwner)
+  void cliOwner.ensureCurrent()
+  const { createUpdateStrategy } = await import('./update/create-strategy')
+  const { registerUpdateIpcHandlers } = await import('./update/ipc')
+  const { startUpdateScheduler } = await import('./update/scheduler')
+  const { installElectronNetwork } = await import('./runtime-network-electron')
+  const { installElectronBroadcast } = await import('./renderer-broadcast-electron')
+  installElectronNetwork()
+  const removeNativeBroadcast = installElectronBroadcast()
+  let preparedMacInstallation: PreparedMacInstallation | undefined
+  const isLegacyInstall = (status: { localPath?: string }): boolean =>
+    !status.localPath || !usesSupervisedInstall(process.platform, status.localPath)
+  const updateIntegration = createDesktopUpdateIntegration({
+    location: { installationRoot: installationRootForEntry(backendPaths.entry) },
+    client: () => client!,
+    currentVersion: app.getVersion(),
+    allowedProcessIds: () => app.getAppMetrics().map((metric) => metric.pid),
+    preparedDebGate: () => preparedMacInstallation?.debGate,
+    verifyInstallerReady: async () => {
+      const gate = preparedMacInstallation?.debGate
+      if (gate && (await inspectDebSystemdGate(gate)) !== 'waiting')
+        throw new Error(
+          'The authorized package gate is no longer ready. Cancel this update and prepare it again.'
+        )
+    },
+    legacyInstall: isLegacyInstall,
+    verifyArtifact: async (status, signal) => {
+      if (!status.localPath || !status.latest)
+        throw new UpdateLifecycleError(
+          'installation-busy',
+          'This update channel cannot verify the complete replacement installation.',
+          {
+            phase: 'preparing',
+            runtime: 'running',
+            installation: 'unchanged',
+            canCancel: true,
+            canRecover: false,
+            canRetryInstall: false,
+            detail: 'unsupported-channel'
+          }
+        )
+      assertInstallationChannelCertified(
+        installationChannelFor(process.platform, status.localPath) ?? 'linux-deb'
+      )
+      if (process.platform === 'darwin') {
+        if (preparedMacInstallation) {
+          await discardPreparedMacInstallation(preparedMacInstallation)
+          preparedMacInstallation = undefined
+        }
+        preparedMacInstallation = await prepareSupervisedMacInstallation({
+          archive: status.localPath,
+          targetVersion: status.latest,
+          installationRoot: installationRootForEntry(backendPaths.entry),
+          sha512: status.artifactSha512,
+          signal
+        })
+        return preparedMacInstallation.manifest
+      }
+      if (process.platform === 'linux' && process.env.APPIMAGE && status.artifactSha512) {
+        if (preparedMacInstallation) {
+          await discardPreparedMacInstallation(preparedMacInstallation)
+          preparedMacInstallation = undefined
+        }
+        preparedMacInstallation = await prepareSupervisedAppImageInstallation({
+          archive: status.localPath,
+          targetVersion: status.latest,
+          installationRoot: installationRootForEntry(backendPaths.entry),
+          sha512: status.artifactSha512,
+          runtimeNode: backendPaths.command,
+          signal
+        })
+        return preparedMacInstallation.manifest
+      }
+      if (
+        status.artifactSha512 &&
+        process.platform === 'linux' &&
+        status.localPath.toLowerCase().endsWith('.deb')
+      ) {
+        if (preparedMacInstallation) {
+          await discardPreparedMacInstallation(preparedMacInstallation)
+          preparedMacInstallation = undefined
+        }
+        const installerOptions = {
+          archive: status.localPath,
+          targetVersion: status.latest,
+          installationRoot: installationRootForEntry(backendPaths.entry),
+          sha512: status.artifactSha512,
+          runtimeNode: backendPaths.command,
+          currentExecutable: process.execPath,
+          signal
+        }
+        preparedMacInstallation = await prepareSupervisedDebInstallation(installerOptions)
+        return preparedMacInstallation.manifest
+      }
+      throw new UpdateLifecycleError(
+        'installation-busy',
+        'This installer channel does not yet provide a supervised completion receipt.',
+        {
+          phase: 'preparing',
+          runtime: 'running',
+          installation: 'unchanged',
+          canCancel: true,
+          canRecover: false,
+          canRetryInstall: false,
+          detail: 'unsupported-channel'
+        }
+      )
+    },
+    validateConfiguration: (config) => {
+      // Attachment permits file-backed credentials, but an interactive replacement Desktop cannot
+      // silently change their storage mode or the Chromium profile selected during preflight.
+      if (
+        config.credentialStore !== getCredentialStore() ||
+        config.profilePath !== profilePath ||
+        config.configRoot !== configRoot ||
+        (config.passwordStore ?? '') !== app.commandLine.getSwitchValue('password-store')
+      )
+        throw new UpdateLifecycleError(
+          'runtime-configuration-unsupported',
+          'This Desktop cannot safely preserve the running service configuration.'
+        )
+    },
+    setClosing: (closing) => recovery.setClosing(closing),
+    retainLease: retainShutdownLease,
+    onProgress: (status) => update.publishLifecycleStatus?.(status),
+    onStopped: () => {
+      runtimeStopped = true
+    },
+    onHandoff: () => {
+      updateCommitted = true
+    },
+    reconnectOriginal: async () => {
+      const previous = client!
+      const identity = previous.runtimeInfo()
+      recovery.setClosing(false)
+      recovery.disconnect(previous)
+      const result = await recovery.reconnect()
+      if (
+        result.phase !== 'connected' ||
+        client!.processId() !== previous.processId() ||
+        client!.runtimeInfo().generation !== identity.generation
+      )
+        throw new Error(
+          'The original service could not be reconnected. Check its shutdown logs before recovery.'
+        )
+      await verifyDesktopRecoveryReadiness(client!, identity.startupOptions)
+    },
+    restart: async (config: RuntimeStartupOptions) => {
+      shutdownLease?.release()
+      shutdownLease = undefined
+      client?.close()
+      preview?.dispose()
+      notifications.dispose()
+      relay?.uninstall()
+      ready = false
+      launch = await startOrAttachDesktopBackend({
+        configRoot: config.configRoot,
+        profilePath: config.profilePath,
+        version: app.getVersion(),
+        ...backendPaths,
+        packaged: app.isPackaged,
+        args: [
+          `--credential-store=${config.credentialStore}`,
+          ...(config.passwordStore ? [`--password-store=${config.passwordStore}`] : []),
+          `--serve=${config.port}`
+        ]
+      })
+      startedBackend = launch.startedProcess
+      client = await attach()
+      notifications = makeNotifications()
+      await verifyDesktopRecoveryReadiness(client, config)
+      runtimeStopped = false
+      updateCommitted = false
+      recovery = makeRecovery()
+      publishStartup(client.startupState())
+      await readiness
+      for (const window of BrowserWindow.getAllWindows())
+        if (isMainWindow(window)) window.webContents.reload()
+    }
+  })
+  const update = createUpdateStrategy(process.platform, {
+    translate,
+    ...updateIntegration,
+    cancelInstall: async () => {
+      if (preparedMacInstallation?.debGate)
+        await cancelDebSystemdGate(preparedMacInstallation.debGate)
+      const result = await updateIntegration.cancelInstall!()
+      if (preparedMacInstallation) {
+        await discardPreparedMacInstallation(preparedMacInstallation)
+        preparedMacInstallation = undefined
+      }
+      return result
+    },
+    ...(['darwin', 'linux', 'win32'].includes(process.platform)
+      ? {
+          executeInstall: async (status, options) => {
+            const operationId = status.recovery?.operationId
+            if (isLegacyInstall(status)) return 'legacy' as const
+            if (!preparedMacInstallation || !operationId)
+              throw new UpdateLifecycleError(
+                'install-failed',
+                'The prepared installer is unavailable.'
+              )
+            await launchPreparedMacInstaller(
+              { installationRoot: installationRootForEntry(backendPaths.entry) },
+              operationId,
+              preparedMacInstallation,
+              { desktopPid: process.pid, relaunch: options.relaunch ?? true }
+            )
+            app.exit(0)
+            return undefined
+          }
+        }
+      : {})
+  })
+  registerUpdateIpcHandlers(update, undefined, requireRecoveryFrame)
+  const stopUpdates = startUpdateScheduler(update)
+  app.once('will-quit', () => {
+    stopUpdates()
+    removeNativeBroadcast()
+  })
+  const settings = async (): Promise<SettingsSnapshot> =>
+    client!.invokeHost('settings:get-settings') as Promise<SettingsSnapshot>
+  let work: DesktopShutdownWork | undefined
+  let admission: Promise<unknown> = Promise.resolve()
+  app.removeListener('before-quit', holdStartupQuit)
+  app.on('before-quit', (event) => {
+    // Preserve committed teardown; an idle disconnected shell must also be quittable without a window.
+    if (updateCommitted || runtimeStopped || plannedRelaunch) return
+    const state = recovery.state()
+    if (currentApplicationShutdownTrigger() === 'system' && state.phase !== 'connected') {
+      // OS shutdown cannot wait for consent or an unreachable backend, including an open quit dialog.
+      event.preventDefault()
+      client?.close()
+      app.exit(0)
+      return
+    }
+    if (!disconnectedQuit && (state.phase === 'connected' || state.closing)) return
+    event.preventDefault()
+    void quitDisconnected().catch(reportError)
+  })
+  const finishedStartupWindow = startupWindow
+  startupWindow = undefined
+  const lifecycle = installAppLifecycle({
+    app,
+    createInitialWindow: !headless,
+    createMainWindow: (options) => createMainWindow(options, translate),
+    configureMainWindow,
+    createTray: (handlers) =>
+      (tray = createAppTray({
+        ...handlers,
+        iconPath: trayIconPath,
+        templateIconPath: process.platform === 'darwin' ? trayMacTemplate : undefined,
+        variantIconPaths: trayVariantIconPaths,
+        translate,
+        getNavigationSessions: async () =>
+          ready
+            ? ((await client!.invokeHost(
+                'desktop:tray-sessions'
+              )) as import('./tray-navigation').TrayNavigationSession[])
+            : [],
+        getRunningSessions: () => work?.sessions ?? [],
+        onOpenSession: (id) => {
+          handlers.onShow()
+          void client!
+            .invokeHost('desktop:open-session', [id])
+            .then(() => getMainWindow()?.webContents.send('notifications:open-session'))
+            .catch(reportError)
+        }
+      })),
+    quit: () => app.quit(),
+    countWindows: () => BrowserWindow.getAllWindows().length,
+    isMigrationInProgress: () => false,
+    refreshQuitState: async () => {
+      if (runtimeStopped) return false
+      if (recovery!.state().phase !== 'connected')
+        throw new Error('Use the connection notice to quit while disconnected.')
+      if (!client!.ownsRuntime() || !ready) return false
+      let next = (await client!.lifecycle({ operation: 'inspect' })) as DesktopShutdownWork
+      if (next.migrationActive) {
+        const confirmed =
+          currentApplicationShutdownTrigger() === 'system' ||
+          (
+            await dialog.showMessageBox({
+              type: 'warning',
+              buttons: [translate('Keep waiting'), translate('Quit anyway')],
+              defaultId: 0,
+              cancelId: 0,
+              title: translate('Move in progress'),
+              message: translate('Open-Science is still moving your data.'),
+              detail: translate(
+                'Your data is safe either way, but quitting now leaves the move unfinished — you may need to start it again. Keep the app open until it finishes.'
+              )
+            })
+          ).response === 1
+        if (!confirmed) throw new Error('The data move is still running. The desktop remains open.')
+        await client!.lifecycle({ operation: 'cancel-migration' })
+        next = (await client!.lifecycle({ operation: 'inspect' })) as DesktopShutdownWork
+      }
+      const changed = work?.fingerprint !== next.fingerprint
+      work = next
+      return changed
+    },
+    detectActiveSessions: () => work?.sessions ?? [],
+    hasActiveReviewerWork: () => work?.reviewerActive ?? false,
+    getActiveSettingsInstallId: () => work?.settingsInstallId,
+    holdSettingsInstallAdmission: () => {
+      recovery!.setClosing(true)
+      if (!runtimeStopped && client!.ownsRuntime() && ready)
+        admission = client!.lifecycle({ operation: 'hold' })
+      void admission.catch(() => undefined)
+      return () => {
+        recovery!.setClosing(false)
+        if (!runtimeStopped && client!.ownsRuntime() && ready)
+          void client!.lifecycle({ operation: 'release' }).catch((error) => {
+            // Rollback is best effort during OS-owned exit; a native modal must not prevent exit.
+            if (currentApplicationShutdownTrigger() === 'system')
+              bootstrapLog.error('quit admission release failed', {
+                error: projectDiagnosticError(error, { configRoot, home: app.getPath('home') })
+              })
+            else reportError(error)
+          })
+      }
+    },
+    prepareForQuit: async () => {
+      await admission
+      if (!runtimeStopped && client!.ownsRuntime() && ready && work)
+        return (await client!.lifecycle({
+          operation: 'prepare',
+          fingerprint: work.fingerprint
+        })) as 'completed' | 'timeout' | 'failed'
+      return undefined
+    },
+    abortQuitPreparation: async (reason) => {
+      try {
+        if (!runtimeStopped && client!.ownsRuntime() && ready)
+          await client!.lifecycle({ operation: 'abort' })
+      } finally {
+        recovery!.setClosing(false)
+        notifyRendererSessionPersistenceFlushAborted(() => getMainWindow(), reason)
+      }
+    },
+    flushSessionPersistence: createElectronSessionPersistenceFlush(() => getMainWindow()),
+    createConfirmClose: (getWindow) =>
+      createElectronCloseConfirm(
+        getWindow,
+        {
+          get: async () => (ready ? (await settings()).closePreference : undefined),
+          set: async (preference) => {
+            await client!.invokeHost('settings:set-close-preference', [preference])
+          }
+        },
+        translate
+      ),
+    onAppearanceChanged: (appearance) => icons?.setAppearance(appearance),
+    log: diagnostics.log,
+    flushLogs,
+    requireCleanBackendShutdown: true,
+    onQuitError: (error) => {
+      recovery!.setClosing(false)
+      reportError(error)
+    },
+    shutdownBackends: async () => {
+      if (!runtimeStopped) retainShutdownLease(await client!.quit())
+      preview?.dispose()
+      notifications.dispose()
+      visibility.dispose()
+      relay?.uninstall()
+    },
+    beforeExit: async () => {
+      const { completeMacInstallationHandoff } = await import('./mac-installation')
+      completeMacInstallationHandoff()
+    }
+  })
+  // Install the normal lifecycle and its first window before closing the startup gate.
+  // Otherwise Electron may quit on window-all-closed and orphan the newly started backend.
+  finishedStartupWindow?.destroy()
+  showMainWindow = lifecycle.showMainWindow
+  getMainWindow = lifecycle.getMainWindow
+  isMainWindowHidden = lifecycle.isMainWindowHidden
+  requestSystemShutdown = lifecycle.onSystemShutdown
+  for (const window of BrowserWindow.getAllWindows()) system.bindWindow(window)
+  app.on('browser-window-created', (_event, window) => {
+    system.bindWindow(window)
+    if (ready) client?.notificationView('window-created')
+  })
+  app.on('browser-window-focus', () => {
+    if (ready) client?.notificationView('focus')
+  })
+  acceptStartupEvents = true
+  publishStartup(client.startupState())
+  await readiness
+  if (preservedStartupOptions) {
+    try {
+      await verifyDesktopRecoveryReadiness(client, preservedStartupOptions)
+      await completeVerifiedStartup?.()
+      // Stopping an older service is not an installation recovery; publish only a real outcome.
+      if (verifiedStartupOutcome)
+        update.publishLifecycleStatus?.({
+          outcome: verifiedStartupOutcome,
+          reason: undefined,
+          recovery: undefined,
+          error: undefined
+        })
+      publishRuntimeStartup({ phase: 'ready' })
+    } catch (error) {
+      const issue = {
+        reason: 'startup-recovery-required' as const,
+        desktopVersion: app.getVersion(),
+        canStop: false,
+        canRecover: true,
+        diagnostics: JSON.stringify(
+          projectDiagnosticError(error, { configRoot, home: app.getPath('home') })
+        )
+      }
+      startupFailure = new DesktopRuntimeStartupError(
+        issue,
+        'The original data is not ready.',
+        undefined,
+        async () => {
+          await verifyDesktopRecoveryReadiness(client!, preservedStartupOptions!, 60_000, true)
+          await completeVerifiedStartup?.()
+          publishRuntimeStartup({ phase: 'ready' })
+        }
+      )
+      publishRuntimeStartup({ phase: 'blocked', issue })
+    }
+  } else publishRuntimeStartup({ phase: 'ready' })
+  if (secondInstancePending) showMainWindow()
+  const { isReadOnlyMacInstallation, showMacInstallationGuidance } =
+    await import('./mac-installation')
+  if (isReadOnlyMacInstallation()) void showMacInstallationGuidance('startup')
+  cleanupStartupClient = undefined
+  diagnostics.operation.complete()
 }
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
+void startDesktop().catch(async (error: unknown) => {
+  bootstrapLog.error('desktop startup failed', {
+    ...diagnosticErrorFields(error),
+    phase: bootstrapPhase,
+    ...(error instanceof CredentialIdentityError ? { recoveryReason: error.reason } : {})
+  })
+  const message =
+    error instanceof CredentialIdentityError
+      ? credentialRecoveryMessage(error, app.getPreferredSystemLanguages())
+      : error instanceof Error
+        ? error.message
+        : String(error)
+  // Failed identity preflight must not yield to Chromium's profile/key initialization.
+  if (!app.isReady()) {
+    dialog.showErrorBox(APP_NAME, message)
+    app.exit(1)
+    return
+  }
+  await reportApplicationStartupFailure({ operation: startupDiagnostics, error, flush: flushLogs })
+  try {
+    await cleanupStartupClient?.()
+  } catch (cleanupError) {
+    bootstrapLog.error('startup backend cleanup failed', diagnosticErrorFields(cleanupError))
+    await flushLogs()
+  }
+  if (error instanceof DesktopBackendStartupError) {
+    await recoverDesktopBackendStartup(error)
+    return
+  }
+  dialog.showErrorBox(APP_NAME, message)
+  app.exit(1)
+})

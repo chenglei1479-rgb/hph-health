@@ -7,6 +7,7 @@ desktop application, installed command, and user data paths use MedResearch Agen
 ## Documentation
 
 - [CLI guide](./CLI.md) - installation, daemon lifecycle, task automation, artifacts, and exit codes
+- [Release compatibility](https://github.com/aipoch/open-science/blob/main/docs/compatibility.md) - stable interfaces, versioning, and data upgrades
 
 ## SDK quick start
 
@@ -15,7 +16,7 @@ import { connectToOpenScience } from '@aipoch/open-science'
 
 const client = await connectToOpenScience()
 const run = await client.startRun({
-  project: 'systematic-review',
+  project: '<project-id-or-exact-name>',
   prompt: 'Summarize the evidence.',
   cwd: '/absolute/path/to/research',
   permissionProfile: 'auto',
@@ -122,7 +123,7 @@ const progress = (async () => {
 })()
 
 const observedRun = await client.startRun({
-  project: 'systematic-review',
+  project: '<project-id-or-exact-name>',
   prompt: 'Summarize the evidence.',
   permissionProfile: 'auto'
 })
@@ -162,8 +163,10 @@ const cancelled = await client.cancelRun(run.id)
 console.log(cancelled.status) // cancelled
 ```
 
-The client discovers the local daemon and reads its authentication token from the MedResearch Agent config
-directory. Tokens are sent in request headers and are never included in normal command output.
+The client discovers the local daemon and reads its authentication token from the Open-Science config
+directory. HTTP calls send the token in request headers. `events()` authenticates its WebSocket using
+a `token` URL query parameter; treat WebSocket URLs and request logs as sensitive. Tokens are
+not included in normal command output.
 
 ### Automation new-session defaults
 

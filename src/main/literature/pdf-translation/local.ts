@@ -1,30 +1,18 @@
+import type {
+  LocalRequest,
+  LocalResult,
+  PdfTranslationLocalRuntime,
+  PdfTranslationLocalTarget
+} from '@aipoch/pdf-translation'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import { LOCAL_MODEL_NOT_INSTALLED } from '../../../shared/local-models'
-import { PdfTranslationError } from '../../../shared/pdf-translation'
+import { PdfTranslationError } from '@aipoch/pdf-translation/contracts'
 import type { LocalModelOwner, LocalModelUse } from '../../local-models/owner'
+import { nodeRuntimeEnvironment } from '../../node-process-host'
 import { registerOwnedPosixProcessGroup, terminateProcessTree } from '../../process-tree'
 
-export type PdfTranslationLocalTarget = Readonly<{ modelId: string; revision: string }>
-type LocalRequest = {
-  target: PdfTranslationLocalTarget
-  systemPrompt: string
-  prompt: string
-  signal: AbortSignal
-  outputLimitBytes: number
-}
-type LocalResult = {
-  text: string
-  stopReason: 'end_turn' | 'max_tokens'
-  usage: { inputTokens: number; outputTokens: number; cacheTokens: number }
-}
-export type PdfTranslationLocalRuntime = {
-  acquireTarget(): Promise<PdfTranslationLocalTarget>
-  run(request: LocalRequest): Promise<LocalResult>
-  release(target: PdfTranslationLocalTarget): Promise<void>
-  shutdown(): Promise<void>
-}
 const RUNTIME = 'transformers-4-2-0-ort-web-1-26-0-dev-20260416-b7804b056c-wasm-v1'
 const TIMEOUT_MS = 180_000
 
@@ -66,7 +54,7 @@ export const createPdfTranslationLocalRuntime = (
     if (child && (child.exitCode !== null || child.signalCode !== null)) await stop()
     if (!child) {
       child = spawn(process.execPath, [join(resources, 'worker.mjs')], {
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        env: { ...process.env, ...nodeRuntimeEnvironment() },
         stdio: ['pipe', 'pipe', 'pipe'],
         detached: process.platform !== 'win32',
         windowsHide: true
