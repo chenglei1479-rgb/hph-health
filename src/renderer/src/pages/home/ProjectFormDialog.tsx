@@ -27,6 +27,7 @@ import {
   PROJECT_DESCRIPTION_MAX_LENGTH,
   PROJECT_NAME_MAX_LENGTH
 } from '../../../../shared/projects'
+import { DeleteDevicePatientData } from './DeleteDevicePatientData'
 
 type ProjectFormDialogProps = {
   open: boolean
@@ -50,6 +51,8 @@ type ProjectFormDialogProps = {
   onDiscardChanges: () => void
   onCancel: () => void
   onConfirm: (event: React.FormEvent<HTMLFormElement>) => void
+  projectId?: string
+  canDeletePatientData?: boolean
 }
 
 // Shared name + description + agent context form for creating and editing a project. All are
@@ -75,7 +78,9 @@ const ProjectFormDialog = ({
   onKeepEditing,
   onDiscardChanges,
   onCancel,
-  onConfirm
+  onConfirm,
+  projectId,
+  canDeletePatientData = true
 }: ProjectFormDialogProps): React.JSX.Element => {
   const { t } = useTranslation()
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -199,6 +204,9 @@ const ProjectFormDialog = ({
                   className={dialogFormTextareaClassName}
                 />
               </div>
+              {projectId ? (
+                <DeleteDevicePatientData projectId={projectId} canDelete={canDeletePatientData} />
+              ) : null}
             </div>
             {error ? (
               <p className="px-5 pb-4 text-sm text-danger-000" role="alert">

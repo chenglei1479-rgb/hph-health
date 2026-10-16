@@ -31,6 +31,8 @@ type ProjectFormDialogProps = {
   onDiscardChanges: () => void
   onCancel: () => void
   onConfirm: (event: React.FormEvent<HTMLFormElement>) => void
+  projectId?: string
+  canDeletePatientData?: boolean
 }
 
 type UseProjectFormDialogResult = {
@@ -48,6 +50,7 @@ type ProjectFormInitialValues = {
 type UseProjectFormDialogOptions = {
   onCreated?: (project: Project) => void
   onCreateCancelled?: () => void
+  canDeletePatientData?: boolean
 }
 
 // Owns the create/edit Project form state machine shared by the Home page and the Workspace sidebar
@@ -72,20 +75,23 @@ const useProjectFormDialog = (
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false)
   const initialDraft = useRef({ name: '', description: '', agentContext: '' })
 
-  const openCreateDialog = useCallback((initialValues: ProjectFormInitialValues = {}): void => {
-    // A submission is in flight: ignore reopens so the pending mutation keeps its drafts.
-    if (isSubmitting) return
+  const openCreateDialog = useCallback(
+    (initialValues: ProjectFormInitialValues = {}): void => {
+      // A submission is in flight: ignore reopens so the pending mutation keeps its drafts.
+      if (isSubmitting) return
 
-    initialDraft.current = { name: '', description: '', agentContext: '' }
-    setDiscardConfirmationOpen(false)
-    setConflictProject(undefined)
-    setFormState({ mode: 'create' })
-    setNameDraft(initialValues.name ?? '')
-    setDescriptionDraft(initialValues.description ?? '')
-    setAgentContextDraft(initialValues.agentContext ?? '')
-    setFormError(undefined)
-    setErrorDetail(undefined)
-  }, [isSubmitting])
+      initialDraft.current = { name: '', description: '', agentContext: '' }
+      setDiscardConfirmationOpen(false)
+      setConflictProject(undefined)
+      setFormState({ mode: 'create' })
+      setNameDraft(initialValues.name ?? '')
+      setDescriptionDraft(initialValues.description ?? '')
+      setAgentContextDraft(initialValues.agentContext ?? '')
+      setFormError(undefined)
+      setErrorDetail(undefined)
+    },
+    [isSubmitting]
+  )
 
   const openEditDialog = useCallback(
     (project: Project): void => {
@@ -253,6 +259,8 @@ const useProjectFormDialog = (
       onKeepEditing: () => setDiscardConfirmationOpen(false),
       onDiscardChanges: closeFormDialog,
       onCancel: requestCloseFormDialog,
+      projectId: formState?.mode === 'edit' ? formState.projectId : undefined,
+      canDeletePatientData: options.canDeletePatientData ?? true,
       onConfirm: confirmForm
     }
   }
