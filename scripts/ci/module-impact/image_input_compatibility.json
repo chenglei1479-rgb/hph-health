@@ -3,7 +3,8 @@
     "src/main/acp/image-input-compatibility-owner.ts",
     "src/main/acp/vision-evidence-repository.ts",
     "src/main/acp/image-input-compatibility-owner.test.ts",
-    "src/main/acp/vision-evidence-repository.test.ts"
+    "src/main/acp/vision-evidence-repository.test.ts",
+    "src/main/acp/image-input-compatibility-port.ts"
   ],
   "interfacePaths": [
     "src/main/acp/image-input-compatibility-owner.ts",
@@ -24,6 +25,8 @@
       "src/shared/renderer-contract-catalog.test.ts"
     ],
     "consumer": [
+      "src/main/application-command-wiring.test.ts",
+      "src/main/composition/project-lifecycle.test.ts",
       "src/main/composition/reviewer.test.ts",
       "src/renderer/src/lib/acp/history-preamble.test.ts",
       "src/renderer/src/lib/acp/useWorkspaceAgentRuntime.test.ts",
@@ -158,7 +161,18 @@
       "src/main/notebook/runtime-service.macos-isolation.integration.test.ts",
       "src/main/session-persistence/ipc.test.ts",
       "src/main/acp/approved-handoff-outcome.integration.test.ts",
-      "src/main/acp/approved-handoff-outcome.test.ts"
+      "src/main/acp/approved-handoff-outcome.test.ts",
+      "src/main/composition/notebook-environment.test.ts",
+      "src/main/desktop-runtime-transport.integration.test.ts",
+      "src/main/side-chat/application-commands.test.ts",
+      "src/main/acp/specialist-switch-recovery.integration.test.ts",
+      "src/main/agents/production-completion-handoff.test.ts",
+      "src/main/desktop-runtime-backpressure.integration.test.ts",
+      "src/main/desktop-runtime-transport-diagnostics.test.ts",
+      "src/main/node-entry.test.ts",
+      "src/main/desktop-runtime-session-size.integration.test.ts",
+      "src/main/notebook-payload.integration.test.ts",
+      "src/main/web-service/session-payload.integration.test.ts"
     ]
   },
   "capabilityOverlays": ["e2e_regressions", "e2e_delegation"],

@@ -1,4 +1,6 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { load } from 'js-yaml'
@@ -48,6 +50,49 @@ const step = (job: Job, name: string): Step => {
 }
 
 describe('release and scheduled workflow topology', () => {
+  it.each(['0189093', '0000000', '1234567', 'abc1234', null])(
+    'keeps backend and installer versions identical for commit %s (null is stable)',
+    (shortSha) => {
+      const root = mkdtempSync(join(tmpdir(), 'nightly-version-'))
+      try {
+        const manifest = { name: 'nightly-version-fixture', version: '0.37.1', private: true }
+        writeFileSync(join(root, 'package.json'), JSON.stringify(manifest))
+        writeFileSync(
+          join(root, 'package-lock.json'),
+          JSON.stringify({ ...manifest, lockfileVersion: 3, packages: { '': manifest } })
+        )
+        const build = step(workflow('build.yml').jobs.build, 'Build & package').run!
+        // Execute the real version preparation, stopping before builds, signing, or publication.
+        const preparation = build.slice(0, build.indexOf('npm run build:e2e'))
+        expect(preparation).toContain('npm version --no-git-tag-version')
+        const output = execFileSync(
+          'bash',
+          [
+            '-e',
+            '-c',
+            preparation.replaceAll('${{ inputs.nightly }}', String(shortSha !== null)) +
+              '\nprintf "package-version=%s\\n" "${eb_ver[@]}"'
+          ],
+          {
+            cwd: root,
+            encoding: 'utf8',
+            env: { ...process.env, GITHUB_SHA: `${shortSha ?? 'abc1234'}${'0'.repeat(33)}` }
+          }
+        )
+        const version = shortSha ? `0.37.1-nightly.g${shortSha}` : manifest.version
+        expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version).toBe(version)
+        const lock = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'))
+        expect(lock.version).toBe(version)
+        expect(lock.packages[''].version).toBe(version)
+        expect(output).toContain(
+          `package-version=${shortSha ? `-c.extraMetadata.version=${version}` : ''}\n`
+        )
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    }
+  )
+
   it('allows Build OIDC through every direct and nested caller', () => {
     // GitHub validates declared permissions before evaluating signing inputs or job conditions.
     const callees = new Set([
@@ -207,32 +252,35 @@ describe('release and scheduled workflow topology', () => {
       'src/main/database/database-null-and-version-bounds.test.ts',
       'src/main/database/migration-service.test.ts',
       'src/main/notebook/runtime-service.test.ts',
-      'src/main/notebook/python-command.test.ts',
+      'packages/environment/src/python-command.test.ts',
       'src/main/notebook/shell-process-ownership.test.ts',
       'src/main/literature/batch-jobs.test.ts',
-      'src/main/notebook/source-file-access-analysis.test.ts',
-      'src/main/notebook/source-file-access-analysis.additional-omics.test.ts',
-      'src/main/notebook/source-file-access-analysis.clinical-formats.test.ts',
-      'src/main/notebook/source-file-access-analysis.workflow-orchestration.test.ts',
+      'packages/notebook-analysis/src/source-file-access-analysis.test.ts',
+      'packages/notebook-analysis/src/source-file-access-analysis.additional-omics.test.ts',
+      'packages/notebook-analysis/src/source-file-access-analysis.clinical-formats.test.ts',
+      'packages/notebook-analysis/src/source-file-access-analysis.workflow-orchestration.test.ts',
       'src/main/session-package/archive.test.ts',
       'src/main/session-package/service.test.ts',
-      'src/main/notebook/package-manager.test.ts',
+      'packages/environment/src/package-manager.test.ts',
       'src/main/notebook/package-process-sandbox.test.ts',
       'src/main/notebook/network-sandbox-owner.test.ts',
-      'src/main/notebook/dependency-analysis.test.ts',
-      'src/main/notebook/dependency-analysis.chord.test.ts',
-      'src/main/notebook/dependency-analysis.path-plot.test.ts',
-      'src/main/notebook/dependency-analysis.anndata.test.ts',
+      'packages/notebook-analysis/src/dependency-analysis.test.ts',
+      'src/main/notebook/working-file-observer.analysis-contract.integration.test.ts',
+      'packages/notebook-analysis/src/dependency-analysis.chord.test.ts',
+      'packages/notebook-analysis/src/dependency-analysis.chord.native.test.ts',
+      'packages/notebook-analysis/src/dependency-analysis.path-plot.test.ts',
+      'packages/notebook-analysis/src/dependency-analysis.anndata.test.ts',
       'src/main/artifacts/artifact-reproducibility-outputs.test.ts',
       'src/main/acp/context-usage-static-context.test.ts',
-      'src/main/notebook/provisioner.test.ts',
+      'packages/environment/src/provisioner.test.ts',
       'src/main/notebook/reproduction-runtime.test.ts',
-      'src/main/notebook/recovery-coordinator.test.ts',
+      'packages/environment/src/recovery-coordinator.test.ts',
       'src/main/artifacts/provenance-repository.test.ts',
       'src/main/artifacts/provenance-write-contract.test.ts',
       'src/main/artifacts/artifact-reproducibility-export.test.ts',
       'src/main/agent-framework/opencode.test.ts',
       'src/main/logger.test.ts',
+      'packages/diagnostics/src/logger.test.ts',
       'src/main/delegation/production-composition.test.ts',
       'packages/notebook-network-sandbox/src/gateway.test.ts',
       'packages/notebook-network-sandbox/src/public-read-lifecycle.test.ts'
@@ -291,7 +339,15 @@ describe('release and scheduled workflow topology', () => {
     expect(build.needs).toEqual(['setup'])
     expect(build.if).toBe("${{ !cancelled() && needs.setup.result == 'success' }}")
     expect(nightly.jobs.prepare.needs).toEqual(['plan', 'build', 'package-smoke'])
-    expect(release.jobs.publish.needs).toEqual(['build', 'package-smoke', 'notarize-mac'])
+    expect(release.jobs.publish.needs).toEqual([
+      'build',
+      'package-smoke',
+      'notarize-mac',
+      'cli-artifacts',
+      'linux-cli-packages'
+    ])
+    expect(release.jobs['cli-artifacts'].needs).toEqual(['build', 'package-smoke', 'notarize-mac'])
+    expect(release.jobs['publish-npm']).toBeUndefined()
     expect(release.jobs['notarize-mac'].needs).toEqual(['build', 'package-smoke'])
   })
 
@@ -731,7 +787,9 @@ if ($artifactSaveBase -eq $artifactSaveCommit) {
     // successful; the reporter inspects the nested conclusions instead.
     const advisory = name === 'nightly.yml' ? " || steps.advisory.outputs.ok != 'true'" : ''
     expect(script.env?.CONCLUSION).toBe(
-      `\${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')${advisory}) && 'failure' || 'success' }}`
+      name === 'source-regression.yml'
+        ? "${{ needs.regression.result == 'success' && needs.packages.result == 'success' && needs.portable.result == 'success' && needs.portable_report.result == 'success' && 'success' || 'failure' }}"
+        : `\${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')${advisory}) && 'failure' || 'success' }}`
     )
     if (name === 'nightly.yml') {
       const detect = step(report, 'Detect advisory job failures')
@@ -778,18 +836,20 @@ describe('website mirror publication intent', () => {
 })
 
 describe('build verification throughput', () => {
-  it('runs Ubuntu static checks independently from three complete portable shards', () => {
+  it('runs Ubuntu static checks independently from four complete portable shards', () => {
     const { verify, verify_tests: tests, verify_macos: macos } = workflow('build.yml').jobs
     expect(verify['runs-on']).toBe('ubuntu-latest')
     expect(verify.needs).toBeUndefined()
     expect(tests.needs).toBeUndefined()
     expect(tests['runs-on']).toBe('ubuntu-latest')
-    expect(tests.strategy?.matrix?.shard).toEqual([1, 2, 3])
+    expect(tests.strategy?.matrix?.shard).toEqual([1, 2, 3, 4])
+    expect(tests['timeout-minutes']).toBe(60)
+    expect(step(tests, 'Test complete suite shard').run).toContain('--testTimeout=60000')
     expect(tests.env).toEqual({
       VITEST_DEFER_COVERAGE_THRESHOLDS: '1',
       VITEST_PORTABLE_CI: '1'
     })
-    expect(step(tests, 'Test complete suite shard').run).toContain('--shard=${{ matrix.shard }}/3')
+    expect(step(tests, 'Test complete suite shard').run).toContain('--shard=${{ matrix.shard }}/4')
     expect(step(tests, 'Test complete suite shard').run).toContain('--coverage')
     expect(step(tests, 'Test complete suite shard').run).toContain('--reporter=blob')
     expect(step(tests, 'Test complete suite shard').run).toContain('--reporter=github-actions')
@@ -838,7 +898,7 @@ describe('build verification throughput', () => {
     const guard = step(job, 'Require complete successful shards')
     expect(guard.env).toEqual({ SHARDS_RESULT: '${{ needs.verify_tests.result }}' })
     expect(guard.run).toContain('test "$SHARDS_RESULT" = success')
-    expect(guard.run).toContain('for shard in 1 2 3')
+    expect(guard.run).toContain('for shard in 1 2 3 4; do')
     expect(guard.run).toContain('test -s "vitest-reports/blob-$shard.json"')
     expect(step(job, 'Merge test reports and enforce coverage').run).toBe(
       'npx vitest run --merge-reports=vitest-reports --coverage --passWithNoTests'
@@ -848,6 +908,41 @@ describe('build verification throughput', () => {
       'if-no-files-found': 'error'
     })
   })
+
+  it.each(['complete', 'missing-fourth', 'empty-fourth', 'failed-shard'])(
+    'checks actual shard artifacts before coverage: %s',
+    (scenario) => {
+      const cwd = mkdtempSync(join(tmpdir(), 'build-coverage-guard-'))
+      try {
+        mkdirSync(join(cwd, 'vitest-reports'))
+        for (const shard of [1, 2, 3, 4]) {
+          if (shard === 4 && scenario === 'missing-fourth') continue
+          writeFileSync(
+            join(cwd, `vitest-reports/blob-${shard}.json`),
+            shard === 4 && scenario === 'empty-fourth' ? '' : '{}'
+          )
+        }
+        const guard = step(
+          workflow('build.yml').jobs.verify_coverage,
+          'Require complete successful shards'
+        )
+        const run = (): void => {
+          execFileSync('bash', ['-e', '-c', guard.run!], {
+            cwd,
+            env: {
+              ...process.env,
+              SHARDS_RESULT: scenario === 'failed-shard' ? 'failure' : 'success'
+            },
+            stdio: 'pipe'
+          })
+        }
+        if (scenario === 'complete') expect(run).not.toThrow()
+        else expect(run).toThrow()
+      } finally {
+        rmSync(cwd, { recursive: true, force: true })
+      }
+    }
+  )
 
   it('reuses real verification for a manual release dry-run without packaging or publication', () => {
     const release = workflow('release.yml')
@@ -867,6 +962,47 @@ describe('build verification throughput', () => {
         "github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')"
       )
     }
+  })
+
+  it('reuses Release packages for diagnostic smoke without builds or publication', () => {
+    const release = workflow('release.yml')
+    const smoke = workflow('package-smoke.yml')
+    expect(release.on?.workflow_dispatch).toMatchObject({
+      inputs: { package_smoke_run_id: { type: 'string', default: '' } }
+    })
+    for (const name of ['release-preflight', 'build']) {
+      expect(release.jobs[name].if).toBe(
+        "${{ github.event_name != 'workflow_dispatch' || !inputs.package_smoke_run_id }}"
+      )
+    }
+    expect(release.jobs['package-smoke-dry-run']).toEqual({
+      if: "${{ github.event_name == 'workflow_dispatch' && inputs.package_smoke_run_id != '' }}",
+      uses: './.github/workflows/package-smoke.yml',
+      with: {
+        artifact_run_id: '${{ inputs.package_smoke_run_id }}',
+        require_windows_signing: false
+      }
+    })
+    expect(smoke.on?.workflow_call).toMatchObject({
+      inputs: { artifact_run_id: { type: 'string', default: '' } }
+    })
+    expect(step(smoke.jobs.smoke, 'Download packaged artifacts').with).toMatchObject({
+      'run-id': '${{ inputs.artifact_run_id || github.run_id }}',
+      'github-token': '${{ github.token }}'
+    })
+    for (const name of [
+      'Record platform certification evidence',
+      'Upload platform certification evidence'
+    ]) {
+      expect(step(smoke.jobs.smoke, name).if).toBe(
+        '${{ !inputs.install_only && !inputs.artifact_run_id }}'
+      )
+    }
+    for (const name of ['publish', 'notarize-mac', 'cli-artifacts']) {
+      expect(release.jobs[name].if).toContain("github.event_name == 'push'")
+    }
+    expect(release.jobs.regression.needs).toEqual(['build', 'package-smoke'])
+    expect(release.jobs['release-sbom-poc'].needs).toBe('publish')
   })
 
   it('keeps reusable build workflows read-only, caller-scoped, and time-bounded', () => {

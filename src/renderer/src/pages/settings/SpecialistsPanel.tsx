@@ -1,3 +1,4 @@
+import type { SpecialistsView } from '../../lib/settings-navigation'
 import { useRetainedDialogValue } from '@/components/ui/use-retained-dialog-value'
 import { InlineNotice } from '@/components/ui/inline-notice'
 import { ErrorNotice } from '@/components/error-notice'
@@ -61,16 +62,15 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { useMarketplaceStore } from '@/stores/marketplace-store'
 import { useSpecialistStore } from '@/stores/specialist-store'
 import { useTagStore } from '@/stores/tag-store'
-import type { CreateSpecialistInput, SpecialistListItem } from '../../../../shared/specialist'
-import type { SkillSource } from '../../../../shared/settings'
-import { specialistPackageReportFromPreview } from '../../../../shared/specialist-package'
-import type {
-  SpecialistDeletePreview,
-  SpecialistDeleteResult
-} from '../../../../shared/specialist-package'
+import type { CreateSpecialistInput } from '@aipoch/specialists'
+import type { SpecialistListItem } from '../../../../shared/specialist'
+import type { SkillSource } from '@aipoch/skills/document'
+import { specialistPackageReportFromPreview } from '@aipoch/specialists'
+import type { SpecialistDeletePreview, SpecialistDeleteResult } from '@aipoch/specialists'
 import { SpecialistEditor } from './SpecialistEditor'
 import { MarketplaceManagedSpecialistDetail } from './MarketplaceManagedSpecialistDetail'
-import { SpecialistMarketplace, type SpecialistMarketplaceView } from './SpecialistMarketplace'
+import type { SpecialistMarketplaceView } from '@/lib/settings-navigation'
+import { SpecialistMarketplace } from './SpecialistMarketplace'
 import { SettingsSearchInput } from './SettingsSearchInput'
 import { SpecialistAppearancePicker } from './SpecialistAppearancePicker'
 import { SpecialistAvatar } from './specialist-avatar'
@@ -89,14 +89,7 @@ import {
 } from './ResourceTagControls'
 
 // Sub-view for the Specialists panel (parallels SkillsView).
-export type SpecialistsView =
-  | { kind: 'list' }
-  | { kind: 'create'; draft?: CreateSpecialistInput }
-  | { kind: 'edit'; id: string }
-  | { kind: 'export'; id: string }
-  | { kind: 'import' }
-  | { kind: 'builtin'; id: string }
-  | SpecialistMarketplaceView
+export type { SpecialistsView } from '../../lib/settings-navigation'
 
 type CategoryFilter = 'all' | 'custom' | 'marketplace' | 'builtin'
 

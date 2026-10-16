@@ -4,11 +4,18 @@ import { createRuntimeConfig } from '../../packages/notebook-network-sandbox/src
 
 import {
   DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
+  OPEN_SCIENCE_DOMAIN_GROUP_IDS,
   buildNotebookNetworkPolicy,
   normalizeNotebookNetworkSettings,
   notebookNetworkSettingsAllowDomain,
   validateCustomAllowedDomain
 } from './notebook-network'
+
+import { OPEN_SCIENCE_DOMAIN_GROUP_IDS as settingDomainGroups } from './notebook-network-settings'
+
+it('preserves the public domain group identity across the settings boundary', () => {
+  expect(OPEN_SCIENCE_DOMAIN_GROUP_IDS).toBe(settingDomainGroups)
+})
 
 vi.mock('node:dns/promises', () => ({
   lookup: vi.fn(async () => [{ address: '8.8.8.8', family: 4 }])
@@ -43,7 +50,16 @@ describe('disabled automatic domain access', () => {
 })
 
 describe('notebook network policy', () => {
-  it('enables every DRA domain group by default', () => {
+  it('passes the application default policy to the sandbox including label wildcards', () => {
+    expect(() =>
+      createRuntimeConfig({
+        policy: buildNotebookNetworkPolicy(DEFAULT_NOTEBOOK_NETWORK_SETTINGS),
+        resources: { root: '/resources' }
+      })
+    ).not.toThrow()
+  })
+
+  it('enables every Open-Science domain group by default', () => {
     const policy = buildNotebookNetworkPolicy(DEFAULT_NOTEBOOK_NETWORK_SETTINGS)
 
     expect(policy.allowedDomains).toContain('pypi.org')

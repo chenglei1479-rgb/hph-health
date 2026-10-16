@@ -5,8 +5,11 @@ import { resolve } from 'node:path'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { ApplicationCallerLeaseRegistry } from '../src/main/caller-lifecycle'
 import { PdfTranslationWriter } from '../src/main/literature/pdf-translation/writer'
-import { extractPdfTranslationSource } from '../src/renderer/src/pages/workspace/previews/renderers/pdf-translation-extraction'
-import { pdfTranslationLayoutFragments } from '../src/renderer/src/pages/workspace/previews/renderers/pdf-translation-fragments'
+import {
+  extractPdfTranslationSource,
+  pdfTranslationLayoutFragments
+} from '@aipoch/pdf-translation/reader'
+
 import { verifyPdfUnits } from '../test/pdf-translation-native-verification'
 import { verifyPdfPreservation } from '../test/pdf-translation-preservation'
 
@@ -63,7 +66,7 @@ it.skipIf(!process.env.PDF_TRANSLATION_CORPUS)(
     const registry = new ApplicationCallerLeaseRegistry()
     onTestFinished(() => registry.dispose())
     const caller = registry.acquire({ leaseId: 'real-pdf-corpus', surface: 'electron' })
-    const writer = new PdfTranslationWriter(() => resolve('resources/pdf-translation/worker.mjs'))
+    const writer = new PdfTranslationWriter()
     const reports = []
     for (const fixture of corpus) {
       const bytes = new Uint8Array(await readFile(resolve(directory, `${fixture.id}.pdf`)))

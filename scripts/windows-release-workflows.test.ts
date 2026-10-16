@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, posix } from 'node:path'
+import { dirname, join, posix } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { load } from 'js-yaml'
@@ -204,7 +204,7 @@ describe('post-merge Windows validation', () => {
   it('prepares the bundled runtime before Windows consumers and snapshot publication', () => {
     const consumers = [
       ['pr-gate.yml', 'windows_core', 'Test Windows notebook shell behavior'],
-      ['pr-gate.yml', 'windows_e2e_setup', 'Pack E2E setup'],
+      ['pr-gate.yml', 'windows_e2e', 'Run mainline journeys'],
       ['windows-e2e-regression.yml', 'windows_e2e_setup', 'Pack E2E setup'],
       ['windows-full-test.yml', 'windows_dependencies', 'Pack dependencies'],
       ['runtime-resource-soak.yml', 'runtime_resource_soak', 'Record runtime resource profile']
@@ -478,7 +478,7 @@ describe('post-merge Windows validation', () => {
       default: 'macos-x64',
       options: ['macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64', 'windows-x64', 'all']
     })
-    expect(smokeWorkflow.permissions).toEqual({ contents: 'read' })
+    expect(smokeWorkflow.permissions).toEqual({ actions: 'read', contents: 'read' })
     expect(smokeWorkflow.concurrency).toEqual({
       group:
         "package-smoke-${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform_name || 'all' }}",
@@ -501,9 +501,14 @@ describe('post-merge Windows validation', () => {
     expect(job.strategy?.matrix).toBe('${{ fromJson(needs.setup.outputs.matrix) }}')
     expect(install.run).toBe('node scripts/ci/npm-ci.mjs')
     expect(download.if).toBe('${{ !inputs.install_only }}')
+    expect(dispatch?.inputs?.artifact_run_id).toMatchObject({ type: 'string', default: '' })
+    expect(download.with).toMatchObject({
+      'run-id': '${{ inputs.artifact_run_id || github.run_id }}',
+      'github-token': '${{ github.token }}'
+    })
     expect(linux.if).toBe("${{ !inputs.install_only && matrix.platform == 'linux' }}")
-    expect(evidence.if).toBe('${{ !inputs.install_only }}')
-    expect(uploadEvidence.if).toBe('${{ !inputs.install_only }}')
+    expect(evidence.if).toBe('${{ !inputs.install_only && !inputs.artifact_run_id }}')
+    expect(uploadEvidence.if).toBe('${{ !inputs.install_only && !inputs.artifact_run_id }}')
   })
 
   it('signs stable Windows packages through the protected OIDC environment', () => {
@@ -620,9 +625,11 @@ describe('post-merge Windows validation', () => {
       inputs: { provider: { type: 'choice', default: 'signpath', options: ['signpath', 'azure'] } }
     })
     expect(workflow).toMatchObject({
-      permissions: { actions: 'read', contents: 'read', 'id-token': 'write' }
+      permissions: { actions: 'read', contents: 'read' }
     })
+    expect(workflow.permissions).not.toHaveProperty('id-token')
     expect(workflow.jobs.build).toMatchObject({
+      permissions: { actions: 'read', contents: 'read', 'id-token': 'write' },
       uses: './.github/workflows/build.yml',
       with: {
         platform_name: 'windows-x64',
@@ -644,7 +651,7 @@ describe('post-merge Windows validation', () => {
     expect(findStep(sign, 'Select unsigned NSIS installer').run).toContain('*-win-x64-setup.exe')
     expect(uploadUnsigned).toMatchObject({
       id: 'upload-unsigned-installer',
-      uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+      uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9',
       with: expect.objectContaining({ archive: false, 'if-no-files-found': 'error' })
     })
     expect(submit).toMatchObject({
@@ -808,7 +815,13 @@ describe('post-merge Windows validation', () => {
       uses: './.github/workflows/package-smoke.yml'
     })
     expect(release.jobs['notarize-mac'].needs).toEqual(['build', 'package-smoke'])
-    expect(release.jobs.publish.needs).toEqual(['build', 'package-smoke', 'notarize-mac'])
+    expect(release.jobs.publish.needs).toEqual([
+      'build',
+      'package-smoke',
+      'notarize-mac',
+      'cli-artifacts',
+      'linux-cli-packages'
+    ])
     expect(nightly.jobs.build.uses).toBe('./.github/workflows/build.yml')
     expect(nightly.jobs['package-smoke']).toMatchObject({
       needs: 'build',
@@ -839,7 +852,9 @@ describe('post-merge Windows validation', () => {
       findStep(regression.jobs.p0, 'Apply manual launch tooling').run?.trim().split('\n')
     ).toEqual([
       'cp .regression-tooling/e2e/fixtures/electron-app.ts e2e/fixtures/electron-app.ts',
-      'cp .regression-tooling/scripts/ci/run-macos-packaged-e2e.sh scripts/ci/run-macos-packaged-e2e.sh'
+      'cp .regression-tooling/scripts/ci/run-macos-packaged-e2e.sh scripts/ci/run-macos-packaged-e2e.sh',
+      'cp .regression-tooling/e2e/certification/notebook-lifecycle.spec.ts e2e/certification/notebook-lifecycle.spec.ts',
+      'cp .regression-tooling/e2e/certification/remote-pairing.spec.ts e2e/certification/remote-pairing.spec.ts'
     ])
     expect(findStep(regression.jobs.visual, 'Checkout source revision').with?.ref).toBe(
       "${{ github.event_name == 'workflow_dispatch' && github.sha || needs.source.outputs.sha }}"
@@ -916,7 +931,7 @@ describe('post-merge Windows validation', () => {
     expect(upgrade['continue-on-error']).toBeUndefined()
     expect(upgrade['timeout-minutes']).toBe(40)
     expect(findStep(upgrade, 'Setup Node')).toMatchObject({
-      uses: 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+      uses: 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1',
       with: { 'node-version': 24 }
     })
     expect(findStep(upgrade, 'Install dependencies').run).toBe(
@@ -1016,7 +1031,13 @@ if ($artifactSaveBase -eq $artifactSaveCommit) {
     ).toMatchObject({ id: 'installer', 'continue-on-error': true })
     expect(release.jobs['windows-full-test']).toBeUndefined()
     expect(release.jobs['windows-upgrade-smoke']).toBeUndefined()
-    expect(release.jobs.publish.needs).toEqual(['build', 'package-smoke', 'notarize-mac'])
+    expect(release.jobs.publish.needs).toEqual([
+      'build',
+      'package-smoke',
+      'notarize-mac',
+      'cli-artifacts',
+      'linux-cli-packages'
+    ])
     expect(
       findStep(release.jobs.publish, 'Aggregate release certification evidence').run
     ).toContain('--require-signed-windows')
@@ -1100,13 +1121,133 @@ if ($artifactSaveBase -eq $artifactSaveCommit) {
     expect(release.jobs['windows-runtime-sign']).toBeUndefined()
     expect(release.jobs['windows-runtime-cdn']).toBeUndefined()
     expect(release.jobs.build.needs).toBe('release-preflight')
-    expect(release.jobs.build.if).toBeUndefined()
+    expect(release.jobs.build.if).toBe(
+      "${{ github.event_name != 'workflow_dispatch' || !inputs.package_smoke_run_id }}"
+    )
     expect(release.jobs.build.with?.sign_windows).toBe(
       "${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}"
     )
     expect(release.jobs['notarize-mac'].if).toBe(stableTagCondition)
     expect(release.jobs['windows-upgrade-smoke']).toBeUndefined()
     expect(release.jobs.publish.if).toBe(stableTagCondition)
+  })
+
+  it
+    .skipIf(process.platform === 'win32')
+    .each([
+      { name: 'upload pin only', change: 'upload', source: false },
+      { name: 'runner with upload pin', change: 'runner', source: true },
+      { name: 'build action with upload pin', change: 'build', source: true },
+      { name: 'checkout with upload pin', change: 'checkout', source: true },
+      { name: 'upload path with upload pin', change: 'path', source: true },
+      { name: 'unpinned upload action', change: 'unpinned', source: true },
+      { name: 'catalog with upload pin', change: 'upload', source: false, catalog: true },
+      { name: 'runner with reviewed catalog', change: 'runner', source: true, catalog: true },
+      { name: 'first release', change: 'upload', source: true, firstRelease: true },
+      ...[
+        'packages/notebook-network-sandbox/vendor/windows-runtime/sources.json',
+        'packages/notebook-network-sandbox/vendor/windows-runtime/node.patch',
+        'packages/notebook-network-sandbox/vendor/windows-runtime/build.ps1',
+        'packages/notebook-network-sandbox/vendor/windows-runtime/npm/prepare.mjs',
+        'scripts/check-windows-notebook-runtime.mjs',
+        'scripts/stage-windows-notebook-components.mjs',
+        '.github/actions/windows-notebook-runtime/action.yml'
+      ].map((path) => ({ name: path, change: 'upload', source: true, path }))
+    ])('checks real release runtime diffs: $name', (scenario) => {
+    const { change, source } = scenario
+    const catalog = ('catalog' in scenario && scenario.catalog) || false
+    const firstRelease = ('firstRelease' in scenario && scenario.firstRelease) || false
+    const directory = mkdtempSync(join(tmpdir(), 'release-runtime-diff-'))
+    const workflowPath = '.github/workflows/windows-notebook-runtime.yml'
+    const original = readFileSync(workflowPath, 'utf8')
+    const env = {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'Runtime test',
+      GIT_AUTHOR_EMAIL: 'runtime-test@example.invalid',
+      GIT_COMMITTER_NAME: 'Runtime test',
+      GIT_COMMITTER_EMAIL: 'runtime-test@example.invalid'
+    }
+    const git = (...args: string[]): string => {
+      const result = spawnSync('git', ['-c', 'commit.gpgsign=false', ...args], {
+        cwd: directory,
+        encoding: 'utf8',
+        env
+      })
+      expect(result.status, result.stderr).toBe(0)
+      return result.stdout.trim()
+    }
+    const write = (path: string, contents: string): void => {
+      const target = join(directory, path)
+      mkdirSync(dirname(target), { recursive: true })
+      writeFileSync(target, contents)
+    }
+    try {
+      git('init')
+      write(workflowPath, original)
+      git('add', '.')
+      git('commit', '-m', 'baseline')
+      if (!firstRelease) git('-c', 'tag.gpgsign=false', 'tag', 'v0.0.1')
+      let updated = original.replace(
+        /actions\/upload-artifact@[0-9a-f]{40}/,
+        `actions/upload-artifact@${'a'.repeat(40)}`
+      )
+      if (change === 'runner') updated = updated.replace('windows-2022', 'windows-2025')
+      if (change === 'build')
+        updated = updated.replace(
+          'uses: ./.github/actions/windows-notebook-runtime',
+          'run: ./different-build.ps1'
+        )
+      if (change === 'checkout')
+        updated = updated.replace(
+          /actions\/checkout@[0-9a-f]{40}/,
+          `actions/checkout@${'b'.repeat(40)}`
+        )
+      if (change === 'path')
+        updated = updated.replace('windows-runtime/x64/', 'windows-runtime/other/')
+      if (change === 'unpinned')
+        updated = updated.replace(
+          /actions\/upload-artifact@[0-9a-f]{40}/,
+          'actions/upload-artifact@main'
+        )
+      write(workflowPath, updated)
+      if ('path' in scenario) write(scenario.path, 'changed runtime input\n')
+      if (catalog) write('src/main/notebook/windows-runtime-catalog.json', '{}\n')
+      git('add', '.')
+      git('commit', '-m', 'candidate')
+      const output = join(directory, 'github-output')
+      writeFileSync(output, '')
+      const step = findStep(
+        readWorkflow('release.yml').jobs['release-preflight'],
+        'Detect Windows runtime changes'
+      )
+      const result = spawnSync(
+        'bash',
+        ['--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', step.run!],
+        {
+          cwd: directory,
+          encoding: 'utf8',
+          env: {
+            ...env,
+            GITHUB_EVENT_NAME: 'push',
+            GITHUB_REF: 'refs/tags/v0.0.2',
+            GITHUB_SHA: git('rev-parse', 'HEAD'),
+            GITHUB_OUTPUT: output
+          }
+        }
+      )
+      const blocked = source && !catalog && !firstRelease
+      expect(result.status, result.stderr).toBe(blocked ? 1 : 0)
+      if (blocked) {
+        expect(result.stderr).toContain('Runtime source changed without a catalog update')
+        expect(readFileSync(output, 'utf8')).toBe('')
+      } else {
+        expect(readFileSync(output, 'utf8')).toBe(
+          `source_changed=${source}\ncatalog_changed=${catalog || firstRelease}\n`
+        )
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
   })
 
   it('locks mirror dependencies and completes local transforms before configuring credentials', () => {

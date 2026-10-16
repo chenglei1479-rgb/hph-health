@@ -1,19 +1,55 @@
-import type { ReplayRunIndex } from '../../shared/replay'
+import type { NotebookDependencyAnalyzer } from '@aipoch/notebook-analysis'
 import { randomUUID } from 'node:crypto'
 import { existsSync, realpathSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-
-import { isImportedResearchSession } from '../storage/session-package-state'
+import type { ReplayRunIndex } from '../../shared/replay'
+import { desktopFileInteraction } from '../desktop-interaction'
+import { runtimeMetadata, runtimeMetadataIfConfigured } from '../runtime-metadata'
+import { createNotebookDependencyAnalyzer } from './dependency-analysis-adapter'
+import { installEnvironmentPackages, verifyExecutable } from './environment-process'
+import { resolveNotebookMicromamba as resolveMicromamba } from './environment-resources'
 import type {
-  NotebookCell,
+  NotebookExecutionRequest,
+  NotebookExecutionResult,
+  NotebookExecutor
+} from './execution-contract'
+
+import type { RuntimeDiagnosticLogger } from '@aipoch/diagnostics/node'
+import { createLogger, errorLogFields } from '@aipoch/diagnostics/node'
+import type { InstallDeps, MicromambaRunner } from '@aipoch/environment'
+import {
+  DEFAULT_PY_ENV,
+  DEFAULT_R_ENV,
+  EnvironmentStateTracker,
+  NotebookRecoveryCoordinator,
+  NotebookRuntimeRepairPolicy,
+  envPrefix,
+  managedNotebookWorkingCache,
+  pythonBin,
+  rBin,
+  rScriptBin,
+  resolveEnvName,
+  type EnvironmentCaptureTarget
+} from '@aipoch/environment'
+import type {
+  DiscoveredInterpreter,
+  NotebookEnvironmentLock,
+  ProvisionProgress
+} from '@aipoch/environment/contracts'
+import type { NotebookSourceFileAccessContext } from '@aipoch/notebook-analysis/contracts'
+import {
+  analyzeNotebookCodeRisk,
+  analyzePowerShellCodeRisk,
+  type NotebookCodeRisk
+} from '@aipoch/notebook-code-risk'
+import type { GrantedLocalRoot } from '../../shared/local-fs'
+import type { PackageMirror } from '../../shared/mirror'
+import type {
   AbortNotebookCodeCellRequest,
   AppendNotebookCodeCellRequest,
   BeginNotebookCodeCellRequest,
   ExecuteNotebookCodeRequest,
-  NotebookBackgroundRunLookupRequest,
-  NotebookBackgroundRunReceipt,
-  NotebookBackgroundRunResult,
   ExecuteNotebookControlRequest,
   ExecuteShellRequest,
   ExportNotebookAllRequest,
@@ -21,22 +57,24 @@ import type {
   ExportNotebookKernelRequest,
   ExportNotebookResult,
   FinishNotebookCodeCellRequest,
-  NotebookEnvironmentLock,
-  NotebookLanguage,
+  NotebookBackgroundRunLookupRequest,
+  NotebookBackgroundRunReceipt,
+  NotebookBackgroundRunResult,
+  NotebookCell,
   NotebookNamespaceRequest,
   NotebookNamespaceSnapshot,
   NotebookProjectActivity,
-  NotebookProjectBackgroundRunActivity,
   NotebookProjectActivityRequest,
+  NotebookProjectBackgroundRunActivity,
   NotebookRestartRequest,
   NotebookRunRecord,
   NotebookRunSummary,
+  NotebookSessionReference,
+  NotebookSessionRequest,
+  NotebookSessionState,
+  NotebookSessionStateRequest,
   RequestNotebookNetworkAccessRequest,
   RequestNotebookNetworkAccessResult,
-  NotebookSessionRequest,
-  NotebookSessionStateRequest,
-  NotebookSessionReference,
-  NotebookSessionState,
   RunNotebookCellRequest,
   ShellRuntimeBinding
 } from '../../shared/notebook'
@@ -45,116 +83,95 @@ import { publishUserFile } from '../user-file-publisher'
 import { confirmDeidentifiedExports } from '../writing-safeguards/export-confirm'
 import { NotebookBackgroundRunError } from '../../shared/notebook'
 import {
-  isNotebookRunCursor,
   NOTEBOOK_STATE_HISTORY_FRAME_ID_LIMIT_BYTES,
   NOTEBOOK_STATE_HISTORY_PAGE_LIMIT,
   NOTEBOOK_STATE_TARGET_RUN_LIMIT,
+  NotebookBackgroundRunError,
+  isNotebookRunCursor,
   parseNotebookLanguage
 } from '../../shared/notebook'
 import type {
+  InstallRequest,
   ManageEnvironmentsRequest,
-  ManageEnvironmentsResult,
-  ProvisionProgress
+  ManageEnvironmentsResult
 } from '../../shared/notebook-env'
-import type { PackageMirror } from '../../shared/mirror'
-import { NotebookDataExecutionAdmissionOwner } from './data-execution-admission'
-import {
-  analyzeNotebookCodeRisk,
-  analyzePowerShellCodeRisk,
-  type NotebookCodeRisk
-} from './code-risk-analysis'
-import type { NotebookSourceFileAccessContext } from './dependency-analysis-types'
-import {
-  NotebookEnvironmentManagementOwner,
-  type NotebookEnvironmentManager
-} from './environment-management'
-import { NotebookExportReader } from './export-reader'
-import type { NotebookKernelExecutorOptions } from './kernel-executor'
-import { saveIpynbAll } from './save-ipynb-all'
-import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
-import type { ProbeDeps } from './mirror-probe'
-import { defaultShellRuntimeBinding, shellRuntimePlatform } from './shell-runtime'
-import { detachedShellMechanism } from './shell-detachment-policy.windows-posix'
-import {
-  installPackages as installPackagesDefault,
-  type InstallDeps,
-  type InstallRequest,
-  type InstallResult
-} from './package-manager'
-import {
-  NotebookPackageOperations,
-  type InspectPackagesRequest,
-  type InspectPackagesResult
-} from './package-operations'
-import {
-  NotebookRunRepository,
-  getNotebookFileEvidenceLocation,
-  getRuntimeRoot
-} from './repository'
-import {
-  DEFAULT_PY_ENV,
-  DEFAULT_R_ENV,
-  envPrefix,
-  pythonBin,
-  rBin,
-  rScriptBin,
-  resolveEnvName
-} from './runtime-paths'
+import { type InstallResult } from '../../shared/notebook-env'
+import type { NotebookLanguage } from '../../shared/notebook-language-contract'
 import type {
-  DiscoveredInterpreter,
   NotebookRuntimeBindings,
   NotebookRuntimeListing,
   RuntimeBindingOperationResult,
   RuntimeEnablement,
   RuntimeUsage
 } from '../../shared/notebook-runtime'
-import type { NotebookRuntimeSettings } from '../settings/capabilities'
-import { NotebookRecoveryCoordinator } from './recovery-coordinator'
-import { KernelProcessLifecycleOwner } from './kernel-process-lifecycle.windows-posix'
-import { managedNotebookWorkingCache } from './windows-micromamba-working-cache'
-import { NotebookRuntimeRepairOwner, type ExplicitRuntimeRepairTarget } from './runtime-repair'
-import { NotebookRuntimeRepairPolicy } from './runtime-repair-policy'
-import { NotebookEnvironmentOperations, type DefaultEnvProvisioner } from './environment-operations'
-import type { MicromambaRunner } from './windows-micromamba-runner'
-import {
-  type NotebookSessionAggregate,
-  type NotebookSessionExecutionRequest,
-  type NotebookSessionExecutionResult,
-  type NotebookSessionExecutor,
-  type NotebookSessionMcpRpcConnection,
-  type NotebookSessionResolvedInterpreter,
-  type NotebookSessionRuntimeBinding
-} from './session-aggregate'
-import { NotebookSessionRegistry } from './session-registry'
-import { createLogger, errorLogFields } from '../logger'
-import { EnvironmentStateTracker, type EnvironmentCaptureTarget } from './environment-state-tracker'
-import { resolveMicromamba } from './micromamba'
-import { NotebookRuntimeBindingOwner } from './runtime-binding'
-import type { RuntimeDiagnosticLogger } from './runtime-diagnostics'
 import { resolveProjectId, type ProjectIdScope } from '../../shared/project-scope'
-import { NotebookRunTerminalizationOwner } from './run-terminalization'
-import type { NotebookShellProcess, NotebookShellResult } from './shell-process'
-import { NotebookShellProcessAdapter } from './shell-process'
-import { ShellProcessOwnershipRegistry } from './shell-process-ownership.windows-posix'
-import type { NotebookProcessSandbox } from './process-sandbox'
-import { sandboxedPackageSpawn } from './package-process-sandbox'
+import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
+import type { NotebookRuntimeSettings } from '../settings/capabilities'
+import { isImportedResearchSession } from '../storage/session-package-state'
+import { publishUserFile } from '../user-file-publisher'
+import { NotebookDataExecutionAdmissionOwner } from './data-execution-admission'
+import {
+  NotebookEnvironmentManagementOwner,
+  type NotebookEnvironmentManager
+} from './environment-management'
+import { NotebookEnvironmentOperations, type DefaultEnvProvisioner } from './environment-operations'
 import {
   NotebookExecutionOwner,
   type NotebookControlCompletionInterceptor,
   type NotebookControlResult
 } from './execution-owner'
-import { NotebookSessionReadModel, type NotebookHandoffContext } from './session-read-model'
-import { notebookLaneKey } from './lane-identity'
+import { NotebookExportReader } from './export-reader'
+import type { NotebookKernelExecutorOptions } from './kernel-executor'
+import { KernelProcessLifecycleOwner } from './kernel-process-lifecycle.windows-posix'
+import { notebookLaneKey, notebookLaneScope } from './lane-identity'
+import type { ProbeDeps } from './mirror-probe'
 import {
-  completeWorkingFileEvidence,
-  deleteWorkingFileEvidenceProject
-} from './working-file-observer'
+  NotebookPackageOperations,
+  type InspectPackagesRequest,
+  type InspectPackagesResult
+} from './package-operations'
+import { sandboxedPackageSpawn } from './package-process-sandbox'
+import { parsePowerShellSearchCommands } from './powershell-search-parser'
+import type { NotebookProcessSandbox } from './process-sandbox'
+import {
+  NotebookRunRepository,
+  getNotebookFileEvidenceLocation,
+  getRuntimeRoot
+} from './repository'
+import { NotebookRunTerminalizationOwner } from './run-terminalization'
+import { NotebookRuntimeBindingOwner } from './runtime-binding'
+import { readTrustedNotebookBindingPermissionPrompts } from './runtime-binding-admission'
+import { NotebookRuntimeRepairOwner, type ExplicitRuntimeRepairTarget } from './runtime-repair'
+import { saveIpynbAll } from './save-ipynb-all'
+import {
+  type NotebookSessionAggregate,
+  type NotebookSessionMcpRpcConnection,
+  type NotebookSessionResolvedInterpreter,
+  type NotebookSessionRuntimeBinding
+} from './session-aggregate'
 import {
   NotebookSessionLifecycleOwner,
   type NotebookExecutorLifecycleCallbacks,
   type NotebookSessionLifecycleCallbacks
 } from './session-lifecycle'
-import { NotebookDependencyAnalyzer } from './dependency-analysis'
+import { NotebookSessionReadModel, type NotebookHandoffContext } from './session-read-model'
+import { NotebookSessionRegistry } from './session-registry'
+import { detachedShellMechanism } from './shell-detachment-policy.windows-posix'
+import type { NotebookShellProcess } from './shell-process'
+import { NotebookShellProcessAdapter } from './shell-process'
+import type { NotebookShellResult } from './shell-process-contract'
+import { ShellProcessOwnershipRegistry } from './shell-process-ownership.windows-posix'
+import { defaultShellRuntimeBinding, shellRuntimePlatform } from './shell-runtime'
+import {
+  completeWorkingFileEvidence,
+  deleteWorkingFileEvidenceProject
+} from './working-file-observer'
+
+import type {
+  AgentResultFollowUpDelivery,
+  BackgroundResultSourceRef
+} from '../../shared/background-result-delivery'
+import { notebookRunSourceRef } from '../background-result-delivery/notebook-adapter'
 import {
   assertNotebookCodeAppendWithinLimit,
   assertNotebookCodeWithinLimit
@@ -165,11 +182,6 @@ import {
   deleteNotebookProjectPromptInputs,
   deleteNotebookSessionPromptInputs
 } from './prompt-input-materialization'
-import type {
-  AgentResultFollowUpDelivery,
-  BackgroundResultSourceRef
-} from '../../shared/background-result-delivery'
-import { notebookRunSourceRef } from '../background-result-delivery/notebook-adapter'
 
 // The default stays outside CN mirror routing when no explicit locale is injected.
 const DEFAULT_LOCALE = 'en-US'
@@ -191,10 +203,7 @@ const dataProcessKey = (language: NotebookLanguage, environment?: string): strin
   `${language === 'r' ? 'r' : 'python'}:${resolveEnvName(language, environment)}`
 
 type ResolvedInterpreter = NotebookSessionResolvedInterpreter
-type NotebookExecutionRequest = NotebookSessionExecutionRequest
-type NotebookExecutionResult = NotebookSessionExecutionResult
 
-type NotebookExecutor = NotebookSessionExecutor
 type NotebookDependencyAnalyzerPort = Pick<NotebookDependencyAnalyzer, 'project'> &
   Partial<Pick<NotebookDependencyAnalyzer, 'sourceFileAccessContext' | 'finalizeEpochs'>>
 
@@ -320,6 +329,16 @@ export type NotebookExecutionApproval = (request: {
   title: string
   rawInput: unknown
   signal?: AbortSignal
+  permissionPrompts?: 'none'
+}) => Promise<boolean>
+
+export type NotebookRuntimeBindingApproval = (request: {
+  sessionId: string
+  title: string
+  rawInput: unknown
+  signal?: AbortSignal
+  defaultManagedFirstBinding: boolean
+  permissionPrompts?: 'none'
 }) => Promise<boolean>
 
 // The wire binding plus the interpreter override the executor needs. `resolvedInterpreter` is set only
@@ -333,9 +352,9 @@ const saveIpynbWithDialog = async (
   data: string,
   translate: NativeTranslator = englishNativeTranslator
 ): Promise<ExportNotebookResult> => {
-  const { app, dialog } = await import('electron')
-  const { canceled, filePath } = await dialog.showSaveDialog({
-    defaultPath: join(app.getPath('downloads'), suggestedName),
+  const dialog = desktopFileInteraction()
+  const { canceled, filePath } = await dialog.chooseSavePath({
+    defaultPath: join(runtimeMetadata().downloadsPath, suggestedName),
     title: translate('Export notebook'),
     filters: [{ name: translate('Jupyter Notebook'), extensions: ['ipynb'] }]
   })
@@ -370,17 +389,19 @@ const saveIpynbWithDialog = async (
 // Resolves the on-disk locations of executable Notebook resources without depending on Electron
 // (mirrors micromamba.ts's electron-free resolution). resources/** ships via electron-builder's
 // asarUnpack, so a packaged build's scripts land beside app.asar under app.asar.unpacked rather
-// than directly under process.resourcesPath. Existence-checked so a resolution mistake fails fast at
+// than directly under the resources path. Existence-checked so a resolution mistake fails fast at
 // startup instead of surfacing as an opaque spawn ENOENT.
 const resolveNotebookResource = (envOverride: string | undefined, fileName: string): string => {
   if (envOverride) return envOverride
 
+  // Plain-Node hosts (runtime certification, SDK consumers) configure no host entry; the
+  // __dirname candidates below resolve the scripts directly instead of throwing.
+  const resourcesPath = runtimeMetadataIfConfigured()?.resourcesPath
   const candidates = [
-    // Packaged (asar): resources/** is unpacked next to app.asar under process.resourcesPath.
-    process.resourcesPath &&
-      join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'notebook', fileName),
+    // Packaged (asar): resources/** is unpacked next to app.asar under the resources path.
+    resourcesPath && join(resourcesPath, 'app.asar.unpacked', 'resources', 'notebook', fileName),
     // Packaged without an asar (e.g. an unpacked --dir build).
-    process.resourcesPath && join(process.resourcesPath, 'resources', 'notebook', fileName),
+    resourcesPath && join(resourcesPath, 'resources', 'notebook', fileName),
     // Dev: electron-vite bundles main into out/main, two levels below the repo root.
     join(__dirname, `../../resources/notebook/${fileName}`),
     // Dev/test: unbundled ts source keeps this file at src/main/notebook, three levels below root.
@@ -434,9 +455,185 @@ const resolveDefaultExecutorOptions = (): NotebookKernelExecutorOptions => {
 // Coordinates notebook cells, shared interpreters, persisted run history, and UI notifications.
 class NotebookRuntimeService {
   private executionApproval: NotebookExecutionApproval | undefined
+  private runtimeBindingApproval: NotebookRuntimeBindingApproval | undefined
+  private readonly runtimeBindingPermissionPolicies = new WeakMap<AbortSignal, 'none'>()
 
   setExecutionApproval(approve: NotebookExecutionApproval): void {
     this.executionApproval = approve
+  }
+
+  setRuntimeBindingApproval(approve: NotebookRuntimeBindingApproval): void {
+    this.runtimeBindingApproval = approve
+  }
+
+  // Read-only classification for authenticated outer-tool admission. The binding boundary repeats
+  // this decision; a correlated handoff requires it still to be valid when the actual call arrives.
+  async canOwnRuntimeBindingDecision(
+    request: NotebookSessionRequest & { language: NotebookLanguage; runtimeId: string }
+  ): Promise<boolean> {
+    if (!this.runtimeBindingApproval) return false
+    try {
+      return await this.sessionLifecycle.runProjectOperation(request, async () => {
+        const lane = this.sessionLifecycle.laneForRequest(request)
+        const target = await this.runtimeBindingOwner.resolveBindingTarget(
+          request.language,
+          request.runtimeId
+        )
+        if (!target.runnable || target.binding.status !== 'active') return false
+        const session = this.sessions.get(lane)
+        const existing = session?.runtimeBinding(request.language)
+        if (existing) return this.runtimeBindingOwner.sameTarget(existing, target.binding)
+        if (session) return target.readyDefault
+        const document = await this.repository.findExisting(
+          notebookLaneScope(lane).projectId,
+          request.sessionId,
+          lane
+        )
+        const persisted = document?.runtimeBindings?.[request.language]
+        if (persisted) {
+          // The resolver reconstructs envName and interpreter arguments from trusted discovery.
+          return (
+            (persisted.status ?? 'active') === 'active' &&
+            persisted.runtimeId === target.binding.runtimeId &&
+            persisted.language === target.binding.language &&
+            persisted.source === target.binding.source &&
+            persisted.provenance === target.binding.provenance &&
+            persisted.interpreterPath === target.binding.interpreterPath
+          )
+        }
+        return target.readyDefault
+      })
+    } catch {
+      return false
+    }
+  }
+
+  private async reviewRuntimeBinding(
+    session: RuntimeSession,
+    language: NotebookLanguage,
+    binding: NotebookSessionRuntimeBinding,
+    operation: 'bind' | 'switch',
+    signal?: AbortSignal,
+    requireHostDecision = false,
+    permissionPrompts?: 'none'
+  ): Promise<void> {
+    signal?.throwIfAborted()
+    const target = await this.runtimeBindingOwner.resolveBindingTarget(language, binding.runtimeId)
+    signal?.throwIfAborted()
+    if (!this.runtimeBindingOwner.sameTarget(binding, target.binding)) {
+      throw new Error(
+        'The selected Notebook runtime changed before approval. Select an enabled runtime again.'
+      )
+    }
+    const current = session.runtimeBinding(language)
+    const defaultManagedFirstBinding = operation === 'bind' && !current && target.readyDefault
+    const validReuse =
+      operation === 'bind' &&
+      current &&
+      target.runnable &&
+      this.runtimeBindingOwner.sameTarget(current, target.binding)
+    if (
+      requireHostDecision &&
+      (!this.runtimeBindingApproval || (!defaultManagedFirstBinding && !validReuse))
+    ) {
+      throw new Error(
+        'The selected Notebook runtime is no longer eligible for host binding admission. Select an enabled runtime again.'
+      )
+    }
+    if (
+      this.runtimeBindingApproval &&
+      operation === 'bind' &&
+      !current &&
+      binding.provenance === 'app-managed' &&
+      binding.envName === this.defaultEnvNameFor(language) &&
+      !target.readyDefault
+    ) {
+      throw new Error(
+        'The app-managed default Notebook runtime is not ready. Recheck runtimes before binding it.'
+      )
+    }
+    let approval: NotebookExecutionApproval | NotebookRuntimeBindingApproval | undefined
+    if (defaultManagedFirstBinding && this.runtimeBindingApproval) {
+      approval = this.runtimeBindingApproval
+    } else if (this.executionApproval) {
+      const { runtimes } = await this.runtimeBindingOwner.list(session, language)
+      const multiple =
+        runtimes.filter((runtime) => runtime.language === language && runtime.runnable).length > 1
+      if ((current && current.runtimeId !== binding.runtimeId) || (!current && multiple)) {
+        approval = this.executionApproval
+      }
+    }
+    signal?.throwIfAborted()
+    if (!approval) return
+    if (!this.runtimeBindingApproval && permissionPrompts === 'none') {
+      throw new Error(
+        'Notebook runtime selection declined: this operation requires an interactive decision.'
+      )
+    }
+    const pending = approval({
+      sessionId: session.sessionId,
+      title: (this.options.translate ?? englishNativeTranslator)(
+        'Confirm Notebook kernel and environment'
+      ),
+      rawInput: {
+        notebookRuntimeSelection: {
+          language,
+          runtimeId: binding.runtimeId,
+          label: binding.label,
+          interpreterPath: binding.interpreterPath,
+          previousRuntimeId: current?.runtimeId,
+          previousLabel: current?.label
+        }
+      },
+      signal,
+      defaultManagedFirstBinding,
+      permissionPrompts
+    })
+    const approved = await this.awaitRuntimeBindingApproval(pending, signal)
+    signal?.throwIfAborted()
+    if (!approved) throw new Error('Notebook runtime selection declined.')
+    const refreshed = await this.runtimeBindingOwner.resolveBindingTarget(
+      language,
+      binding.runtimeId
+    )
+    signal?.throwIfAborted()
+    if (
+      !refreshed.runnable ||
+      !this.runtimeBindingOwner.sameTarget(binding, refreshed.binding) ||
+      (defaultManagedFirstBinding && !refreshed.readyDefault)
+    ) {
+      throw new Error(
+        'The selected Notebook runtime changed while approval was pending. Select an enabled runtime again.'
+      )
+    }
+  }
+
+  private async awaitRuntimeBindingApproval(
+    pending: Promise<boolean>,
+    signal?: AbortSignal
+  ): Promise<boolean> {
+    if (!signal) return pending
+    let abort!: () => void
+    try {
+      return await new Promise<boolean>((resolve, reject) => {
+        abort = () => reject(signal.reason)
+        signal.addEventListener('abort', abort, { once: true })
+        pending.then(resolve, reject)
+        if (signal.aborted) abort()
+      })
+    } finally {
+      signal.removeEventListener('abort', abort)
+    }
+  }
+
+  private runtimeSelectionExecutionSignal(
+    request: NotebookSessionRequest,
+    signals: AbortSignal[]
+  ): AbortSignal {
+    const signal = AbortSignal.any(signals)
+    const policy = readTrustedNotebookBindingPermissionPrompts(request)
+    if (policy) this.runtimeBindingPermissionPolicies.set(signal, policy)
+    return signal
   }
 
   private async prepareRuntimeSelection(
@@ -444,10 +641,14 @@ class NotebookRuntimeService {
     language: NotebookLanguage,
     signal?: AbortSignal
   ): Promise<void> {
-    if (!this.executionApproval || session.runtimeBinding(language)) return
+    if (
+      (!this.executionApproval && !this.runtimeBindingApproval) ||
+      session.runtimeBinding(language)
+    )
+      return
     await this.runtimeBindingOwner.runWrite(notebookLaneKey(session.lane), async () => {
       if (session.runtimeBinding(language)) return
-      const { runtimes } = await this.runtimeBindingOwner.list(session)
+      const { runtimes } = await this.runtimeBindingOwner.list(session, language)
       const candidates = runtimes.filter(
         (runtime) => runtime.language === language && runtime.runnable
       )
@@ -457,13 +658,24 @@ class NotebookRuntimeService {
           `Several ${language} environments are enabled. Choose the kernel/environment with list_notebook_runtimes and notebook_bind_runtime before executing code.`
         )
       }
-      // No installed default yet: retain the existing provisioning policy. A sole enabled runtime
-      // is already the user's Settings choice and does not require a per-Session execution grant.
+      // No installed default yet: retain the existing provisioning policy. The sole ready default
+      // uses the same host-owned decision as explicit binding, including Ask's one-shot prompt.
       if (candidates.length === 1) {
         const result = await this.runtimeBindingOwner.bind(
           session,
           language,
-          candidates[0].runtimeId
+          candidates[0].runtimeId,
+          (binding) =>
+            this.reviewRuntimeBinding(
+              session,
+              language,
+              binding,
+              'bind',
+              signal,
+              false,
+              signal ? this.runtimeBindingPermissionPolicies.get(signal) : undefined
+            ),
+          () => signal?.throwIfAborted()
         )
         if ('error' in result) throw new Error(result.error)
         this.sessionLifecycle.notifyChanged(session)
@@ -487,6 +699,7 @@ class NotebookRuntimeService {
         (previous) =>
           previous.runId !== run.runId &&
           previous.kernelEpochId === run.kernelEpochId &&
+          previous.executionStarted !== false &&
           (previous.kernelDispatched === true || previous.status === 'completed') &&
           // A soft cancellation can preserve assignments in the live kernel, like a timeout.
           ['completed', 'failed', 'timeout', 'cancelled'].includes(previous.status)
@@ -495,12 +708,14 @@ class NotebookRuntimeService {
         script: previous.script,
         incomplete: previous.status !== 'completed'
       }))
+    const shellRuntime = run.shellRuntime
     const risks: NotebookCodeRisk[] =
-      run.shellRuntime?.kind === 'powershell'
+      shellRuntime?.kind === 'powershell'
         ? await analyzePowerShellCodeRisk(
             run.script,
+            (source, signal) =>
+              parsePowerShellSearchCommands(source, signal, shellRuntime.version, true),
             signal,
-            run.shellRuntime.version,
             run.cwdBefore
           )
         : await analyzeNotebookCodeRisk(
@@ -628,11 +843,10 @@ class NotebookRuntimeService {
     })
     const workingCache = managedNotebookWorkingCache(options.platform, !options.installPackagesImpl)
     this.repairPolicy = new NotebookRuntimeRepairPolicy(runtimeRoot)
-    this.recoveryCoordinator = new NotebookRecoveryCoordinator(
-      runtimeRoot,
-      this.repairPolicy,
-      workingCache
-    )
+    this.recoveryCoordinator = new NotebookRecoveryCoordinator(runtimeRoot, this.repairPolicy, {
+      ...workingCache,
+      verifyExecutable
+    })
     this.mcpRpcConnectionResolver = options.getMcpRpcConnection
     const runtimeSettings = options.notebookRuntimeSettings ?? EMPTY_NOTEBOOK_RUNTIME_SETTINGS
     this.runtimeEnablementResolver = async (language) =>
@@ -652,7 +866,7 @@ class NotebookRuntimeService {
     })
     this.dependencyAnalyzer =
       options.dependencyAnalyzer ??
-      new NotebookDependencyAnalyzer({
+      createNotebookDependencyAnalyzer({
         storageRoot: options.dataRoot,
         repository: this.repository,
         resolveInterpreter: (run) =>
@@ -759,7 +973,7 @@ class NotebookRuntimeService {
         resolveMicromamba: async () =>
           options.micromambaRunner
             ? options.micromambaRunner.resolve()
-            : resolveMicromamba({ platform: options.platform }),
+            : resolveMicromamba({ platform: options.platform, runtimeRoot }),
         logger: this.runtimeLogger
       })
     this.packageOperations = new NotebookPackageOperations({
@@ -782,7 +996,7 @@ class NotebookRuntimeService {
       environmentOperations: this.environmentOperations,
       recovery: this.recoveryCoordinator,
       environmentStateTracker: this.environmentStateTracker,
-      installPackages: options.installPackagesImpl ?? installPackagesDefault,
+      installPackages: options.installPackagesImpl ?? installEnvironmentPackages,
       ...(options.processSandbox
         ? {
             packageSpawn: (target, mirror) =>
@@ -1031,9 +1245,10 @@ class NotebookRuntimeService {
   // runtime; refuses re-binding a different runtime (use notebook_switch_runtime to change).
   async bindRuntime(
     request: NotebookSessionRequest & { language: NotebookLanguage; runtimeId: string },
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    admission?: Readonly<{ requireHostDecision: true }>
   ): Promise<RuntimeBindingOperationResult> {
-    return this.changeRuntimeBinding(request, 'bind', signal)
+    return this.changeRuntimeBinding(request, 'bind', signal, admission?.requireHostDecision)
   }
 
   // An explicit switch stops the previous kernel before committing the new runtime selection.
@@ -1047,7 +1262,8 @@ class NotebookRuntimeService {
   private async changeRuntimeBinding(
     request: NotebookSessionRequest & { language: NotebookLanguage; runtimeId: string },
     operation: 'bind' | 'switch',
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    requireHostDecision = false
   ): Promise<RuntimeBindingOperationResult> {
     return this.sessionLifecycle.runProjectOperation(request, (deletionSignal) =>
       this.runtimeBindingOwner.runWrite(
@@ -1074,59 +1290,29 @@ class NotebookRuntimeService {
               async (binding?: NotebookSessionRuntimeBinding) => {
                 signal?.throwIfAborted()
                 deletionSignal.throwIfAborted()
-                if (binding && this.executionApproval) {
-                  const current = session.runtimeBinding(request.language)
-                  const { runtimes } = await this.runtimeBindingOwner.list(session)
-                  const multiple =
-                    runtimes.filter(
-                      (runtime) => runtime.language === request.language && runtime.runnable
-                    ).length > 1
-                  if (
-                    (current && current.runtimeId !== binding.runtimeId) ||
-                    (!current && multiple)
-                  ) {
-                    const approved = await this.executionApproval({
-                      sessionId: request.sessionId,
-                      title: (this.options.translate ?? englishNativeTranslator)(
-                        'Confirm Notebook kernel and environment'
-                      ),
-                      rawInput: {
-                        notebookRuntimeSelection: {
-                          language: request.language,
-                          runtimeId: binding.runtimeId,
-                          label: binding.label,
-                          interpreterPath: binding.interpreterPath,
-                          previousRuntimeId: current?.runtimeId,
-                          previousLabel: current?.label
-                        }
-                      },
-                      signal: signal ? AbortSignal.any([signal, deletionSignal]) : deletionSignal
-                    })
-                    signal?.throwIfAborted()
-                    deletionSignal.throwIfAborted()
-                    if (!approved) throw new Error('Notebook runtime selection declined.')
-                    const refreshed = await this.runtimeBindingOwner.list(session)
-                    if (
-                      !refreshed.runtimes.some(
-                        (candidate) =>
-                          candidate.runtimeId === binding.runtimeId &&
-                          candidate.interpreterPath === binding.interpreterPath &&
-                          candidate.runnable
-                      )
-                    ) {
-                      throw new Error(
-                        'The selected Notebook runtime changed while approval was pending. Select an enabled runtime again.'
-                      )
-                    }
-                  }
+                if (binding) {
+                  await this.reviewRuntimeBinding(
+                    session,
+                    request.language,
+                    binding,
+                    operation,
+                    signal ? AbortSignal.any([signal, deletionSignal]) : deletionSignal,
+                    requireHostDecision,
+                    readTrustedNotebookBindingPermissionPrompts(request)
+                  )
                 }
                 if (operation === 'bind') {
+                  if (session.runtimeBinding(request.language)) return
                   if (binding?.source !== 'external') return
                   const env = this.resolveRunEnv(session, request.language)
                   if (session.kernelStatus(dataProcessKey(request.language, env)) === undefined)
                     return
                 }
                 await stopKernel()
+              },
+              () => {
+                signal?.throwIfAborted()
+                deletionSignal.throwIfAborted()
               }
             )
             bindingChanged = 'bound' in result || result.bindingChanged
@@ -1317,7 +1503,10 @@ class NotebookRuntimeService {
       const { run, dependencyProjection } = await this.executionOwner.executeDataCell(
         session,
         request,
-        signal ? AbortSignal.any([signal, deletionSignal]) : deletionSignal,
+        this.runtimeSelectionExecutionSignal(
+          request,
+          signal ? [signal, deletionSignal] : [deletionSignal]
+        ),
         helperModules
       )
       return this.sessionReadModel.toRunSummary(session, run, dependencyProjection)
@@ -1453,7 +1642,10 @@ class NotebookRuntimeService {
     const completion = this.sessionLifecycle
       .runProjectOperation(request, async (deletionSignal) => {
         const session = await this.sessionLifecycle.ensure(request)
-        const executionSignal = AbortSignal.any([controller.signal, deletionSignal])
+        const executionSignal = this.runtimeSelectionExecutionSignal(request, [
+          controller.signal,
+          deletionSignal
+        ])
         const { run, dependencyProjection } = await this.executionOwner.executeDataCell(
           session,
           request,
@@ -2449,7 +2641,7 @@ class NotebookRuntimeService {
   // once recovery has settled, and when recovery was never kicked off (e.g. tests). Public so the
   // startup env gate and UI provision/repair handlers can share the SAME barrier (they touch prefixes
   // too, not just materialize/install).
-  recoveryStatus(): import('../../shared/notebook-env').NotebookRecoveryStatus {
+  recoveryStatus(): import('@aipoch/environment/contracts').NotebookRecoveryStatus {
     return this.recoveryCoordinator.status()
   }
 
@@ -2743,19 +2935,19 @@ class NotebookRuntimeService {
   }
 }
 
-export { NotebookRuntimeService, resolveDefaultExecutorOptions, resolveLoopScriptPaths }
 export { NotebookControlCompletionCapturedError } from './execution-owner'
+export { NotebookRuntimeService, resolveDefaultExecutorOptions, resolveLoopScriptPaths }
 export type {
-  NotebookExecutionRequest,
-  NotebookExecutionResult,
-  NotebookControlResult,
-  NotebookShellResult,
   InspectPackagesRequest,
   InspectPackagesResult,
+  NotebookControlResult,
+  NotebookEnvironmentManager,
+  NotebookExecutionRequest,
+  NotebookExecutionResult,
   NotebookExecutor,
   NotebookExecutorLifecycleCallbacks,
-  NotebookEnvironmentManager,
   NotebookHandoffContext,
   NotebookRuntimeServiceCallbacks,
-  NotebookRuntimeServiceOptions
+  NotebookRuntimeServiceOptions,
+  NotebookShellResult
 }

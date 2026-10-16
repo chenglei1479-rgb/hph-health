@@ -3,6 +3,8 @@ import { expect, type Page } from '@playwright/test'
 import type { PersistedChatSession } from '../src/shared/session-persistence'
 import type { ReviewWithChecks } from '../src/shared/reviewer'
 import { test } from './fixtures/electron-app'
+import { createProjectViaUi } from './fixtures/project'
+import { submitPromptViaUi } from './fixtures/conversation'
 
 async function snapshot(
   page: Page
@@ -32,10 +34,7 @@ for (const scenario of [
     test.setTimeout(180_000)
     await app.completeOnboarding()
     let page = await app.configureFakeAgent()
-    await page.getByRole('button', { name: 'New project' }).click()
-    const dialog = page.getByRole('dialog', { name: 'New project' })
-    await dialog.getByLabel('Name').fill(`Review diagnostic ${scenario}`)
-    await dialog.getByRole('button', { name: 'Create project' }).click()
+    await createProjectViaUi(page, `Review diagnostic ${scenario}`)
     await page.getByTestId('composer-controls-trigger').click()
     await page.getByRole('menuitem', { name: 'Auto-review', exact: true }).click()
     await page.keyboard.press('Escape')
@@ -43,12 +42,10 @@ for (const scenario of [
       'aria-label',
       /auto-review On/
     )
-    await page
-      .getByRole('textbox', { name: 'Ask anything' })
-      .fill(
-        `Run auto review ${scenario === 'correction restart stop' ? 'correction stop' : scenario} scenario.`
-      )
-    await page.getByRole('button', { name: 'Send message' }).click()
+    await submitPromptViaUi(
+      page,
+      `Run auto review ${scenario === 'correction restart stop' ? 'correction stop' : scenario} scenario.`
+    )
 
     if (scenario.endsWith('stop')) {
       await expect(
@@ -87,8 +84,14 @@ for (const scenario of [
       }
       if (scenario === 'correction disabled stop') {
         await page.getByTestId('composer-controls-trigger').click()
-        await page.getByRole('menuitem', { name: 'Auto-review', exact: true }).click()
+        const toggle = page.getByRole('menuitem', { name: 'Auto-review', exact: true })
+        await expect(toggle).toHaveAttribute('aria-disabled', 'false')
+        await toggle.click()
         await page.keyboard.press('Escape')
+        await expect(page.getByTestId('composer-controls-trigger')).toHaveAttribute(
+          'aria-label',
+          /auto-review Off/
+        )
       }
       await page.getByRole('button', { name: 'Resume session', exact: true }).click()
       if (scenario === 'correction repeat stop') {

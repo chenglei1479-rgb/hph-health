@@ -33,6 +33,7 @@ export type LegacyShellRecovery = { token: string; count: number }
 export type UpdateApplyOptions = {
   relaunch?: boolean
   force?: boolean
+  cliConsentToken?: string
   legacyShellRecoveryToken?: string
 }
 
@@ -49,13 +50,21 @@ export type UpdateStatus = {
   totalBytes?: number // total installer size in bytes
   // Full progress detail (speed/ETA/reconnect) mirrored from the last update:progress broadcast so
   // the dialog can render the shared DownloadProgressLine.
-  downloadProgress?: import('./download-progress').DownloadProgress
+  downloadProgress?: import('@aipoch/resilient-download').DownloadProgress
+  artifactSha512?: string // provider checksum of the downloaded installer; rechecked before extraction
   localPath?: string // set when state === 'ready'
   // Terminal lifecycle failure, or retryable action feedback while a ready installer remains usable.
   error?: string
+  canForce?: boolean
+  diagnostics?: string
+  outcome?: 'cancelled' | 'recovered' | 'installed'
+  reason?: UpdateFailureReason
+  recovery?: UpdateRecoveryStatus
+  cliConfirmation?: UpdateCliConfirmation
   // Active research that prevented an in-place install. This is deliberately not a new UpdateState:
   // the operation still failed, while callers that need automation can distinguish a safe block.
   blockedBy?: UpdateBlocker[]
+  blockedTasks?: { sessionId: string; projectId: string; title: string; kind: UpdateBlocker }[]
   // Transient, exact-snapshot consent for backing up unidentifiable historical Shell launch records.
   legacyShellRecovery?: LegacyShellRecovery
   // How the renderer applies a ready update: open the downloaded installer (mac manual reinstall) or
@@ -63,9 +72,59 @@ export type UpdateStatus = {
   applyKind?: 'installer' | 'restart'
 }
 
-// DownloadProgress now lives in download-progress.ts as a superset (adds phase/bytesPerSecond/
-// etaSeconds/attempt). Re-exported here so existing importers of this module keep working.
-export type { DownloadProgress } from './download-progress'
+export type UpdateFailureReason =
+  | 'active-work'
+  | 'runtime-not-controlled'
+  | 'runtime-stop-timeout'
+  | 'runtime-stop-unclean'
+  | 'runtime-configuration-unsupported'
+  | 'installation-busy'
+  | 'install-failed'
+  | 'user-cancelled'
+
+export type UpdatePhase =
+  | 'preparing'
+  | 'stopping'
+  | 'stopped'
+  | 'handoff'
+  | 'recovering'
+  | 'cancelling'
+  | 'checking'
+  | 'install-check'
+export type UpdateRecoveryStatus = {
+  operationId?: string
+  phase: UpdatePhase
+  runtime: 'running' | 'stopped-clean' | 'stopped-unclean' | 'unknown'
+  installation: 'unchanged' | 'pending' | 'verified' | 'incomplete' | 'unknown'
+  canCancel: boolean
+  canRetryInstall: boolean
+  canRecover: boolean
+  detail?:
+    | 'controller-held'
+    | 'operation-pending'
+    | 'other-runtime'
+    | 'occupancy-unknown'
+    | 'unsupported-channel'
+}
+export type UpdateCliConfirmation = {
+  token: string
+  pid: number
+  port: number
+  source: 'this-installation' | 'another-installation'
+  entryPath: string
+}
+
+export class UpdateLifecycleError extends Error {
+  constructor(
+    readonly reason: UpdateFailureReason,
+    message: string,
+    readonly recovery?: UpdateRecoveryStatus,
+    options?: ErrorOptions
+  ) {
+    super(message, options)
+    this.name = 'UpdateLifecycleError'
+  }
+}
 
 export type AppInfo = { name: string; version: string; copyright: string }
 

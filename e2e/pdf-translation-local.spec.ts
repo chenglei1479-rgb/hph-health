@@ -1,10 +1,10 @@
+import { literatureItemInputSchema } from '@aipoch/literature-library/contracts'
+import { expect } from '@playwright/test'
 import { copyFile, mkdir, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
-import { expect } from '@playwright/test'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { PDF_TRANSLATION_MODEL_REVISIONS } from '../src/main/local-models/catalog'
 import { createProjectDbClient } from '../src/main/projects/prisma-client'
-import { literatureItemInputSchema } from '../src/shared/literature'
 import type {
   PdfTranslationBeginRequest,
   PdfTranslationCheckpoint

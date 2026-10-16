@@ -1,3 +1,4 @@
+import { projectConnectorsFromStored } from '../connectors/read-model'
 import { createAcpRuntime } from '../acp/runtime-composition'
 import { AgentsService } from '../agents/agents-service'
 import {
@@ -10,7 +11,7 @@ import {
   createAcpBackedSpecialistBridge
 } from '../agents/specialist-approval-gateway'
 import { SettingsService } from '../settings/service'
-import { SpecialistPackageService } from '../specialist/package/service'
+import { SpecialistPackageService } from '@aipoch/specialists/node'
 import { SpecialistService } from '../specialist/service'
 import { SessionBindingService } from '../specialist/session-binding'
 import { SessionSpecialistReconfiguration } from '../specialist/session-reconfiguration'
@@ -74,9 +75,11 @@ export function composeAgentControls({
     specialistService,
     catalog: {
       listSkillCatalog: () => settingsService.listSpecialistSkillCatalog(),
-      getConnectors: () => settingsService.getConnectors()
+      getConnectors: async () =>
+        projectConnectorsFromStored(await settingsService.getConnectors(), (id) =>
+          connectorRuntimeSettings.customServerAvailability(id)
+        )
     },
-    customServerAvailability: (id) => connectorRuntimeSettings.customServerAvailability(id),
     sessionBinding: sessionBindingService,
     approvalGateway: specialistApprovalGateway,
     approvalLifecycle: completionHandoffLifecycle,

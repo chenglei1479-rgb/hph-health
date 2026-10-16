@@ -1,12 +1,13 @@
-import { createHash } from 'node:crypto'
-import { dirname, isAbsolute, join, relative } from 'node:path'
+import { literatureItemInputSchema } from '@aipoch/literature-library/contracts'
+import type { PdfStructureResult } from '@aipoch/pdf-structure/result'
 import { expect } from '@playwright/test'
+import { createHash } from 'node:crypto'
+import { dirname, isAbsolute, relative } from 'node:path'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { PdfStructureCache } from '../src/main/literature/pdf-structure/cache'
 import { createPdfStructureEngine } from '../src/main/literature/pdf-structure/engine'
-import { literatureItemInputSchema } from '../src/shared/literature'
-import type { PdfStructureResult } from '../src/shared/pdf-structure'
 import { test } from './fixtures/electron-app'
+import { openAllReferences } from './fixtures/library'
 
 function textPdf(pageCount = 2): Buffer {
   const streams = [
@@ -71,9 +72,7 @@ test('prepares a Library PDF through real IPC and cached table provenance', asyn
   const { profile } = await app.captureBrandState()
   const fixtureRelative = relative(dirname(profile), dataRoot)
   expect(isAbsolute(fixtureRelative) || fixtureRelative.startsWith('..')).toBe(false)
-  const recipe = await createPdfStructureEngine(
-    join(process.cwd(), 'resources/pdf-structure')
-  ).describe()
+  const recipe = await createPdfStructureEngine().describe()
   const loading = getDocument({ data: new Uint8Array(bytes), useSystemFonts: true })
   let result: PdfStructureResult
   try {
@@ -139,8 +138,7 @@ test('prepares a Library PDF through real IPC and cached table provenance', asyn
   )
   expect(cached?.extractionId).toBe(result.extractionId)
   const library = async (): Promise<void> => {
-    await page.getByRole('button', { name: 'Library', exact: true }).click()
-    await page.getByRole('button', { name: 'All references', exact: true }).click()
+    await openAllReferences(page)
   }
   const prepare = async (separate: boolean): Promise<void> => {
     await page.getByRole('button', { name: 'Preview preparation.pdf', exact: true }).click()
@@ -160,7 +158,12 @@ test('prepares a Library PDF through real IPC and cached table provenance', asyn
     await expect(page.getByRole('tooltip')).toContainText(
       'not translation completeness or accuracy.'
     )
-    await report.getByRole('button', { name: 'Full-text preparation', exact: true }).hover()
+    // Close the hover tooltip without sending Escape to the translation sidebar.
+    await information.click()
+    await page.mouse.move(0, 0)
+    await expect(
+      page.getByRole('tooltip').filter({ hasText: 'not translation completeness or accuracy.' })
+    ).toBeHidden()
     await expect(page.getByRole('group', { name: 'PDF rendition' })).toHaveCount(0)
   }
   const close = async (): Promise<void> => {
@@ -329,8 +332,7 @@ test('cancels preparation and closes an active Library PDF without retaining its
     },
     { item, bytes: [...textPdf(240)] }
   )
-  await page.getByRole('button', { name: 'Library', exact: true }).click()
-  await page.getByRole('button', { name: 'All references', exact: true }).click()
+  await openAllReferences(page)
   await page.getByRole('button', { name: 'Preview long-preparation.pdf', exact: true }).click()
   await page.getByRole('button', { name: 'Full-text translation', exact: true }).click()
   const report = page.locator('[data-pdf-preparation]')

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PdfDocumentSource } from '../../../../../../shared/pdf-bookmarks'
+import type { PdfDocumentSource } from '../../../../../../shared/pdf-document-source'
 import type { PdfTranslationCheckpoint } from '../../../../../../shared/pdf-translation'
 import { usePdfTranslationCheckpoint } from './use-pdf-translation-checkpoint'
 

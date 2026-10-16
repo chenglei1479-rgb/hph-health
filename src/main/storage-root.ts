@@ -1,7 +1,7 @@
+import { runtimeMetadata } from './runtime-metadata'
 import { existsSync, lstatSync } from 'node:fs'
 import { basename, isAbsolute, join, resolve, sep } from 'node:path'
 
-import { app } from 'electron'
 import { directoryHasFiles } from './storage/location-evidence'
 import { MANAGED_WORKSPACE_OWNERSHIP_DIR } from './storage/managed-workspace-ownership-dir'
 import { MIGRATABLE_DATA_DIRS } from './storage/data-directories'
@@ -13,7 +13,7 @@ export { DataLocationSelectionError } from './storage/data-location-selection'
 
 // Fixed config root shared with the pre-Electron bootstrap. Never relocated with research data.
 const resolveConfigRoot = (): string =>
-  resolveBootstrapConfigRoot(() => app.getPath('home'), app.isPackaged)
+  resolveBootstrapConfigRoot(() => runtimeMetadata().homePath, runtimeMetadata().packaged)
 
 // Legacy alias retained for source compatibility. New production call sites use resolveConfigRoot.
 const resolveStorageRoot = resolveConfigRoot
@@ -21,9 +21,9 @@ const resolveStorageRoot = resolveConfigRoot
 // Visible, no-space data folder name. NO space: runtime/ holds conda/venv whose tools break on
 // spaced paths. dev gets a suffix so it never shares data with a packaged build.
 const dataFolderName = (): string =>
-  app.isPackaged ? 'MedResearch-Agent' : 'MedResearch-Agent-DEV'
+  runtimeMetadata().packaged ? 'MedResearch-Agent' : 'MedResearch-Agent-DEV'
 const legacyDataFolderName = (): string =>
-  app.isPackaged ? 'MedResearchAgent' : 'MedResearchAgent-DEV'
+  runtimeMetadata().packaged ? 'MedResearchAgent' : 'MedResearchAgent-DEV'
 
 // The data root the app derives from a user-picked (or default) parent directory: always
 // `<parent>/<dataFolderName()>` for a new location. Verified existing roots are adopted directly
@@ -31,7 +31,7 @@ const legacyDataFolderName = (): string =>
 const dataRootForParent = (parent: string): string => join(parent, dataFolderName())
 
 const defaultDataParent = (): string =>
-  resolveConfigRootOverride(app.isPackaged) ?? app.getPath('home')
+  resolveConfigRootOverride(runtimeMetadata().packaged) ?? runtimeMetadata().homePath
 
 // Explicitly picked old and custom roots are validated by the migration/adoption owner. Preserve
 // their exact location; selecting a root must not append a second brand directory.
@@ -115,10 +115,16 @@ const initDataRoot = (settingsDataRoot: unknown, onboardingCompletedAt?: number)
       // research in the config root still needs conflict detection before pinning a pointer.
       configRoot,
       homeDefault,
+      ...(!runtimeMetadata().packaged ? [join(defaultDataParent(), 'MedResearchAgent-dev')] : []),
       // 0.31 ignored ordinary config overrides when resolving its implicit home root.
       // Keep only this product's former unspaced folder as a local migration candidate.
       ...(!process.env.OPEN_SCIENCE_E2E_STORAGE_ROOT?.trim()
-        ? [join(app.getPath('home'), legacyDataFolderName())]
+        ? [
+            join(runtimeMetadata().homePath, legacyDataFolderName()),
+            ...(!runtimeMetadata().packaged
+              ? [join(runtimeMetadata().homePath, 'MedResearchAgent-dev')]
+              : [])
+          ]
         : [])
     ]
     const physicalLocations = new Set<string>()

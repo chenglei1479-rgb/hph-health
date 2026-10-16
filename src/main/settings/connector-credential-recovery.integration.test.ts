@@ -1,3 +1,5 @@
+import { builtinConnectorRegistry } from '../connectors/registry'
+import { configureTestElectronHost } from '../../../test/runtime-host'
 import { configureCredentialStore } from './credential-store-mode'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -91,6 +93,7 @@ describe('shared credential recovery', () => {
       let current = await settings.getConnectors()
       const call = vi.fn(async () => ({ ok: true }))
       const runtime = new ConnectorService({
+        registry: builtinConnectorRegistry,
         getConnectors: () => current,
         getConnectorsFresh: () => settings.getConnectors(),
         resolveApiKey: () => undefined,
@@ -173,6 +176,7 @@ describe('shared credential recovery', () => {
     let current = await settings.getConnectors()
     const call = vi.fn(async () => ({ ok: true }))
     const runtime = new ConnectorService({
+      registry: builtinConnectorRegistry,
       getConnectors: () => current,
       getConnectorsFresh: () => settings.getConnectors(),
       resolveApiKey: () => undefined,
@@ -253,6 +257,7 @@ describe('shared credential recovery', () => {
       let current = await settings.getConnectors()
       const call = vi.fn(async () => ({ ok: true }))
       const runtime = new ConnectorService({
+        registry: builtinConnectorRegistry,
         getConnectors: () => current,
         getConnectorsFresh: () => settings.getConnectors(),
         resolveApiKey: () => undefined,
@@ -294,3 +299,5 @@ describe('shared credential recovery', () => {
     }
   )
 })
+
+await configureTestElectronHost(await import('electron'))

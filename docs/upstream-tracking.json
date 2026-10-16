@@ -3,17 +3,18 @@
   "repository": "https://github.com/aipoch/open-science",
   "draVersionAtAudit": "0.1.19",
   "referenceBase": {
-    "tag": "v0.36.0",
-    "commit": "724d95e208209cc5fd12ffc54e715fa590454ba5",
-    "status": "unified-candidate-source-merged-pending-validation",
-    "previousTag": "v0.35.1"
+    "tag": "v1.0.0",
+    "commit": "046fa0a22da72f3f51e19347dbfa2ae15682c153",
+    "status": "source-merged-pending-validation",
+    "previousTag": "v0.36.0",
+    "previousCommit": "724d95e208209cc5fd12ffc54e715fa590454ba5"
   },
   "lastObservedRelease": {
-    "tag": "v0.36.0",
-    "commit": "724d95e208209cc5fd12ffc54e715fa590454ba5",
-    "url": "https://github.com/aipoch/open-science/releases/tag/v0.36.0",
-    "observedOn": "2026-10-10",
-    "status": "unified-candidate-pending-validation"
+    "tag": "v1.0.0",
+    "commit": "046fa0a22da72f3f51e19347dbfa2ae15682c153",
+    "url": "https://github.com/aipoch/open-science/releases/tag/v1.0.0",
+    "observedOn": "2026-10-16",
+    "status": "source-merged-pending-validation"
   },
   "lastNotifiedRelease": "v0.35.0",
   "monitor": {

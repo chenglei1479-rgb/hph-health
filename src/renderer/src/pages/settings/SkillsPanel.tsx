@@ -1,3 +1,4 @@
+import type { SkillsView } from '../../lib/settings-navigation'
 import type { TFunction } from 'i18next'
 import { useResourceSelection, useStickyResourceFilters } from './use-resource-selection'
 import { ErrorNotice } from '@/components/error-notice'
@@ -15,7 +16,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { SkillSource } from '../../../../shared/settings'
+import type { SkillSource } from '@aipoch/skills/document'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -53,7 +54,7 @@ import {
   ResourceSelectionBar,
   ResourceSelectionCheckbox
 } from './ResourceCatalogSelection'
-import { SkillMarketplace, type SkillMarketplaceView } from './SkillMarketplace'
+import { SkillMarketplace } from './SkillMarketplace'
 import {
   ResourceTagBadges,
   ResourceTagMenu,
@@ -120,15 +121,7 @@ const skillDescription = (
 }
 
 // The skills panel sub-view, driven by the settings navigation history so each is a breadcrumb page.
-export type SkillsView =
-  | SkillMarketplaceView
-  | { kind: 'list' }
-  | { kind: 'detail'; id: string }
-  | { kind: 'create' }
-  | { kind: 'edit'; id: string }
-  | { kind: 'import' }
-  | { kind: 'import-agent-home' }
-  | { kind: 'upload' }
+export type { SkillsView } from '../../lib/settings-navigation'
 
 type SourceFilter = 'all' | SkillSource
 const MAIN_AGENT_FILTER = '__main-agent__'

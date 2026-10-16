@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { type PdfTranslationEdition } from '@aipoch/pdf-translation/contracts'
 import {
   pdfTranslationCheckpointSchema,
   pdfTranslationCheckpointMatchesSource,
   pdfTranslationSourceKey,
   type PdfTranslationCheckpointRequest,
-  type PdfTranslationCheckpoint,
-  type PdfTranslationEdition
+  type PdfTranslationCheckpoint
 } from '../../../../../../shared/pdf-translation'
 
 export function usePdfTranslationCheckpoint(

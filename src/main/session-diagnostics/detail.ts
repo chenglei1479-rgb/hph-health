@@ -1,6 +1,6 @@
 import { homedir } from 'node:os'
 
-import { redactSensitiveText } from '../diagnostic-redaction'
+import { redactSensitiveText } from '@aipoch/diagnostics'
 
 export type DiagnosticTextOptions = {
   configRoot?: string
@@ -130,7 +130,10 @@ export function projectDiagnosticError(
       else if (
         key === 'code' &&
         typeof candidate === 'string' &&
-        /^[A-Z][A-Z0-9_]{0,60}$/.test(candidate)
+        (/^[A-Z][A-Z0-9_]{0,60}$/.test(candidate) ||
+          /^(?:runtime-not-controlled|runtime-stop-timeout|runtime-stop-unclean|runtime-configuration-unsupported|installation-busy|install-failed|user-cancelled|active-work)$/.test(
+            candidate
+          ))
       )
         result[key] = text(candidate, 64)
     }

@@ -1,10 +1,13 @@
-import { net } from 'electron'
+import { createRequire } from 'node:module'
+import * as electronModule from 'electron'
 
 import {
   isBlockedPrereleaseUrl,
   isDraPrerelease,
   PRERELEASE_BLOCKED_REQUEST
 } from '../../shared/prerelease'
+
+const require = createRequire(import.meta.url)
 
 const AUTH_ENV_KEYS = [
   'DRA_AUTH_MODE',
@@ -33,14 +36,41 @@ const guardedFetch = (original: typeof fetch): typeof fetch =>
     return original(input, init)
   }) as typeof fetch
 
-// Chromium net.fetch is a separate stack from global fetch. Update manifests use it.
-const patchElectronNetFetch = (): void => {
+type ElectronNet = { fetch?: typeof fetch }
+
+const patchNet = (net: ElectronNet | undefined): void => {
   try {
     const current = net?.fetch
     if (!net || typeof current !== 'function') return
-    net.fetch = guardedFetch(current.bind(net) as typeof fetch) as typeof net.fetch
+    if ((current as { draGuarded?: boolean }).draGuarded) return
+    const guarded = guardedFetch(current.bind(net) as typeof fetch) as typeof fetch & {
+      draGuarded?: boolean
+    }
+    guarded.draGuarded = true
+    net.fetch = guarded
   } catch {
     // A locked net.fetch cannot be wrapped. global fetch is still guarded.
+  }
+}
+
+// Chromium net.fetch is a separate stack from global fetch. Update manifests use it.
+// A namespace import stays loadable in the Node backend (electron has no named net export
+// there) and still sees the Vitest mock. createRequire covers the Electron main process
+// when that binding is a different object.
+const patchElectronNetFetch = (): void => {
+  const namespace = electronModule as ElectronNet & { default?: ElectronNet }
+  patchNet(namespace.net)
+  try {
+    // Vitest's electron mock has no default export and throws if it is read.
+    patchNet(namespace.default?.net)
+  } catch {
+    // The namespace binding is enough when default is absent.
+  }
+  try {
+    const loaded = require('electron') as ElectronNet | string | undefined
+    if (loaded && typeof loaded === 'object') patchNet(loaded.net)
+  } catch {
+    // The Node backend does not provide Electron's net module.
   }
 }
 

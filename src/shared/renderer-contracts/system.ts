@@ -1,3 +1,8 @@
+import { RUNTIME_STARTUP_CHANNELS, type RuntimeStartupState } from '../runtime-startup'
+import {
+  DESKTOP_RUNTIME_RECOVERY_CHANNELS,
+  type DesktopRuntimeRecoveryState
+} from '../desktop-runtime-recovery'
 // Ordered fragments keep the public registration order when capabilities interleave.
 import type { RendererFailureReport } from '../diagnostics'
 
@@ -6,6 +11,7 @@ import type { LogFileStatus, OpenLogFileResult, RevealLogFileResult } from '../l
 import type { MachineApprovalStatus, SetMachineApprovalRequest } from '../machine-approval'
 
 import type { NetworkInfo } from '../network'
+import { NETWORK_SYSTEM_RESUMED_CHANNEL, type NetworkInfo } from '../network'
 
 import type { CliLauncherStatus } from '../cli'
 
@@ -38,6 +44,56 @@ export const cliGetStatusContracts = {
 } as const
 
 export const databaseStartupGetStateContracts = {
+  'runtimeStartup.getState': callable<() => Promise<RuntimeStartupState>>()(
+    'runtime-startup',
+    [RUNTIME_STARTUP_CHANNELS.getState, ELECTRON],
+    { optionalRoot: true }
+  ),
+  'runtimeStartup.stopAndContinue': callable<() => Promise<RuntimeStartupState>>()(
+    'runtime-startup',
+    [RUNTIME_STARTUP_CHANNELS.stopAndContinue, ELECTRON],
+    { optionalRoot: true }
+  ),
+  'runtimeStartup.recover': callable<() => Promise<RuntimeStartupState>>()(
+    'runtime-startup',
+    [RUNTIME_STARTUP_CHANNELS.recover, ELECTRON],
+    { optionalRoot: true }
+  ),
+  'runtimeStartup.quit': callable<() => Promise<void>>()(
+    'runtime-startup',
+    [RUNTIME_STARTUP_CHANNELS.quit, ELECTRON],
+    { optionalRoot: true }
+  ),
+  'runtimeStartup.onStateChanged': callable<
+    (listener: AcpListener<RuntimeStartupState>) => RemoveListener
+  >()('runtime-startup', [RUNTIME_STARTUP_CHANNELS.onStateChanged, ELECTRON_EVENT], {
+    optionalRoot: true
+  }),
+  'desktopRuntime.getState': callable<() => Promise<DesktopRuntimeRecoveryState>>()(
+    'desktop-runtime',
+    [DESKTOP_RUNTIME_RECOVERY_CHANNELS.getState, ELECTRON],
+    { optionalRoot: true }
+  ),
+  'desktopRuntime.reconnect': callable<() => Promise<DesktopRuntimeRecoveryState>>()(
+    'desktop-runtime',
+    [DESKTOP_RUNTIME_RECOVERY_CHANNELS.reconnect, ELECTRON],
+    { optionalRoot: true }
+  ),
+  'desktopRuntime.reconciled': callable<(epoch: number, success: boolean) => Promise<void>>()(
+    'desktop-runtime',
+    [DESKTOP_RUNTIME_RECOVERY_CHANNELS.reconciled, ELECTRON],
+    { optionalRoot: true }
+  ),
+  'desktopRuntime.quit': callable<() => Promise<void>>()(
+    'desktop-runtime',
+    [DESKTOP_RUNTIME_RECOVERY_CHANNELS.quit, ELECTRON],
+    { optionalRoot: true }
+  ),
+  'desktopRuntime.onStateChanged': callable<
+    (listener: AcpListener<DesktopRuntimeRecoveryState>) => RemoveListener
+  >()('desktop-runtime', [DESKTOP_RUNTIME_RECOVERY_CHANNELS.stateChanged, ELECTRON_EVENT], {
+    optionalRoot: true
+  }),
   'databaseStartup.getState': callable<() => Promise<DatabaseStartupState>>()('database-startup', [
     DATABASE_STARTUP_CHANNELS.getState,
     ELECTRON
@@ -106,6 +162,10 @@ export const logsGetStatusContracts = {
 } as const
 
 export const networkCheckConnectivityContracts = {
+  'network.onSystemResumed': callable<(listener: () => void) => RemoveListener>()('network', [
+    NETWORK_SYSTEM_RESUMED_CHANNEL,
+    ELECTRON_EVENT
+  ]),
   'network.checkConnectivity': callable<() => Promise<boolean>>()('network', [
     'network:check-connectivity',
     ELECTRON

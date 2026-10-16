@@ -1,12 +1,13 @@
+import type { LocalModelApi, LocalModelCapability } from '../../shared/local-models'
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { lstat, mkdir, rename, rmdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { LOCAL_MODEL_NOT_INSTALLED, type LocalModelSnapshot } from '../../shared/local-models'
-import { DownloadChecksumError, resilientDownload } from '../net/resilient-download'
-import { netFetchStandard } from '../skills/net-fetch'
-import { readFileWithinLimit, writeDurableJsonFile } from '../storage/durable-json-file'
+import { DownloadChecksumError, resilientDownload } from '@aipoch/resilient-download'
+import { netFetchStandard } from '../network-fetch'
+import { readFileWithinLimit, writeDurableJsonFile } from '@aipoch/durable-files'
 import { acquireDataRootWriter } from '../storage/migration-state'
 import { resolveDataRoot } from '../storage-root'
 import { PDF_TABLE_MODEL_REVISIONS, type LocalModelRevision } from './catalog'
@@ -296,7 +297,7 @@ export const createLocalModelOwner = (dependencies: Dependencies = {}): LocalMod
               expectedSha256: asset.sha256,
               expectedSize: asset.size,
               signal: controller.signal,
-              deps: { fetchImpl: netFetchStandard },
+              fetchImpl: netFetchStandard,
               onProgress: (progress: NonNullable<LocalModelSnapshot['downloadProgress']>) => {
                 const transferred = completed + progress.transferred
                 const total = snapshot.downloadBytes
@@ -444,4 +445,22 @@ export type LocalModelOwner = {
   install(): Promise<LocalModelSnapshot>
   cancel(): Promise<LocalModelSnapshot>
   remove(): Promise<LocalModelSnapshot>
+}
+
+// Both Electron and host commands use the same capability validation and owner routing.
+export const createLocalModelApi = (
+  tables: Pick<LocalModelOwner, 'getSnapshot' | 'install' | 'cancel' | 'remove'>,
+  translation: Pick<LocalModelOwner, 'getSnapshot' | 'install' | 'cancel' | 'remove'>
+): LocalModelApi => {
+  const owner = (capability?: LocalModelCapability): typeof tables => {
+    if (capability === undefined || capability === 'pdf-tables') return tables
+    if (capability === 'pdf-translation') return translation
+    throw new Error('Unsupported local model capability.')
+  }
+  return {
+    getSnapshot: (capability) => owner(capability).getSnapshot(),
+    install: (capability) => owner(capability).install(),
+    cancel: (capability) => owner(capability).cancel(),
+    remove: (capability) => owner(capability).remove()
+  }
 }

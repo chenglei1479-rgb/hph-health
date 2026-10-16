@@ -1,8 +1,9 @@
+import { runtimeMetadataIfConfigured } from '../runtime-metadata'
 import { join } from 'node:path'
 import catalog from './windows-runtime-catalog.json'
-import { extractPackArchive } from './pack-archive'
-import { resilientDownload } from '../net/resilient-download'
-import { netFetchStandard } from '../skills/net-fetch'
+import { extractPackArchive } from '@aipoch/environment'
+import { resilientDownload } from '@aipoch/resilient-download'
+import { netFetchStandard } from '../network-fetch'
 import {
   WindowsRuntimeComponentStore,
   assertWindowsRuntimeComponentRelease,
@@ -64,7 +65,7 @@ export class WindowsNotebookRuntimeManager {
           signal,
           stallTimeoutMs: 60_000,
           onProgress: (value) => progress?.(value.transferred, value.total, value),
-          deps: { fetchImpl: netFetchStandard }
+          fetchImpl: netFetchStandard
         })
       }
     })
@@ -128,9 +129,12 @@ export class WindowsNotebookRuntimeManager {
         component,
         architecture: this.architecture,
         officialRoots,
-        bundledRoots: process.resourcesPath
-          ? [join(process.resourcesPath, 'notebook-runtime', this.architecture, component)]
-          : [],
+        bundledRoots: (() => {
+          const resourcesPath = runtimeMetadataIfConfigured()?.resourcesPath
+          return resourcesPath
+            ? [join(resourcesPath, 'notebook-runtime', this.architecture, component)]
+            : []
+        })(),
         allowDownload,
         signal,
         onProgress: (progress) => {

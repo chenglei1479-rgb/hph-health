@@ -24,8 +24,8 @@ import {
   withTrustedNativeToolIdentity,
   type PermissionPolicyContext
 } from './permission-policy'
-import { initLogger, flushLogs } from '../logger'
-import * as mainLogger from '../logger'
+import { initLogger, flushLogs } from '@aipoch/diagnostics/node'
+import * as mainLogger from '@aipoch/diagnostics/node'
 import {
   logPermissionDiagnostic,
   type PermissionDiagnostic
@@ -83,6 +83,53 @@ describe('issue #3284 shared permission boundary', () => {
     expect(emit).not.toHaveBeenCalled()
     expect(broker.listGrants(request.sessionId)).toEqual([])
   })
+
+  it('keeps binding handoff separate from execution and selects only a one-call option', async () => {
+    const emit = vi.fn()
+    const broker = new AcpPermissionBroker(emit)
+    const request = withTrustedMcpToolIdentity(
+      createPermissionRequest(),
+      'open-science-notebook/notebook_bind_runtime'
+    )
+    expect(
+      await broker.requestPermission(request, {
+        profile: 'ask',
+        notebookBindingHostAdmission: true
+      })
+    ).toEqual({ outcome: { outcome: 'selected', optionId: 'allow-once' } })
+    expect(emit).not.toHaveBeenCalled()
+    expect(broker.listGrants(request.sessionId)).toEqual([])
+    const executionFlag = broker.requestPermission(request, {
+      profile: 'ask',
+      notebookHostAdmission: true
+    })
+    expect(emit).toHaveBeenCalledTimes(1)
+    const pending = broker.getPendingRequests()[0]
+    await broker.respond({ requestId: pending.requestId, optionId: 'reject-once' })
+    await expect(executionFlag).resolves.toMatchObject({ outcome: { optionId: 'reject-once' } })
+  })
+
+  it.each(['notebook_switch_runtime', 'manage_environments', 'unknown_tool'])(
+    'does not extend binding handoff to %s',
+    async (tool) => {
+      const emit = vi.fn()
+      const broker = new AcpPermissionBroker(emit)
+      const request = withTrustedMcpToolIdentity(
+        createPermissionRequest(),
+        `open-science-notebook/${tool}`
+      )
+      const decision = broker.requestPermission(request, {
+        profile: 'ask',
+        notebookBindingHostAdmission: true
+      })
+      expect(emit).toHaveBeenCalledTimes(1)
+      await broker.respond({
+        requestId: broker.getPendingRequests()[0].requestId,
+        optionId: 'reject-once'
+      })
+      await expect(decision).resolves.toMatchObject({ outcome: { optionId: 'reject-once' } })
+    }
+  )
 
   it('does not let provider metadata forge a Notebook host handoff', async () => {
     const emit = vi.fn()

@@ -1,3 +1,4 @@
+import { desktopShellInteraction } from '../desktop-interaction'
 import type { RuntimeWriterOwner } from './runtime-writer'
 import type { AcpRuntimeEvent } from '../../shared/acp'
 import { createMessageSearch } from './message-search'
@@ -30,7 +31,7 @@ import type {
 } from '../../shared/session-persistence'
 import { broadcastLifecycleEvent, getLifecycleClientId } from '../lifecycle-broadcast'
 import { callerLeaseForEvent } from '../caller-lifecycle'
-import { createLogger, diagnosticErrorFields, type Logger } from '../logger'
+import { createLogger, diagnosticErrorFields, type Logger } from '@aipoch/diagnostics/node'
 import { resolveConfigRoot } from '../storage-root'
 import { SessionRepository } from './repository'
 import { SessionProjectionRepository } from './projection'
@@ -462,3 +463,13 @@ export type {
   SessionPersistenceBackend,
   SessionPersistenceHandlers
 }
+
+export const createSessionRecoveryFolderCommand =
+  (
+    repository: Pick<SessionRepository, 'recoveryFolderPath'>
+  ): ((request: OpenSessionRecoveryFolderRequest) => Promise<void>) =>
+  async (request) => {
+    const path = repository.recoveryFolderPath(request.projectId)
+    const error = await desktopShellInteraction().openPath(path)
+    if (error) throw new Error('Session recovery folder could not be opened.')
+  }

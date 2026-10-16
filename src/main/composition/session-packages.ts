@@ -1,12 +1,12 @@
-import { app, dialog } from 'electron'
+import { desktopInteraction } from '../desktop-interaction'
 import { getDefaultPermissionProfile } from '../../shared/permission-profiles'
 import type { SensitiveContentEvidence } from '../../shared/session-diagnostics'
 import { createAcpRuntime } from '../acp/runtime-composition'
 import type { ApplicationEvents } from '../application-events'
 import { type ApplicationModuleBuilder } from '../application-runtime'
 import { ArchiveCoordinator } from '../archive/coordinator'
-import { startDiagnosticOperation, type DiagnosticOperation } from '../diagnostics/operation'
-import { createLogger } from '../logger'
+import { startDiagnosticOperation, type DiagnosticOperation } from '@aipoch/diagnostics/node'
+import { createLogger } from '@aipoch/diagnostics/node'
 import {
   createDefaultPreviewStateRepository,
   createDefaultProjectRepository
@@ -15,7 +15,6 @@ import { getProjectDbClient } from '../projects/prisma-client'
 import { createSessionPackageDesktop } from '../session-package/desktop-composition'
 import { createPackageInspector } from '../session-package/inspection-worker'
 import createInspectionWorker from '../session-package/inspection-worker-entry?nodeWorker'
-import { installSessionPackageQuitGuard } from '../session-package/quit-guard'
 import type { PackageSensitiveContentSource } from '../session-package/sensitive-content'
 import { SessionPackageService } from '../session-package/service'
 import {
@@ -75,8 +74,8 @@ export async function composeSessionPackages({
     const service = new SessionPackageService({
       getDefaultPermissionProfile: async () =>
         getDefaultPermissionProfile(await settingsRepository.getSettings()),
-      onSessionPublished: async ({ projectId, sessionId }) => {
-        await packagePublicationOwner.current?.adoptPublishedSession(projectId, sessionId)
+      onSessionPublished: async (publication) => {
+        await packagePublicationOwner.current?.adoptPublishedSession(publication)
       },
       inspectPackage: createPackageInspector(createInspectionWorker),
       configRoot: resolveConfigRoot(),
@@ -226,22 +225,22 @@ export function composeSessionPackageSurfaces({
     onSensitiveContentFailure: rememberSensitiveContentFailure
   })
   sessionPackageDesktopLifecycle.isActive = () => sessionPackageDesktop.operations.active
-  const removePackageQuitGuard = installSessionPackageQuitGuard(
-    app,
-    () => sessionPackageDesktop.hasActiveTransfer(),
-    () => {
-      dialog.showMessageBoxSync({
-        type: 'info',
-        title: translate('Session package operation in progress'),
-        message: translate(
-          'Wait for the package operation to finish, or cancel it from the progress window before quitting.'
-        ),
-        buttons: [translate('OK')]
-      })
-    }
+  declareElectronAdapter('session-package-quit-guard', () =>
+    desktopInteraction('Session package quit confirmation').installPackageQuitGuard(
+      () => sessionPackageDesktop.hasActiveTransfer(),
+      () => {
+        desktopInteraction('Confirm desktop action').confirmSync({
+          type: 'info',
+          title: translate('Session package operation in progress'),
+          message: translate(
+            'Wait for the package operation to finish, or cancel it from the progress window before quitting.'
+          ),
+          buttons: [translate('OK')]
+        })
+      }
+    )
   )
   sessionPackageDesktopLifecycle.close = async () => {
-    removePackageQuitGuard()
     await sessionPackageDesktop.close()
   }
   return { conversationExportService, sessionPackageDesktop }

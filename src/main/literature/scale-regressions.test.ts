@@ -1,19 +1,21 @@
+import { writeDurableJsonFile } from '@aipoch/durable-files'
+import { LiteratureBatchJobs } from '@aipoch/literature-discovery'
+import type { LiteratureJobsResult } from '@aipoch/literature-discovery/jobs'
+import { findLiteratureDuplicateGroups } from '@aipoch/literature-library'
+import { literatureItemInputSchema } from '@aipoch/literature-library/item'
+import { type LiteratureItemView } from '@aipoch/literature-library/contracts'
 import { randomUUID } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
-import { literatureItemInputSchema, type LiteratureItemView } from '../../shared/literature'
-import type { LiteratureJobsResult } from '../../shared/literature-jobs'
 import { WEB_RPC_PROTOCOL_VERSION } from '../../shared/web-rpc-contract'
 import { ApplicationEventHub } from '../application-events'
 import { migrateApplicationDatabase } from '../database/migration-service'
 import { createProjectDbClient } from '../projects/prisma-client'
 import { startWebHttpServer } from '../web-service/http-server'
 import { LiteratureCatalog } from './catalog'
-import { LiteratureBatchJobs } from './batch-jobs'
-import { findLiteratureDuplicateGroups } from './duplicates'
-import { writeDurableJsonFile } from '../storage/durable-json-file'
+import { discoveryJobOptions } from './discovery-adapters'
 
 vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] },
@@ -22,8 +24,8 @@ vi.mock('electron', () => ({
   net: { fetch: vi.fn() }
 }))
 // Observe bytes at the durable-write boundary; atomic recovery is covered by the journal suite.
-vi.mock('../storage/durable-json-file', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../storage/durable-json-file')>()),
+vi.mock('@aipoch/durable-files', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@aipoch/durable-files')>()),
   writeDurableJsonFile: vi.fn(async () => undefined)
 }))
 const cleanup: Array<() => Promise<unknown>> = []
@@ -132,6 +134,7 @@ async function completedJob(count: number): Promise<{
   })
   const onError = vi.fn()
   const jobs = new LiteratureBatchJobs({
+    ...discoveryJobOptions,
     path: join(await directory(), 'jobs.json'),
     spacingMs: 0,
     onError,
@@ -182,13 +185,6 @@ async function completedJob(count: number): Promise<{
   const measured = { bytes, calls }
   return { measured, result }
 }
-
-it('keeps batch checkpoint bytes proportional to the number of processed references', async () => {
-  const small = await completedJob(100)
-  const large = await completedJob(200)
-  console.info('checkpoint bytes', { small: small.measured, large: large.measured })
-  expect(large.measured.bytes).toBeLessThan(small.measured.bytes * 2.5)
-}, 60_000)
 
 it('opens a completed maximum-size metadata review over Web RPC', async () => {
   const fixture = await completedJob(1000)

@@ -1,5 +1,10 @@
 import { remoteAccessApplicationCommandContracts } from '../../shared/remote-access'
-import { callerContextForEvent, hasCallerAuthority, type CallerContext } from '../caller-context'
+import {
+  callerContextForEvent,
+  hasCallerAuthority,
+  requireDesktopCaller,
+  type CallerContext
+} from '../caller-context'
 import { ipcMainHandle } from '../ipc-handler-registry'
 import { RemoteAccessService } from './service'
 

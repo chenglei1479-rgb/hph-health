@@ -9,8 +9,8 @@ import { CONNECTOR_RESOURCE_LIMITS } from './connector-resource-limits'
 import { SettingsDocumentStore } from './document-store'
 import { SettingsRepository } from './repository'
 import type { StoredCustomMcpServer, StoredProvider } from './types'
-import { skillMutationOwnerFor } from '../skills/skill-mutation-owner'
-import { envDirectoryName } from '../notebook/runtime-paths'
+import { UserSkillSpecialistPackageAdapter } from '@aipoch/skills'
+import { envDirectoryName } from '@aipoch/environment'
 
 // Capture the warn calls the repository makes through createLogger. vi.hoisted runs before the
 // module's top-level code so the vi.mock factory can reference the same spy instance.
@@ -21,7 +21,8 @@ const loggerMock = vi.hoisted(() => ({
   error: vi.fn()
 }))
 const { warn: warnSpy } = loggerMock
-vi.mock('../logger', () => ({
+vi.mock('@aipoch/diagnostics/node', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@aipoch/diagnostics/node')>()),
   createLogger: () => loggerMock
 }))
 
@@ -1728,9 +1729,11 @@ describe('settings repository: v2 official providers & activeModel migration', (
 
   it('serializes Main Skill enablement with package Skill replacement', async () => {
     const root = await createStorageRoot()
-    const owner = skillMutationOwnerFor(root)
-    const repository = new SettingsRepository(root, (operation) => owner.runExclusive(operation))
-    const release = await owner.acquire()
+    const owner = new UserSkillSpecialistPackageAdapter(root)
+    const repository = new SettingsRepository(root, (operation) =>
+      owner.runMutationExclusive(operation)
+    )
+    await owner.beginMutation('enablement-test', 'test', [])
     let settled = false
     const update = repository.setSkillEnabled('imported-a', false).finally(() => {
       settled = true
@@ -1738,7 +1741,7 @@ describe('settings repository: v2 official providers & activeModel migration', (
     await new Promise((resolve) => setImmediate(resolve))
     expect(settled).toBe(false)
 
-    release()
+    await owner.endMutation('enablement-test')
     await expect(update).resolves.toMatchObject({ disabledSkillIds: ['imported-a'] })
   })
 

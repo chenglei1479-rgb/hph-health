@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { parseSettingsSnapshot } from '../../shared/settings'
 import { RENDERER_CONTRACT_GROUPS } from '../../shared/renderer-contract-catalog'
 import {
   createApplicationCommandRouter,
@@ -7,7 +8,7 @@ import {
   type ApplicationCommand,
   type ApplicationInvocation
 } from '../application-command-router'
-import { createWebCallerContext } from '../caller-context'
+import { createWebCallerContext, createElectronCallerContext } from '../caller-context'
 import {
   registerCoreSettingsApplicationCommands,
   settingsCoreApplicationCommandGroup,
@@ -16,10 +17,19 @@ import {
 } from './application-commands'
 import { SettingsSnapshotCommitOwner } from './settings-snapshot-commit-owner'
 
+const validSnapshot = (): ReturnType<typeof parseSettingsSnapshot> =>
+  parseSettingsSnapshot({
+    providers: [],
+    agentFrameworks: [],
+    agentFrameworkId: 'opencode',
+    claude: {},
+    opencode: {}
+  })
+
 const passThroughSnapshotCommits = {
   currentSnapshotAfter: (pending: Promise<unknown>) => pending,
   projectAfter: (pending: Promise<unknown>) => pending,
-  readCurrentSnapshot: () => Promise.resolve(undefined)
+  readCurrentSnapshot: () => Promise.resolve(validSnapshot())
 } as unknown as SettingsSnapshotCommitOwner
 
 const deferred = <T>(): { promise: Promise<T>; resolve: (value: T) => void } => {
@@ -50,6 +60,9 @@ const expectedChannels = [
   'settings:get-wsl-setup-status',
   'settings:get-preflight',
   'settings:get-settings',
+  'settings:resolve-skill-document',
+  'settings:list-agent-home-skills',
+  'settings:preview-custom-server-template-export',
   'settings:get-skill-detail',
   'settings:install-claude',
   'settings:install-codebuddy',
@@ -177,6 +190,37 @@ const createDependencies = (
 }
 
 describe('Settings core application commands', () => {
+  it('validates snapshot reads for local and remote callers without rewriting optional preferences', async () => {
+    const snapshot = validSnapshot()
+    const getSettingsView = vi.fn().mockResolvedValue(snapshot)
+    const events = { publish: vi.fn() }
+    const { dependencies } = createDependencies(
+      new SettingsSnapshotCommitOwner({ getSettingsView }, events)
+    )
+    const router = createApplicationCommandRouter()
+    registerCoreSettingsApplicationCommands(router.registrar, dependencies)
+    for (const location of ['local', 'remote'] as const) {
+      const read = (args: readonly unknown[] = []): Promise<unknown> =>
+        router.dispatcher.invoke(
+          settingsCoreApplicationCommands.getSettings,
+          invocation(args as readonly [], location)
+        )
+      await expect(read()).resolves.toBe(snapshot)
+      expect(snapshot).not.toHaveProperty('localePreference')
+      await expect(read(['unexpected'])).rejects.toMatchObject({
+        code: 'invalid-command-arguments'
+      })
+      getSettingsView.mockResolvedValueOnce({ ...snapshot, providers: null })
+      await expect(read()).rejects.toMatchObject({ code: 'invalid-command-result' })
+      getSettingsView.mockRejectedValueOnce(
+        Object.assign(new Error('private path'), { code: 'EACCES' })
+      )
+      await expect(read()).rejects.toMatchObject({ code: 'settings-storage-unavailable' })
+      await expect(read()).resolves.toBe(snapshot)
+    }
+    expect(events.publish).not.toHaveBeenCalled()
+  })
+
   it('returns validated-save outcomes intact through local and remote command serialization', async () => {
     const { dependencies } = createDependencies()
     const result = {
@@ -725,4 +769,38 @@ describe('Settings core application commands', () => {
     expect(serviceMethod('setNotificationsEnabled')).not.toHaveBeenCalled()
     expect(serviceMethod('setShowNotificationContent')).not.toHaveBeenCalled()
   })
+})
+
+it('keeps native Skill sources and Connector export previews behind desktop authority', async () => {
+  const { dependencies, serviceMethod } = createDependencies()
+  const router = createApplicationCommandRouter()
+  registerCoreSettingsApplicationCommands(router.registrar, dependencies)
+  const cases = [
+    [
+      settingsCoreApplicationCommands.resolveSkillDocument,
+      [{ name: 'demo' }],
+      'resolveSkillDocument'
+    ],
+    [settingsCoreApplicationCommands.listAgentHomeSkills, [], 'listAgentHomeSkills'],
+    [
+      settingsCoreApplicationCommands.previewCustomServerTemplateExport,
+      ['server-1'],
+      'previewCustomServerTemplateExport'
+    ]
+  ] as const
+  for (const [command, args, method] of cases) {
+    // The heterogeneous table deliberately erases tuple inference only at dispatch.
+    const descriptor = command as ApplicationCommand<string, readonly unknown[], unknown>
+    for (const location of ['local', 'remote'] as const) {
+      await expect(
+        router.dispatcher.invoke(descriptor, invocation(args, location))
+      ).rejects.toThrow('desktop app')
+    }
+    await router.dispatcher.invoke(descriptor, {
+      ...invocation(args),
+      callerContext: createElectronCallerContext(1),
+      callerLease: { ...callerLease(), leaseId: createElectronCallerContext(1).leaseId }
+    })
+    expect(serviceMethod(method)).toHaveBeenCalledExactlyOnceWith(...args)
+  }
 })

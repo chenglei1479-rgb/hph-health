@@ -1,14 +1,15 @@
+import { configureTestElectronHost } from '../../../test/runtime-host'
 import { createHash } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { net } from 'electron'
-import { DownloadChecksumError } from '../net/resilient-download'
+import { DownloadChecksumError } from '@aipoch/resilient-download'
 import { createLocalModelOwner } from './owner'
 import type { LocalModelRevision } from './catalog'
 import { PDF_TABLE_MODEL_REVISIONS } from './catalog'
-import type { DownloadProgress } from '../../shared/download-progress'
+import type { DownloadProgress } from '@aipoch/resilient-download'
 import { LOCAL_MODEL_NOT_INSTALLED } from '../../shared/local-models'
 import {
   acquireDataRootWriter,
@@ -17,7 +18,11 @@ import {
   waitForDataRootWriters
 } from '../storage/migration-state'
 import { composeApplicationRuntime } from '../application-runtime'
-import * as durableJson from '../storage/durable-json-file'
+import * as durableJson from '@aipoch/durable-files'
+
+vi.mock('@aipoch/durable-files', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@aipoch/durable-files')>())
+}))
 
 vi.mock('electron', () => ({
   net: { fetch: vi.fn() },
@@ -962,8 +967,10 @@ it('isolates flat translation assets and receipts from parser model management',
   await waitForIdle(owner)
   const use = await owner.acquireUse()
   expect(
-    use.assets.every((asset) =>
-      asset.path.includes('models/pdf-translation/revisions/translation-v1/')
+    use.assets.every(
+      (asset) =>
+        dirname(asset.path) ===
+        join(root, 'models', 'pdf-translation', 'revisions', 'translation-v1')
     )
   ).toBe(true)
   expect((await owner.remove()).inUse).toBe(true)
@@ -974,3 +981,4 @@ it('isolates flat translation assets and receipts from parser model management',
   ).toBe('v1')
   await owner.close()
 })
+await configureTestElectronHost(await import('electron'))

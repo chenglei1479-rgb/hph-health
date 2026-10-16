@@ -1,49 +1,48 @@
 // @vitest-environment jsdom
-import { act, forwardRef, useCallback, useEffect } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
-import { fireEvent, waitFor } from '@testing-library/react'
-import { literatureItemInputSchema } from '../../../../shared/literature'
-import { BookmarksProvider } from './bookmarks/BookmarksProvider'
-import type { PropsWithChildren } from 'react'
+import {
+  createInitialGrantedFoldersState,
+  useGrantedFoldersStore
+} from '@/stores/granted-folders-store'
+import {
+  createInitialReviewState,
+  selectProjectSessionReviews,
+  useReviewStore
+} from '@/stores/review-store'
+import { createInitialSessionJobState, useSessionJobStore } from '@/stores/session-job-store'
 import {
   useSessionStore,
   type ChatMessage,
   type ChatSession,
   type ToolActivity
 } from '@/stores/session-store'
-import {
-  createInitialReviewState,
-  selectProjectSessionReviews,
-  useReviewStore
-} from '@/stores/review-store'
-import { createUploadVersionReference, type UploadedAttachment } from '../../../../shared/uploads'
+import { literatureItemInputSchema } from '@aipoch/literature-library/item'
+import { fireEvent, waitFor } from '@testing-library/react'
+import type { PropsWithChildren } from 'react'
+import { act, forwardRef, useCallback, useEffect } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ReviewWithChecks } from '../../../../shared/reviewer'
 import type { ArtifactVersionDescriptor } from '../../../../shared/artifact-provenance'
-import type { ManagedPreviewResource } from '../../../../shared/preview-resources'
-import type {
-  HandoffLifecycleEvent,
-  HandoffLifecycleEventSource
-} from '../../../../shared/handoff-lifecycle'
-import type { ActivePlanProjection } from '../../../../shared/session-plan/contract'
-import type {
-  NotebookRunRecord,
-  NotebookSessionReference,
-  NotebookSessionState
-} from '../../../../shared/notebook'
+import type { JobSummary } from '../../../../shared/compute'
 import {
   createLinearConversationGraph,
   projectConversationMessage,
   resolveActiveConversationMessages
 } from '../../../../shared/conversation-graph'
+import type {
+  HandoffLifecycleEvent,
+  HandoffLifecycleEventSource
+} from '../../../../shared/handoff-lifecycle'
+import type {
+  NotebookRunRecord,
+  NotebookSessionReference,
+  NotebookSessionState
+} from '../../../../shared/notebook'
+import type { ManagedPreviewResource } from '../../../../shared/preview-resources'
+import type { ReviewWithChecks } from '../../../../shared/reviewer'
 import { normalizeSessionFile } from '../../../../shared/session-persistence'
-import {
-  createInitialGrantedFoldersState,
-  useGrantedFoldersStore
-} from '@/stores/granted-folders-store'
-import { createInitialSessionJobState, useSessionJobStore } from '@/stores/session-job-store'
-import type { JobSummary } from '../../../../shared/compute'
-
+import type { ActivePlanProjection } from '../../../../shared/session-plan/contract'
+import { createUploadVersionReference, type UploadedAttachment } from '../../../../shared/uploads'
+import { BookmarksProvider } from './bookmarks/BookmarksProvider'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 import type { ComposerDoc } from './composer/composer-doc'
@@ -3264,6 +3263,67 @@ describe('WorkspaceMessageScroller artifact click behavior', () => {
     expect(resolveVersionDescriptors).toHaveBeenCalledTimes(1)
     expect(container.querySelector('[aria-label="Preview generated file sin.png"]')).not.toBeNull()
   })
+
+  it.each(['temporary', 'bound'])(
+    'defers copied artifact lookup until branch ownership is durable (%s identity)',
+    async (identity) => {
+      const { WorkspaceMessageScroller } = await import('./WorkspaceMessageScroller')
+      const resolveVersionDescriptors = vi
+        .fn()
+        .mockRejectedValue(new Error('Session does not belong to the requested Project.'))
+      window.api.artifacts.resolveVersionDescriptors = resolveVersionDescriptors
+      const session = createSession({
+        id: identity === 'temporary' ? 'pending-session-123-1' : 'durable-session',
+        isPending: identity === 'temporary',
+        delegationPolicyAuthorityPending: true,
+        status: 'idle',
+        branchSource: { sessionId: 'source-session' },
+        messages: [
+          createMessage({
+            id: 'reply-1',
+            role: 'agent',
+            content: 'Created the chart',
+            artifactIds: ['artifact-version-1']
+          })
+        ]
+      })
+
+      root = createRoot(container)
+      await act(async () => {
+        root.render(
+          <WorkspaceMessageScroller activeSession={session} onSendEditedMessage={vi.fn()} />
+        )
+      })
+
+      expect(resolveVersionDescriptors).not.toHaveBeenCalled()
+      expect(flushSessionPersistenceMock).not.toHaveBeenCalled()
+
+      resolveVersionDescriptors.mockResolvedValue([])
+      flushSessionPersistenceMock.mockRejectedValue(
+        new Error('Unrelated Session persistence failed')
+      )
+      await act(async () => {
+        root.render(
+          <WorkspaceMessageScroller
+            activeSession={{
+              ...session,
+              id: 'durable-session',
+              isPending: false,
+              // A save acknowledgement can arrive before the policy acknowledgement.
+              revision: 1
+            }}
+            onSendEditedMessage={vi.fn()}
+          />
+        )
+      })
+      expect(resolveVersionDescriptors).toHaveBeenCalledExactlyOnceWith({
+        projectId: 'default',
+        appSessionId: 'durable-session',
+        versionIds: ['artifact-version-1']
+      })
+      expect(flushSessionPersistenceMock).not.toHaveBeenCalled()
+    }
+  )
 
   it('retries copied generated Version metadata after pending Session persistence settles', async () => {
     const { WorkspaceMessageScroller } = await import('./WorkspaceMessageScroller')

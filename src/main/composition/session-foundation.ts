@@ -1,4 +1,7 @@
-import { app, dialog } from 'electron'
+import { resolveDesktopLogPaths } from '../session-diagnostics/desktop-log-paths'
+import { desktopFileInteraction } from '../desktop-interaction'
+import { runtimeMetadata } from '../runtime-metadata'
+
 import type {
   SensitiveContentEvidence,
   SensitiveContentFailure,
@@ -6,7 +9,7 @@ import type {
 } from '../../shared/session-diagnostics'
 import { createAcpRuntime } from '../acp/runtime-composition'
 import { type ApplicationModuleBuilder } from '../application-runtime'
-import { createLogger, diagnosticErrorFields, getLogFilePath } from '../logger'
+import { createLogger, diagnosticErrorFields, getLogFilePath } from '@aipoch/diagnostics/node'
 import { getProjectDbClient } from '../projects/prisma-client'
 import { broadcastToRenderers } from '../renderer-broadcast'
 import { createSessionDiagnosticsDesktop } from '../session-diagnostics/desktop'
@@ -19,7 +22,7 @@ import {
 import { createDefaultSessionRepository } from '../session-persistence/ipc'
 import { SettingsService } from '../settings/service'
 import { SideChatRuntimeOwner } from '../side-chat/runtime-owner'
-import { UserSkillCatalogObserver } from '../skills/user-skill-catalog-observer'
+import { UserSkillCatalogObserver } from '@aipoch/skills'
 import { resolveConfigRoot, resolveDataRoot } from '../storage-root'
 
 export async function composeSessionFoundation({
@@ -128,13 +131,20 @@ export async function composeSessionFoundation({
           dataRoot: resolveDataRoot(),
           configRoot: resolveConfigRoot(),
           logPath: getLogFilePath(),
-          appVersion: app.getVersion(),
+          ...resolveDesktopLogPaths({
+            configRoot: resolveConfigRoot(),
+            packaged: runtimeMetadata().packaged,
+            homePath: runtimeMetadata().homePath
+          }),
+          appVersion: runtimeMetadata().version,
           sensitiveContent: sensitiveContent?.failure,
           sensitiveContentSources: sensitiveContent?.sources
         }
       },
       chooseDestination: async (defaultName) => {
-        const result = await dialog.showSaveDialog({ defaultPath: defaultName })
+        const result = await desktopFileInteraction().chooseSavePath({
+          defaultPath: defaultName
+        })
         return result.canceled ? undefined : result.filePath
       }
     })

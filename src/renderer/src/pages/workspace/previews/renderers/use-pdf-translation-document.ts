@@ -1,25 +1,29 @@
-import { verifiedPdfLatinAccentText } from './pdf-translation-latin-accents'
-import { pdfTranslationLayoutFragments } from './pdf-translation-fragments'
-import { getPdfTranslationTextContent } from './pdf-translation-text-content'
-import { resolveInlineFractions } from '../../../../../../../resources/pdf-translation/math-fractions.mjs'
+import { pdfTranslationCheckpointRequestSchema } from '../../../../../../shared/pdf-translation'
 import {
+  verifiedPdfLatinAccentText,
+  pdfTranslationLayoutFragments,
+  getPdfTranslationTextContent,
+  resolveInlineFractions,
   pdfLinkLabelKey,
   pdfLinkLabelMatches,
   pdfLinkAddressMatches,
   translatedPdfBracketedReference,
   translatedPdfLinkFragment,
-  translatedPdfLinkLabel
-} from '../../../../../../../resources/pdf-translation/link-labels.mjs'
+  translatedPdfLinkLabel,
+  isPdfTranslationResultExtension,
+  type PdfTranslationResults
+} from '@aipoch/pdf-translation/reader'
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { pdfjsLib } from '../pdfjs'
-import { isPdfTranslationResultExtension, type PdfTranslationResults } from './pdf-translation'
+
 import {
   pdfGenerationFailure,
   type PdfGenerationFailure,
-  type PdfTranslationLayoutFailure,
-  type PdfTranslationRecordLayoutRequest
-} from '../../../../../../shared/pdf-translation'
+  type PdfTranslationLayoutFailure
+} from '@aipoch/pdf-translation/contracts'
+import { type PdfTranslationRecordLayoutRequest } from '../../../../../../shared/pdf-translation'
 
 /** A generated file belongs to exactly one accepted result snapshot, never a filename alone. */
 export type PdfTranslationArtifact = Readonly<{ results: PdfTranslationResults; data: Uint8Array }>
@@ -698,7 +702,12 @@ function partialPdfSnapshot(results: PdfTranslationResults): Readonly<{
     readyPages,
     units: sourceUnits.map((unit) => ({
       source: unit.source,
-      fragments: pdfTranslationLayoutFragments(unit, results.source),
+      // Retained source has no output capacity to reserve. Enlarging its region
+      // can include rotated figure labels excluded from prose extraction.
+      fragments:
+        !translations.has(unit.id) || translations.get(unit.id)!.translation === unit.source
+          ? unit.fragments
+          : pdfTranslationLayoutFragments(unit, results.source),
       translation: translations.get(unit.id)?.translation ?? unit.source
     }))
   }
@@ -1028,7 +1037,7 @@ export function usePdfTranslationDocument(
     const cache =
       complete && runResults.checkpoint
         ? {
-            source: runResults.checkpoint.source,
+            source: pdfTranslationCheckpointRequestSchema.parse(runResults.checkpoint.source),
             checkpointKey: runResults.checkpoint.key,
             ...(bypassCache ? { bypass: true } : {})
           }
@@ -1051,7 +1060,7 @@ export function usePdfTranslationDocument(
       if (runResults.checkpoint && api?.recordLayout) {
         void api
           .recordLayout({
-            source: runResults.checkpoint.source,
+            source: pdfTranslationCheckpointRequestSchema.parse(runResults.checkpoint.source),
             checkpointKey: runResults.checkpoint.key,
             generatedAt,
             units: entries,
@@ -3460,7 +3469,7 @@ export function usePdfTranslationDocument(
           generatedUnits.flatMap(({ unit, sourceIndex, snapshot }) => {
             if (
               incremental &&
-              !cacheToken &&
+              (!cacheToken || retainedUnitIds.includes(unit.id)) &&
               !unit.fragments.some((fragment) =>
                 incremental?.pageNumbers.includes(fragment.pageNumber)
               )

@@ -2,7 +2,10 @@ import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { ipcMain } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { configureIpcHandlerRegistry } from '../ipc-handler-registry'
 
 const handlers = new Map<string, (event: unknown, payload: unknown) => unknown>()
 
@@ -14,6 +17,8 @@ vi.mock('electron', () => ({
     }
   }
 }))
+
+configureIpcHandlerRegistry(ipcMain)
 
 const { createMachineApprovalCommandOwner, registerMachineApprovalIpcHandlers } =
   await import('./approval-ipc')

@@ -1,5 +1,7 @@
 import { app } from 'electron'
 import { getAccountOwner } from '../account/runtime'
+import { createWindowsExecutableVerifier } from '../windows-executable-trust'
+import { runtimeMetadata } from '../runtime-metadata'
 import { dirname } from 'node:path'
 import { DEFAULT_ARTIFACT_PROJECT_ID } from '../../shared/artifacts'
 import type { ApplicationEvents } from '../application-events'
@@ -8,16 +10,16 @@ import { ArchiveCoordinator } from '../archive/coordinator'
 import { ArtifactReproducibilityAttemptOwner } from '../artifacts/artifact-reproducibility-lifecycle'
 import { withReproducibilityNotebookLifecycle } from '../artifacts/reproducibility-notebook-lifecycle'
 import { BackgroundResultDeliveryOwner } from '../background-result-delivery/owner'
-import { type DiagnosticOperation } from '../diagnostics/operation'
+import { type DiagnosticOperation } from '@aipoch/diagnostics/node'
 import { QUIT_SHUTDOWN_BUDGET_MS } from '../lifecycle-shutdown'
 import { GrantedLocalRootsRepository } from '../local-fs/granted-roots-repository'
 import { createNotebookApplicationModule } from '../notebook/application'
-import { NotebookDependencyAnalyzer } from '../notebook/dependency-analysis'
+import { NotebookDependencyAnalyzer } from '@aipoch/notebook-analysis'
 import { NotebookNetworkSandboxOwner } from '../notebook/network-sandbox-owner'
 import { NotebookRunRepository } from '../notebook/repository'
-import { runtimeRoot } from '../notebook/runtime-paths'
+import { runtimeRoot } from '@aipoch/environment'
 import type { NotebookRuntimeService } from '../notebook/runtime-service'
-import { createProductionMicromambaRunner } from '../notebook/windows-micromamba-runner'
+import { createProductionMicromambaRunner } from '../notebook/environment-runner'
 import type { NotebookRuntimeSettings } from '../settings/capabilities'
 import { SettingsService } from '../settings/service'
 import { resolveConfigRoot, resolveDataRoot } from '../storage-root'
@@ -72,10 +74,12 @@ export async function composeNotebookRuntime({
   // One runner owns Windows integrity/preflight/fallback state for every production micromamba
   // consumer in this main-process generation. Each consumer receives only its narrow resolve seam.
   const micromambaRunner = createProductionMicromambaRunner({
-    packaged: app.isPackaged,
-    configHome: app.getPath('home'),
+    verifySignature: createWindowsExecutableVerifier(),
+    runtimeRoot: provisioningRoot,
+    packaged: runtimeMetadata().packaged,
+    configHome: runtimeMetadata().homePath,
     home: dirname(dirname(provisioningRoot)),
-    resourcesPath: process.resourcesPath
+    resourcesPath: runtimeMetadata().resourcesPath
   })
   const notebookRuntimeSettings: Pick<
     NotebookRuntimeSettings,
@@ -113,8 +117,8 @@ export async function composeNotebookRuntime({
         settingsService.getAgentEnvironmentCreationEnabled(),
       notebookRuntimeSettings,
       micromambaRunner,
-      locale: app.getLocale(),
-      appVersion: app.getVersion(),
+      locale: runtimeMetadata().locale,
+      appVersion: runtimeMetadata().version,
       translate,
       helperModuleCatalog: settingsService.registeredHelperCatalog(),
       processSandbox: notebookNetworkSandbox,
