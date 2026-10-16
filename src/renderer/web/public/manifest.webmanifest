@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Deep Research Agent",
-  "short_name": "DRA",
+  "name": "Baselio",
+  "short_name": "Baselio",
   "description": "医療文献、研究計画、データ解析、学術論文作成のための研究ワークスペース。",
   "lang": "ja",
   "start_url": "/",

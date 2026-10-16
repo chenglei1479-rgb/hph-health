@@ -1436,7 +1436,7 @@ describe('PreviewFileSurface managed text versions', () => {
     },
     {
       code: 'PERMISSION_DENIED' as const,
-      message: 'DRA does not have permission to save this file.'
+      message: 'Baselio does not have permission to save this file.'
     },
     {
       code: 'OUT_OF_SPACE' as const,

@@ -56,7 +56,7 @@ describe('SkillEditLoader', () => {
 
     expect(container.textContent).not.toContain('Loading…')
     expect(container.querySelector('[role="alert"]')?.textContent).toContain(
-      'DRA could not load this Skill.'
+      'Baselio could not load this Skill.'
     )
 
     const retry = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
@@ -280,6 +280,6 @@ it('does not let the editor fall back to an unconditional save when detail has n
   await act(async () => {
     root.render(<SkillEditLoader skillId={detail.id} onDone={vi.fn()} />)
   })
-  expect(container.textContent).toContain('DRA could not load this Skill.')
+  expect(container.textContent).toContain('Baselio could not load this Skill.')
   expect(updateSkill).not.toHaveBeenCalled()
 })

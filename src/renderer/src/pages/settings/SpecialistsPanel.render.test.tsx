@@ -216,7 +216,7 @@ describe('SpecialistsPanel', () => {
     })
 
     expect(document.body.textContent).toContain(
-      'DRA could not load Specialists. Retry to continue.'
+      'Baselio could not load Specialists. Retry to continue.'
     )
     expect(document.body.textContent).not.toContain('Loading…')
 
@@ -1054,7 +1054,7 @@ describe('SpecialistsPanel', () => {
     },
     {
       code: 'recovery-failed' as const,
-      copy: 'DRA could not recover an earlier package operation. Restart the app before trying again.',
+      copy: 'Baselio could not recover an earlier package operation. Restart the app before trying again.',
       action: 'Open data folder'
     },
     {
@@ -1288,7 +1288,7 @@ describe('SpecialistsPanel', () => {
       modifiedSinceImport: false,
       marketplaceProvenance: {
         sourceId: 'official',
-        publisher: 'DRA',
+        publisher: 'Baselio',
         version: '1.0.1'
       },
       importBaseline: {
@@ -1323,7 +1323,7 @@ describe('SpecialistsPanel', () => {
     )
     expect(marketplaceGroup?.textContent).toContain('RNA Reviewer')
     expect(document.body.textContent).toContain('Marketplace')
-    expect(document.body.textContent).toContain('Publisher: DRA')
+    expect(document.body.textContent).toContain('Publisher: Baselio')
     expect(document.body.textContent).toContain('Version 1.0.1')
     expect(document.body.textContent).not.toContain('Unchanged locally')
     expect(document.body.textContent).not.toContain('Imported ZIP')
@@ -1344,7 +1344,7 @@ describe('SpecialistsPanel', () => {
       modifiedSinceImport: false,
       marketplaceProvenance: {
         sourceId: 'official',
-        publisher: 'DRA',
+        publisher: 'Baselio',
         version: '1.0.0'
       }
     }
@@ -2097,7 +2097,7 @@ describe('SpecialistsPanel', () => {
       packageVersion: '1.0.0',
       marketplaceProvenance: {
         sourceId: 'official',
-        publisher: 'DRA',
+        publisher: 'Baselio',
         version: '1.0.0'
       }
     }
@@ -2123,12 +2123,12 @@ describe('SpecialistsPanel', () => {
         specialists: [
           {
             sourceId: 'official',
-            sourceName: 'DRA Marketplace',
+            sourceName: 'Baselio Marketplace',
             sourceTrust: 'official',
             id: managed.id,
             displayName: managed.name,
             summary: managed.description,
-            publisher: { id: 'open-science', name: 'DRA' },
+            publisher: { id: 'open-science', name: 'Baselio' },
             version: '1.1.0',
             installedVersion: '1.0.0',
             updateAvailable: true
@@ -2471,7 +2471,7 @@ describe('S04 explicit Specialist refresh controls', () => {
       useSpecialistStore.setState(
         scenario === 'read failure'
           ? {
-              loadError: 'DRA could not load Specialists. Retry to continue.'
+              loadError: 'Baselio could not load Specialists. Retry to continue.'
             }
           : {
               integrity: {

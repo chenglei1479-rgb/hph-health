@@ -7,6 +7,7 @@ import {
   type NativeImage
 } from 'electron'
 
+import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 import { DEFAULT_APP_ICON_VARIANT, type AppIconVariant } from '../shared/settings'
 import type { ActiveSessionInfo } from '../shared/storage'
 import { englishNativeTranslator, type NativeTranslator } from './locale/main-process-messages'
@@ -235,7 +236,7 @@ const createAppTray = (opts: {
     trayNavigationRefreshers.set(tray, refreshNavigation)
     void refreshNavigation()
 
-    tray.setToolTip(headlessWeb ? 'DRA (Web)' : 'DRA')
+    tray.setToolTip(headlessWeb ? `${PRODUCT_DISPLAY_NAME} (Web)` : PRODUCT_DISPLAY_NAME)
 
     const primaryAction = (): void => {
       if (headlessWeb) void opts.onOpenWeb!()

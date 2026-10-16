@@ -45,7 +45,7 @@ export const selectCredentialIdentity = (options: {
   linuxPasswordStore?: string
 }): CredentialIdentity => {
   const suffix = options.packaged ? '' : ' (DEV)'
-  // These names are the published credential helper allowlist. The product display name stays DRA.
+  // These names are the published credential helper allowlist. Do not follow the display name.
   const current = `Open-Science${suffix}`
   const legacy = `Open Science${suffix}`
   if (options.platform === 'win32') {

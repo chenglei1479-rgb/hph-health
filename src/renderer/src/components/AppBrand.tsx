@@ -27,10 +27,8 @@ export const AppBrand = ({
       <span className="dra-app-brand-name" aria-hidden="true">
         {productName}
       </span>
-      <span className="dra-app-brand-tagline" lang="en" aria-hidden="true">
-        {APP.brand.taglineLines.map((line) => (
-          <span key={line}>{line}</span>
-        ))}
+      <span className="dra-app-brand-tagline" aria-hidden="true">
+        {t('AI Research Infrastructure for Medicine')}
       </span>
     </span>
   )

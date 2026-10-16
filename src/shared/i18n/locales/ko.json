@@ -1523,7 +1523,7 @@
     "Literature could not be created.": "문헌을 만들 수 없습니다.",
     "Mark completed session {{title}} as read": "완료된 세션을 읽음으로 표시: {{title}}",
     "Installed_specialists": "설치됨",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "의학을 위한 AI 연구 인프라",
     "completed": "완료",
     "PDF passages": "PDF 발췌문",
     "The skill package exceeds the {{limit}} total size limit.": "스킬 패키지가 {{limit}} 전체 크기 제한을 초과합니다.",
@@ -7511,6 +7511,7 @@
     "Conversations in this project are not deleted.": "이 프로젝트의 대화는 삭제하지 않습니다.",
     "Patient data stored for this project on this device was deleted.": "이 기기에 저장된 이 프로젝트의 환자 데이터를 삭제했습니다.",
     "Could not delete patient data for this project on this device. Try again.": "이 기기의 이 프로젝트 환자 데이터를 삭제하지 못했습니다. 다시 시도하세요.",
-    "Deleting patient data on this device…": "이 기기의 환자 데이터를 삭제하는 중…"
+    "Deleting patient data on this device…": "이 기기의 환자 데이터를 삭제하는 중…",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "학술 연구 전용이며 진단이나 치료 목적이 아닙니다. 가상 데이터만 사용하세요. 환자 식별 정보를 업로드하지 마세요. 연구자는 출처, 방법, 결과를 검증해야 합니다."
   }
 }

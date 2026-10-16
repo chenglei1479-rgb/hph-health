@@ -1599,7 +1599,7 @@
     "Literature could not be created.": "No se pudo crear la referencia.",
     "Mark completed session {{title}} as read": "Marcar sesión completada {{title}} como leída",
     "Installed_specialists": "Instalados",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "Infraestructura de investigación con IA para la medicina",
     "completed": "completado",
     "PDF passages": "Pasajes del PDF",
     "The skill package exceeds the {{limit}} total size limit.": "El paquete de habilidades excede el límite de tamaño total {{limit}}.",
@@ -7841,6 +7841,7 @@
     "Conversations in this project are not deleted.": "Las conversaciones de este proyecto no se eliminan.",
     "Patient data stored for this project on this device was deleted.": "Se eliminaron los datos de pacientes de este proyecto guardados en este equipo.",
     "Could not delete patient data for this project on this device. Try again.": "No se pudieron eliminar los datos de pacientes de este proyecto en este equipo. Inténtelo de nuevo.",
-    "Deleting patient data on this device…": "Eliminando los datos de pacientes en este equipo…"
+    "Deleting patient data on this device…": "Eliminando los datos de pacientes en este equipo…",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Solo para investigación académica; no para diagnóstico ni tratamiento. Utilice solo datos ficticios. No cargue información que identifique a pacientes. Los investigadores deben verificar fuentes, métodos y resultados."
   }
 }

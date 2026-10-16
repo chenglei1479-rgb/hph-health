@@ -1,6 +1,5 @@
 import { ApplicationPresentationHost } from '@/ApplicationPresentationHost'
 import { AccountGate } from '@/components/AccountGate'
-import { PrereleaseBanner } from '@/components/PrereleaseBanner'
 import { PrereleaseFirstModelCallNotice } from '@/components/PrereleaseFirstModelCallNotice'
 import { SessionPackageImportError } from '@/components/SessionPackageImportError'
 import { SessionPackageOperation } from '@/components/SessionPackageOperation'
@@ -10,7 +9,6 @@ installRendererPrereleaseLockdown()
 
 const App = (): React.JSX.Element => (
   <>
-    <PrereleaseBanner />
     <PrereleaseFirstModelCallNotice />
     <AccountGate>
       <ApplicationPresentationHost />

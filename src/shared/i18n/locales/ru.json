@@ -1622,7 +1622,7 @@
     "Literature could not be created.": "Не удалось создать источник.",
     "Mark completed session {{title}} as read": "Отметить сессию {{title}} как прочитанную",
     "Installed_specialists": "Установленные",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "ИИ-инфраструктура медицинских исследований",
     "completed": "завершён",
     "PDF passages": "Фрагменты PDF",
     "The skill package exceeds the {{limit}} total size limit.": "Пакет навыка превышает общий лимит по размеру {{limit}}.",
@@ -7980,6 +7980,7 @@
     "Conversations in this project are not deleted.": "Диалоги в этом проекте не удаляются.",
     "Patient data stored for this project on this device was deleted.": "Данные пациентов этого проекта, хранившиеся на этом устройстве, удалены.",
     "Could not delete patient data for this project on this device. Try again.": "Не удалось удалить данные пациентов этого проекта на этом устройстве. Повторите попытку.",
-    "Deleting patient data on this device…": "Удаление данных пациентов на этом устройстве…"
+    "Deleting patient data on this device…": "Удаление данных пациентов на этом устройстве…",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Только для академических исследований; не для диагностики или лечения. Используйте только вымышленные данные. Не загружайте данные, позволяющие идентифицировать пациента. Исследователи должны проверять источники, методы и результаты."
   }
 }

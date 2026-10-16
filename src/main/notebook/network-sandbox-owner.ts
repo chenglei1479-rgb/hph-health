@@ -26,6 +26,7 @@ import {
 } from './windows-notebook-runtime'
 import { probeWindowsRuntimeComponent } from './windows-runtime-probe'
 import type { ShellRuntimeBinding } from '../../shared/notebook'
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 
 import { type NotebookNetworkSettings } from '../../shared/notebook-network-settings'
 import {
@@ -1113,9 +1114,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
       if (request.signal?.aborted)
         throw new NotebookRuntimeAccessCancelledError('R access preparation was cancelled.')
       if (isMigrationInProgress())
-        throw new Error(
-          'DRA is moving your data. Wait for the move to finish before running this.'
-        )
+        throw new Error('DRA is moving your data. Wait for the move to finish before running this.')
       diagnostic.phase('data-root-write-wait')
       const result = await withDataRootWrite(async () => {
         diagnostic.phase('preflight')
@@ -1153,7 +1152,7 @@ class NotebookNetworkSandboxOwner implements NotebookProcessSandbox {
           throw new NotebookRuntimeAccessCancelledError('R access preparation was cancelled.')
         if (!this.options.allowRuntimeAccessPrompt)
           throw new Error(
-            'R access requires administrator authorization on the local DRA desktop.'
+            `R access requires administrator authorization on the local ${PRODUCT_DISPLAY_NAME} desktop.`
           )
         diagnostic.phase('authorize')
         return {

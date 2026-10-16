@@ -1,5 +1,8 @@
 import type { ToolContext, ToolDescriptor } from '@aipoch/connector-core'
 
+// This package cannot import src/shared. Keep this string equal to PRODUCT_DISPLAY_NAME.
+const ENRICHR_LIST_DESCRIPTION = 'Baselio gene-set enrichment'
+
 const ENRICHR_BASE = 'https://maayanlab.cloud'
 const SPEEDRICHR_BASE = `${ENRICHR_BASE}/speedrichr/api`
 const ORGANISMS = ['human', 'fly', 'yeast', 'worm', 'fish'] as const
@@ -334,7 +337,7 @@ export const GENES_ENRICHR_TOOLS: ToolDescriptor[] = [
       const description =
         typeof args.description === 'string' && args.description.trim() !== ''
           ? args.description.trim()
-          : 'DRA gene-set enrichment'
+          : ENRICHR_LIST_DESCRIPTION
       const maxResults =
         typeof args.max_results === 'number' && Number.isInteger(args.max_results)
           ? args.max_results

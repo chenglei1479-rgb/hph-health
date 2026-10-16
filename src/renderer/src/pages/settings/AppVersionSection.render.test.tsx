@@ -47,7 +47,7 @@ describe('AppVersionSection', () => {
     useUpdateStore.setState({ status: { state: 'disabled', current: '0.1.29' } })
     act(() => root.render(<AppVersionSection />))
     expect(container.textContent).toContain(
-      'Automatic updates are disabled until a DRA update service is configured.'
+      'Automatic updates are disabled until a Baselio update service is configured.'
     )
     const checkButton = Array.from(container.querySelectorAll('button')).find((element) =>
       /check now/i.test(element.textContent ?? '')
@@ -68,7 +68,7 @@ describe('AppVersionSection', () => {
     expect(container.textContent).not.toContain('Check now')
     expect(container.textContent).not.toContain('Update to 0.2.0')
     expect(container.textContent).not.toContain(
-      'Automatic updates are disabled until a DRA update service is configured.'
+      'Automatic updates are disabled until a Baselio update service is configured.'
     )
     const buttons = Array.from(container.querySelectorAll('button'))
     expect(buttons).toHaveLength(1)
@@ -89,9 +89,9 @@ describe('AppVersionSection', () => {
       root.render(<AppVersionSection />)
     })
 
-    expect(container.textContent).toContain('DRA')
+    expect(container.textContent).toContain('Baselio')
     expect(container.textContent).toContain('v0.2.0')
-    expect(container.textContent).toContain('© 2026 DRA')
+    expect(container.textContent).toContain('© 2026 Baselio')
     expect(container.textContent).toContain('Based on AIPOCH Open-Science')
     expect(container.textContent).toContain('AIPOCH Open-Science をベースに開発')
     expect(container.querySelector('img[alt*="AIPOCH"]')).toBeNull()

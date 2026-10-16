@@ -1,9 +1,9 @@
 {
   "name": "medresearch-agent",
-  "productName": "DRA",
+  "productName": "Baselio",
   "desktopName": "medresearch-agent.desktop",
   "version": "0.1.33-unified.1",
-  "description": "DRA \u2014 AI Research Infrastructure for Medicine",
+  "description": "Baselio — AI Research Infrastructure for Medicine",
   "main": "./out/main/index.js",
   "author": "aipoch",
   "license": "Apache-2.0",

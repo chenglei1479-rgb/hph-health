@@ -77,7 +77,7 @@ describe('NetworkPanel offline retry', () => {
       root.render(<NetworkPanel view={{ kind: 'list' }} onNavigate={() => {}} />)
     )
     expect(container.querySelector('[aria-label="Proxy"]')?.textContent).toContain(
-      'How DRA, ACP agents, notebook runtimes, and installers reach the internet.'
+      'How Baselio, ACP agents, notebook runtimes, and installers reach the internet.'
     )
     expect(buttonWithText('Check again')).not.toBeUndefined()
     await act(async () => buttonWithText('Check again').click())

@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import openScienceLogoSvg from './open-science-logo.svg?raw'
 
 export const REMOTE_PAIR_STATUS_PATH = '/__open_science_remote/pair/status'
@@ -69,10 +70,10 @@ export const renderPairingPage = (params: {
     <main class="card">
       <div class="brand">
         ${openScienceLogo}
-        <div class="brand-name">DRA</div>
+        <div class="brand-name">${escapeHtml(PRODUCT_DISPLAY_NAME)}</div>
       </div>
       <h1>Approve this browser</h1>
-      <p>On your home computer, open DRA → Settings → Remote, then verify and approve the pairing code below.</p>
+      <p>On your home computer, open ${escapeHtml(PRODUCT_DISPLAY_NAME)} → Settings → Remote, then verify and approve the pairing code below.</p>
       <div class="code" aria-label="Pairing code">${code}</div>
       <p>Choose “Allow for up to 12 hours” or “Trust this browser for 180 days”. Do not share this pairing code with anyone.</p>
       <div class="device">${browser} · ${platform}</div>

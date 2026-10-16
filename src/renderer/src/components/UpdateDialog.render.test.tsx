@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { replaceVisibleDevelopmentCode } from '../../../shared/product-identity'
 import { UPDATE_INSTALLATION_REQUIRED } from '../../../shared/update'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -266,7 +267,7 @@ describe('UpdateDialog', () => {
         current: '0.1.0',
         latest: '0.2.0',
         applyKind: 'installer',
-        localPath: '/data/update/DRA.dmg',
+        localPath: '/data/update/Baselio.dmg',
         error: 'Could not open the update installer: no associated application'
       }
     })
@@ -307,7 +308,7 @@ describe('UpdateDialog', () => {
     expect(document.body.textContent).toContain(
       'use Reveal in Settings → General → Diagnostics to locate the log file'
     )
-    expect(document.body.textContent).toContain('Quit and reopen DRA')
+    expect(document.body.textContent).toContain('Quit and reopen Baselio')
     const issueLink = document.body.querySelector(`a[href="${APP.links.githubIssues}"]`)
     expect(issueLink?.textContent).toContain('open a GitHub issue')
   })
@@ -437,7 +438,9 @@ it('opens installation guidance from a read-only update failure', () => {
   act(() => root.render(<UpdateDialog />))
   expect(document.body.textContent).not.toContain('Retry')
   expect(document.body.textContent).toContain('Show installation steps')
-  expect(document.body.textContent).toContain(UPDATE_INSTALLATION_REQUIRED)
+  expect(document.body.textContent).toContain(
+    replaceVisibleDevelopmentCode(UPDATE_INSTALLATION_REQUIRED, 'en')
+  )
   const guidanceButton = Array.from(document.body.querySelectorAll('button')).find(
     (button) => button.textContent === 'Show installation steps'
   )!

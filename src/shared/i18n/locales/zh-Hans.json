@@ -1524,7 +1524,7 @@
     "Literature could not be created.": "无法创建文献。",
     "Mark completed session {{title}} as read": "将已完成的会话 {{title}} 标记为已读",
     "Installed_specialists": "已安装",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "面向医学的 AI 研究基础设施",
     "completed": "已完成",
     "PDF passages": "PDF 片段",
     "The skill package exceeds the {{limit}} total size limit.": "技能包超过 {{limit}} 的总大小限制。",
@@ -7513,6 +7513,7 @@
     "Conversations in this project are not deleted.": "不会删除此项目中的对话。",
     "Patient data stored for this project on this device was deleted.": "已删除此项目在此设备上保存的患者数据。",
     "Could not delete patient data for this project on this device. Try again.": "无法删除此项目在此设备上的患者数据。请重试。",
-    "Deleting patient data on this device…": "正在删除此设备上的患者数据…"
+    "Deleting patient data on this device…": "正在删除此设备上的患者数据…",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "仅用于学术研究，不用于诊断或治疗。请仅使用虚构数据。请勿上传可识别患者身份的信息。研究者须核实来源、方法与输出内容。"
   }
 }

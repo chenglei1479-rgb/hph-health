@@ -38,7 +38,7 @@ beforeEach(() => {
   root = createRoot(container)
 
   useUpdateStore.setState({
-    appInfo: { name: 'DRA', version: '0.2.0', copyright: '© 2026 AIPOCH.' },
+    appInfo: { name: 'Baselio', version: '0.2.0', copyright: '© 2026 AIPOCH.' },
     status: { state: 'up-to-date', current: '0.2.0', latest: '0.2.0' }
   })
 })

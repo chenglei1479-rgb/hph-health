@@ -28,18 +28,18 @@ describe('AI usage declaration', () => {
     expect(declaration.draft).not.toContain(coiSentence('ja'))
   })
 
-  it('adds a neutral conflict sentence while the company and public name are unset', () => {
+  it('names the configured product and leaves the company as a placeholder', () => {
     const declaration = buildAiUsageDeclaration({
       usages: defaultAiUsageRecords(),
       includeCoi: true
     })
     expect(declaration.draft).toContain(
-      '本研究では、【運営会社名（未設定）】より研究支援ソフトウェア（開発コード名）の無償提供を受けた。'
+      '本研究では、【運営会社名（未設定）】よりベースリオの無償提供を受けた。'
     )
     expect(declaration.draft).toContain(coiSentence('ja'))
     expect(declaration.draft).toContain(coiSentence('en'))
     expect(declaration.draft).toContain(
-      'This study received research-support software (development code name) free of charge from [Operating company name (not set)].'
+      'This study received Baselio free of charge from [Operating company name (not set)].'
     )
     expect(declaration.draft).not.toContain('DRA')
     expect(declaration.draft).not.toContain('著者は DRA の無償提供を受けた')
@@ -57,17 +57,13 @@ describe('AI usage declaration', () => {
       'This study received Example Research free of charge from Example KK.'
     )
     expect(coiSentence('ja', { companyLegalName: 'Example KK' })).toBe(
-      '本研究では、Example KKより研究支援ソフトウェア（開発コード名）の無償提供を受けた。'
+      '本研究では、Example KKよりベースリオの無償提供を受けた。'
     )
     expect(coiSentence('en', { productName: 'Example Research' })).toContain(
       '[Operating company name (not set)]'
     )
-    expect(coiSentence('zh-Hans')).toBe(
-      '本研究从【运营公司名称（未设置）】无偿获得了研究支持软件（开发代号）。'
-    )
-    expect(coiSentence('zh-Hant')).toBe(
-      '本研究從【營運公司名稱（未設定）】無償取得了研究支援軟體（開發代號）。'
-    )
+    expect(coiSentence('zh-Hans')).toBe('本研究从【运营公司名称（未设置）】无偿获得了Baselio。')
+    expect(coiSentence('zh-Hant')).toBe('本研究從【營運公司名稱（未設定）】無償取得了Baselio。')
   })
 
   it('follows the selected language and does not put Japanese into Chinese or English', () => {
@@ -124,7 +120,8 @@ describe('AI usage declaration', () => {
       expect(coiCheckboxLabel(locale)).not.toContain('DRA')
     }
     expect(coiCheckboxLabel('ja')).toContain('【運営会社名（未設定）】')
-    expect(coiCheckboxLabel('ja')).toContain('研究支援ソフトウェア（開発コード名）')
+    expect(coiCheckboxLabel('ja')).toContain('ベースリオ')
+    expect(coiCheckboxLabel('en')).toContain('Baselio')
     expect(coiCheckboxLabel('zh-CN')).toContain('【运营公司名称（未设置）】')
     expect(coiCheckboxLabel('zh-TW')).toContain('【營運公司名稱（未設定）】')
     expect(coiCheckboxLabel('en')).toContain('[Operating company name (not set)]')

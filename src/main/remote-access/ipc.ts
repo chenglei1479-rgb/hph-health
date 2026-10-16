@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { remoteAccessApplicationCommandContracts } from '../../shared/remote-access'
 import {
   callerContextForEvent,
@@ -12,7 +13,7 @@ const isDesktopCaller = (context: CallerContext): boolean => context.surface ===
 
 const requireDesktopCaller = (context: CallerContext): void => {
   if (!isDesktopCaller(context)) {
-    throw new Error('This action must be approved from the DRA desktop app.')
+    throw new Error(`This action must be approved from the ${PRODUCT_DISPLAY_NAME} desktop app.`)
   }
 }
 
@@ -25,7 +26,7 @@ const canManagePairing = (context: CallerContext): boolean =>
 const requirePairingManager = (context: CallerContext): void => {
   if (!canManagePairing(context)) {
     throw new Error(
-      'Pairing can only be managed from the DRA desktop app or an approved browser.'
+      `Pairing can only be managed from the ${PRODUCT_DISPLAY_NAME} desktop app or an approved browser.`
     )
   }
 }

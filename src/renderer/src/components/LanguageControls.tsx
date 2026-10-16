@@ -70,7 +70,7 @@ export const LanguageSelect = ({ compact = false }: { compact?: boolean }): Reac
         onValueChange={(value) => setPreference(value as LanguagePreference)}
       >
         <SelectTrigger
-          className={cn(compact && 'h-8 px-2 text-xs')}
+          className={cn(compact && 'h-9 px-2.5 text-sm')}
           aria-label={t('Interface language')}
         >
           <span>{active.label}</span>

@@ -1524,7 +1524,7 @@
     "Literature could not be created.": "文献を作成できませんでした。",
     "Mark completed session {{title}} as read": "完了したセッション {{title}} を既読としてマークする",
     "Installed_specialists": "インストール済み",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "医学のためのAI研究基盤",
     "completed": "完了",
     "PDF passages": "PDF の抜粋",
     "The skill package exceeds the {{limit}} total size limit.": "スキルパッケージは、{{limit}} の合計サイズ制限を超えています。",
@@ -7513,6 +7513,7 @@
     "Conversations in this project are not deleted.": "このプロジェクトの会話は削除されません。",
     "Patient data stored for this project on this device was deleted.": "この端末に保存されていた、このプロジェクトの患者データを削除しました。",
     "Could not delete patient data for this project on this device. Try again.": "この端末の、このプロジェクトの患者データを削除できませんでした。もう一度お試しください。",
-    "Deleting patient data on this device…": "この端末の患者データを削除しています…"
+    "Deleting patient data on this device…": "この端末の患者データを削除しています…",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "学術研究専用です。診断や治療には使用しないでください。架空データのみを使用してください。患者を特定できる情報をアップロードしないでください。情報源、方法、出力は研究者が確認してください。"
   }
 }

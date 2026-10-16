@@ -313,7 +313,9 @@ const assertMacArchitecture = (binary) => {
   const text = `${result.stdout ?? ''}`
   const expected = process.arch === 'arm64' ? 'arm64' : 'x86_64'
   if (!text.includes(expected)) {
-    throw new Error(`Expected a ${expected} DRA binary on this runner. file says: ${text.trim()}`)
+    throw new Error(
+      `Expected a ${expected} application binary on this runner. file says: ${text.trim()}`
+    )
   }
 }
 
@@ -326,7 +328,11 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   const mount = join(process.env.RUNNER_TEMP || tmpdir(), 'dra-smoke-dmg')
   attachDmg(dmg, mount)
   try {
-    runBounded('ditto', [join(mount, 'DRA.app'), paths.app], MAC_DITTO_TIMEOUT_MS)
+    const mountedApp = readdirSync(mount).find((name) => name.endsWith('.app'))
+    if (!mountedApp) throw new Error(`The disk image has no application bundle: ${mount}`)
+    paths.app = join(homedir(), 'Applications', 'DRA Test', mountedApp)
+    mkdirSync(dirname(paths.app), { recursive: true })
+    runBounded('ditto', [join(mount, mountedApp), paths.app], MAC_DITTO_TIMEOUT_MS)
   } finally {
     try {
       runBounded('hdiutil', macDmgDetachArgs(mount), MAC_DMG_DETACH_TIMEOUT_MS)
@@ -336,7 +342,10 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
     }
   }
   clearQuarantine(paths.app)
-  const binary = join(paths.app, 'Contents', 'MacOS', 'DRA')
+  const macOsDir = join(paths.app, 'Contents', 'MacOS')
+  const executableName = readdirSync(macOsDir).find((name) => !name.startsWith('.'))
+  if (!executableName) throw new Error(`The application bundle has no executable: ${macOsDir}`)
+  const binary = join(macOsDir, executableName)
   assertMacArchitecture(binary)
   writeSmokeSettings(paths.configRoot, paths.dataRoot)
   mkdirSync(paths.userData, { recursive: true })

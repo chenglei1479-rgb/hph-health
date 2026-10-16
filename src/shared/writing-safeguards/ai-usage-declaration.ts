@@ -8,6 +8,7 @@ import type { Locale } from '../locale'
 import {
   OPERATOR_COMPANY_LEGAL_NAME,
   PRODUCT_DISPLAY_NAME,
+  PRODUCT_DISPLAY_NAME_JA,
   productNameIsPublic
 } from '../product-identity'
 
@@ -54,8 +55,12 @@ const resolveIdentity = (
   companyLegalName: identity?.companyLegalName ?? OPERATOR_COMPANY_LEGAL_NAME
 })
 
-export const disclosureProductPhrase = (locale: DisclosureLocale, productName: string): string =>
-  productNameIsPublic(productName) ? productName.trim() : neutralProduct[locale]
+export const disclosureProductPhrase = (locale: DisclosureLocale, productName: string): string => {
+  const trimmed = productName.trim()
+  if (!productNameIsPublic(trimmed)) return neutralProduct[locale]
+  if (locale === 'ja' && trimmed === PRODUCT_DISPLAY_NAME) return PRODUCT_DISPLAY_NAME_JA
+  return trimmed
+}
 
 export const disclosureCompanyName = (
   locale: DisclosureLocale,

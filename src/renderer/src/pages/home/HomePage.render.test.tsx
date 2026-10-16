@@ -389,7 +389,7 @@ afterEach(() => {
 })
 
 describe('HomePage package export progress', () => {
-  it('shows background progress in the DRA header before Search and reopens its detail', () => {
+  it('shows background progress in the Baselio header before Search and reopens its detail', () => {
     usePackageOperationStore.setState({
       operation: {
         id: 'export-1',
@@ -1876,7 +1876,7 @@ describe('HomePage activity overview', () => {
     )
     expect(retry).toBeDefined()
     expect(container.querySelector('[role="alert"] p')?.textContent).toBe(
-      'DRA could not load projects. Retry to continue.'
+      'Baselio could not load projects. Retry to continue.'
     )
     expect(container.textContent).not.toContain('database is locked')
     const section = container.querySelector<HTMLElement>('[aria-label="Projects"]')!
@@ -1933,16 +1933,14 @@ describe('HomePage recent session ordering', () => {
     expect(container.textContent).not.toContain('執筆時の確認')
   })
 
-  it('keeps the logo and three-line DRA signature in the home header', async () => {
+  it('keeps the configured wordmark and one tagline in the home header', async () => {
     await renderHome()
     const brand = container.querySelector('header .dra-app-brand')
     expect(brand).not.toBeNull()
-    expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('DRA')
-    expect(
-      Array.from(brand?.querySelectorAll('.dra-app-brand-tagline > span') ?? []).map(
-        (line) => line.textContent
-      )
-    ).toEqual(['AI Research', 'Infrastructure', 'for Medicine'])
+    expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('Baselio')
+    expect(brand?.querySelector('.dra-app-brand-tagline')?.textContent).toBe(
+      'AI Research Infrastructure for Medicine'
+    )
     const images = brand?.querySelectorAll('img')
     expect(images).toHaveLength(2)
     expect(images?.[0].getAttribute('src')).toMatch(/logo/)
