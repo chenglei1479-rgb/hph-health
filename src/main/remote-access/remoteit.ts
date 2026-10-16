@@ -4,6 +4,7 @@ import { access } from 'node:fs/promises'
 import { promisify } from 'node:util'
 
 import type { RemoteItInstallation, RemoteItService } from '../../shared/remote-access'
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 
 const execFileAsync = promisify(execFile)
 const COMMAND_TIMEOUT_MS = 15_000
@@ -11,9 +12,10 @@ const MAX_OUTPUT_BYTES = 400_000
 const REMOTE_IT_HTTP_TYPE = 7
 const REMOTE_IT_BATCH_MARKER = '__OPEN_SCIENCE_REMOTEIT_BATCH_COMMAND_END__'
 const REMOTE_IT_STATUS_RETRY_DELAYS_MS = [250, 750, 1_500, 3_000, 5_000] as const
-const REMOTE_IT_DEVICE_SETUP_AUTHORIZATION_MESSAGE =
-  'This computer must be added as a Remote.It Device before DRA can configure remote access. In Remote.It, choose +, select This system, and complete Add Device once. Then return to DRA and click Detect again; both DRA services will be created automatically.'
-export const REMOTE_IT_APP_SERVICE_NAME = 'DRA Remote'
+const REMOTE_IT_DEVICE_SETUP_AUTHORIZATION_MESSAGE = `This computer must be added as a Remote.It Device before ${PRODUCT_DISPLAY_NAME} can configure remote access. In Remote.It, choose +, select This system, and complete Add Device once. Then return to ${PRODUCT_DISPLAY_NAME} and click Detect again; both ${PRODUCT_DISPLAY_NAME} services will be created automatically.`
+/** Existing testers' Remote.It service. Matched so it is renamed instead of duplicated. */
+export const LEGACY_REMOTE_IT_APP_SERVICE_NAME = 'DRA Remote'
+export const REMOTE_IT_APP_SERVICE_NAME = `${PRODUCT_DISPLAY_NAME} Remote`
 export const REMOTE_IT_BROWSER_SERVICE_NAME = 'System Service'
 
 type CommandResult = { stdout: string; stderr: string }
@@ -405,7 +407,7 @@ const readStatusAfterMutation = async (
   }
   const detail = commandError(lastError, 'Remote.It status is temporarily unavailable.').message
   throw new Error(
-    `Remote.It accepted the service changes, but its background agent is still restarting. DRA saved the new Service IDs and will reuse them. Wait a few seconds, then click Detect; do not add the device or switch modes again. Technical details: ${detail}`
+    `Remote.It accepted the service changes, but its background agent is still restarting. ${PRODUCT_DISPLAY_NAME} saved the new Service IDs and will reuse them. Wait a few seconds, then click Detect; do not add the device or switch modes again. Technical details: ${detail}`
   )
 }
 
@@ -490,7 +492,7 @@ const matchingManagedService = (
       (entry) =>
         [
           serviceName,
-          ...(serviceName === REMOTE_IT_APP_SERVICE_NAME ? ['DRA Remote'] : [])
+          ...(serviceName === REMOTE_IT_APP_SERVICE_NAME ? [LEGACY_REMOTE_IT_APP_SERVICE_NAME] : [])
         ].includes(stringValue(entry.name) ?? '') &&
         numberValue(entry.type) === REMOTE_IT_HTTP_TYPE &&
         isLoopbackHost(entry.addressHost) &&
@@ -591,14 +593,14 @@ const enrichWindowsServiceNames = async (
     }
     if (unresolvedIds.length > 0) {
       throw new Error(
-        'Remote.It has not reported the names of existing Windows services yet. Wait a few seconds, then try again; DRA did not create duplicates.'
+        `Remote.It has not reported the names of existing Windows services yet. Wait a few seconds, then try again; ${PRODUCT_DISPLAY_NAME} did not create duplicates.`
       )
     }
     return status
   } catch (error) {
     throw commandError(
       error,
-      'Remote.It could not identify existing Windows services, so DRA stopped before creating duplicates.'
+      `Remote.It could not identify existing Windows services, so ${PRODUCT_DISPLAY_NAME} stopped before creating duplicates.`
     )
   }
 }
@@ -648,7 +650,7 @@ const modifyService = async (
   } catch (error) {
     throw commandError(
       error,
-      'Remote.It could not update the DRA service. On macOS or Linux, service management may require administrator approval.'
+      `Remote.It could not update the ${PRODUCT_DISPLAY_NAME} service. On macOS or Linux, service management may require administrator approval.`
     )
   }
 }
@@ -712,13 +714,19 @@ const serviceIdFromMutation = (result: CommandResult): string | undefined => {
   }
 }
 
-const managedServiceArgs = (name: string, localPort: number, serviceId?: string): string[] =>
+const managedServiceArgs = (
+  name: string,
+  localPort: number,
+  serviceId?: string,
+  rename?: boolean
+): string[] =>
   serviceId
     ? [
         'service',
         'modify',
         '--id',
         serviceId,
+        ...(rename ? ['--name', name] : []),
         '--port',
         String(localPort),
         '--hostname',
@@ -799,16 +807,19 @@ export const enableRemoteItServices = async (
     if (
       service &&
       hasExpectedServiceConfiguration(service, localPort, true) &&
-      stringValue(service.name) !== 'DRA Remote'
+      stringValue(service.name) !== LEGACY_REMOTE_IT_APP_SERVICE_NAME
     )
       continue
+    const serviceName =
+      target === 'app' ? REMOTE_IT_APP_SERVICE_NAME : REMOTE_IT_BROWSER_SERVICE_NAME
     planned.push({
       kind: serviceId ? 'modify' : 'add',
       target,
       args: managedServiceArgs(
-        target === 'app' ? REMOTE_IT_APP_SERVICE_NAME : REMOTE_IT_BROWSER_SERVICE_NAME,
+        serviceName,
         localPort,
-        serviceId
+        serviceId,
+        target === 'app' && stringValue(service?.name) === LEGACY_REMOTE_IT_APP_SERVICE_NAME
       )
     })
   }
@@ -870,7 +881,7 @@ export const enableRemoteItServices = async (
       if (
         !entry ||
         !hasExpectedServiceConfiguration(entry, localPort, true) ||
-        stringValue(entry.name) === 'DRA Remote'
+        stringValue(entry.name) === LEGACY_REMOTE_IT_APP_SERVICE_NAME
       )
         return false
     }
@@ -925,7 +936,9 @@ export const enableRemoteItServices = async (
     namedBrowserServiceId ??
     managed.browserServiceId
   if (!appServiceId || !browserServiceId || appServiceId === browserServiceId) {
-    throw new Error('Remote.It did not return two distinct DRA service identifiers.')
+    throw new Error(
+      `Remote.It did not return two distinct ${PRODUCT_DISPLAY_NAME} service identifiers.`
+    )
   }
   await managed.onServiceIdsDiscovered?.({ appServiceId, browserServiceId })
 
@@ -952,7 +965,7 @@ export const enableRemoteItServices = async (
     !hasReadyServiceConfiguration(finalBrowser, localPort)
   ) {
     throw new Error(
-      `Remote.It did not make both DRA service endpoints ready at 127.0.0.1:${localPort}.`
+      `Remote.It did not make both ${PRODUCT_DISPLAY_NAME} service endpoints ready at 127.0.0.1:${localPort}.`
     )
   }
 
@@ -987,7 +1000,7 @@ export const enableRemoteItService = async (
   if (service) {
     const serviceId = stringValue(service.id)
     if (!serviceId) throw new Error('Remote.It returned an invalid service identifier.')
-    const oldBrand = stringValue(service.name) === 'DRA Remote'
+    const oldBrand = stringValue(service.name) === LEGACY_REMOTE_IT_APP_SERVICE_NAME
     const needsRepair = oldBrand || !hasExpectedServiceConfiguration(service, localPort, true)
     if (needsRepair) {
       await modifyService(
@@ -1031,7 +1044,7 @@ export const enableRemoteItService = async (
     } catch (error) {
       throw commandError(
         error,
-        'Remote.It could not create the DRA service. On macOS or Linux, service management may require administrator approval.'
+        `Remote.It could not create the ${PRODUCT_DISPLAY_NAME} service. On macOS or Linux, service management may require administrator approval.`
       )
     }
     status = await readStatus(binaryPath, run)
@@ -1057,11 +1070,11 @@ export const enableRemoteItService = async (
   if (!serviceId) {
     throw new Error('Remote.It created the service but did not report its identifier.')
   }
-  if (stringValue(finalService?.name) === 'DRA Remote')
+  if (stringValue(finalService?.name) === LEGACY_REMOTE_IT_APP_SERVICE_NAME)
     throw new Error('Remote.It did not apply the new application service name.')
   if (!finalService || !hasExpectedServiceConfiguration(finalService, localPort, true)) {
     throw new Error(
-      `Remote.It did not apply the DRA service endpoint 127.0.0.1:${localPort}.`
+      `Remote.It did not apply the ${PRODUCT_DISPLAY_NAME} service endpoint 127.0.0.1:${localPort}.`
     )
   }
   const installation = installationView(
@@ -1071,7 +1084,7 @@ export const enableRemoteItService = async (
     serviceId
   )
   if (!installation.service?.enabled) {
-    throw new Error('Remote.It created the DRA service but it is not enabled.')
+    throw new Error(`Remote.It created the ${PRODUCT_DISPLAY_NAME} service but it is not enabled.`)
   }
   return { installation, serviceId }
 }
@@ -1102,13 +1115,15 @@ export const ensureRemoteItConnectLink = async (
     const returnedServiceId = stringValue(link?.service?.id)
     const url = stringValue(link?.url)
     if (link?.enabled !== true || returnedServiceId !== serviceId || !url) {
-      throw new Error('Remote.It did not enable a Persistent Public URL for DRA.')
+      throw new Error(
+        `Remote.It did not enable a Persistent Public URL for ${PRODUCT_DISPLAY_NAME}.`
+      )
     }
     return url
   } catch (error) {
     const detail = commandError(
       error,
-      'Remote.It could not enable the Persistent Public URL for DRA.'
+      `Remote.It could not enable the Persistent Public URL for ${PRODUCT_DISPLAY_NAME}.`
     ).message
     throw new Error(`Remote.It browser URL setup failed: ${detail}`)
   }

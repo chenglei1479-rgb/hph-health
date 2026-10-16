@@ -348,9 +348,9 @@ describe('describePermissionRequest', () => {
     expect(
       describePermissionRequest(request({ title: 'open-science-notebook', isMcp: true }))
     ).toMatchObject({
-      actionTitle: 'Use DRA Notebook?',
+      actionTitle: 'Use Baselio Notebook?',
       categoryLabel: 'External service',
-      actionDetail: 'DRA Notebook'
+      actionDetail: 'Baselio Notebook'
     })
   })
 

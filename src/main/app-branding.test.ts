@@ -10,7 +10,7 @@ const displayName = PRODUCT_DISPLAY_NAME
 const appId = 'com.dra-hph.desktop'
 
 describe('app display branding', () => {
-  it('uses the DRA display name in shell and workspace surfaces', () => {
+  it('uses the configured display name in shell and workspace surfaces', () => {
     const mainSource = readFileSync(resolve(projectRoot, 'src/main/index.ts'), 'utf8')
     const windowsSource = readFileSync(resolve(projectRoot, 'src/main/windows.ts'), 'utf8')
     const rendererHtmlSource = readFileSync(resolve(projectRoot, 'src/renderer/index.html'), 'utf8')
@@ -34,6 +34,58 @@ describe('app display branding', () => {
     expect(packageSource).toContain(`"productName": "${displayName}"`)
     expect(appConfigSource).toContain('name: PRODUCT_DISPLAY_NAME')
     expect(homePageSource).toContain('APP.name')
+
+    const webHtmlSource = readFileSync(resolve(projectRoot, 'src/renderer/web/index.html'), 'utf8')
+    const manifestSource = readFileSync(
+      resolve(projectRoot, 'src/renderer/web/public/manifest.webmanifest'),
+      'utf8'
+    )
+    expect(webHtmlSource).toContain(`<title>${displayName}</title>`)
+    expect(webHtmlSource).toContain(`content="${displayName}"`)
+    expect(webHtmlSource).toContain(
+      `<div class="open-science-connection-name">${displayName}</div>`
+    )
+    expect(manifestSource).toContain(`"short_name": "${displayName}"`)
+  })
+
+  it('keeps packaged data and credential names when the display name changes', () => {
+    const mainSource = readFileSync(resolve(projectRoot, 'src/main/index.ts'), 'utf8')
+    const profileSource = readFileSync(
+      resolve(projectRoot, 'src/main/storage/electron-profile.ts'),
+      'utf8'
+    )
+    const selectionSource = readFileSync(
+      resolve(projectRoot, 'src/main/credential-identity/selection.ts'),
+      'utf8'
+    )
+    const builderSource = readFileSync(resolve(projectRoot, 'electron-builder.yml'), 'utf8')
+    const packageJson = JSON.parse(readFileSync(resolve(projectRoot, 'package.json'), 'utf8')) as {
+      name: string
+      productName: string
+    }
+
+    expect(mainSource).toContain('app.setName(credentialIdentity.appName)')
+    expect(mainSource).not.toContain('app.setName(app.isPackaged ? APP_NAME')
+    expect(mainSource).toContain('label: APP_NAME')
+    expect(mainSource).toContain('applicationName: APP_NAME')
+    expect(profileSource).toContain('MedResearch Agent')
+    expect(profileSource).not.toContain('PRODUCT_DISPLAY_NAME')
+    expect(selectionSource).toContain('MedResearch Agent')
+    expect(selectionSource).not.toContain('PRODUCT_DISPLAY_NAME')
+    expect(builderSource).toContain(`appId: ${appId}`)
+    expect(builderSource).toContain('executableName: medresearch-agent')
+    expect(builderSource).toContain('name: DRA Session package')
+    expect(builderSource).toContain(
+      'artifactName: deep-research-agent-${version}-win-${arch}.${ext}'
+    )
+    expect(builderSource).toContain(
+      'artifactName: deep-research-agent-${version}-win-${arch}-setup.${ext}'
+    )
+    expect(builderSource).toContain(
+      'artifactName: deep-research-agent-${version}-mac-${arch}.${ext}'
+    )
+    expect(packageJson.name).toBe('medresearch-agent')
+    expect(packageJson.productName).toBe(displayName)
   })
 
   it('uses the stable app identifier for packaged and window integration metadata', () => {

@@ -387,7 +387,7 @@ describe('ConnectorDetailView', () => {
     })
 
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
-      'DRA could not load this Connector.'
+      'Baselio could not load this Connector.'
     )
     const retry = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
       (button) => button.textContent?.trim() === 'Retry'

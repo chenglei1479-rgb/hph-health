@@ -7404,7 +7404,7 @@
     "Permission check failed. Please retry.": "No se pudieron comprobar los permisos. Vuelva a intentarlo.",
     "This checks account permissions only; it does not run Python or verify tool availability.": "Esta comprobación solo verifica los permisos de la cuenta; no ejecuta Python ni verifica la disponibilidad de las herramientas.",
     "Checked at {{time}}": "Comprobado el {{time}}",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "Infraestructura de investigación con IA para la medicina",
     "Automatic updates are disabled until a DRA update service is configured.": "Las actualizaciones automáticas están desactivadas hasta que se configure un servicio de actualización de DRA.",
     "Local profile: {{profile}}": "Perfil local: {{profile}}",
     "DRA sign-in is not required. Model providers may still use the network.": "No es necesario iniciar sesión en DRA. Los servicios de modelos pueden seguir utilizando la red.",

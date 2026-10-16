@@ -79,8 +79,7 @@ describe('DataRootWarning', () => {
     switchTo('zh-Hans')
     render(<DataRootWarning />)
 
-    // The app name is a product noun and stays Latin in every locale.
-    expect(container.textContent).toContain('DRA')
+    expect(container.textContent).toContain('Baselio')
     expect(container.textContent).toContain('不要移动、重命名或删除其中的文件')
   })
 })

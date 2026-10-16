@@ -7543,7 +7543,7 @@
     "Permission check failed. Please retry.": "Не удалось проверить разрешения. Повторите попытку.",
     "This checks account permissions only; it does not run Python or verify tool availability.": "Проверяются только разрешения аккаунта; Python не запускается, доступность инструментов не проверяется.",
     "Checked at {{time}}": "Проверено: {{time}}",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "ИИ-инфраструктура медицинских исследований",
     "Automatic updates are disabled until a DRA update service is configured.": "Автоматические обновления отключены до настройки службы обновлений DRA.",
     "Local profile: {{profile}}": "Локальный профиль: {{profile}}",
     "DRA sign-in is not required. Model providers may still use the network.": "Вход в DRA не требуется. Поставщики моделей могут по-прежнему использовать сеть.",

@@ -174,7 +174,7 @@ describe('PersistentOAuthClientProvider', () => {
     })
 
     expect(provider.clientMetadata).toMatchObject({
-      client_name: 'DRA',
+      client_name: 'Baselio',
       token_endpoint_auth_method: 'none',
       scope: 'openid profile'
     })

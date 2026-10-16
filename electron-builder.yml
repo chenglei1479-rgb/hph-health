@@ -1,6 +1,6 @@
 appId: com.dra-hph.desktop
-productName: DRA
-copyright: Copyright © 2026 DRA. Based on AIPOCH Open-Science.
+productName: Baselio
+copyright: Copyright © 2026 Baselio. Based on AIPOCH Open-Science.
 directories:
   buildResources: build
 # Apply a valid deep ad-hoc signature on macOS (no Developer ID available). Without this,
@@ -217,8 +217,8 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     # Electron locates its Helper bundles using this internal name. Keep it aligned with productName.
-    CFBundleName: DRA
-    CFBundleDisplayName: DRA
+    CFBundleName: Baselio
+    CFBundleDisplayName: Baselio
     NSCameraUsageDescription: Application requests access to the device's camera.
     NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     NSDesktopFolderUsageDescription: Open-Science needs access to Desktop files to browse, open, and save your research files.
@@ -235,14 +235,14 @@ mac:
     - from: resources/bin/mac/${arch}/micromamba
       to: micromamba
 dmg:
-  title: DRA
+  title: Baselio
   background: build/dmg-background.png
   iconSize: 88
   iconTextSize: 12
   contents:
     - x: 130
       y: 286
-      name: DRA.app
+      name: Baselio.app
     - x: 530
       y: 286
       type: link

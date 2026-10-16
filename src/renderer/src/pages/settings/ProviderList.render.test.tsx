@@ -324,7 +324,7 @@ describe('ProviderList', () => {
       })
     ])
 
-    expect(container.textContent).toContain('Authentication imported into DRA')
+    expect(container.textContent).toContain('Authentication imported into Baselio')
     expect(buttonByLabel('Check Codex login')).toBeDefined()
     expect(buttonByLabel('Edit')).toBeDefined()
     expect(buttonByLabel('Delete')).toBeDefined()
@@ -345,7 +345,7 @@ describe('ProviderList', () => {
     })
     renderList([imported], undefined, undefined, { onReimport })
 
-    expect(container.textContent).toContain('Authentication imported into DRA')
+    expect(container.textContent).toContain('Authentication imported into Baselio')
     expect(buttonByLabel('Check Codex login')).toBeDefined()
     act(() => buttonByLabel('Re-import Codex login')?.click())
     expect(onReimport).toHaveBeenCalledWith(imported)
@@ -369,7 +369,7 @@ describe('ProviderList', () => {
       provider({
         id: 'builtin-codex-isolated',
         type: 'codex-isolated',
-        name: 'DRA Codex login'
+        name: 'Baselio Codex login'
       })
     ])
 
@@ -384,7 +384,7 @@ describe('ProviderList', () => {
     const isolated = provider({
       id: 'builtin-codex-isolated',
       type: 'codex-isolated',
-      name: 'DRA Codex login',
+      name: 'Baselio Codex login',
       models: [],
       model: undefined,
       maskedKey: undefined,
@@ -494,7 +494,7 @@ describe('ProviderList', () => {
 
     // Signed in (verified): sign-in actions go away, app-local disconnect is offered.
     renderList([{ ...shared, lastValidatedAt: 1 }], undefined, undefined, { onLogoutSharedClaude })
-    act(() => buttonByLabel('Disconnect from DRA')?.click())
+    act(() => buttonByLabel('Disconnect from Baselio')?.click())
     expect(onLogoutSharedClaude).toHaveBeenCalledOnce()
     expect(buttonByLabel('Sign in with browser')).toBeUndefined()
   })

@@ -14,6 +14,7 @@ import {
 import type { PermissionProfileId } from '../../shared/permission-profiles'
 import { augmentedPathEnv } from '../settings/shell-path'
 import type { ModelReasoningEffort } from '../../shared/reasoning-effort'
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import type { OfficialVendorId } from '../../shared/provider-registry'
 import {
   CODEX_ACP_CONFIGURABLE_PROVIDER_ID,
@@ -281,7 +282,7 @@ const buildCodexConfig = (provider: {
     model_provider: CODEX_PROVIDER_ID,
     model_providers: {
       [CODEX_PROVIDER_ID]: {
-        name: 'DRA',
+        name: PRODUCT_DISPLAY_NAME,
         wire_api: 'responses',
         ...(baseUrl ? { base_url: baseUrl } : {}),
         ...(provider.key ? { requires_openai_auth: true } : {})

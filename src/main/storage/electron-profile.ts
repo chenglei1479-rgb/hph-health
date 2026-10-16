@@ -51,5 +51,7 @@ export const resolveElectronProfile = (options: ProfileLocationOptions): string 
     return validateProfilePath(join(options.configRoot, 'electron-profile'))
   }
   const suffix = options.packaged ? '' : ' (DEV)'
+  // Pinned userData directory. Electron would otherwise name this folder from
+  // productName, and a display-name change would hide existing projects.
   return validateProfilePath(join(options.appData, 'MedResearch Agent' + suffix))
 }

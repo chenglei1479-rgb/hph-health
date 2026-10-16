@@ -12,6 +12,7 @@ import type {
   OAuthTokens
 } from '@modelcontextprotocol/sdk/shared/auth.js'
 
+import { PRODUCT_DISPLAY_NAME } from '../../../shared/product-identity'
 import type { StoredCustomMcpOAuthConfig, StoredCustomMcpOAuthState } from '../../settings/types'
 import {
   DEFAULT_LOOPBACK_OAUTH_REDIRECT_URI,
@@ -78,7 +79,9 @@ export class OAuthCallbackServer {
       const pending = this.pending.get(state)
       if (!pending) {
         response.writeHead(400, { 'content-type': 'text/html; charset=utf-8' })
-        response.end('<h1>DRA authorization expired</h1><p>You can close this window.</p>')
+        response.end(
+          `<h1>${PRODUCT_DISPLAY_NAME} authorization expired</h1><p>You can close this window.</p>`
+        )
         return
       }
 
@@ -202,7 +205,7 @@ export class PersistentOAuthClientProvider implements OAuthClientProvider {
 
   get clientMetadata(): OAuthClientMetadata {
     return {
-      client_name: 'DRA',
+      client_name: PRODUCT_DISPLAY_NAME,
       redirect_uris: [this.options.redirectUrl],
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],

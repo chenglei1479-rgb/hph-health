@@ -64,7 +64,7 @@ beforeEach(() => {
   document.body.appendChild(container)
   root = createRoot(container)
   useUpdateStore.setState({
-    appInfo: { name: 'DRA', version: '0.4.0', copyright: '© 2026 AIPOCH' },
+    appInfo: { name: 'Baselio', version: '0.4.0', copyright: '© 2026 AIPOCH' },
     status: { state: 'up-to-date', current: '0.4.0', latest: '0.4.0' }
   })
   cliApi = {

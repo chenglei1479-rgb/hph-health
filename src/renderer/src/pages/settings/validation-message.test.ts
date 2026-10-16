@@ -112,8 +112,8 @@ describe('localizeProviderResourceMessage', () => {
       '请从基础 URL 中移除凭据，改用 API 密钥字段。'
     ],
     [
-      'DRA could not find a file-backed Codex credential to import. Your existing Codex sign-in may be stored in the system credential store, which DRA cannot import from. Continue with the DRA Codex sign-in instead.',
-      'DRA 未找到可导入的基于文件的 Codex 凭据。你已有的 Codex 登录可能存储在系统凭据库中，DRA 无法从中导入。请改用 DRA 的 Codex 登录继续。'
+      'Baselio could not find a file-backed Codex credential to import. Your existing Codex sign-in may be stored in the system credential store, which Baselio cannot import from. Continue with the Baselio Codex sign-in instead.',
+      'Baselio 未找到可导入的基于文件的 Codex 凭据。你已有的 Codex 登录可能存储在系统凭据库中，Baselio 无法从中导入。请改用 Baselio 的 Codex 登录继续。'
     ]
   ])('localizes a custom provider Base URL error', (message, expected) => {
     expect(localizeProviderResourceMessage(message, i18next.getFixedT('zh-Hans'))).toBe(expected)

@@ -631,10 +631,10 @@ describe('ProviderStep', () => {
     expect(resolveVendorModelApiEndpoints('opencode', model)).toContain('anthropic')
   })
 
-  // Switches the auth picker to the isolated "Sign in with DRA" mode — the only path that
+  // Switches the auth picker to the isolated "Sign in with Baselio" mode — the only path that
   // runs the browser login (loginIsolatedCodex).
   const switchToIsolatedSignIn = async (): Promise<void> => {
-    await selectOption('Codex authentication', 'Sign in with DRA')
+    await selectOption('Codex authentication', 'Sign in with Baselio')
   }
 
   it('runs the isolated Codex sign-in then advances', async () => {

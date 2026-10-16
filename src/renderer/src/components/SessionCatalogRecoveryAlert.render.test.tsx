@@ -193,9 +193,9 @@ describe('SessionCatalogRecoveryAlert', () => {
       )
     )
 
-    expect(container.textContent).toContain('DRA update required')
+    expect(container.textContent).toContain('Baselio update required')
     expect(container.textContent).toContain(
-      'A saved conversation requires a newer version of DRA'
+      'A saved conversation requires a newer version of Baselio'
     )
     expect(container.textContent).toContain('files stay unchanged')
     expect(container.querySelector('[data-testid="session-persistence-retry"]')).toBeNull()

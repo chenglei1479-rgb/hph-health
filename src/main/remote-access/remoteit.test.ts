@@ -11,6 +11,7 @@ import {
   knownBinaryPaths,
   parseRemoteItJson,
   runRemoteItMutationBatch,
+  REMOTE_IT_APP_SERVICE_NAME,
   runRemoteItMutation,
   type RemoteItCommandRunner
 } from './remoteit'
@@ -511,7 +512,7 @@ describe('Remote.It adapter', () => {
     const script = String(
       run.mock.calls.find(([command]) => command === '/usr/bin/osascript')?.[1][1]
     )
-    expect(script).toContain('DRA Remote')
+    expect(script).toContain(REMOTE_IT_APP_SERVICE_NAME)
     expect(script).toContain('System Service')
   })
 
@@ -662,7 +663,7 @@ describe('Remote.It adapter', () => {
                 {
                   id: 'device-1',
                   services: [
-                    { id: 'app-service', name: 'DRA Remote' },
+                    { id: 'app-service', name: REMOTE_IT_APP_SERVICE_NAME },
                     { id: 'browser-service', name: 'System Service' }
                   ]
                 }
@@ -729,7 +730,9 @@ describe('Remote.It adapter', () => {
       if (args[0] === 'service' && args[1] === 'add') {
         addCount += 1
         if (addCount === 2) phase = 'restarting'
-        const serviceId = args.includes('DRA Remote') ? 'app-service' : 'browser-service'
+        const serviceId = args.includes(REMOTE_IT_APP_SERVICE_NAME)
+          ? 'app-service'
+          : 'browser-service'
         return { stdout: JSON.stringify({ code: 0, data: { serviceId } }), stderr: '' }
       }
       throw new Error(`Unexpected command: ${args.join(' ')}`)
@@ -943,7 +946,7 @@ it('renames and reuses an old-brand Remote.It service without creating a duplica
         stdout: status([
           {
             id: 'old-id',
-            name: renamed ? 'DRA Remote' : 'DRA Remote',
+            name: renamed ? REMOTE_IT_APP_SERVICE_NAME : 'DRA Remote',
             type: 7,
             addressHost: '127.0.0.1',
             addressPort: 4180,
@@ -955,13 +958,19 @@ it('renames and reuses an old-brand Remote.It service without creating a duplica
       }
     if (args[0] === 'version') return { stdout: '4.1.0', stderr: '' }
     if (args[0] === 'service' && args[1] === 'modify') {
-      renamed = args.includes('--name') && args.includes('DRA Remote')
+      renamed = args.includes('--name') && args.includes(REMOTE_IT_APP_SERVICE_NAME)
       return { stdout: '{}', stderr: '' }
     }
     throw new Error(`Unexpected mutation: ${args.join(' ')}`)
   })
   await expect(
-    enableRemoteItService('/fake/remoteit', 4180, { name: 'DRA Remote' }, run, 'win32')
+    enableRemoteItService(
+      '/fake/remoteit',
+      4180,
+      { name: REMOTE_IT_APP_SERVICE_NAME },
+      run,
+      'win32'
+    )
   ).resolves.toMatchObject({ serviceId: 'old-id' })
   expect(renamed).toBe(true)
   expect(run.mock.calls.some(([, args]) => args.includes('add'))).toBe(false)

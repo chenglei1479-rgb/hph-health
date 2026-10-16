@@ -94,10 +94,10 @@ describe('writing safeguards', () => {
     expect(updated).toBeInstanceOf(HTMLTextAreaElement)
     if (!(updated instanceof HTMLTextAreaElement)) return
     expect(updated.value).toContain(
-      '本研究では、【運営会社名（未設定）】より研究支援ソフトウェア（開発コード名）の無償提供を受けた。'
+      '本研究では、【運営会社名（未設定）】よりベースリオの無償提供を受けた。'
     )
     expect(updated.value).toContain(
-      'This study received research-support software (development code name) free of charge from [Operating company name (not set)].'
+      'This study received Baselio free of charge from [Operating company name (not set)].'
     )
     expect(updated.value).not.toContain('DRA')
     await act(async () => {

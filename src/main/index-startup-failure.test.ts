@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 import type { CredentialIdentity } from './credential-identity/selection'
 vi.mock('./credential-identity/bootstrap', () => ({
   selectStartupCredentialIdentity: (...args: unknown[]) =>
@@ -461,7 +462,7 @@ it('reports the original startup failure when shell IPC cleanup throws', async (
   )
   expect(fixture.electron.dialog.showErrorBox).not.toHaveBeenCalled()
   expect(stderrWrite).toHaveBeenCalledWith(
-    expect.stringContaining('DRA could not finish starting.')
+    expect.stringContaining(`${PRODUCT_DISPLAY_NAME} could not finish starting.`)
   )
   expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining(fixture.failure.message))
 })
@@ -519,11 +520,11 @@ it.each([
     expect.objectContaining({ error: fixture.failure })
   )
   expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-    'DRA',
+    PRODUCT_DISPLAY_NAME,
     expect.stringContaining(fixture.failure.message)
   )
   expect(fixture.electron.dialog.showErrorBox.mock.calls[0]?.[1]).toContain(
-    'DRA could not finish starting.'
+    `${PRODUCT_DISPLAY_NAME} could not finish starting.`
   )
 })
 
@@ -828,7 +829,7 @@ it.each([
       await import('./index')
       await fixture.exited
       expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-        'DRA',
+        PRODUCT_DISPLAY_NAME,
         expect.stringContaining(path)
       )
       expect(fixture.electron.dialog.showErrorBox.mock.calls[0][1]).toMatch(/restore|recover/i)
@@ -901,7 +902,7 @@ it('stops synchronously on a failed credential preflight before Electron ready o
     expect(readiness).not.toHaveBeenCalled()
     expect(fixture.prepareLocations).not.toHaveBeenCalled()
     expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-      'DRA',
+      PRODUCT_DISPLAY_NAME,
       expect.stringContaining('windows-profile-key-unavailable')
     )
   } finally {
@@ -1021,7 +1022,7 @@ it.each([
           expect(cipher.decryptString).toHaveBeenCalledWith(Buffer.from('v11original'))
       } else {
         expect(fixture.electron.dialog.showErrorBox).toHaveBeenCalledWith(
-          'DRA',
+          PRODUCT_DISPLAY_NAME,
           expect.stringContaining('CREDENTIAL_IDENTITY')
         )
         expect(fixture.prepareLocations).not.toHaveBeenCalled()

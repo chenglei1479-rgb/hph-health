@@ -438,7 +438,7 @@ describe('ConnectorsPanel (groups)', () => {
     await act(async () => rejectLoad?.(new Error('catalog unavailable')))
 
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
-      'DRA could not load Connectors.'
+      'Baselio could not load Connectors.'
     )
     const retry = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(
       (button) => button.textContent?.trim() === 'Retry'

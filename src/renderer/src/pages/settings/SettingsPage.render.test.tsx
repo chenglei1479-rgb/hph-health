@@ -4920,7 +4920,7 @@ describe('SettingsPage layout', () => {
           {
             id: 'official',
             kind: 'official',
-            name: 'DRA Marketplace',
+            name: 'Baselio Marketplace',
             repositoryUrl: 'https://github.com/aipoch/marketplace',
             ref: 'published',
             trust: 'official',
@@ -4932,7 +4932,7 @@ describe('SettingsPage layout', () => {
         specialists: [
           {
             sourceId: 'official',
-            sourceName: 'DRA Marketplace',
+            sourceName: 'Baselio Marketplace',
             sourceTrust: 'official',
             id: 'example-specialist',
             displayName: 'Example Specialist',
@@ -5004,7 +5004,7 @@ describe('SettingsPage layout', () => {
           id: 'storage' as const,
           label: 'App storage permission',
           status: 'failed' as const,
-          summary: 'DRA cannot write to its private data folder.'
+          summary: 'Baselio cannot write to its private data folder.'
         }
       ],
       ready: false,
@@ -5020,7 +5020,7 @@ describe('SettingsPage layout', () => {
           id: 'storage' as const,
           label: 'App storage permission',
           status: 'passed' as const,
-          summary: 'DRA can write to its private data folder.'
+          summary: 'Baselio can write to its private data folder.'
         },
         {
           id: 'agent' as const,

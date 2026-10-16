@@ -711,7 +711,7 @@ describe('Host application commands', () => {
         invocation([approval], ordinaryRemote)
       )
     ).rejects.toThrow(
-      'Pairing can only be managed from the DRA desktop app or an approved browser.'
+      'Pairing can only be managed from the Baselio desktop app or an approved browser.'
     )
     await expect(
       router.dispatcher.invoke(
@@ -755,7 +755,7 @@ describe('Host application commands', () => {
         hostApplicationCommands.remoteAccess.detect,
         invocation([], currentManager)
       )
-    ).rejects.toThrow('This action must be approved from the DRA desktop app.')
+    ).rejects.toThrow('This action must be approved from the Baselio desktop app.')
     await expect(
       router.dispatcher.invoke(
         hostApplicationCommands.remoteAccess.probe,

@@ -37,12 +37,12 @@ it('ships the seeded fictional cohort and a static abstract with the required la
     for (const item of pages) {
       expect(item.disclaimer.length).toBeGreaterThan(0)
       expect(item.footerDisclaimer).toBe(item.disclaimer)
-      expect(item.footerMark).toBe('DRA デモ')
+      expect(item.footerMark).toBe('ベースリオ デモ')
       const titleAt = html.indexOf(`<h1>${item.title}</h1>`)
       const disclaimerAt = html.indexOf(`<p class="disclaimer">${item.disclaimer}</p>`, titleAt)
       expect(disclaimerAt).toBeGreaterThan(titleAt)
     }
-    expect(html.match(/DRA デモ/g)).toHaveLength(3)
+    expect(html.match(/ベースリオ デモ/g)).toHaveLength(3)
   }
 
   expect(built.documents.ja.html.split(JA_LINE).length - 1).toBe(6)

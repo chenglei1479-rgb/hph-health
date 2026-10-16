@@ -497,12 +497,12 @@ describe('ProvidersPanel: claude-shared actions', () => {
 
     render()
     const disconnect = document.body.querySelector<HTMLButtonElement>(
-      '[aria-label="Disconnect from DRA"]'
+      '[aria-label="Disconnect from Baselio"]'
     )
     await act(async () => disconnect?.click())
 
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      'Could not disconnect Claude from DRA.'
+      'Could not disconnect Claude from Baselio.'
     )
   })
 })

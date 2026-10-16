@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 const SEED = 0xd4ba9a11
 const ROW_COUNT = 240
 const JA_DISCLAIMER = '架空のデータによるデモです。実在の患者・研究結果ではありません'
-const FOOTER_MARK = 'DRA デモ'
+const FOOTER_MARK = 'ベースリオ デモ'
 
 const AGE_BANDS = ['18-39', '40-64', '65-79', '80+']
 const SEXES = ['F', 'M']

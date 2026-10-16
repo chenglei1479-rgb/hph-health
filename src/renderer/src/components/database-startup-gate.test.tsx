@@ -59,7 +59,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'DRA could not open its database.',
+          message: 'Baselio could not open its database.',
           retryable: true
         }
       })
@@ -69,7 +69,7 @@ describe('DatabaseStartupGate', () => {
     const application = screen.getByText('Business application')
     await act(async () => resolveRetry({ phase: 'starting' }))
     expect(screen.queryByText('Business application')).toBe(application)
-    expect(screen.queryByText('Starting DRA…')).toBeNull()
+    expect(screen.queryByText('Starting Baselio…')).toBeNull()
   })
 
   it.each(['ready', 'blocked'] as const)(
@@ -93,7 +93,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'DRA could not open its database.',
+          message: 'Baselio could not open its database.',
           retryable: true
         }
       }
@@ -102,7 +102,7 @@ describe('DatabaseStartupGate', () => {
       act(() => publish(phase === 'ready' ? { phase } : blocked))
       await act(async () => rejectRetry(new Error('late failure')))
       expect(
-        screen.queryByText('DRA could not finish checking its database.')
+        screen.queryByText('Baselio could not finish checking its database.')
       ).toBeNull()
       expect(
         screen.getByText(phase === 'ready' ? 'Business application' : blocked.error.message)
@@ -130,7 +130,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'DRA could not open its database.',
+          message: 'Baselio could not open its database.',
           retryable: true
         }
       })
@@ -169,19 +169,19 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'DRA could not open its database.',
+          message: 'Baselio could not open its database.',
           retryable: true
         }
       })
     )
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     await act(async () => resolveRetry({ phase: 'starting' }))
-    expect(screen.getByText('Starting DRA…')).toBeTruthy()
+    expect(screen.getByText('Starting Baselio…')).toBeTruthy()
     act(() => publish({ phase: 'ready' }))
     expect(screen.getByText('Business application')).toBeTruthy()
     view.unmount()
     act(() => publish({ phase: 'starting' }))
-    expect(screen.queryByText('Starting DRA…')).toBeNull()
+    expect(screen.queryByText('Starting Baselio…')).toBeNull()
   })
 
   it('ignores a retry from an unmounted StrictMode gate after a new gate is ready', async () => {
@@ -204,7 +204,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'DRA could not open its database.',
+          message: 'Baselio could not open its database.',
           retryable: true
         }
       })
@@ -224,7 +224,7 @@ describe('DatabaseStartupGate', () => {
     const application = screen.getByText('New application')
     await act(async () => resolveRetry({ phase: 'starting' }))
     expect(screen.getByText('New application')).toBe(application)
-    expect(screen.queryByText('Starting DRA…')).toBeNull()
+    expect(screen.queryByText('Starting Baselio…')).toBeNull()
   })
 
   it('reuses the branded startup loader while checking and migrating the database', () => {
@@ -248,15 +248,15 @@ describe('DatabaseStartupGate', () => {
     const updatingLabel = screen.getByText('Updating database…')
     expect(updatingLabel.tagName).toBe('SPAN')
     expect(updatingLabel.className).toBe(checkingLabel.className)
-    expect(screen.getByText('Keep DRA open while this finishes.')).toBeTruthy()
+    expect(screen.getByText('Keep Baselio open while this finishes.')).toBeTruthy()
     expect(screen.getByTestId('open-science-logo-loader')).toBe(startupLoader)
 
     act(() => publish({ phase: 'starting' }))
 
-    const startingLabel = screen.getByText('Starting DRA…')
+    const startingLabel = screen.getByText('Starting Baselio…')
     expect(startingLabel.tagName).toBe('SPAN')
     expect(startingLabel.className).toBe(checkingLabel.className)
-    expect(screen.getByText('Keep DRA open while this finishes.')).toBeTruthy()
+    expect(screen.getByText('Keep Baselio open while this finishes.')).toBeTruthy()
     expect(screen.queryByText('Checking database…')).toBeNull()
     expect(screen.getByTestId('open-science-logo-loader')).toBe(startupLoader)
   })
@@ -276,13 +276,13 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_newer_than_app',
-          message: 'This database was updated by a newer version of DRA.',
+          message: 'This database was updated by a newer version of Baselio.',
           migrationId: '0002_future_schema',
           retryable: false
         }
       })
     )
-    expect(screen.getByText("DRA couldn't start")).toBeTruthy()
+    expect(screen.getByText("Baselio couldn't start")).toBeTruthy()
     expect(screen.getByText(/database_newer_than_app/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
 
@@ -313,10 +313,10 @@ describe('DatabaseStartupGate', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("DRA couldn't start")).toBeTruthy()
+      expect(screen.getByText("Baselio couldn't start")).toBeTruthy()
     })
     expect(
-      screen.getByText('DRA could not finish checking its database.')
+      screen.getByText('Baselio could not finish checking its database.')
     ).toBeTruthy()
     expect(screen.getByText(/database_startup_unavailable/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
@@ -344,7 +344,7 @@ describe('DatabaseStartupGate', () => {
     })
 
     expect(screen.getByText('Business application')).toBeTruthy()
-    expect(screen.queryByText("DRA couldn't start")).toBeNull()
+    expect(screen.queryByText("Baselio couldn't start")).toBeNull()
   })
 
   it('restores retry after a retry IPC rejection', async () => {
@@ -362,7 +362,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'DRA could not open its database.',
+          message: 'Baselio could not open its database.',
           retryable: true
         }
       })
@@ -370,9 +370,9 @@ describe('DatabaseStartupGate', () => {
 
     await act(async () => screen.getByRole('button', { name: 'Retry' }).click())
 
-    expect(screen.getByText("DRA couldn't start")).toBeTruthy()
+    expect(screen.getByText("Baselio couldn't start")).toBeTruthy()
     expect(
-      screen.getByText('DRA could not finish checking its database.')
+      screen.getByText('Baselio could not finish checking its database.')
     ).toBeTruthy()
     expect(screen.getByText(/database_startup_unavailable/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
@@ -399,7 +399,7 @@ describe('DatabaseStartupGate', () => {
     })
 
     expect(screen.getByText('Business application')).toBeTruthy()
-    expect(screen.queryByText("DRA couldn't start")).toBeNull()
+    expect(screen.queryByText("Baselio couldn't start")).toBeNull()
     expect(getState).toHaveBeenCalledOnce()
   })
 
@@ -414,7 +414,7 @@ describe('DatabaseStartupGate', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('DRA could not finish checking its database.')
+        screen.getByText('Baselio could not finish checking its database.')
       ).toBeTruthy()
     })
 
@@ -422,7 +422,7 @@ describe('DatabaseStartupGate', () => {
       await i18next.changeLanguage('zh-Hans')
     })
 
-    expect(screen.getByText('DRA 无法完成数据库检查。')).toBeTruthy()
+    expect(screen.getByText('Baselio 无法完成数据库检查。')).toBeTruthy()
     expect(screen.getByRole('button', { name: '重试' })).toBeTruthy()
     expect(screen.queryByText('Business application')).toBeNull()
   })
@@ -439,7 +439,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'DRA could not open its database.',
+          message: 'Baselio could not open its database.',
           retryable: true
         }
       })
@@ -461,7 +461,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_newer_than_app',
-          message: 'The database was updated by a newer version of DRA.',
+          message: 'The database was updated by a newer version of Baselio.',
           migrationId: '0009_vision_evidence',
           retryable: false,
           diagnostics: 'App version: 0.9.2 (darwin-arm64)\n\nError: boom'
@@ -520,7 +520,7 @@ describe('DatabaseStartupGate', () => {
         phase: 'blocked',
         error: {
           code: 'database_open_failed',
-          message: 'DRA could not open its database.',
+          message: 'Baselio could not open its database.',
           retryable: true
         }
       })
@@ -528,7 +528,7 @@ describe('DatabaseStartupGate', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
     expect(
       screen.getByText(
-        'Quit other copies of DRA, check free disk space and folder permissions, then retry.'
+        'Quit other copies of Baselio, check free disk space and folder permissions, then retry.'
       )
     ).toBeTruthy()
     expect(screen.queryByText(/Part of the stored data doesn't match/)).toBeNull()

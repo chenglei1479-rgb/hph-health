@@ -7076,7 +7076,7 @@
     "Permission check failed. Please retry.": "权限检查失败，请重试。",
     "This checks account permissions only; it does not run Python or verify tool availability.": "此操作仅检查账号权限，不运行 Python，也不验证工具是否可用。",
     "Checked at {{time}}": "检查时间：{{time}}",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "面向医学的 AI 研究基础设施",
     "Automatic updates are disabled until a DRA update service is configured.": "配置 DRA 更新服务之前，自动更新已停用。",
     "Local profile: {{profile}}": "本地档案：{{profile}}",
     "DRA sign-in is not required. Model providers may still use the network.": "无需登录 DRA。模型服务仍可能使用网络。",

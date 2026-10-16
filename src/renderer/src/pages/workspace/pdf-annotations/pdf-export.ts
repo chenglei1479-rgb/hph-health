@@ -1,4 +1,5 @@
 import { PDFDocument, PDFHexString, PDFName, PDFDict, PDFRef, PDFString } from 'pdf-lib'
+import { PRODUCT_DISPLAY_NAME } from '../../../../shared/product-identity'
 import {
   PDF_EXPORT_MAX_BYTES,
   PDF_EXPORT_MAX_MARKS,
@@ -198,7 +199,7 @@ export const exportAnnotatedPdf = async (request: PdfExportRequest): Promise<Arr
       Subtype: TYPES[mark.kind],
       P: page.ref,
       NM: PDFHexString.fromText(`open-science:${mark.id}`),
-      T: PDFHexString.fromText('DRA'),
+      T: PDFHexString.fromText(PRODUCT_DISPLAY_NAME),
       Subj: PDFHexString.fromText(mark.kind),
       Contents: PDFHexString.fromText(mark.note),
       CreationDate: PDFHexString.fromText(pdfDate(mark.createdAt)),

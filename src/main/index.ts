@@ -14,6 +14,7 @@ import { createRequire } from 'node:module'
 import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveBootstrapConfigRoot, resolveElectronProfile } from './storage/electron-profile'
+import { APP } from '../shared/app-config'
 import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 
 // Only lightweight, Electron-free bootstrap modules are imported statically here. The MCP server
@@ -310,6 +311,9 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
       ? { linuxPasswordStore: app.commandLine?.getSwitchValue('password-store') }
       : {})
   })
+  // safeStorage reads app.getName() for the keychain service. Keep the pinned
+  // credential identity for the life of the process. The menu and about panel
+  // use PRODUCT_DISPLAY_NAME without changing this name.
   app.setName(credentialIdentity.appName)
   preparingLocations = true
   bootstrapPhase = 'configuration-root'
@@ -349,7 +353,6 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
   electronInitializationStarted = true
   bootstrapPhase = 'electron-ready'
   await app.whenReady()
-  app.setName(app.isPackaged ? APP_NAME : `${APP_NAME} (DEV)`)
   bootstrapPhase = 'credential-ciphertext-validation'
   validateCredentials(safeStorage, (error) => {
     if (!credentialRecoveryPresented) {
@@ -532,7 +535,6 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
 
       startupDiagnostics?.phase('electron-ready')
       await app.whenReady()
-      app.setName(app.isPackaged ? APP_NAME : `${APP_NAME} (DEV)`)
       const { installProductionPhiGate } = await import('./phi/production-gate')
       const phiDirectory = join(app.getPath('userData'), 'phi-vault')
       installProductionPhiGate(phiDirectory)
@@ -577,9 +579,31 @@ async function startElectronApp(mainEntryPath: string): Promise<void> {
       ])
 
       if (process.platform === 'darwin') {
+        // The process name stays the credential identity. The menu title and
+        // About panel are the only macOS surfaces that should show the product.
+        if (typeof app.setAboutPanelOptions === 'function') {
+          app.setAboutPanelOptions({
+            applicationName: APP_NAME,
+            applicationVersion: app.getVersion(),
+            copyright: APP.copyright
+          })
+        }
         Menu.setApplicationMenu(
           Menu.buildFromTemplate([
-            { role: 'appMenu' },
+            {
+              label: APP_NAME,
+              submenu: [
+                { role: 'about' },
+                { type: 'separator' },
+                { role: 'services' },
+                { type: 'separator' },
+                { role: 'hide' },
+                { role: 'hideOthers' },
+                { role: 'unhide' },
+                { type: 'separator' },
+                { role: 'quit' }
+              ]
+            },
             { role: 'fileMenu' },
             { role: 'editMenu' },
             { role: 'viewMenu' },

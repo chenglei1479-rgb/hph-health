@@ -49,6 +49,8 @@ export const selectCredentialIdentity = (options: {
   linuxPasswordStore?: string
 }): CredentialIdentity => {
   const suffix = options.packaged ? '' : ' (DEV)'
+  // Pinned keychain and secret-service name. app.setName(this value) runs before
+  // ready so safeStorage keeps the existing item. Do not follow the display name.
   const current = `MedResearch Agent${suffix}`
   const legacy = `MedResearch Agent${suffix}`
   if (options.platform === 'win32') {

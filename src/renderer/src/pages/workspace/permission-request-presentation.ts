@@ -1,4 +1,5 @@
 import type { AcpPermissionRequest } from '../../../../shared/acp'
+import { PRODUCT_DISPLAY_NAME } from '../../../../shared/product-identity'
 
 import {
   matchNotebookControlTool,
@@ -349,7 +350,7 @@ const humanizeMcpName = (name: string | undefined): string | undefined => {
         .filter(Boolean)
         .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
         .join(' ')
-        .replace(/^Open ?Science\b/iu, 'DRA')
+        .replace(/^Open ?Science\b/iu, PRODUCT_DISPLAY_NAME)
     )
     .filter(Boolean)
 

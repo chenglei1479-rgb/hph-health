@@ -7074,7 +7074,7 @@
     "Permission check failed. Please retry.": "권한 확인에 실패했습니다. 다시 시도하세요.",
     "This checks account permissions only; it does not run Python or verify tool availability.": "계정 권한만 확인합니다. Python을 실행하거나 도구 사용 가능 여부를 검증하지 않습니다.",
     "Checked at {{time}}": "확인 시간: {{time}}",
-    "AI Research Infrastructure for Medicine": "AI Research Infrastructure for Medicine",
+    "AI Research Infrastructure for Medicine": "의학을 위한 AI 연구 인프라",
     "Automatic updates are disabled until a DRA update service is configured.": "DRA 업데이트 서비스가 설정될 때까지 자동 업데이트가 비활성화됩니다.",
     "Local profile: {{profile}}": "로컬 프로필: {{profile}}",
     "DRA sign-in is not required. Model providers may still use the network.": "DRA 로그인이 필요하지 않습니다. 모델 제공업체는 네트워크를 사용할 수 있습니다.",

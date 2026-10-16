@@ -1,6 +1,7 @@
 import i18next, { type i18n, type Resource } from 'i18next'
 
 import { DEFAULT_LOCALE, LOCALES, type Locale } from '../locale'
+import { replaceVisibleDevelopmentCode } from '../product-identity'
 
 export const COMMON_NAMESPACE = 'common'
 export const NATIVE_NAMESPACE = 'native'
@@ -146,6 +147,17 @@ export const englishSourceFallbackPostProcessor = {
   }
 }
 
+// Resolved copy still contains the development code. Swap the standalone token
+// for the configured display name after the English fallback has run.
+export const productDisplayNamePostProcessor = {
+  type: 'postProcessor' as const,
+  name: 'productDisplayName',
+  process(value: string, _keys: string | string[], options: { lng?: string }): string {
+    if (typeof value !== 'string') return value
+    return replaceVisibleDevelopmentCode(value, options.lng)
+  }
+}
+
 export const sanitizeCatalog = (
   catalog: Readonly<Record<string, unknown>>
 ): Record<string, string> => {
@@ -200,6 +212,7 @@ export const initializeI18nInstance = (
   }
 ): i18n => {
   instance.use(englishSourceFallbackPostProcessor)
+  instance.use(productDisplayNamePostProcessor)
   void instance.init({
     lng: options.locale,
     fallbackLng,
@@ -211,7 +224,7 @@ export const initializeI18nInstance = (
     keySeparator: false,
     nsSeparator: false,
     interpolation: { escapeValue: false },
-    postProcess: [englishSourceFallbackPostProcessor.name],
+    postProcess: [englishSourceFallbackPostProcessor.name, productDisplayNamePostProcessor.name],
     postProcessPassResolved: true,
     returnNull: false,
     initAsync: false

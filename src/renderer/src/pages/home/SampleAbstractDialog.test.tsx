@@ -42,7 +42,7 @@ it('shows the fictional abstract without a model call and keeps the Japanese lin
     expect(title).toBeTruthy()
     expect(disclaimer?.textContent).toContain('并非真实患者或研究结果')
     expect(footer?.textContent).toContain('并非真实患者或研究结果')
-    expect(footer?.textContent).toContain('DRA デモ')
+    expect(footer?.textContent).toContain('ベースリオ デモ')
     expect(page.textContent).not.toContain(JA_LINE)
   }
 
