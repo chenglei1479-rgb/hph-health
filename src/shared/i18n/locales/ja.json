@@ -6941,7 +6941,7 @@
     "{{appName}} checks its core requirements before your first research session.": "{{appName}} は、最初の研究セッションの前に必要な環境を確認します。",
     "Frame a PICO question and build a traceable evidence table.": "PICOを整理し、出典をたどれるエビデンステーブルを作成します。",
     "Draft from verified sources and real study results.": "確認済みの資料と実際の研究結果に基づいて草稿を作成します。",
-    "For academic research only; not for diagnosis or treatment. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "学術研究専用です。診断や治療には使用しないでください。患者を特定できる情報をアップロードしないでください。情報源、方法、出力は研究者が確認してください。",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "学術研究専用です。診断や治療には使用しないでください。架空データのみを使用してください。患者を特定できる情報をアップロードしないでください。情報源、方法、出力は研究者が確認してください。",
     "Return to the listed tasks and stop their subagents before quitting DRA.": "DRA を終了する前に、一覧の各タスクに戻ってサブエージェントを停止してください。",
     "DRA couldn't display this page": "DRA でこのページを表示できませんでした",
     "DRA couldn't start": "DRA を開始できませんでした",

@@ -6939,7 +6939,7 @@
     "{{appName}} checks its core requirements before your first research session.": "{{appName}}에서 첫 연구 세션 전에 필수 환경을 확인합니다.",
     "Frame a PICO question and build a traceable evidence table.": "PICO 질문을 구성하고 출처를 추적할 수 있는 근거 표를 만듭니다.",
     "Draft from verified sources and real study results.": "검증된 출처와 실제 연구 결과를 바탕으로 초안을 작성합니다.",
-    "For academic research only; not for diagnosis or treatment. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "학술 연구 전용이며 진단이나 치료 목적이 아닙니다. 환자 식별 정보를 업로드하지 마세요. 연구자는 출처, 방법, 결과를 검증해야 합니다.",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "학술 연구 전용이며 진단이나 치료 목적이 아닙니다. 가상 데이터만 사용하세요. 환자 식별 정보를 업로드하지 마세요. 연구자는 출처, 방법, 결과를 검증해야 합니다.",
     "Return to the listed tasks and stop their subagents before quitting DRA.": "DRA를 종료하기 전에 나열된 작업으로 돌아가 서브에이전트를 중지하세요.",
     "DRA couldn't display this page": "DRA에서 이 페이지를 표시할 수 없습니다",
     "DRA couldn't start": "DRA를 시작하지 못했습니다",

@@ -6941,7 +6941,7 @@
     "{{appName}} checks its core requirements before your first research session.": "{{appName}} 會在首次科研工作階段前檢查必要的執行環境。",
     "Frame a PICO question and build a traceable evidence table.": "建立 PICO 問題，並整理可追溯的證據表。",
     "Draft from verified sources and real study results.": "根據已核實的來源與真實研究結果起草論文。",
-    "For academic research only; not for diagnosis or treatment. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "僅供學術研究，不用於診斷或治療。請勿上傳可識別患者身分的資訊。研究者須核實來源、方法與輸出內容。",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "僅供學術研究，不用於診斷或治療。請僅使用虛構資料。請勿上傳可識別患者身分的資訊。研究者須核實來源、方法與輸出內容。",
     "Return to the listed tasks and stop their subagents before quitting DRA.": "請返回列出的任務並停止其子智能體，然後再結束 DRA。",
     "DRA couldn't display this page": "DRA 無法顯示此頁面",
     "DRA couldn't start": "DRA 無法啟動",

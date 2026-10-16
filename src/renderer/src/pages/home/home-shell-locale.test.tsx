@@ -14,7 +14,6 @@ import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNot
 import { writingSafeguardsCopy } from '@/pages/writing-safeguards/copy'
 import { WritingSafeguardsEntry } from '@/pages/writing-safeguards/WritingSafeguardsEntry'
 import { resolveLocaleFromTags, type Locale } from '../../../../shared/locale'
-import { prereleaseBannerText } from '../../../../shared/prerelease'
 import {
   ETHICS_WRITING_REMINDER,
   ethicsWritingReminder
@@ -71,13 +70,11 @@ describe('home shell locale', () => {
     expect(variableDefinitionCopy('zh-CN').maskingCheckNote).not.toContain('マスキングチェック')
     expect(ethicsWritingReminder('', 'zh-CN').message).toContain('尚未填写伦理审查批准号')
     expect(ethicsWritingReminder('', 'zh-CN').blocking).toBe(false)
-    expect(prereleaseBannerText('zh-CN')).toBe('内部测试版：请仅使用虚构数据')
 
     expect(variableDefinitionCopy('zh-CN')).toEqual(variableDefinitionCopy('zh-Hans'))
     expect(writingSafeguardsCopy('ja').open).toBe('執筆時の確認')
     expect(variableDefinitionCopy('ja').maskingCheck).toBe('マスキングチェック')
     expect(ethicsWritingReminder('', 'ja').message).toBe(ETHICS_WRITING_REMINDER)
-    expect(prereleaseBannerText('ja')).toContain('架空データのみ')
 
     for (const locale of ['en', 'de', 'es', 'fr', 'ko', 'ru', 'zh-Hans', 'zh-Hant'] as const) {
       expect(variableDefinitionCopy(locale).open).not.toBe('変数定義表')
@@ -85,13 +82,11 @@ describe('home shell locale', () => {
       expect(variableDefinitionCopy(locale).maskingCheckNote).not.toContain('マスキングチェック')
       expect(ethicsWritingReminder('', locale).message).not.toBe(ETHICS_WRITING_REMINDER)
       expect(ethicsWritingReminder('', locale).blocking).toBe(false)
-      expect(prereleaseBannerText(locale)).not.toContain('架空データのみ')
     }
 
     expect(variableDefinitionCopy('pt-BR').open).toBe(variableDefinitionCopy('en').open)
     expect(writingSafeguardsCopy('pt-BR').open).toBe('Checks while writing')
     expect(ethicsWritingReminder('', 'pt-BR').message).toBe(ethicsWritingReminder('', 'en').message)
-    expect(prereleaseBannerText('pt-BR')).toBe(prereleaseBannerText('en'))
     expect(writingSafeguardsCopy('pt-BR').open).not.toBe('執筆時の確認')
   })
 

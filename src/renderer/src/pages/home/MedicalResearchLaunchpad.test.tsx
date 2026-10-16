@@ -132,6 +132,10 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(japanese.host.textContent).toContain(
       '締め切り向けの短い原稿。倫理番号と AI 利用の確認あり。'
     )
+    expect(
+      japanese.host.querySelector('[data-testid="research-use-disclaimer"]')?.textContent
+    ).toContain('架空データのみを使用してください。')
+    expect(japanese.host.textContent).not.toContain('内部テスト版')
   } finally {
     await act(async () => japanese.root.unmount())
   }
@@ -148,6 +152,10 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(chinese.host.textContent).not.toContain('ステップから始める')
     expect(chinese.host.textContent).not.toContain('指導医と相談する準備')
     expect(chinese.host.textContent).not.toContain('このパックは患者データを読み込みません。')
+    expect(
+      chinese.host.querySelector('[data-testid="research-use-disclaimer"]')?.textContent
+    ).toContain('请仅使用虚构数据。')
+    expect(chinese.host.textContent).not.toContain('内部测试版')
   } finally {
     await act(async () => chinese.root.unmount())
   }
@@ -160,6 +168,9 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     )
     expect(german.host.textContent).not.toContain('ステップから始める')
     expect(german.host.textContent).not.toContain('このパックは患者データを読み込みません。')
+    expect(
+      german.host.querySelector('[data-testid="research-use-disclaimer"]')?.textContent
+    ).toContain('Verwenden Sie nur fiktive Daten.')
   } finally {
     await act(async () => german.root.unmount())
   }
@@ -228,9 +239,11 @@ it('renders equal recent-project cards, a show-all toggle, and localized updated
     expect(expander?.className).not.toContain('shadow-card')
     expect(expander?.className).toContain('w-full')
     expect(sample?.textContent).toContain('No model call and no API key.')
-    expect(
-      english.host.querySelector('[data-testid="research-use-disclaimer"]')?.className
-    ).toContain('bg-bg-200')
+    const disclaimer = english.host.querySelector('[data-testid="research-use-disclaimer"]')
+    expect(disclaimer?.className).toContain('bg-bg-200')
+    expect(disclaimer?.textContent).toContain('Use fictional data only.')
+    expect(disclaimer?.textContent).toContain('Do not upload identifiable patient information.')
+    expect(english.host.querySelector('[data-testid="prerelease-banner"]')).toBeNull()
     expect(english.host.querySelector('[data-testid="delete-local-copies"]')).not.toBeNull()
 
     const toggle = english.host.querySelector<HTMLButtonElement>(
@@ -304,6 +317,10 @@ it('renders equal recent-project cards, a show-all toggle, and localized updated
       traditional.host.querySelector('[data-testid="recent-projects-toggle"]')?.textContent
     ).toBe('顯示所有專案')
     expect(traditional.host.textContent).toContain('不呼叫模型，也不需要 API 金鑰。')
+    expect(
+      traditional.host.querySelector('[data-testid="research-use-disclaimer"]')?.textContent
+    ).toContain('請僅使用虛構資料。')
+    expect(traditional.host.textContent).not.toContain('內部測試版')
   } finally {
     await act(async () => traditional.root.unmount())
   }

@@ -7269,7 +7269,7 @@
     "{{appName}} checks its core requirements before your first research session.": "{{appName}} comprueba los requisitos básicos antes de su primera sesión de investigación.",
     "Frame a PICO question and build a traceable evidence table.": "Defina una pregunta PICO y cree una tabla de evidencia trazable.",
     "Draft from verified sources and real study results.": "Redacte a partir de fuentes verificadas y resultados reales.",
-    "For academic research only; not for diagnosis or treatment. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Solo para investigación académica; no para diagnóstico ni tratamiento. No cargue información que identifique a pacientes. Los investigadores deben verificar fuentes, métodos y resultados.",
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Solo para investigación académica; no para diagnóstico ni tratamiento. Utilice solo datos ficticios. No cargue información que identifique a pacientes. Los investigadores deben verificar fuentes, métodos y resultados.",
     "Return to the listed tasks and stop their subagents before quitting DRA.": "Regrese a las tareas enumeradas y detenga a sus subagentes antes de salir de DRA.",
     "DRA couldn't display this page": "DRA no pudo mostrar esta página",
     "DRA couldn't start": "DRA no se pudo iniciar",
