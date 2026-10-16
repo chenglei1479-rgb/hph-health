@@ -299,7 +299,7 @@ describe('Linux OS credentials through production bootstrap and access', () => {
       const identity = selectStartupCredentialIdentity({ platform: 'linux', packaged })
       expect(identity).toMatchObject({
         backend: 'linux-secret-service',
-        appName: `MedResearch Agent${packaged ? '' : ' (DEV)'}`,
+        appName: `Open Science${packaged ? '' : ' (DEV)'}`,
         exists: true
       })
       for (const [command, args] of native.run.mock.calls) {

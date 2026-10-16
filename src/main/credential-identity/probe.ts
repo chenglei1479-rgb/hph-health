@@ -70,18 +70,8 @@ const runCredentialIdentityProbe = (appName: string): IdentityProbeResult => {
     const value: unknown = JSON.parse(result.stdout)
     if (!value || typeof value !== 'object') return { status: 'error' }
     const output = value as Record<string, unknown>
-    if (output.schemaVersion !== 1 || output.platform !== 'darwin') return { status: 'error' }
-    // The published v1.0.0 helper allowlist is Open Science / Open-Science only. It redacts
-    // the DRA product name and returns invalid-identity without querying the keychain. That is
-    // not evidence the keychain is locked or that a secret exists, so a fresh profile can start.
-    // Selection still records the identity as unconfirmed, and existing ciphertext fails closed.
-    if (
-      output.identity === '' &&
-      output.status === 'error' &&
-      output.reason === 'invalid-identity'
-    )
-      return safeCredentialProbeResult({ status: 'not-found', reason: 'invalid-identity' })
-    if (output.identity !== appName) return { status: 'error' }
+    if (output.schemaVersion !== 1 || output.platform !== 'darwin' || output.identity !== appName)
+      return { status: 'error' }
     if (
       !['exists', 'not-found', 'access-blocked', 'error', 'unsupported'].includes(
         String(output.status)

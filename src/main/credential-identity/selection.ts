@@ -45,8 +45,9 @@ export const selectCredentialIdentity = (options: {
   linuxPasswordStore?: string
 }): CredentialIdentity => {
   const suffix = options.packaged ? '' : ' (DEV)'
-  const current = `MedResearch Agent${suffix}`
-  const legacy = `MedResearch Agent${suffix}`
+  // These names are the published credential helper allowlist. The product display name stays DRA.
+  const current = `Open-Science${suffix}`
+  const legacy = `Open Science${suffix}`
   if (options.platform === 'win32') {
     // Windows OSCrypt belongs to Local State + the DPAPI user context, not an app-name item.
     return Object.freeze({ backend: 'windows-dpapi', appName: current })

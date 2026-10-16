@@ -119,7 +119,7 @@ it.each(['access-blocked', 'error', 'not-found'] as const)(
   }
 )
 
-it('treats the published helper rejecting the DRA product name as an absent key', async () => {
+it('fails closed when the helper redacts a name outside its allowlist', async () => {
   fixture.spawn.mockReturnValue({
     status: 0,
     signal: null,
@@ -134,10 +134,7 @@ it('treats the published helper rejecting the DRA product name as an absent key'
     })
   })
   const { probeCredentialIdentity } = await import('./probe')
-  expect(probeCredentialIdentity('MedResearch Agent')).toEqual({
-    status: 'not-found',
-    reason: 'invalid-identity'
-  })
+  expect(probeCredentialIdentity('MedResearch Agent')).toEqual({ status: 'error' })
 })
 
 it('fails closed when a blank identity is not an allowlist rejection', async () => {

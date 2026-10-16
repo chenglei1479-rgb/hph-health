@@ -18,18 +18,18 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 it.each([
-  ['access-blocked', 'exists', 'MedResearch Agent (DEV)', 'legacy-identity-present'],
-  ['exists', 'exists', 'MedResearch Agent (DEV)', 'preferred-identity-present'],
-  ['exists', 'access-blocked', 'MedResearch Agent (DEV)', 'preferred-identity-present'],
-  ['not-found', 'exists', 'MedResearch Agent (DEV)', 'legacy-identity-present'],
-  ['not-found', 'not-found', 'MedResearch Agent (DEV)', 'no-identity-confirmed'],
-  ['error', 'unsupported', 'MedResearch Agent (DEV)', 'no-identity-confirmed']
+  ['access-blocked', 'exists', 'Open Science (DEV)', 'legacy-identity-present'],
+  ['exists', 'exists', 'Open-Science (DEV)', 'preferred-identity-present'],
+  ['exists', 'access-blocked', 'Open-Science (DEV)', 'preferred-identity-present'],
+  ['not-found', 'exists', 'Open Science (DEV)', 'legacy-identity-present'],
+  ['not-found', 'not-found', 'Open-Science (DEV)', 'no-identity-confirmed'],
+  ['error', 'unsupported', 'Open-Science (DEV)', 'no-identity-confirmed']
 ] as const)(
   'logs only executed probes and their original results: %s / %s',
   async (current, legacy, selected, selectionReason) => {
     fixture.spawn.mockImplementation((_executable: string, args: string[]) => {
       const identity = args[0]
-      const status = identity === 'MedResearch Agent (DEV)' ? current : legacy
+      const status = identity === 'Open-Science (DEV)' ? current : legacy
       return {
         status: 0,
         signal: null,
@@ -61,10 +61,10 @@ it.each([
     })
     const executed =
       current === 'exists'
-        ? [['MedResearch Agent (DEV)', current]]
+        ? [['Open-Science (DEV)', current]]
         : [
-            ['MedResearch Agent (DEV)', current],
-            ['MedResearch Agent (DEV)', legacy]
+            ['Open-Science (DEV)', current],
+            ['Open Science (DEV)', legacy]
           ]
     expect(fixture.spawn.mock.calls.map(([, args]) => args)).toEqual(
       executed.map(([name]) => [name])
@@ -91,7 +91,7 @@ it.each([
     })
     if (current === 'exists')
       expect(summary.skippedProbe).toEqual({
-        appName: 'MedResearch Agent (DEV)',
+        appName: 'Open Science (DEV)',
         reason: 'preferred-identity-present'
       })
     else expect(summary.skippedProbe).toBeUndefined()
@@ -110,14 +110,14 @@ it('filters injected diagnostics and thrown errors in the final selection log', 
     .mockReturnValueOnce({ status: 'access-blocked', reason: 'RAW-PRIVATE-REASON', osStatus: 1.5 })
   const lines = await captureDiagnosticLogs(() => {
     expect(selectCredentialIdentity({ platform: 'darwin', packaged: true, probe })).toMatchObject({
-      appName: 'MedResearch Agent',
+      appName: 'Open-Science',
       exists: false
     })
   })
   const summary = JSON.parse(lines.at(-1)!).data
   expect(summary.probes).toEqual([
-    { order: 1, appName: 'MedResearch Agent', status: 'error', reason: 'probe-exception' },
-    { order: 2, appName: 'MedResearch Agent', status: 'access-blocked' }
+    { order: 1, appName: 'Open-Science', status: 'error', reason: 'probe-exception' },
+    { order: 2, appName: 'Open Science', status: 'access-blocked' }
   ])
   expect(lines.join('\n')).not.toMatch(/RAW-/)
 })
