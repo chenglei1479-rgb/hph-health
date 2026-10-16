@@ -1,10 +1,14 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
+import { cp, lstat, mkdtemp, mkdir, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { expect, it } from 'vitest'
 import { packageRegistry } from './package-verification-plan.mjs'
-import { buildDevPackages, packageBuildProjects } from './build-dev-packages.mjs'
+import {
+  buildDevPackages,
+  linkPackedFileDependencies,
+  packageBuildProjects
+} from './build-dev-packages.mjs'
 
 it('registers every buildable local package and its declared internal dependencies', async () => {
   const root = process.cwd()
@@ -155,6 +159,37 @@ it('skips unchanged output, propagates dependency edits, rejects errors and repa
     await rm(root, { recursive: true, force: true })
   }
 }, 60_000)
+
+it('replaces a packed file: install with a link to the workspace package', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'packed-file-link-'))
+  const put = async (file: string, content: string): Promise<void> => {
+    await mkdir(dirname(join(root, file)), { recursive: true })
+    await writeFile(join(root, file), content)
+  }
+  try {
+    await put(
+      'package.json',
+      JSON.stringify({ dependencies: { 'fixture-core': 'file:packages/core' } })
+    )
+    await put('packages/core/package.json', JSON.stringify({ name: 'fixture-core' }))
+    await put('packages/core/marker.txt', 'workspace')
+    await cp(join(root, 'packages/core'), join(root, 'node_modules/fixture-core'), {
+      recursive: true
+    })
+    expect((await lstat(join(root, 'node_modules/fixture-core'))).isSymbolicLink()).toBe(false)
+    linkPackedFileDependencies(root)
+    expect((await lstat(join(root, 'node_modules/fixture-core'))).isSymbolicLink()).toBe(true)
+    expect(await realpath(join(root, 'node_modules/fixture-core'))).toBe(
+      await realpath(join(root, 'packages/core'))
+    )
+    await put('packages/core/marker.txt', 'updated')
+    expect(await readFile(join(root, 'node_modules/fixture-core/marker.txt'), 'utf8')).toBe(
+      'updated'
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
 
 it('prepares packages once per composed command, including npm lifecycle hooks', async () => {
   const { scripts } = JSON.parse(await readFile('package.json', 'utf8'))

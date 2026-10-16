@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { spawn } from 'node:child_process'
-import { existsSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, lstatSync, readFileSync, readdirSync, rmSync, symlinkSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
@@ -46,6 +46,38 @@ export function packageBuildProjects(root = repositoryRoot) {
   })
 }
 
+// npm ci --install-links packs file: packages before their dist exists. TypeScript and the
+// packaged app both resolve those names from node_modules, so replace the packed copy with
+// a link to the workspace package. An existing link is left alone.
+export function linkPackedFileDependencies(root = repositoryRoot) {
+  const manifestPath = join(root, 'package.json')
+  if (!existsSync(manifestPath)) return
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  const specs = {
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+    ...manifest.optionalDependencies
+  }
+  for (const [name, spec] of Object.entries(specs)) {
+    if (typeof spec !== 'string' || !spec.startsWith('file:')) continue
+    const source = resolve(root, spec.slice('file:'.length))
+    const sourceManifest = join(source, 'package.json')
+    if (!existsSync(sourceManifest)) continue
+    const target = join(root, 'node_modules', name)
+    if (!existsSync(target)) continue
+    const info = lstatSync(target)
+    if (info.isSymbolicLink()) continue
+    if (!info.isDirectory()) continue
+    const installedManifest = join(target, 'package.json')
+    if (!existsSync(installedManifest)) continue
+    if (JSON.parse(readFileSync(installedManifest, 'utf8')).name !== name) continue
+    rmSync(target, { recursive: true, force: true })
+    // Junctions do not require Windows developer mode. POSIX keeps a relative directory link.
+    const linkTarget = process.platform === 'win32' ? source : relative(dirname(target), source)
+    symlinkSync(linkTarget, target, process.platform === 'win32' ? 'junction' : 'dir')
+  }
+}
+
 // Build mode trusts its metadata even when an individual emitted JS file has been deleted.
 // Invalidate that project's metadata, then let TypeScript own compilation and dependency order.
 export async function buildDevPackages({
@@ -55,6 +87,7 @@ export async function buildDevPackages({
   clean = false,
   packages
 } = {}) {
+  linkPackedFileDependencies(root)
   const graph = packageBuildProjects(root)
   const selected = new Set()
   const include = (project) => {
