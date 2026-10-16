@@ -55,6 +55,7 @@ import { NetworkStatusIndicator } from '@/components/NetworkStatusIndicator'
 import { NotificationBell } from '@/components/NotificationBell'
 import { ProjectDeletionCleanupNotice } from '@/components/ProjectDeletionCleanupNotice'
 import { UpdateCapsule } from '@/components/UpdateCapsule'
+import { homeCardClassName, homeMutedClassName, homeTitleClassName } from './home-layout'
 import { MedicalResearchLaunchpad, type MedicalResearchWorkflow } from './MedicalResearchLaunchpad'
 import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
 import {
@@ -155,13 +156,12 @@ const getRunningActivityTimestamp = (session: ChatSession, computeStartedAt?: nu
     : (session.presentedActivityAt ?? session.updatedAt)
 }
 
-const sectionHeadingClassName =
-  'mb-3 flex items-center gap-2 text-[17px] font-medium leading-6 text-text-000'
+const sectionHeadingClassName = cn(homeTitleClassName, 'mb-4 flex items-center gap-2')
 
-const listCardClassName = 'rounded-2xl bg-bg-000 p-1.5 shadow-card'
+const listCardClassName = cn(homeCardClassName, 'p-2')
 
 const rowClassName =
-  'group flex w-full items-center gap-2 rounded-xl px-2.5 py-2.5 text-left hover:bg-bg-300 sm:px-3'
+  'group flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm font-medium leading-5 hover:bg-bg-200 sm:px-2'
 
 const rowActionClassName =
   'inline-flex size-7 shrink-0 items-center justify-center rounded text-text-300 opacity-100 transition-opacity duration-150 ease-out hover:bg-bg-400 hover:text-text-000 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 data-[state=open]:opacity-100'
@@ -790,21 +790,21 @@ const HomePage = ({
   return (
     <TooltipProvider>
       <main className="h-svh overflow-y-auto bg-bg-10 text-text-000">
-        <div className="mx-auto max-w-[1080px] px-4 py-5 pb-12 sm:px-8 sm:py-7 sm:pb-16">
-          <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mx-auto w-full max-w-[1080px] px-4 py-6 pb-16 sm:px-8">
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <a
                   href={APP.links.website}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-serif text-[26px] font-medium leading-none tracking-[-0.02em] text-text-000 hover:text-text-100"
+                  className="inline-flex items-center text-text-000 hover:text-text-100"
                 >
                   <AppBrand productName={APP.name} />
                 </a>
                 {hasCompleteSessionCatalog &&
                 (activeSessionCounts.waiting > 0 || activeSessionCounts.running > 0) ? (
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
+                  <div className={cn(homeMutedClassName, 'flex items-center gap-2 font-medium')}>
                     {activeSessionCounts.waiting > 0 ? (
                       <span className="text-session-waiting">
                         {t('{{count}} waiting on you', { count: activeSessionCounts.waiting })}
@@ -824,12 +824,12 @@ const HomePage = ({
                 ) : null}
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-1">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {requiredEnvironmentFailures.length > 0 && environmentRepairPanel ? (
                 <button
                   type="button"
                   onClick={() => openSettingsToPanel(environmentRepairPanel)}
-                  className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-danger-000/35 bg-danger-900 px-2.5 text-xs font-medium text-danger-000 hover:border-danger-000/55 hover:bg-danger-900/80"
+                  className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-danger-000/35 bg-danger-900 px-3 text-sm font-medium text-danger-000 hover:border-danger-000/55 hover:bg-danger-900/80"
                   aria-label={t('Open environment repair')}
                 >
                   <CircleAlert className="size-3.5" strokeWidth={2} aria-hidden="true" />
@@ -857,8 +857,8 @@ const HomePage = ({
                 >
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="size-9 rounded-lg text-text-300"
+                    size="icon-lg"
+                    className="text-text-300"
                     onClick={onOpenGlobalSearch}
                     aria-label={t('Search')}
                   >
@@ -876,8 +876,8 @@ const HomePage = ({
                 >
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="size-9 rounded-lg text-text-300"
+                    size="icon-lg"
+                    className="text-text-300"
                     onClick={() => openLibrary('user')}
                     aria-label={t('Library')}
                   >
@@ -898,7 +898,7 @@ const HomePage = ({
                     type="button"
                     aria-label={t('Settings')}
                     onClick={openSettings}
-                    className="inline-flex size-9 items-center justify-center rounded-lg text-text-300 hover:bg-bg-300 hover:text-text-000"
+                    className="inline-flex size-9 items-center justify-center rounded-lg text-text-300 hover:bg-muted hover:text-text-000"
                   >
                     <Settings className="size-4" strokeWidth={2} aria-hidden="true" />
                   </button>
@@ -916,12 +916,12 @@ const HomePage = ({
                 >
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="h-8 gap-1 rounded-md px-3 text-xs"
+                    size="lg"
+                    className="gap-2 px-3"
                     onClick={() => openCreateDialog()}
                     aria-label={t('New project')}
                   >
-                    <Plus className="size-3.5" strokeWidth={2} aria-hidden="true" />
+                    <Plus className="size-4" strokeWidth={2} aria-hidden="true" />
                     <span className="hidden sm:inline">{t('New project')}</span>
                   </Button>
                 </TooltipTrigger>
@@ -939,8 +939,8 @@ const HomePage = ({
           <EthicsWritingNotice open={ethicsReminderOpen} />
 
           {sessionUpdates.length > 0 ? (
-            <section className="mt-8 sm:mt-10" aria-label={t('Session updates')}>
-              <div className="grid grid-cols-1 gap-3 py-1 md:grid-cols-2">
+            <section className="mt-8" aria-label={t('Session updates')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {sessionUpdates.map(({ session, activity, activityTimestamp }) => {
                   const waitReason = isSessionWaitReason(activity) ? activity : undefined
                   const waiting = waitReason !== undefined
@@ -959,9 +959,9 @@ const HomePage = ({
                         <button
                           type="button"
                           // Fixed height sized to the tallest content (status row + title +
-                          // two-line description, ~154px); cards without a description keep the
-                          // height and mt-auto sinks the project line.
-                          className="flex h-[156px] w-full min-w-0 cursor-pointer flex-col rounded-2xl bg-bg-000 pb-3 px-[18px] pt-4 text-left shadow-card hover:bg-bg-200 focus-visible:ring-[3px] focus-visible:ring-ring/50 active:bg-bg-300 motion-reduce:transition-none"
+                          // two-line description); cards without a description keep the height
+                          // and mt-auto sinks the project line.
+                          className="flex h-44 w-full min-w-0 cursor-pointer flex-col rounded-2xl bg-bg-000 px-4 py-4 text-left shadow-card hover:bg-bg-200 focus-visible:ring-[3px] focus-visible:ring-ring/50 active:bg-bg-200 motion-reduce:transition-none"
                           onClick={() => openSession(session.projectId, session.id, 'user')}
                           aria-label={
                             waitReason
@@ -977,7 +977,7 @@ const HomePage = ({
                           <span className="flex w-full items-center justify-between gap-3">
                             <span
                               className={cn(
-                                'inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium',
+                                'inline-flex shrink-0 items-center gap-2 rounded-lg px-2 py-1 text-xs font-normal leading-5',
                                 waiting
                                   ? 'bg-session-waiting/10 text-session-waiting'
                                   : completed
@@ -1009,7 +1009,7 @@ const HomePage = ({
                             </span>
                             {/* Flush right on every card — a reserved dismiss gap leaves the time
                               floating left of where a long truncated title ends. */}
-                            <span className="shrink-0 text-xs text-text-100">
+                            <span className={cn(homeMutedClassName, 'shrink-0')}>
                               {completed
                                 ? isJustNow
                                   ? t('just now')
@@ -1021,7 +1021,8 @@ const HomePage = ({
                           </span>
                           <span
                             className={cn(
-                              'mt-2.5 min-w-0 max-w-full truncate text-base font-semibold text-text-000',
+                              'mt-2 min-w-0 max-w-full truncate',
+                              homeTitleClassName,
                               !waiting && !completed && 'home-session-title-running'
                             )}
                           >
@@ -1030,12 +1031,12 @@ const HomePage = ({
                           {session.description?.trim() ? (
                             <span
                               data-testid="session-description-preview"
-                              className="mt-1.5 line-clamp-2 break-words text-xs leading-[1.4] text-text-300"
+                              className={cn(homeMutedClassName, 'mt-2 line-clamp-2 break-words')}
                             >
                               {session.description.trim()}
                             </span>
                           ) : null}
-                          <span className="mt-auto w-full truncate pt-3 text-xs text-text-100">
+                          <span className={cn(homeMutedClassName, 'mt-auto w-full truncate pt-4')}>
                             {projectNames.get(session.projectId) ?? t('Unknown project')}
                           </span>
                         </button>
@@ -1086,16 +1087,11 @@ const HomePage = ({
             </section>
           ) : null}
 
-          <div
-            className={cn(
-              'grid grid-cols-1 gap-7 sm:gap-8 lg:grid-cols-2',
-              sessionUpdates.length > 0 ? 'mt-8' : 'mt-8 sm:mt-10'
-            )}
-          >
+          <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
             <section className="min-w-0" aria-label={t('Projects')}>
               <h2 className={sectionHeadingClassName}>
                 <GalleryVerticalEnd
-                  className="size-4 text-text-100"
+                  className="size-4 text-text-300"
                   strokeWidth={2}
                   aria-hidden="true"
                 />
@@ -1103,13 +1099,13 @@ const HomePage = ({
               </h2>
               {projectActionError ? (
                 <div
-                  className="mb-3 rounded-2xl border border-danger-000/30 px-4 py-3 text-sm text-danger-000"
+                  className="mb-4 rounded-2xl bg-danger-900 px-4 py-4 text-sm font-medium leading-5 text-danger-000"
                   role="alert"
                 >
                   {projectActionError}
                 </div>
               ) : null}
-              <ProjectDeletionCleanupNotice className="mb-3 rounded-2xl px-4 py-3" />
+              <ProjectDeletionCleanupNotice className="mb-4 rounded-2xl px-4 py-4" />
               {loadError ? (
                 <ErrorNotice
                   role="alert"
@@ -1121,11 +1117,11 @@ const HomePage = ({
                   }}
                 />
               ) : !isProjectsLoaded && projectSummaries.length === 0 ? (
-                <div role="status" className="px-4 py-10 text-center text-sm text-muted-foreground">
+                <div role="status" className={cn(homeMutedClassName, 'px-4 py-8 text-center')}>
                   {t('Loading…')}
                 </div>
               ) : projectSummaries.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border-200/70 px-4 py-10 text-center text-sm text-muted-foreground">
+                <div className={cn(homeCardClassName, homeMutedClassName, 'px-4 py-8 text-center')}>
                   {t('No projects yet. Create one to get started.')}
                 </div>
               ) : (
@@ -1142,7 +1138,7 @@ const HomePage = ({
                           className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left after:absolute after:inset-0 after:rounded-[inherit]"
                           onClick={() => openProject(project.id, 'user')}
                         >
-                          <span className="min-w-0 truncate font-semibold text-text-000">
+                          <span className="min-w-0 truncate text-sm font-medium leading-5 text-text-000">
                             {project.name}
                           </span>
                           {project.pinned ? (
@@ -1156,7 +1152,12 @@ const HomePage = ({
                             </>
                           ) : null}
                           {project.isExample ? (
-                            <span className="shrink-0 rounded bg-bg-300 px-1.5 py-0.5 text-[10px] font-medium text-text-100">
+                            <span
+                              className={cn(
+                                homeMutedClassName,
+                                'shrink-0 rounded-lg bg-bg-200 px-2 py-0.5'
+                              )}
+                            >
                               {t('Example')}
                             </span>
                           ) : null}
@@ -1186,7 +1187,7 @@ const HomePage = ({
                             </span>
                           ) : null}
                         </button>
-                        <span className="hidden shrink-0 text-xs text-text-100 sm:inline">
+                        <span className={cn(homeMutedClassName, 'hidden shrink-0 sm:inline')}>
                           {hasCompleteSessionCatalog
                             ? t('{{count}} sessions', {
                                 defaultValue_one: '{{count}} session',
@@ -1195,14 +1196,24 @@ const HomePage = ({
                             : t('Session count unavailable')}
                         </span>
                         {showArtifactCounts && artifactCounts.has(project.id) ? (
-                          <span className="hidden shrink-0 tabular-nums text-xs text-text-100 sm:inline">
+                          <span
+                            className={cn(
+                              homeMutedClassName,
+                              'hidden shrink-0 tabular-nums sm:inline'
+                            )}
+                          >
                             {t('{{count}} artifacts', {
                               defaultValue_one: '{{count}} artifact',
                               count: artifactCounts.get(project.id)
                             })}
                           </span>
                         ) : null}
-                        <span className="hidden w-8 shrink-0 text-right text-xs text-text-000 sm:inline">
+                        <span
+                          className={cn(
+                            homeMutedClassName,
+                            'hidden w-8 shrink-0 text-right sm:inline'
+                          )}
+                        >
                           {relativeTime(lastActivityAt)}
                         </span>
                         <DropdownMenu>
@@ -1301,11 +1312,11 @@ const HomePage = ({
 
             <section className="min-w-0" aria-label={t('Recent sessions')}>
               <h2 className={sectionHeadingClassName}>
-                <Clock className="size-4 text-text-100" strokeWidth={2} aria-hidden="true" />
+                <Clock className="size-4 text-text-300" strokeWidth={2} aria-hidden="true" />
                 {t('Recent sessions')}
               </h2>
               {recentSessions.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border-200/70 px-4 py-10 text-center text-sm text-muted-foreground">
+                <div className={cn(homeCardClassName, homeMutedClassName, 'px-4 py-8 text-center')}>
                   {t('Sessions you start will appear here.')}
                 </div>
               ) : (
@@ -1325,14 +1336,14 @@ const HomePage = ({
                         <span className="size-[7px] rounded-full border border-text-100" />
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-sm font-medium text-text-000">
+                        <span className="truncate text-sm font-medium leading-5 text-text-000">
                           {session.title}
                         </span>
-                        <span className="truncate text-xs text-text-100">
+                        <span className={cn(homeMutedClassName, 'truncate')}>
                           {projectNames.get(session.projectId) ?? t('Unknown project')}
                         </span>
                       </span>
-                      <span className="shrink-0 text-xs text-text-000">
+                      <span className={cn(homeMutedClassName, 'shrink-0')}>
                         {relativeTime(session.updatedAt)}
                       </span>
                     </button>

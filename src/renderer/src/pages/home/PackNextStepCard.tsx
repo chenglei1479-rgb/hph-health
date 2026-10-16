@@ -6,6 +6,13 @@ import {
   type DeliveryPackId
 } from '../../../../shared/deliverable-next-step'
 import { deliveryPackTitle, unreleasedDestinationTitle } from './delivery-pack-title'
+import {
+  homeBodyClassName,
+  homeCardClassName,
+  homeMutedClassName,
+  homeTitleClassName
+} from './home-layout'
+import { cn } from '@/lib/utils'
 
 type PackNextStepCardProps = {
   completionId: DeliveryPackId
@@ -35,22 +42,20 @@ export const PackNextStepCard = ({
       data-next-step={step.id}
       data-next-step-kind={step.kind}
       aria-label={t('Next step')}
-      className="rounded-2xl border border-[#e4ded2] bg-[#faf8f2] px-4 py-3 text-sm text-[#20343a]"
+      className={cn(homeCardClassName, 'flex flex-col gap-2 p-4')}
     >
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#536970]">
-          {t('Next step')}
-        </h2>
+      <div className="flex items-start justify-between gap-4">
+        <h2 className={homeTitleClassName}>{t('Next step')}</h2>
         {onDismiss ? (
-          <button type="button" className="text-xs text-[#536970]" onClick={onDismiss}>
+          <button type="button" className={homeMutedClassName} onClick={onDismiss}>
             {t('Dismiss')}
           </button>
         ) : null}
       </div>
-      <p className="mt-2 font-medium">{title}</p>
+      <p className={homeBodyClassName}>{title}</p>
       {step.kind === 'unreleased' ? (
-        <p className="mt-1 text-xs leading-5 text-[#635f56]">
-          <span className="font-medium">{t('Not available in this version')}</span>
+        <p className={homeMutedClassName}>
+          <span>{t('Not available in this version')}</span>
           <span> </span>
           <span>{t('This destination is not in the app yet.')}</span>
         </p>
@@ -58,7 +63,7 @@ export const PackNextStepCard = ({
         <button
           type="button"
           data-testid="pack-next-step-open"
-          className="mt-3 rounded-xl border border-[#d5dfdc] bg-white px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-9 w-fit rounded-lg border border-border-200 bg-bg-000 px-3 text-sm font-medium leading-5 text-text-000 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={continueDisabled}
           onClick={onContinue}
         >

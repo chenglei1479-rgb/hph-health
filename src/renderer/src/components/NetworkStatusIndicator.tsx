@@ -68,7 +68,7 @@ const NetworkStatusIndicator = ({
           className={
             variant === 'pill'
               ? cn(
-                  'inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition-colors duration-150 ease-out',
+                  'inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors duration-150 ease-out',
                   pillToneClasses[tone]
                 )
               : cn(
@@ -77,11 +77,7 @@ const NetworkStatusIndicator = ({
                 )
           }
         >
-          <WifiOff
-            className={variant === 'pill' ? 'size-3.5' : 'size-4'}
-            strokeWidth={2}
-            aria-hidden="true"
-          />
+          <WifiOff className="size-4" strokeWidth={2} aria-hidden="true" />
           {variant === 'pill' ? <span>{text}</span> : null}
         </button>
       </TooltipTrigger>

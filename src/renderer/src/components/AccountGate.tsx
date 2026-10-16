@@ -20,7 +20,7 @@ export const AccountButton = (): React.JSX.Element | null => {
   const open = useContext(AccountContext)
   const { t } = useTranslation()
   return open ? (
-    <Button variant="outline" size="sm" onClick={open}>
+    <Button variant="outline" size="lg" className="px-3" onClick={open}>
       {t('Account')}
     </Button>
   ) : null
