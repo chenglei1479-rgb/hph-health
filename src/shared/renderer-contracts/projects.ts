@@ -54,6 +54,10 @@ export const projectsCreateContracts = {
     'projects',
     ['projects:delete', WEB, undefined, undefined, RUNTIME_VALIDATED]
   ),
+  'projects.deleteDevicePatientData': callable<(request: DeleteProjectRequest) => Promise<void>>()(
+    'projects',
+    ['projects:delete-device-patient-data', WEB, undefined, undefined, RUNTIME_VALIDATED]
+  ),
   'projects.get': callable<(id: string) => Promise<Project | null>>()('projects', [
     'projects:get',
     WEB,

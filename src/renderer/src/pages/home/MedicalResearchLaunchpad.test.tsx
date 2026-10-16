@@ -37,8 +37,8 @@ it('shows three primary entries in order and keeps the six research entries behi
     expect(step2?.textContent).toContain('Step 2')
     expect(step2?.textContent).toContain('Choose where to begin')
     expect(step2?.textContent).toContain('Prepare to consult your supervising doctor')
-    expect(step2?.textContent).toContain('Analyze data')
-    expect(step2?.textContent).toContain('Write an abstract or paper')
+    expect(step2?.textContent).toContain('Analyze your own data')
+    expect(step2?.textContent).toContain('Prepare a conference abstract or paper')
     expect(step2?.textContent).not.toContain('Choose a deliverable')
     expect(host.textContent).not.toContain('Special requirements')
     expect(host.querySelector('[data-testid="research-data-flow"]')).toBeNull()
@@ -56,7 +56,8 @@ it('shows three primary entries in order and keeps the six research entries behi
     expect(host.querySelector('[data-testid="continue-project-study-1"]')?.textContent).toContain(
       'Lung cohort'
     )
-    expect(host.querySelector('[data-testid="delete-local-copies"]')).not.toBeNull()
+    expect(host.querySelector('[data-testid="delete-local-copies"]')).toBeNull()
+    expect(host.querySelector('[data-testid="delete-device-patient-data"]')).toBeNull()
     expect(host.querySelector('[data-testid="open-fictional-sample"]')).not.toBeNull()
     expect(host.querySelector('[data-testid="research-entry-novelty"]')).toBeNull()
     const toggle = host.querySelector<HTMLButtonElement>('[data-testid="start-from-step"]')
@@ -117,8 +118,8 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
   try {
     expect(japanese.host.textContent).toContain('ステップから始める（文献・計画・解析など）')
     expect(japanese.host.textContent).toContain('指導医と相談する準備')
-    expect(japanese.host.textContent).toContain('データを分析')
-    expect(japanese.host.textContent).toContain('抄録・論文を書く')
+    expect(japanese.host.textContent).toContain('自分のデータを分析する')
+    expect(japanese.host.textContent).toContain('学会抄録・論文を準備する')
     expect(japanese.host.textContent).toContain('プロジェクトを続ける')
     expect(japanese.host.textContent).not.toContain('統計資料の書き出し')
     expect(japanese.host.textContent).not.toContain('指導医相談資料')
@@ -138,8 +139,8 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
   try {
     expect(chinese.host.textContent).toContain('从步骤开始（文献、计划、分析等）')
     expect(chinese.host.textContent).toContain('准备与指导医师咨询')
-    expect(chinese.host.textContent).toContain('数据分析')
-    expect(chinese.host.textContent).toContain('撰写摘要或论文')
+    expect(chinese.host.textContent).toContain('分析自己的数据')
+    expect(chinese.host.textContent).toContain('准备学会摘要或论文')
     expect(chinese.host.textContent).not.toContain('仅汇总结果，不含原始数据')
     expect(chinese.host.textContent).toContain('此交付包不读取患者数据。')
     expect(chinese.host.textContent).not.toContain('ステップから始める')

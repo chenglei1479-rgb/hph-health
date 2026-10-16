@@ -533,6 +533,7 @@ describe('preload bridge — public surface inventory', () => {
       'projectFiles.searchArtifacts',
       'projects.create',
       'projects.delete',
+      'projects.deleteDevicePatientData',
       'projects.get',
       'projects.list',
       'projects.listDeletionCleanup',

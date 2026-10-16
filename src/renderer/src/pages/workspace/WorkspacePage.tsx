@@ -223,7 +223,9 @@ const WorkspacePage = ({
   } | null>(null)
   const fileDialogItem = usePreviewWorkbenchStore((state) => state.fileDialogItem)
   const togglePreviewPanel = usePreviewWorkbenchStore((state) => state.togglePanel)
-  const projectFormDialog = useProjectFormDialog()
+  const projectFormDialog = useProjectFormDialog({
+    canDeletePatientData: canDeleteConversations
+  })
   const [projectFileCount, setProjectFileCount] = useState<{
     projectId: string
     total: number

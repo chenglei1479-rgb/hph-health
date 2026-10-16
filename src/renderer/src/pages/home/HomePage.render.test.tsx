@@ -1923,7 +1923,8 @@ describe('HomePage recent session ordering', () => {
       )
     ).toEqual(['mentor-prep', 'analyze-data', 'write-abstract'])
     expect(container.querySelector('[data-testid="export-statistician-package"]')).toBeNull()
-    expect(container.querySelector('[data-testid="delete-local-copies"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="delete-local-copies"]')).toBeNull()
+    expect(container.querySelector('[data-testid="delete-device-patient-data"]')).toBeNull()
     expect(
       container.querySelector('[data-testid="continue-project-project-1"]')?.textContent
     ).toContain('Research project')

@@ -426,6 +426,14 @@ const dataContentApplicationCommands = Object.freeze({
     readonly [request: Projects.DeleteProjectRequest],
     Projects.ProjectDeletionOutcome
   >('projects:delete', Projects.projectApplicationCommandContracts.delete),
+  projectDeleteDevicePatientData: defineApplicationCommand<
+    'projects:delete-device-patient-data',
+    readonly [request: Projects.DeleteProjectRequest],
+    void
+  >(
+    'projects:delete-device-patient-data',
+    Projects.projectApplicationCommandContracts.deleteDevicePatientData
+  ),
   projectGet: projectCommand(
     'projects:get',
     'get',
@@ -658,6 +666,7 @@ const dataContentApplicationCommandGroups = Object.freeze([
     dataContentApplicationCommands.projectCreate,
     dataContentApplicationCommands.projectUpdateArchive,
     dataContentApplicationCommands.projectDelete,
+    dataContentApplicationCommands.projectDeleteDevicePatientData,
     dataContentApplicationCommands.projectGet,
     dataContentApplicationCommands.projectList,
     dataContentApplicationCommands.projectListDeletionCleanup,
@@ -907,6 +916,8 @@ const registerDataContentApplicationCommands = (
           return project
         }),
       'projects:delete': ({ args }) => dependencies.projects.delete(args[0].id),
+      'projects:delete-device-patient-data': ({ args }) =>
+        dependencies.projects.deleteDevicePatientData(args[0].id),
       'projects:get': ({ args }) =>
         dependencies.withDataRootWrite(() => dependencies.projects.get(args[0])),
       'projects:list': () => dependencies.withDataRootWrite(() => dependencies.projects.list()),

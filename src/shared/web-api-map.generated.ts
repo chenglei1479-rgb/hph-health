@@ -185,6 +185,7 @@ export const WEB_INVOKE_CHANNELS = {
   'projectFiles.searchArtifacts': 'project-files:search-artifacts',
   'projects.create': 'projects:create',
   'projects.delete': 'projects:delete',
+  'projects.deleteDevicePatientData': 'projects:delete-device-patient-data',
   'projects.get': 'projects:get',
   'projects.list': 'projects:list',
   'projects.listDeletionCleanup': 'projects:list-deletion-cleanup',
