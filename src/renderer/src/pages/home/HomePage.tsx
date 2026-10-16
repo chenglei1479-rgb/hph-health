@@ -488,9 +488,10 @@ const HomePage = ({
 
   const recentHomeProjects = useMemo(
     () =>
-      projectSummaries.slice(0, 6).map(({ project: recentProject }) => ({
+      projectSummaries.map(({ project: recentProject, lastActivityAt }) => ({
         id: recentProject.id,
-        name: recentProject.name
+        name: recentProject.name,
+        updatedAt: lastActivityAt
       })),
     [projectSummaries]
   )
