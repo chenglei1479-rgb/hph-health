@@ -486,6 +486,25 @@ const HomePage = ({
     persistedSessions
   ])
 
+  const recentHomeProjects = useMemo(
+    () =>
+      projectSummaries.slice(0, 6).map(({ project: recentProject }) => ({
+        id: recentProject.id,
+        name: recentProject.name
+      })),
+    [projectSummaries]
+  )
+  const localProjectIds = useMemo(() => projects.map((item) => item.id), [projects])
+
+  const deleteLocalCopies = async (ids: readonly string[]): Promise<void> => {
+    if (!canDeleteProjects) throw new Error('Project recovery is incomplete.')
+    useNavigationStore.getState().recordUserNavigation()
+    for (const id of ids) {
+      await deleteProject(id)
+      useSessionStore.getState().removeSessionsForProject(id)
+    }
+  }
+
   const recentSessions = useRecentSessions(
     persistedSessions,
     isProjectsLoaded && !loadError && hasCompleteSessionCatalog
@@ -655,6 +674,7 @@ const HomePage = ({
       name: theme.slice(0, PROJECT_NAME_MAX_LENGTH),
       description: templates[workflow].description,
       agentContext:
+        (workflow === 'analysis' ? `${WORKFLOW_MODE_ANALYSIS_LINE}\n` : '') +
         (isDeliverablePackage(workflow)
           ? `${guardDeliverableOutboundText(
               `${t('Load the research-deliverables skill for {{researchPackage}}. Confirm required inputs and the output checklist before starting. Mark missing evidence and unexecuted analyses explicitly.', { researchPackage: templates[workflow].name })}\nPackage mode: ${workflow}${workflow === 'mentor-pack' ? `\n${mentorPackAgentInstruction(t)}` : ''}${workflow === 'consultation-pack' ? `\n${consultationPackExportPrompt(t)}` : ''}`
@@ -920,7 +940,14 @@ const HomePage = ({
           </header>
           <PackageOperationIndicator />
 
-          <MedicalResearchLaunchpad onSelectWorkflow={selectMedicalWorkflow} />
+          <MedicalResearchLaunchpad
+            onSelectWorkflow={selectMedicalWorkflow}
+            recentProjects={recentHomeProjects}
+            onOpenProject={(projectId) => openProject(projectId, 'user')}
+            canDeleteLocalCopies={canDeleteProjects}
+            localProjectIds={localProjectIds}
+            onDeleteLocalCopies={deleteLocalCopies}
+          />
           <EthicsWritingNotice open={ethicsReminderOpen} />
 
           {sessionUpdates.length > 0 ? (

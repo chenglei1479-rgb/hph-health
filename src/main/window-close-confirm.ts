@@ -7,6 +7,7 @@ import {
 } from 'electron'
 import { randomUUID } from 'node:crypto'
 
+import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 import { hasDelegatedActiveSession, type ActiveSessionInfo } from '../shared/storage'
 import { englishNativeTranslator, type NativeTranslator } from './locale/main-process-messages'
 import {
@@ -221,7 +222,7 @@ const nativeFallback = async (
           buttons: [translate('Stay'), translate('Retry saving'), translate('Force quit')],
           defaultId: 0,
           cancelId: 0,
-          title: 'DRA',
+          title: PRODUCT_DISPLAY_NAME,
           message: translate('Saving is not finished'),
           detail: translate(
             'DRA could not confirm that all recent changes were saved. Retry saving, or force quit and risk losing recent changes.'
@@ -235,7 +236,7 @@ const nativeFallback = async (
             ],
             defaultId: 0,
             cancelId: 0,
-            title: 'DRA',
+            title: PRODUCT_DISPLAY_NAME,
             message: translate('Subagents are still running'),
             detail: translate(
               'Return to the running tasks and stop their subagents before quitting DRA.'
@@ -247,7 +248,7 @@ const nativeFallback = async (
               buttons: [translate('Cancel'), translate('Quit', { context: 'verb' })],
               defaultId: 0,
               cancelId: 0,
-              title: 'DRA',
+              title: PRODUCT_DISPLAY_NAME,
               message: translate('Quit DRA?'),
               detail: translate('Work is still running and will be interrupted if you quit.')
             }
@@ -256,7 +257,7 @@ const nativeFallback = async (
               buttons: [translate('Minimize to tray'), translate('Quit', { context: 'verb' })],
               defaultId: 0,
               cancelId: 0,
-              title: 'DRA',
+              title: PRODUCT_DISPLAY_NAME,
               message: translate('Minimize to tray or quit?'),
               detail: translate('Background work may still be running.'),
               checkboxLabel: translate("Don't ask again"),

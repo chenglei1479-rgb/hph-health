@@ -7286,9 +7286,6 @@
     "Step 1": "Étape 1",
     "Project setup": "Configuration du projet",
     "Step 2": "Étape 2",
-    "Choose a deliverable": "Choisir un livrable",
-    "Deliverable package": "Paquet de livrables",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "Après la configuration du projet, choisissez le paquet de livrables à préparer. Le brouillon reste modifiable jusqu’à l’envoi.",
     "Research theme": "Thème de recherche",
     "Type a clinical question or research topic…": "Saisissez une question clinique ou un sujet de recherche…",
     "Try this example:": "Exemple:",
@@ -7710,6 +7707,16 @@
     "Fictional sample abstract": "Résumé fictif d’exemple",
     "Open the fictional sample. No model call and no API key.": "Ouvrir l’exemple fictif. Aucun appel de modèle et aucune clé d’API.",
     "Save this sample": "Enregistrer cet exemple",
+    "Prepare to consult your supervising doctor": "Préparer la discussion avec le directeur de recherche",
+    "Write an abstract or paper": "Rédiger un résumé ou un article",
+    "Continue a project": "Continuer un projet",
+    "No recent projects yet.": "Aucun projet récent pour le moment.",
+    "Delete local copies": "Supprimer les copies locales",
+    "Delete the app's local copies?": "Supprimer les copies locales de l'application\u00a0?",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "Cette action supprime les copies locales de l'application pour les projets, les conversations enregistrées et les compteurs de livraisons sur cet appareil. Les sauvegardes et les copies hors de l'application, y compris celles conservées par le système d'exploitation, ne sont pas supprimées. Les fichiers du dossier de travail d'un projet ne sont pas supprimés.",
+    "The app's local copies were deleted.": "Les copies locales de l'application ont été supprimées.",
+    "Could not delete the app's local copies. Try again.": "Impossible de supprimer les copies locales de l'application. Réessayez.",
+    "Deleting local copies…": "Suppression des copies locales…",
     "Sample saved on this device.": "Enregistré sur cet appareil."
   }
 }

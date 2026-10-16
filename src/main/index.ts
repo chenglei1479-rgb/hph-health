@@ -14,6 +14,7 @@ import { createRequire } from 'node:module'
 import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveBootstrapConfigRoot, resolveElectronProfile } from './storage/electron-profile'
+import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 
 // Only lightweight, Electron-free bootstrap modules are imported statically here. The MCP server
 // modules (and their heavy SDK graph) remain lazy inside the matching execution branch.
@@ -54,7 +55,7 @@ import type {
 } from 'electron'
 import type { InterfaceScaleShortcut } from '../shared/interface-scale'
 
-const APP_NAME = 'DRA'
+const APP_NAME = PRODUCT_DISPLAY_NAME
 const APP_USER_MODEL_ID = 'com.dra-hph.desktop'
 const STARTUP_IMPORTS_TIMING = 'open-science:startup-imports'
 const shouldRunArtifactMcpServer = process.argv.includes(ARTIFACT_MCP_SERVER_ARG)

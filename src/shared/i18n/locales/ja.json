@@ -6958,9 +6958,6 @@
     "Step 1": "ステップ 1",
     "Project setup": "プロジェクト設定",
     "Step 2": "ステップ 2",
-    "Choose a deliverable": "成果物を選択",
-    "Deliverable package": "成果物パッケージ",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "プロジェクト設定のあと、作成する成果物パッケージを選びます。下書きは送信するまで編集できます。",
     "Research theme": "研究テーマ",
     "Type a clinical question or research topic…": "臨床上の問いや研究テーマを入力…",
     "Try this example:": "入力例：",
@@ -7382,6 +7379,16 @@
     "Fictional sample abstract": "架空サンプルの学会抄録",
     "Open the fictional sample. No model call and no API key.": "架空サンプルを開きます。モデルは呼ばず、API キーも要りません。",
     "Save this sample": "このサンプルを保存",
+    "Prepare to consult your supervising doctor": "指導医と相談する準備",
+    "Write an abstract or paper": "抄録・論文を書く",
+    "Continue a project": "プロジェクトを続ける",
+    "No recent projects yet.": "最近のプロジェクトはまだありません。",
+    "Delete local copies": "ローカルコピーを削除",
+    "Delete the app's local copies?": "アプリ内のローカルコピーを削除しますか？",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "プロジェクト、保存した会話、この端末の交付回数について、アプリが持つローカルコピーを削除します。アプリの外にあるバックアップや、OS が保持するコピーは削除しません。プロジェクトの作業フォルダー内のファイルは削除しません。",
+    "The app's local copies were deleted.": "アプリ内のローカルコピーを削除しました。",
+    "Could not delete the app's local copies. Try again.": "アプリ内のローカルコピーを削除できませんでした。もう一度お試しください。",
+    "Deleting local copies…": "ローカルコピーを削除しています…",
     "Sample saved on this device.": "この端末に保存しました。"
   }
 }

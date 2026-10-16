@@ -13,6 +13,7 @@ import {
   type MacInstallationAssistantResult
 } from '../shared/mac-installation'
 import { createLogger, diagnosticErrorFields } from './logger'
+import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 
 export type InstallationLocation = 'writable' | 'read-only' | 'unknown'
 
@@ -179,7 +180,7 @@ export const showMacInstallationGuidance = (reason: 'startup' | 'update'): Promi
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
-    title: 'DRA',
+    title: PRODUCT_DISPLAY_NAME,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     backgroundColor: '#fbfcfb',

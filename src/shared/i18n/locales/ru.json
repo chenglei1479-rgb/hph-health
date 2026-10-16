@@ -7425,9 +7425,6 @@
     "Step 1": "Шаг 1",
     "Project setup": "Настройка проекта",
     "Step 2": "Шаг 2",
-    "Choose a deliverable": "Выберите пакет результатов",
-    "Deliverable package": "Пакет результатов",
-    "Select the package to prepare after the project is set up. The draft stays editable until you send it.": "После настройки проекта выберите пакет результатов. Черновик можно править, пока вы его не отправите.",
     "Research theme": "Тема исследования",
     "Type a clinical question or research topic…": "Введите клинический вопрос или тему исследования…",
     "Try this example:": "Например:",
@@ -7849,6 +7846,16 @@
     "Fictional sample abstract": "Вымышленный образец тезисов",
     "Open the fictional sample. No model call and no API key.": "Открыть вымышленный образец. Без вызова модели и без ключа API.",
     "Save this sample": "Сохранить этот образец",
+    "Prepare to consult your supervising doctor": "Подготовка к консультации с научным руководителем",
+    "Write an abstract or paper": "Написать тезисы или статью",
+    "Continue a project": "Продолжить проект",
+    "No recent projects yet.": "Недавних проектов пока нет.",
+    "Delete local copies": "Удалить локальные копии",
+    "Delete the app's local copies?": "Удалить локальные копии приложения?",
+    "This deletes the app's local copies of projects, saved conversations, and on-device delivery counts. Backups and copies stored outside the app, including copies kept by the operating system, are not deleted. Files in a project's working folder are not deleted.": "Будут удалены локальные копии приложения: проекты, сохранённые диалоги и счётчики поставок на этом компьютере. Резервные копии и копии вне приложения, в том числе копии операционной системы, не удаляются. Файлы в рабочей папке проекта не удаляются.",
+    "The app's local copies were deleted.": "Локальные копии приложения удалены.",
+    "Could not delete the app's local copies. Try again.": "Не удалось удалить локальные копии приложения. Повторите попытку.",
+    "Deleting local copies…": "Удаление локальных копий…",
     "Sample saved on this device.": "Сохранено на этом устройстве."
   }
 }
