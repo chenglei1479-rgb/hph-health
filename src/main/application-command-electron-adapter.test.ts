@@ -69,6 +69,7 @@ const validatedChannels = [
   'pdf-structure:read-thumbnail',
   'projects:create',
   'projects:delete',
+  'projects:delete-device-patient-data',
   'projects:get',
   'projects:list',
   'projects:list-deletion-cleanup',

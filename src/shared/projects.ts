@@ -114,6 +114,10 @@ export const projectApplicationCommandContracts = Object.freeze({
     validationCodec(z.tuple([deleteProjectRequestSchema])),
     validationCodec(projectDeletionOutcomeSchema)
   ),
+  deleteDevicePatientData: defineApplicationCommandContract(
+    validationCodec(z.tuple([deleteProjectRequestSchema])),
+    validationCodec(z.undefined())
+  ),
   listDeletionCleanup: defineApplicationCommandContract(
     validationCodec(z.tuple([])),
     validationCodec(z.array(projectDeletionCleanupSchema))
