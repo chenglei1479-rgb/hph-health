@@ -5,8 +5,10 @@ import { expect, it } from 'vitest'
 
 type Step = {
   env?: Record<string, string>
+  if?: string
   name?: string
   run?: string
+  'timeout-minutes'?: number
   uses?: string
 }
 
@@ -16,6 +18,7 @@ type Job = {
   'runs-on'?: string
   permissions?: Record<string, string>
   steps?: Step[]
+  'timeout-minutes'?: number
   strategy?: {
     matrix?: {
       include?: Array<{
@@ -125,6 +128,10 @@ it('launches the packaged app on Windows, Apple silicon, and Intel macOS before 
   )
   expect(launch?.run).toContain('scripts/ci/packaged-startup-smoke.mjs')
   expect(launch?.run).toContain('--timeout-ms 240000')
+  expect(launch?.['timeout-minutes']).toBe(15)
+  expect(launch?.['timeout-minutes']).toBeLessThan(Number(smoke?.['timeout-minutes']))
+  const upload = smoke?.steps?.find((step) => step.name === 'Upload the startup log')
+  expect(upload?.if).toBe('always()')
 
   const release = workflow.jobs.release
   expect(release?.needs).toEqual(['build', 'smoke'])

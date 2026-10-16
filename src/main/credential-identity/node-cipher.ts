@@ -32,9 +32,12 @@ const nativeSecret = (
     '@aipoch/credential-identity-probe-native'
   ) as { secretExecutablePath: string }
   const executable = secretExecutablePath.replace(/app\.asar([/\\])/u, 'app.asar.unpacked$1')
+  // Same constraint as the identity probe: a keychain prompt ignores SIGTERM, and spawnSync
+  // then waits forever. SIGKILL ends the helper so this call fails closed at the timeout.
   const result = spawnSync(executable, [operation, ...args], {
     input,
     timeout: 30_000,
+    killSignal: 'SIGKILL',
     maxBuffer: 65536,
     windowsHide: true,
     stdio: ['pipe', 'pipe', 'ignore']

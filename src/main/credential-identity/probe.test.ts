@@ -62,6 +62,7 @@ it('resolves the real package entry without loading or executing a native bindin
     ['MedResearch Agent'],
     expect.objectContaining({
       timeout: 10000,
+      killSignal: 'SIGKILL',
       maxBuffer: 4096,
       stdio: ['ignore', 'pipe', 'ignore']
     })
@@ -185,7 +186,12 @@ it('passes only DPAPI ciphertext over stdin to the separate Windows key-read exe
   expect(fixture.spawn).toHaveBeenCalledWith(
     fixture.overridePath.replace('app.asar\\', 'app.asar.unpacked\\'),
     [],
-    expect.objectContaining({ input: ciphertext, stdio: ['pipe', 'pipe', 'ignore'] })
+    expect.objectContaining({
+      input: ciphertext,
+      timeout: 10000,
+      killSignal: 'SIGKILL',
+      stdio: ['pipe', 'pipe', 'ignore']
+    })
   )
 })
 

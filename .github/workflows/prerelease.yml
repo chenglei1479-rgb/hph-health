@@ -207,8 +207,12 @@ jobs:
           name: ${{ matrix.artifact }}
           path: packaged
 
+      # The 40-minute job limit cancels the runner and skips later steps, which is why a
+      # hung launch uploaded no log. This step limit fails the launch while the runner is
+      # still up so the upload below still runs.
       - name: Launch the packaged app and wait for home
         shell: bash
+        timeout-minutes: 15
         env:
           SMOKE_PLATFORM_LABEL: ${{ matrix.label }}
         run: node scripts/ci/packaged-startup-smoke.mjs --artifact-dir packaged --timeout-ms 240000

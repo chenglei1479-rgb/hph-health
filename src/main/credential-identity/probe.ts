@@ -59,9 +59,13 @@ const runCredentialIdentityProbe = (appName: string): IdentityProbeResult => {
       '@aipoch/credential-identity-probe-native'
     ) as { executablePath: string }
     const executable = executablePath.replace(/app\.asar([/\\])/u, 'app.asar.unpacked$1')
+    // spawnSync waits until the helper exits. Its default SIGTERM does not interrupt a
+    // Security.framework keychain prompt, so the timeout would never return. SIGKILL cannot
+    // be caught; a killed helper is still an error, not an absent key.
     const result = spawnSync(executable, [appName], {
       encoding: 'utf8',
       timeout: 10_000,
+      killSignal: 'SIGKILL',
       maxBuffer: 4096,
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'ignore']

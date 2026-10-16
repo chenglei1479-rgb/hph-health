@@ -52,7 +52,11 @@ describe('Node OSCrypt-compatible cipher', () => {
       expect(spawnSync).toHaveBeenCalledWith(
         join(directory, 'app.asar.unpacked', 'native', 'credential_secret.exe'),
         ['protect'],
-        expect.objectContaining({ windowsHide: true })
+        expect.objectContaining({
+          windowsHide: true,
+          timeout: 30_000,
+          killSignal: 'SIGKILL'
+        })
       )
     } finally {
       vi.mocked(createRequire).mockRestore()
