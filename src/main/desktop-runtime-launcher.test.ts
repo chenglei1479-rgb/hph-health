@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import {
   discoverDesktopBackend,
+  desktopBackendChildEnv,
   desktopBackendPaths,
   DesktopRuntimeStoppingError
 } from './desktop-runtime-launcher'
@@ -279,5 +280,29 @@ describe('desktop preview proxy', () => {
     ).rejects.toThrow()
     expect(fetcher).not.toHaveBeenCalled()
     proxy.dispose()
+  })
+})
+
+describe('desktop backend child environment', () => {
+  const paths = { configRoot: '/cfg', profilePath: '/profile', attemptId: 'attempt-1' }
+
+  it('copies prerelease into the backend when the shell is a beta', () => {
+    const env = desktopBackendChildEnv({ PATH: '/usr/bin', ELECTRON_RUN_AS_NODE: '1' }, paths, true)
+    expect(env.DRA_PRERELEASE).toBe('1')
+    expect(env.ELECTRON_RUN_AS_NODE).toBeUndefined()
+    expect(env.OPEN_SCIENCE_CONFIG_ROOT).toBe('/cfg')
+    expect(env.OPEN_SCIENCE_USER_DATA).toBe('/profile')
+    expect(env.OPEN_SCIENCE_STARTUP_ATTEMPT).toBe('attempt-1')
+    expect(env.PATH).toBe('/usr/bin')
+  })
+
+  it('does not invent prerelease mode for a production shell', () => {
+    const env = desktopBackendChildEnv(
+      { PATH: '/usr/bin', DRA_AUTH_MODE: 'required' },
+      paths,
+      false
+    )
+    expect(env.DRA_PRERELEASE).toBeUndefined()
+    expect(env.DRA_AUTH_MODE).toBe('required')
   })
 })

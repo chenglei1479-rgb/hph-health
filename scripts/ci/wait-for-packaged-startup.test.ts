@@ -6,6 +6,7 @@ import { expect, it } from 'vitest'
 
 import {
   DRA_HOME_READY_LINE,
+  DRA_LOGIN_READY_LINE,
   DRA_STARTUP_FAILURE_PREFIX,
   parseWaitArgs,
   waitForPackagedStartup
@@ -23,6 +24,28 @@ it('returns ready only when the home line is present and the failure phrase is n
     sleepFn: async () => undefined
   })
   expect(result).toMatchObject({ ok: true, reason: 'ready' })
+})
+
+it('accepts the login screen only when that line is requested', async () => {
+  const logPath = join(root, 'login.log')
+  writeFileSync(logPath, `${DRA_LOGIN_READY_LINE}\n`)
+  let calls = 0
+  const homeOnly = await waitForPackagedStartup({
+    logPath,
+    timeoutMs: 1000,
+    pidAlive: () => true,
+    now: () => (calls++ === 0 ? 0 : 1000),
+    sleepFn: async () => undefined
+  })
+  expect(homeOnly).toMatchObject({ ok: false, reason: 'timeout' })
+  const signedOut = await waitForPackagedStartup({
+    logPath,
+    timeoutMs: 1000,
+    readyLines: [DRA_HOME_READY_LINE, DRA_LOGIN_READY_LINE],
+    pidAlive: () => true,
+    sleepFn: async () => undefined
+  })
+  expect(signedOut).toMatchObject({ ok: true, reason: 'ready' })
 })
 
 it('fails when startup reports the dialog error, even if the process is still alive', async () => {

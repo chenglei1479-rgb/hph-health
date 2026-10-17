@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const DRA_HOME_READY_LINE = 'DRA home window ready'
+export const DRA_LOGIN_READY_LINE = 'DRA login window ready'
 export const DRA_STARTUP_FAILURE_PREFIX = 'DRA could not finish starting.'
 
 const readText = (file) => {
@@ -35,12 +36,16 @@ export async function waitForPackagedStartup({
   timeoutMs,
   pollMs = 500,
   extraPaths = [],
+  readyLines = [DRA_HOME_READY_LINE],
   now = Date.now,
   sleepFn = sleep,
   pidAlive = defaultPidAlive
 }) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new Error('timeoutMs must be a positive number.')
+  }
+  if (!Array.isArray(readyLines) || readyLines.length === 0) {
+    throw new Error('readyLines must name at least one startup line.')
   }
   const started = now()
   let detail = ''
@@ -49,7 +54,7 @@ export async function waitForPackagedStartup({
     if (detail.includes(DRA_STARTUP_FAILURE_PREFIX)) {
       return { ok: false, reason: 'startup-error', detail }
     }
-    if (detail.includes(DRA_HOME_READY_LINE)) {
+    if (readyLines.some((line) => detail.includes(line))) {
       return { ok: true, reason: 'ready', detail }
     }
     if (pid !== undefined && !pidAlive(pid)) {

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   DRA_HOME_READY_LINE,
+  DRA_LOGIN_READY_LINE,
   DRA_STARTUP_FAILURE_PREFIX,
   packagedStartupLogFile,
   recordPackagedStartupFailure,
@@ -95,6 +96,24 @@ describe('watchPackagedHomeReady', () => {
     closed?.()
     await vi.advanceTimersByTimeAsync(1500)
     expect(executeJavaScript).toHaveBeenCalledTimes(calls)
+  })
+
+  it('writes the login line when the sign-in screen is showing', async () => {
+    vi.useFakeTimers()
+    const loginLog = join(root, 'login.log')
+    const executeJavaScript = vi.fn<() => Promise<unknown>>().mockResolvedValue('login')
+    watchPackagedHomeReady(
+      {
+        isDestroyed: () => false,
+        on: () => undefined,
+        webContents: { isDestroyed: () => false, executeJavaScript }
+      },
+      { DRA_STARTUP_LOG_FILE: loginLog }
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(readFileSync(loginLog, 'utf8')).toContain(DRA_LOGIN_READY_LINE)
+    expect(readFileSync(loginLog, 'utf8')).not.toContain(DRA_HOME_READY_LINE)
   })
 
   it('does not read webContents after the window is destroyed', async () => {

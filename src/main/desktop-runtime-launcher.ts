@@ -21,6 +21,26 @@ import { access, mkdir, open, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
 import type { DesktopEndpoint } from './desktop-connection'
+import { isDraPrerelease } from '../shared/prerelease'
+
+// The shell may be a packaged beta (baked __DRA_PRERELEASE__) while the user launched it
+// with no DRA_PRERELEASE variable. The Node backend only honors that flag from its own
+// bundle define or from the environment it is spawned with.
+export const desktopBackendChildEnv = (
+  base: NodeJS.ProcessEnv,
+  paths: { configRoot: string; profilePath: string; attemptId: string },
+  prerelease = isDraPrerelease(base)
+): NodeJS.ProcessEnv => {
+  const env: NodeJS.ProcessEnv = {
+    ...base,
+    OPEN_SCIENCE_CONFIG_ROOT: paths.configRoot,
+    OPEN_SCIENCE_USER_DATA: paths.profilePath,
+    OPEN_SCIENCE_STARTUP_ATTEMPT: paths.attemptId
+  }
+  if (prerelease) env.DRA_PRERELEASE = '1'
+  delete env.ELECTRON_RUN_AS_NODE
+  return env
+}
 
 const ownerSchema = z
   .object({
@@ -374,13 +394,11 @@ export async function startOrAttachDesktopBackend(options: {
   )
   // The explicit config root must not make Node select a different credential profile.
   const attemptId = randomUUID()
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    OPEN_SCIENCE_CONFIG_ROOT: options.configRoot,
-    OPEN_SCIENCE_USER_DATA: options.profilePath,
-    OPEN_SCIENCE_STARTUP_ATTEMPT: attemptId
-  }
-  delete env.ELECTRON_RUN_AS_NODE
+  const env = desktopBackendChildEnv(process.env, {
+    configRoot: options.configRoot,
+    profilePath: options.profilePath,
+    attemptId
+  })
   let child: ChildProcess
   let failure: Error | undefined
   let status: BackendStartupStatus | undefined

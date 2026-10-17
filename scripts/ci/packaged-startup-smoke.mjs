@@ -6,6 +6,7 @@ import {
   createWriteStream,
   existsSync,
   mkdirSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -15,7 +16,11 @@ import { homedir, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { waitForPackagedStartup } from './wait-for-packaged-startup.mjs'
+import {
+  DRA_HOME_READY_LINE,
+  DRA_LOGIN_READY_LINE,
+  waitForPackagedStartup
+} from './wait-for-packaged-startup.mjs'
 
 // Non-C: install directory with a space, matching a doctor install such as D:\DRA\medresearch-agent.
 export const WINDOWS_SMOKE_DRIVE = 'D:'
@@ -91,6 +96,33 @@ export const packagedSmokeEnv = (base, paths) => {
   env.DRA_STARTUP_LOG_FILE = paths.logFile
   return env
 }
+
+// Auth and the prerelease bypass must not leak into the signed-out launch. A beta still
+// reaches home when the package itself is a prerelease; a production package must reach login.
+const SIGNED_OUT_ENV_KEYS = [
+  'DRA_PRERELEASE',
+  'DRA_AUTH_MODE',
+  'DRA_AUTH_ISSUER',
+  'DRA_AUTH_CLIENT_ID',
+  'DRA_AUTH_AUDIENCE',
+  'DRA_AUTH_ORGANIZATION',
+  'DRA_AUTH_CALLBACK_PORT',
+  'DRA_AUTH_GOOGLE_CONNECTION',
+  'DRA_AUTH_MICROSOFT_CONNECTION',
+  'DRA_AUTH_APPLE_CONNECTION',
+  'DRA_AUTH_INSTITUTION_CONNECTION'
+]
+
+export const signedOutSmokeEnv = (base, paths) => {
+  const env = packagedSmokeEnv(base, paths)
+  for (const key of SIGNED_OUT_ENV_KEYS) delete env[key]
+  return env
+}
+
+// An upgraded beta.10 profile already has a workspace history file next to settings.
+export const beta10ResearchHistoryJson = () => '{"session":"retained"}\n'
+
+export const SIGNED_OUT_READY_LINES = [DRA_HOME_READY_LINE, DRA_LOGIN_READY_LINE]
 
 const argumentValue = (argv, name) => {
   const index = argv.indexOf(name)
@@ -182,6 +214,15 @@ const seedDeclinedMachineApproval = (userData) => {
   writeFileSync(file, declinedMachineApprovalLine(), { mode: 0o600 })
 }
 
+const seedBeta10UserData = ({ configRoot, dataRoot, userData }) => {
+  writeSmokeSettings(configRoot, dataRoot)
+  mkdirSync(userData, { recursive: true })
+  seedDeclinedMachineApproval(userData)
+  const history = join(dataRoot, 'workspaces', 'history.json')
+  mkdirSync(dirname(history), { recursive: true })
+  writeFileSync(history, beta10ResearchHistoryJson())
+}
+
 const mirrorAppLogs = (userData, workspaceLogs) => {
   const logs = join(userData, 'logs')
   if (!existsSync(logs)) return
@@ -221,6 +262,107 @@ const stopPackagedApp = (pid) => {
   }
 }
 
+const signedOutPaths = (paths) => ({
+  configRoot: `${paths.configRoot} signed-out`,
+  dataRoot: `${paths.dataRoot} signed-out`,
+  userData: `${paths.userData} signed-out`,
+  logFile: join(dirname(paths.logFile), 'startup-signed-out.log'),
+  stdoutPath: join(dirname(paths.stdoutPath), 'stdout-signed-out.log'),
+  stderrPath: join(dirname(paths.stderrPath), 'stderr-signed-out.log')
+})
+
+const launchRecorded = async ({
+  binary,
+  env,
+  logFile,
+  stdoutPath,
+  stderrPath,
+  timeoutMs,
+  workspaceLogs,
+  label,
+  userData,
+  readyLines,
+  rejectAccountLoginAtHome = false
+}) => {
+  note(`Launching ${binary} (${label}).`)
+  const child = launchPackagedApp(binary, env)
+  return finish({
+    child,
+    logFile,
+    stdoutPath,
+    stderrPath,
+    timeoutMs,
+    workspaceLogs,
+    label,
+    userData,
+    readyLines,
+    rejectAccountLoginAtHome
+  })
+}
+
+// Home plus "login required" means the splash was dismissed while the backend is still
+// signed-out. A real sign-in screen is allowed; a beta local-mode home is not.
+export const rejectHomeThatStillRequiredLogin = (userData, result) => {
+  if (!result.ok || !result.detail?.includes(DRA_HOME_READY_LINE)) return result
+  if (result.detail.includes(DRA_LOGIN_READY_LINE)) return result
+  const logs = [join(userData, 'desktop-logs', 'main.log'), join(userData, 'logs', 'main.log')]
+  for (const file of logs) {
+    let text = ''
+    try {
+      text = readFileSync(file, 'utf8')
+    } catch {
+      continue
+    }
+    if (text.includes('DRA account login required')) {
+      return {
+        ok: false,
+        reason: 'login-required',
+        detail: `${result.detail}\n${text}`
+      }
+    }
+  }
+  return result
+}
+
+const launchPrereleaseThenSignedOut = async ({
+  binary,
+  paths,
+  timeoutMs,
+  workspaceLogs,
+  label
+}) => {
+  writeSmokeSettings(paths.configRoot, paths.dataRoot)
+  mkdirSync(paths.userData, { recursive: true })
+  seedDeclinedMachineApproval(paths.userData)
+  const homeCode = await launchRecorded({
+    binary,
+    env: packagedSmokeEnv(process.env, paths),
+    logFile: paths.logFile,
+    stdoutPath: paths.stdoutPath,
+    stderrPath: paths.stderrPath,
+    timeoutMs,
+    workspaceLogs,
+    label: `${label} prerelease`,
+    userData: paths.userData
+  })
+  if (homeCode !== 0) return homeCode
+  const signedOut = signedOutPaths(paths)
+  seedBeta10UserData(signedOut)
+  return launchRecorded({
+    binary,
+    env: signedOutSmokeEnv(process.env, signedOut),
+    logFile: signedOut.logFile,
+    stdoutPath: signedOut.stdoutPath,
+    stderrPath: signedOut.stderrPath,
+    timeoutMs,
+    workspaceLogs: join(workspaceLogs, 'signed-out'),
+    label: `${label} signed-out`,
+    userData: signedOut.userData,
+    readyLines: SIGNED_OUT_READY_LINES,
+    rejectAccountLoginAtHome: true
+  })
+}
+
 const launchPackagedApp = (binary, env) => {
   const child = spawn(binary, [], {
     detached: true,
@@ -234,10 +376,11 @@ const launchPackagedApp = (binary, env) => {
 }
 
 const publishSummary = (label, result) => {
+  const reachedLogin = result.detail?.includes(DRA_LOGIN_READY_LINE)
   const line =
     result.reason === 'ready'
-      ? `${label} reached the home window.`
-      : `${label} did not reach the home window (${result.reason}).`
+      ? `${label} reached ${reachedLogin ? 'the login screen' : 'the home window'}.`
+      : `${label} did not reach home or the login screen (${result.reason}).`
   process.stdout.write(`${line}\n`)
   if (process.env.GITHUB_STEP_SUMMARY) {
     writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n`, { flag: 'a' })
@@ -252,7 +395,9 @@ const finish = async ({
   timeoutMs,
   workspaceLogs,
   label,
-  userData
+  userData,
+  readyLines,
+  rejectAccountLoginAtHome = false
 }) => {
   mkdirSync(workspaceLogs, { recursive: true })
   if (child.stdout) child.stdout.pipe(createWriteStream(stdoutPath))
@@ -263,7 +408,8 @@ const finish = async ({
       logPath: logFile,
       pid: child.pid,
       timeoutMs,
-      extraPaths: [stdoutPath, stderrPath]
+      extraPaths: [stdoutPath, stderrPath],
+      readyLines
     })
   } finally {
     stopPackagedApp(child.pid)
@@ -272,6 +418,8 @@ const finish = async ({
     mirrorLog(stderrPath, join(workspaceLogs, 'stderr.log'))
     if (userData) mirrorAppLogs(userData, workspaceLogs)
   }
+  if (rejectAccountLoginAtHome && userData)
+    result = rejectHomeThatStillRequiredLogin(userData, result)
   writeFileSync(join(workspaceLogs, 'result.txt'), `${label}\n${result.reason}\n${result.detail}`)
   publishSummary(label, result)
   return result.ok ? 0 : 1
@@ -347,21 +495,7 @@ const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   if (!executableName) throw new Error(`The application bundle has no executable: ${macOsDir}`)
   const binary = join(macOsDir, executableName)
   assertMacArchitecture(binary)
-  writeSmokeSettings(paths.configRoot, paths.dataRoot)
-  mkdirSync(paths.userData, { recursive: true })
-  seedDeclinedMachineApproval(paths.userData)
-  note(`Launching ${binary}.`)
-  const child = launchPackagedApp(binary, packagedSmokeEnv(process.env, paths))
-  return finish({
-    child,
-    logFile: paths.logFile,
-    stdoutPath: paths.stdoutPath,
-    stderrPath: paths.stderrPath,
-    timeoutMs,
-    workspaceLogs,
-    label,
-    userData: paths.userData
-  })
+  return launchPrereleaseThenSignedOut({ binary, paths, timeoutMs, workspaceLogs, label })
 }
 
 const mapWindowsDrive = () => {
@@ -389,26 +523,19 @@ const runWindows = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   mapWindowsDrive()
   mkdirSync('D:\\DRA Test', { recursive: true })
   run('cmd.exe', windowsSilentInstallArgs(setup), { windowsVerbatimArguments: true })
-  writeSmokeSettings(WINDOWS_SMOKE_CONFIG_ROOT, WINDOWS_SMOKE_DATA_ROOT)
-  mkdirSync(WINDOWS_SMOKE_USER_DATA, { recursive: true })
-  seedDeclinedMachineApproval(WINDOWS_SMOKE_USER_DATA)
-  const child = launchPackagedApp(
-    join(WINDOWS_SMOKE_INSTALL_DIR, 'medresearch-agent.exe'),
-    packagedSmokeEnv(process.env, {
+  return launchPrereleaseThenSignedOut({
+    binary: join(WINDOWS_SMOKE_INSTALL_DIR, 'medresearch-agent.exe'),
+    paths: {
       configRoot: WINDOWS_SMOKE_CONFIG_ROOT,
+      dataRoot: WINDOWS_SMOKE_DATA_ROOT,
       userData: WINDOWS_SMOKE_USER_DATA,
-      logFile: WINDOWS_SMOKE_LOG_FILE
-    })
-  )
-  return finish({
-    child,
-    logFile: WINDOWS_SMOKE_LOG_FILE,
-    stdoutPath: 'D:\\DRA Test\\stdout.log',
-    stderrPath: 'D:\\DRA Test\\stderr.log',
+      logFile: WINDOWS_SMOKE_LOG_FILE,
+      stdoutPath: 'D:\\DRA Test\\stdout.log',
+      stderrPath: 'D:\\DRA Test\\stderr.log'
+    },
     timeoutMs,
     workspaceLogs,
-    label,
-    userData: WINDOWS_SMOKE_USER_DATA
+    label
   })
 }
 

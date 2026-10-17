@@ -83,7 +83,9 @@ it('builds unsigned macOS dmg and Windows NSIS packages and publishes a prerelea
   expect(packageIndex).toBeGreaterThan(micromambaIndex)
 
   const stageMicromamba = build?.steps?.[micromambaIndex]
-  expect(stageMicromamba?.run).toContain('node scripts/fetch-micromamba.mjs "$subdir" "$primary_path"')
+  expect(stageMicromamba?.run).toContain(
+    'node scripts/fetch-micromamba.mjs "$subdir" "$primary_path"'
+  )
   expect(stageMicromamba?.run).toContain('mac-arm64) subdir=osx-arm64')
   expect(stageMicromamba?.run).toContain('mac-x64) subdir=osx-64')
   expect(stageMicromamba?.run).toContain('win-x64) subdir=win-64')
@@ -124,11 +126,11 @@ it('launches the packaged app on Windows, Apple silicon, and Intel macOS before 
     { os: 'macos-15-intel', label: 'macOS x64', artifact: 'dra-x64-mac' }
   ])
   const launch = smoke?.steps?.find(
-    (step) => step.name === 'Launch the packaged app and wait for home'
+    (step) => step.name === 'Launch the packaged app and wait for home or sign-in'
   )
   expect(launch?.run).toContain('scripts/ci/packaged-startup-smoke.mjs')
   expect(launch?.run).toContain('--timeout-ms 240000')
-  expect(launch?.['timeout-minutes']).toBe(15)
+  expect(launch?.['timeout-minutes']).toBe(20)
   expect(launch?.['timeout-minutes']).toBeLessThan(Number(smoke?.['timeout-minutes']))
   const upload = smoke?.steps?.find((step) => step.name === 'Upload the startup log')
   expect(upload?.if).toBe('always()')

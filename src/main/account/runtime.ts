@@ -51,12 +51,20 @@ export const isAccountAccessAllowed = (): boolean => {
   return !state.required || Boolean(state.user)
 }
 
+// Local reachability is not an account feature. The renderer probes it during splash,
+// before a signed-out user can reach the sign-in screen.
+const ACCOUNT_PUBLIC_CHANNELS = new Set([
+  'app:get-runtime-versions',
+  'network:get-info',
+  'network:check-connectivity'
+])
+
 export const assertAccountChannelAccess = (channel: string): void => {
   if (
     channel.startsWith('account:') ||
     channel.startsWith('window:') ||
     channel.startsWith('database-startup:') ||
-    channel === 'app:get-runtime-versions'
+    ACCOUNT_PUBLIC_CHANNELS.has(channel)
   )
     return
   getAccountOwner().assertAccess()
