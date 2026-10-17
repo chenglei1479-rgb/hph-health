@@ -1478,6 +1478,7 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   height: 1.375rem;
 }
 .dra-app-brand-name {
+  --dra-brand-name: #295846;
   flex-shrink: 0;
   font-family: 'Quicksand', 'Segoe UI', sans-serif;
   font-size: 1.833rem;
@@ -1486,7 +1487,8 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   letter-spacing: -0.03em;
   color: var(--dra-brand-name);
 }
-.dark .dra-app-brand {
+.dark .dra-app-brand,
+.dark .dra-app-brand-name {
   --dra-brand-name: var(--primary);
 }
 .dark .baselio-mark svg {
