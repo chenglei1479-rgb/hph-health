@@ -25,8 +25,8 @@ describe('macOS package smoke', () => {
   it('selects one DMG and ZIP and derives their shared version', async () => {
     const root = await mkdtemp(join(tmpdir(), 'open-science-macos-artifacts-'))
     roots.push(root)
-    const dmg = join(root, 'deep-research-agent-0.12.0-mac-arm64.dmg')
-    const zip = join(root, 'deep-research-agent-0.12.0-mac-arm64.zip')
+    const dmg = join(root, 'Baselio-0.12.0-mac-arm64.dmg')
+    const zip = join(root, 'Baselio-0.12.0-mac-arm64.zip')
     await Promise.all([
       writeFile(dmg, ''),
       writeFile(zip, ''),

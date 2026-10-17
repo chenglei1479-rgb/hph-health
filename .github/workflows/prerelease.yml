@@ -159,13 +159,33 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=6144
         run: npx electron-builder --config build/prerelease-electron-builder.cjs --${{ matrix.platform }} ${{ matrix.target }} --${{ matrix.arch }}
 
+      - name: Check the installer file name
+        shell: bash
+        run: |
+          shopt -s nullglob
+          case "${{ matrix.platform }}-${{ matrix.arch }}" in
+            mac-arm64) files=(dist/Baselio-*-mac-arm64.dmg) ;;
+            mac-x64) files=(dist/Baselio-*-mac-x64.dmg) ;;
+            win-x64) files=(dist/Baselio-*-win-x64-setup.exe) ;;
+            *)
+              echo "No Baselio installer pattern for ${{ matrix.platform }}/${{ matrix.arch }}" >&2
+              exit 1
+              ;;
+          esac
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "Expected one Baselio installer; found ${#files[@]}." >&2
+            ls -1 dist >&2 || true
+            exit 1
+          fi
+          echo "Installer file: ${files[0]}"
+
       - name: Upload installers
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dra-${{ matrix.arch }}-${{ matrix.platform }}
           path: |
-            dist/*.dmg
-            dist/*-setup.exe
+            dist/Baselio-*.dmg
+            dist/Baselio-*-setup.exe
           if-no-files-found: error
 
   smoke:
@@ -267,7 +287,7 @@ jobs:
               ;;
           esac
           shopt -s globstar nullglob
-          files=(dist/**/*.dmg dist/**/*-setup.exe)
+          files=(dist/**/Baselio-*.dmg dist/**/Baselio-*-setup.exe)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "No installers to publish." >&2
             exit 1

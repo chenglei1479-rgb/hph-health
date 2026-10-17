@@ -57,7 +57,7 @@ describe('Windows updater certification', () => {
 
     await expect(
       observeInstaller({
-        installer: 'C:\\updates\\aipoch-medresearch-agent-0.11.1-win-x64-setup.exe',
+        installer: 'C:\\updates\\Baselio-0.11.1-win-x64-setup.exe',
         env: { LOCALAPPDATA: 'C:\\profile' },
         signal: controller.signal,
         runProcessImpl
@@ -72,8 +72,7 @@ describe('Windows updater certification', () => {
       expect.objectContaining({
         allowNonZero: true,
         env: expect.objectContaining({
-          OPEN_SCIENCE_INSTALLER_WATCH_TARGET:
-            'C:\\updates\\aipoch-medresearch-agent-0.11.1-win-x64-setup.exe'
+          OPEN_SCIENCE_INSTALLER_WATCH_TARGET: 'C:\\updates\\Baselio-0.11.1-win-x64-setup.exe'
         }),
         signal: controller.signal,
         timeoutMs: 370_000

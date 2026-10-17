@@ -15,7 +15,7 @@ import {
 } from './database-migration-ledger-smoke.mjs'
 import { authenticatePackagedAppEndpoint } from './packaged-web-service-auth.mjs'
 
-const ARTIFACT_PATTERN = /^deep-research-agent-(.+)-mac-(?:arm64|x64)\.(dmg|zip)$/
+const ARTIFACT_PATTERN = /^Baselio-(.+)-mac-(?:arm64|x64)\.(dmg|zip)$/
 const SMOKE_ROOT_PREFIX = 'deep-research-agent-macos-package-smoke-'
 const STARTUP_TIMEOUT_MS = 60_000
 

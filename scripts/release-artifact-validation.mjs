@@ -21,17 +21,17 @@ export function artifactHash(file, algorithm, encoding = 'hex') {
 }
 
 export function validateArtifactName(name, version, allowLegacyNames = false) {
-  if (
-    typeof name !== 'string' ||
-    /[/\\\r\n]/.test(name) ||
-    !(
+  const accepted =
+    typeof name === 'string' &&
+    (name.startsWith(`Baselio-${version}-`) ||
+      name.startsWith(`Baselio_${version}_`) ||
+      // Upstream publication names. Desktop installers no longer use this prefix.
       name.startsWith(`aipoch-open-science-${version}-`) ||
       name.startsWith(`aipoch-open-science_${version}_`) ||
       (allowLegacyNames &&
         (name.startsWith(`open-science-${version}-`) ||
-          name.startsWith(`open-science_${version}_`)))
-    )
-  ) {
+          name.startsWith(`open-science_${version}_`))))
+  if (typeof name !== 'string' || /[/\\\r\n]/.test(name) || !accepted) {
     throw new Error(`Artifact name does not match release ${version}: ${name}`)
   }
 }

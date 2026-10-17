@@ -19,7 +19,7 @@ it('skips publisher verification for an unsigned prerelease package', async () =
   })
   await expect(
     exports.default!({
-      artifactPaths: ['dist/deep-research-agent-0.1.33-beta.1-win-x64-setup.exe']
+      artifactPaths: ['dist/Baselio-0.1.33-beta.1-win-x64-setup.exe']
     })
   ).resolves.toEqual([])
   expect(calls).toEqual([])
@@ -40,7 +40,7 @@ it('verifies real artifact paths using the electron-builder BuildResult hook con
             execFileSync: (...args: unknown[]) => calls.push(args)
           }
   })
-  const installer = path.resolve('dist/deep-research-agent-0.1.29-win-x64-setup.exe')
+  const installer = path.resolve('dist/Baselio-0.1.29-win-x64-setup.exe')
   await exports.default!({ artifactPaths: [installer] })
   expect(calls).toHaveLength(1)
   expect(calls[0][0]).toBe('powershell.exe')

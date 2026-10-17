@@ -91,7 +91,7 @@ describe('Linux package smoke', () => {
   )
 
   it.each(['x64', 'x86_64', 'arm64'])('accepts the %s AppImage filename', (arch) => {
-    expect(appImageVersion(`aipoch-open-science-0.33.3-linux-${arch}.AppImage`)).toBe('0.33.3')
+    expect(appImageVersion(`Baselio-0.33.3-linux-${arch}.AppImage`)).toBe('0.33.3')
   })
 
   it('requires the ARM64 Prisma engine and rejects foreign engines', async () => {
@@ -123,7 +123,7 @@ describe('Linux package smoke', () => {
   it('discovers one AppImage and derives stable or nightly versions', async () => {
     const root = await mkdtemp(join(tmpdir(), 'open-science-linux-artifacts-'))
     roots.push(root)
-    const appImage = join(root, 'aipoch-medresearch-agent-0.11.0-nightly.abc1234-linux-x86_64.AppImage')
+    const appImage = join(root, 'Baselio-0.11.0-nightly.abc1234-linux-x86_64.AppImage')
     await writeFile(appImage, '')
 
     await expect(findOne(root, /\.AppImage$/, 'AppImage')).resolves.toBe(appImage)
@@ -150,7 +150,12 @@ describe('Linux package smoke', () => {
 
   it('requires explicit package and installed executable paths', () => {
     expect(
-      parseArguments(['--artifact-dir', 'dist', '--installed-executable', '/usr/bin/medresearch-agent'])
+      parseArguments([
+        '--artifact-dir',
+        'dist',
+        '--installed-executable',
+        '/usr/bin/medresearch-agent'
+      ])
     ).toMatchObject({ installedExecutable: resolve('/usr/bin/medresearch-agent') })
     expect(() => parseArguments([])).toThrow(/Usage:/)
   })

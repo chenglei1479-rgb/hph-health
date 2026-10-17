@@ -509,10 +509,10 @@ it('registers .science as a viewable document without changing the per-user inst
     })
   )
   expect(config.win.fileAssociations[0]).toMatchObject({
-    name: 'DRA Session package',
-    description: 'DRA Session package'
+    name: 'Open Science Session package',
+    description: 'Open-Science Session package'
   })
-  expect(config.mac.fileAssociations[0].name).toBe('DRA Session package')
-  expect(config.linux.fileAssociations[0].name).toBe('DRA Session package')
+  expect(config.mac.fileAssociations[0].name).toBe('Open-Science Session package')
+  expect(config.linux.fileAssociations[0].name).toBe('Open-Science Session package')
   expect(config.nsis).toMatchObject({ perMachine: false, allowElevation: false })
 })

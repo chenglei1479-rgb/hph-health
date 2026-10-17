@@ -60,6 +60,7 @@ describe('app display branding', () => {
     const packageJson = JSON.parse(readFileSync(resolve(projectRoot, 'package.json'), 'utf8')) as {
       name: string
       productName: string
+      author: string
     }
 
     expect(mainSource).toContain('app.setName(identity.appName)')
@@ -73,18 +74,19 @@ describe('app display branding', () => {
     expect(selectionSource).not.toContain(displayName)
     expect(builderSource).toContain(`appId: ${appId}`)
     expect(builderSource).toContain('executableName: medresearch-agent')
-    expect(builderSource).toContain('name: DRA Session package')
-    expect(builderSource).toContain(
-      'artifactName: deep-research-agent-${version}-win-${arch}.${ext}'
-    )
-    expect(builderSource).toContain(
-      'artifactName: deep-research-agent-${version}-win-${arch}-setup.${ext}'
-    )
-    expect(builderSource).toContain(
-      'artifactName: deep-research-agent-${version}-mac-${arch}.${ext}'
-    )
+    // Windows ProgID and the other association names are persisted. beta.11/12
+    // shipped these strings; renaming them would drop existing .science links.
+    expect(builderSource).toContain('name: Open Science Session package')
+    expect(builderSource).toContain('name: Open-Science Session package')
+    expect(builderSource).not.toContain('artifactName: aipoch-')
+    expect(builderSource).toContain('artifactName: Baselio-${version}-win-${arch}.${ext}')
+    expect(builderSource).toContain('artifactName: Baselio-${version}-win-${arch}-setup.${ext}')
+    expect(builderSource).toContain('artifactName: Baselio-${version}-mac-${arch}.${ext}')
+    expect(builderSource).toContain('artifactName: Baselio-${version}-linux-${arch}.${ext}')
+    expect(builderSource).toContain('artifactName: Baselio_${version}_${arch}.${ext}')
     expect(packageJson.name).toBe('medresearch-agent')
     expect(packageJson.productName).toBe(displayName)
+    expect(packageJson.author).toBe(displayName)
   })
 
   it('uses the stable app identifier for packaged and window integration metadata', () => {
