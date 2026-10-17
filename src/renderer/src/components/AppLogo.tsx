@@ -7,7 +7,7 @@ type AppLogoProps = {
   alt?: string
 }
 
-// Traced from the approved Baselio reference. currentColor follows the theme primary.
+// Solid deep-green b. The path fill is #2B5E4A; dark mode overrides it.
 const AppLogo = ({ className, alt = '' }: AppLogoProps): React.JSX.Element => {
   return (
     <span

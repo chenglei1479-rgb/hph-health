@@ -148,8 +148,8 @@ const OpenScienceLogoLoader = (): React.JSX.Element => {
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-1/2 size-[min(200%,100vw)] -translate-x-1/2 -translate-y-1/2 text-foreground opacity-0"
       />
-      <AppLogo className="size-16" />
-      <span className="dra-app-brand-name text-[1.75rem]">baselio</span>
+      <AppLogo className="h-16 w-auto" />
+      <span className="dra-app-brand-name text-[5.333rem]">baselio</span>
     </div>
   )
 }
