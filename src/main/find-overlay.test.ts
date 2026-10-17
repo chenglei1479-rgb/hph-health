@@ -125,7 +125,7 @@ describe('find overlay manager', () => {
     })
     expect(view.webContents.loadFile).toHaveBeenCalledWith(HTML_PATH)
     expect(mainWindow.contentView.addChildView).toHaveBeenCalledWith(view)
-    expect(view.setBackgroundColor).toHaveBeenCalledWith('#fafaf8')
+    expect(view.setBackgroundColor).toHaveBeenCalledWith('#f3f8f5')
     expect(view.setBounds).toHaveBeenCalledWith({ x: 572, y: 8, width: 420, height: 40 })
     expect(view.setVisible).toHaveBeenLastCalledWith(true)
     expect(view.webContents.focus).toHaveBeenCalledTimes(1)
@@ -181,7 +181,7 @@ describe('find overlay manager', () => {
       theme: 'dark',
       followsSystem: false
     })
-    expect(view.setBackgroundColor).toHaveBeenLastCalledWith('#1a1a18')
+    expect(view.setBackgroundColor).toHaveBeenLastCalledWith('#12241e')
   })
 
   it('updates an open overlay appearance without refocusing or signaling show', async () => {
@@ -199,7 +199,7 @@ describe('find overlay manager', () => {
       theme: 'dark',
       followsSystem: false
     })
-    expect(view.setBackgroundColor).toHaveBeenLastCalledWith('#1a1a18')
+    expect(view.setBackgroundColor).toHaveBeenLastCalledWith('#12241e')
   })
 
   it('caches appearance updates while hidden without sending to the overlay', () => {
@@ -209,7 +209,7 @@ describe('find overlay manager', () => {
 
     expect(view.webContents.send).not.toHaveBeenCalled()
     manager.open()
-    expect(view.setBackgroundColor).toHaveBeenCalledWith('#1a1a18')
+    expect(view.setBackgroundColor).toHaveBeenCalledWith('#12241e')
   })
 
   it('disposes a view whose page fails to load and creates a fresh view on retry', async () => {

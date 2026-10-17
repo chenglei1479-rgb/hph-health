@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 
+import { AppLogo } from './AppLogo'
 import {
   createLogoParticles,
   drawOpenScienceLogoFrame,
@@ -137,13 +138,18 @@ const OpenScienceLogoLoader = (): React.JSX.Element => {
   }, [])
 
   return (
-    <div className="relative size-56 shrink-0" aria-hidden="true">
+    <div
+      className="relative flex size-56 shrink-0 flex-col items-center justify-center gap-3"
+      aria-hidden="true"
+    >
       <canvas
         ref={canvasRef}
         data-testid="open-science-logo-loader"
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 size-[min(200%,100vw)] -translate-x-1/2 -translate-y-1/2 text-foreground"
+        className="pointer-events-none absolute left-1/2 top-1/2 size-[min(200%,100vw)] -translate-x-1/2 -translate-y-1/2 text-foreground opacity-0"
       />
+      <AppLogo className="h-16 w-auto" />
+      <span className="dra-app-brand-name text-[5.333rem]">baselio</span>
     </div>
   )
 }

@@ -490,15 +490,6 @@ const HomePage = ({
     persistedSessions
   ])
 
-  const recentHomeProjects = useMemo(
-    () =>
-      projectSummaries.map(({ project: recentProject, lastActivityAt }) => ({
-        id: recentProject.id,
-        name: recentProject.name,
-        updatedAt: lastActivityAt
-      })),
-    [projectSummaries]
-  )
   const recentSessions = useRecentSessions(
     persistedSessions,
     isProjectsLoaded && !loadError && hasCompleteSessionCatalog
@@ -798,16 +789,9 @@ const HomePage = ({
       <main className="h-svh overflow-y-auto bg-bg-10 text-text-000">
         <div className="mx-auto w-full max-w-[1080px] px-4 py-6 pb-16 sm:px-8">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
+            <div className="flex min-w-0 items-center">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <a
-                  href={APP.links.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center text-text-000 hover:text-text-100"
-                >
-                  <AppBrand productName={APP.name} />
-                </a>
+                <AppBrand productName={APP.name} />
                 {hasCompleteSessionCatalog &&
                 (activeSessionCounts.waiting > 0 || activeSessionCounts.running > 0) ? (
                   <div className={cn(homeMutedClassName, 'flex items-center gap-2 font-medium')}>
@@ -921,7 +905,7 @@ const HomePage = ({
                   }}
                 >
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="lg"
                     className="gap-2 px-3"
                     onClick={() => openCreateDialog()}
@@ -937,11 +921,7 @@ const HomePage = ({
           </header>
           <PackageOperationIndicator />
 
-          <MedicalResearchLaunchpad
-            onSelectWorkflow={selectMedicalWorkflow}
-            recentProjects={recentHomeProjects}
-            onOpenProject={(projectId) => openProject(projectId, 'user')}
-          />
+          <MedicalResearchLaunchpad onSelectWorkflow={selectMedicalWorkflow} />
           <EthicsWritingNotice open={ethicsReminderOpen} />
 
           {sessionUpdates.length > 0 ? (
@@ -1105,7 +1085,7 @@ const HomePage = ({
             >
               <h2 className={sectionHeadingClassName}>
                 <GalleryVerticalEnd
-                  className="size-4 text-text-300"
+                  className="size-4 text-primary"
                   strokeWidth={2}
                   aria-hidden="true"
                 />
@@ -1144,7 +1124,7 @@ const HomePage = ({
                   </p>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     size="sm"
                     className="mt-5 h-auto min-h-8 max-w-full gap-1.5 rounded-md px-3 py-1.5 text-xs whitespace-normal"
                     onClick={openCreateDialog}
@@ -1344,7 +1324,7 @@ const HomePage = ({
               aria-label={t('Recent sessions')}
             >
               <h2 className={sectionHeadingClassName}>
-                <Clock className="size-4 text-text-300" strokeWidth={2} aria-hidden="true" />
+                <Clock className="size-4 text-primary" strokeWidth={2} aria-hidden="true" />
                 {t('Recent sessions')}
               </h2>
               {recentSessions.length === 0 ? (

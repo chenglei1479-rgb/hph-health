@@ -442,16 +442,16 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   --shadow-dialog-value: 0 8px 32px rgb(10 10 10 / 12%);
   /* Ringless variant of the card elevation for surfaces that must not read as bordered. */
   --shadow-sheet-value: 0 4px 24px rgb(10 10 10 / 0.04);
-  --bg-10: hsl(60 14% 99%);
-  --bg-000: hsl(0 0% 100%);
-  --bg-200: hsl(60 11% 95%);
-  --bg-300: hsl(45 12% 93%);
-  --bg-400: hsl(45 10% 88%);
-  --border-ink-channel: 60 2% 12%;
-  --text-000: hsl(0 0% 7%);
+  --bg-10: #f3f8f5;
+  --bg-000: #ffffff;
+  --bg-200: #e4f0ea;
+  --bg-300: #d5e6dc;
+  --bg-400: #c3d9ce;
+  --border-ink-channel: 160 18% 18%;
+  --text-000: #1c2c27;
   --text-100: var(--muted-foreground);
-  --text-200: hsl(43 3% 52%);
-  --text-300: hsl(43 3% 57%);
+  --text-200: hsl(160 12% 32%);
+  --text-300: hsl(158 14% 36%);
   --rail-card-bg: 0 0% 100%;
   --danger-000: hsl(0 45% 38%);
   --danger-900: hsl(0 55% 95%);
@@ -471,8 +471,8 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   --syntax-keyword: hsl(222 60% 46%);
   --syntax-string: hsl(140 52% 32%);
   --syntax-number: hsl(280 48% 48%);
-  --action-panel-toggle: hsl(0 0% 42%);
-  --surface-control-hover: hsl(38 20% 90%);
+  --action-panel-toggle: hsl(160 8% 38%);
+  --surface-control-hover: #d7e8de;
   --message-user-text: hsl(0 0% 12%);
   /* Green pill for composer artifact/upload `@` mention chips, distinct from the blue skill chip. */
   --mention-chip: hsl(110 42% 90%);
@@ -484,20 +484,20 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   --path-chip: hsl(43 3% 32%);
   --path-chip-foreground: hsl(60 14% 96%);
   --always-black: 0 0% 0%;
-  --background: #fafaf8;
-  --foreground: #202321;
+  --background: #f3f8f5;
+  --foreground: #1c2c27;
   --card: #ffffff;
-  --card-foreground: #202321;
+  --card-foreground: #1c2c27;
   --popover: #ffffff;
-  --popover-foreground: #202321;
-  --primary: oklch(0.47 0.105 184);
-  --primary-foreground: oklch(0.985 0.008 180);
-  --secondary: #ececea;
-  --secondary-foreground: #202321;
-  --muted: #ececea;
-  --muted-foreground: #646762;
-  --accent: oklch(0.87 0.115 82);
-  --accent-foreground: oklch(0.2 0.03 62);
+  --popover-foreground: #1c2c27;
+  --primary: #2b5e4a;
+  --primary-foreground: #ffffff;
+  --secondary: #e4f0ea;
+  --secondary-foreground: #1c2c27;
+  --muted: #e4f0ea;
+  --muted-foreground: #55665e;
+  --accent: #d7e8de;
+  --accent-foreground: #1a3d32;
   --destructive: oklch(0.58 0.22 25);
   --chart-1: rgb(109 167 236);
   --chart-2: rgb(88 176 133);
@@ -507,9 +507,9 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   --session-running: oklch(0.51 0.15 255);
   --session-running-shimmer: rgb(255 255 255 / 78%);
   --session-waiting: oklch(0.62 0.16 68);
-  --border: #dededa;
-  --input: #dededa;
-  --ring: oklch(0.58 0.11 184);
+  --border: #c5d9ce;
+  --input: #c5d9ce;
+  --ring: #2f6a54;
 }
 
 /* Dark theme: warm, low-chroma dark surfaces that keep the app's paper feel rather than a cold
@@ -525,16 +525,16 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   --shadow-menu-value: 0 2px 8px rgb(0 0 0 / 0.5);
   --shadow-dialog-value: 0 8px 32px rgb(0 0 0 / 0.6);
   --shadow-sheet-value: 0 4px 24px rgb(0 0 0 / 0.45);
-  --bg-10: hsl(60 3% 10%);
-  --bg-000: hsl(48 4% 15%);
-  --bg-200: hsl(50 3% 18%);
-  --bg-300: hsl(48 3% 22%);
-  --bg-400: hsl(46 3% 28%);
-  --border-ink-channel: 48 8% 82%;
-  --text-000: hsl(48 12% 92%);
-  --text-100: hsl(45 5% 62%);
-  --text-200: hsl(45 5% 56%);
-  --text-300: hsl(45 4% 50%);
+  --bg-10: #12241e;
+  --bg-000: #1b332b;
+  --bg-200: #243e34;
+  --bg-300: #2c4a3e;
+  --bg-400: #375a4c;
+  --border-ink-channel: 150 16% 82%;
+  --text-000: #e7f3ec;
+  --text-100: #c5d9ce;
+  --text-200: hsl(155 16% 78%);
+  --text-300: hsl(155 12% 72%);
   --rail-card-bg: 48 4% 15%;
   --danger-000: hsl(0 70% 72%);
   --danger-900: hsl(0 35% 20%);
@@ -551,8 +551,8 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   --syntax-keyword: hsl(215 75% 72%);
   --syntax-string: hsl(140 45% 62%);
   --syntax-number: hsl(280 60% 74%);
-  --action-panel-toggle: hsl(45 5% 68%);
-  --surface-control-hover: hsl(48 4% 24%);
+  --action-panel-toggle: hsl(155 10% 72%);
+  --surface-control-hover: #2c4a3e;
   --message-user-text: hsl(48 12% 92%);
   --mention-chip: hsl(140 30% 22%);
   --mention-chip-foreground: hsl(140 45% 72%);
@@ -562,20 +562,20 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
      dark-green/dark-blue mention chips. */
   --path-chip: hsl(48 6% 78%);
   --path-chip-foreground: hsl(43 3% 18%);
-  --background: #1a1a18;
-  --foreground: #e8e6df;
-  --card: #26251f;
-  --card-foreground: #e8e6df;
-  --popover: #26251f;
-  --popover-foreground: #e8e6df;
-  --primary: oklch(0.72 0.1 184);
-  --primary-foreground: oklch(0.18 0.03 190);
-  --secondary: #33322b;
-  --secondary-foreground: #e8e6df;
-  --muted: #33322b;
-  --muted-foreground: #a8a49a;
-  --accent: oklch(0.78 0.11 82);
-  --accent-foreground: oklch(0.2 0.03 62);
+  --background: #12241e;
+  --foreground: #e7f3ec;
+  --card: #1b332b;
+  --card-foreground: #e7f3ec;
+  --popover: #1b332b;
+  --popover-foreground: #e7f3ec;
+  --primary: #8fcbb4;
+  --primary-foreground: #10241c;
+  --secondary: #243e34;
+  --secondary-foreground: #e7f3ec;
+  --muted: #243e34;
+  --muted-foreground: #c5d9ce;
+  --accent: #2c4a3e;
+  --accent-foreground: #e7f3ec;
   --destructive: oklch(0.68 0.19 25);
   --chart-1: rgb(109 167 236);
   --chart-2: rgb(88 176 133);
@@ -584,9 +584,9 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   --chart-5: rgb(225 113 91);
   --session-running: oklch(0.77 0.1 255);
   --session-waiting: oklch(0.74 0.14 68);
-  --border: #3a3931;
-  --input: #3a3931;
-  --ring: oklch(0.66 0.1 184);
+  --border: #3d5c50;
+  --input: #3d5c50;
+  --ring: #8fcbb4;
 }
 
 /* Keyboard focus must remain visible in forced colors and appear without a transition. */
@@ -1441,57 +1441,68 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
   }
 }
 
-/* Wordmark plus one translated tagline. The class prefix is an internal identifier. */
+@font-face {
+  font-family: 'Quicksand';
+  src: url('./fonts/quicksand-latin-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+.baselio-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  aspect-ratio: 1.0038;
+  color: #295846;
+  line-height: 0;
+}
+.baselio-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Wordmark. The class prefix is an internal identifier. */
 .dra-app-brand {
-  --dra-brand-name: #193d34;
-  --dra-brand-caption: #42645a;
+  --dra-brand-name: #295846;
   display: inline-flex;
   max-width: 100%;
   min-width: 0;
-  align-items: center;
-  gap: 0.625rem;
+  align-items: flex-end;
+  gap: 0.5rem;
   vertical-align: middle;
 }
+/* Quicksand 'baselio' ink is 0.75em (ascender). 1.833rem type makes that ink 22px. */
 .dra-app-brand-logo {
-  width: 2.25rem;
-  height: 2.25rem;
-  flex-shrink: 0;
-  border-radius: 0.5rem;
-  box-shadow:
-    0 1px 2px #173f3210,
-    0 4px 12px #173f320a;
+  width: calc(1.375rem * 1.0038);
+  height: 1.375rem;
 }
 .dra-app-brand-name {
+  --dra-brand-name: #295846;
   flex-shrink: 0;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 650;
-  line-height: 1.2;
-  letter-spacing: 0;
+  font-family: 'Quicksand', 'Segoe UI', sans-serif;
+  font-size: 1.833rem;
+  font-weight: 600;
+  line-height: 0.75;
+  letter-spacing: -0.03em;
   color: var(--dra-brand-name);
 }
-.dra-app-brand-tagline {
-  min-width: 0;
-  text-align: left;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  font-size: 0.75rem;
-  font-weight: 400;
-  line-height: 1.3;
-  letter-spacing: 0;
-  color: var(--dra-brand-caption);
+.dark .dra-app-brand,
+.dark .dra-app-brand-name {
+  --dra-brand-name: var(--primary);
 }
-.dark .dra-app-brand {
-  --dra-brand-name: var(--foreground);
-  --dra-brand-caption: color-mix(in srgb, var(--primary) 65%, var(--foreground));
+.dark .baselio-mark svg {
+  fill: var(--primary);
 }
 @media (max-width: 760px) {
   .dra-app-brand {
-    gap: 0.5rem;
+    gap: 0.4rem;
+  }
+  .dra-app-brand-logo {
+    width: calc(1.125rem * 1.0038);
+    height: 1.125rem;
   }
   .dra-app-brand-name {
-    font-size: 1.125rem;
-  }
-  .dra-app-brand-tagline {
-    font-size: 0.6875rem;
+    font-size: 1.5rem;
   }
 }

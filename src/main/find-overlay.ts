@@ -85,8 +85,8 @@ export type FindOverlayManager = {
 
 const ZERO_BOUNDS = { x: 0, y: 0, width: 0, height: 0 }
 const FALLBACK_APPEARANCE: WindowFindAppearance = { theme: 'light', followsSystem: true }
-const LIGHT_BACKGROUND = '#fafaf8'
-const DARK_BACKGROUND = '#1a1a18'
+const LIGHT_BACKGROUND = '#f3f8f5'
+const DARK_BACKGROUND = '#12241e'
 
 // Owns the find overlay WebContentsView for one main window. The view is created lazily on first open
 // and stays attached for the life of the window: open/close toggle its visibility and bounds while

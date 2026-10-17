@@ -46,7 +46,7 @@ any new color role before using it.
 
 ## Theme Tokens
 
-Light surfaces use warm off-white backgrounds, white cards and deep-green primary controls.
+Light surfaces use pale mint backgrounds (`#F3F8F5`), white cards and deep-green primary controls (`#2B5E4A`).
 Dark surfaces use the corresponding semantic overrides in `main.css`. `--background`, `--card`,
 `--popover`, `--foreground`, `--muted-foreground`, `--primary` and `--ring` describe roles, not
 interchangeable literal colors. The workspace tokens below describe their surface assignments.
@@ -94,12 +94,12 @@ Workspace-only tokens without a shadcn counterpart, plus shadow tokens. For shar
 
 | Token                               | Tailwind class                                                                         | Light value                                                       | Usage                                                |
 | ----------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------- |
-| `--bg-400`                          | `bg-bg-400`                                                                            | `hsl(45 10% 88%)`                                                 | Sidebar row action hover                             |
-| `--text-300`                        | `text-text-300`                                                                        | `hsl(43 3% 57%)`                                                  | Action icon default color and loading dots           |
+| `--bg-400`                          | `bg-bg-400`                                                                            | `#C3D9CE`                                                         | Sidebar row action hover                             |
+| `--text-300`                        | `text-text-300`                                                                        | `hsl(158 14% 36%)`                                                | Action icon default color and loading dots           |
 | `--rail-card-bg`                    | `bg-rail-card-bg`                                                                      | `hsl(0 0% 100%)`                                                  | Sidebar rail card                                    |
 | `--danger-000` / `--danger-900`     | `text-danger-000`, `bg-danger-900`                                                     | `hsl(0 45% 38%)`, `hsl(0 55% 95%)`                                | Destructive session menu and dialog actions          |
 | `--action-panel-toggle`             | `text-action-panel-toggle`                                                             | `hsl(0 0% 42%)`                                                   | Collapsed preview toggle                             |
-| `--surface-control-hover`           | `hover:bg-surface-control-hover`                                                       | `hsl(38 20% 90%)`                                                 | Header icon control hover                            |
+| `--surface-control-hover`           | `hover:bg-surface-control-hover`                                                       | `#D7E8DE`                                                         | Header icon control hover                            |
 | `--message-user-text`               | `text-message-user-text`                                                               | `hsl(0 0% 12%)`                                                   | User message bubble text                             |
 | `--diff-added-*`                    | `bg-diff-added-surface`, `bg-diff-added-highlight`, `text-diff-added-foreground`       | Light green surfaces with `hsl(145 60% 24%)` foreground           | Added Version-diff rows, inline spans, and markers   |
 | `--diff-removed-*`                  | `bg-diff-removed-surface`, `bg-diff-removed-highlight`, `text-diff-removed-foreground` | Light red surfaces with `hsl(0 55% 32%)` foreground               | Removed Version-diff rows, inline spans, and markers |

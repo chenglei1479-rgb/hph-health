@@ -1925,27 +1925,31 @@ describe('HomePage recent session ordering', () => {
     expect(container.querySelector('[data-testid="export-statistician-package"]')).toBeNull()
     expect(container.querySelector('[data-testid="delete-local-copies"]')).toBeNull()
     expect(container.querySelector('[data-testid="delete-device-patient-data"]')).toBeNull()
-    expect(
-      container.querySelector('[data-testid="continue-project-project-1"]')?.textContent
-    ).toContain('Research project')
+    expect(container.querySelector('[data-testid="continue-project"]')).toBeNull()
+    expect(container.textContent).not.toContain('Continue a project')
+    expect(container.querySelector('[aria-label="Projects"]')?.textContent).toContain(
+      'Research project'
+    )
+    expect(container.querySelector('[aria-label="Recent sessions"]')).not.toBeNull()
     expect(container.querySelector('[data-testid="open-fictional-sample"]')).not.toBeNull()
     expect(container.textContent).not.toContain('変数定義表')
     expect(container.textContent).not.toContain('執筆時の確認')
   })
 
-  it('keeps the configured wordmark and one tagline in the home header', async () => {
+  it('keeps the configured wordmark in the home header without a tagline or repo link', async () => {
     await renderHome()
     const brand = container.querySelector('header .dra-app-brand')
     expect(brand).not.toBeNull()
-    expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('Baselio')
-    expect(brand?.querySelector('.dra-app-brand-tagline')?.textContent).toBe(
-      'AI Research Infrastructure for Medicine'
-    )
-    const images = brand?.querySelectorAll('img')
-    expect(images).toHaveLength(2)
-    expect(images?.[0].getAttribute('src')).toMatch(/logo/)
-    expect(images?.[0].className).toContain('dark:hidden')
-    expect(images?.[1].className).toContain('dark:block')
+    expect(brand?.closest('a')).toBeNull()
+    expect(brand?.getAttribute('aria-label')).toBe('Baselio')
+    expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('baselio')
+    expect(brand?.querySelector('.dra-app-brand-tagline')).toBeNull()
+    expect(brand?.querySelector('.baselio-mark svg')).not.toBeNull()
+    expect(brand?.querySelector('img')).toBeNull()
+    expect(brand?.textContent).not.toContain('AI Research Infrastructure for Medicine')
+    expect(
+      container.querySelector('header a[href*="github.com/chenglei1479-rgb/hph-health"]')
+    ).toBeNull()
   })
 
   it('refreshes concurrent output in place, preserving focused rows, and resorts on a new visit', async () => {
