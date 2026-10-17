@@ -16,6 +16,7 @@ type Scan = (text: string) => PhiSpan[] | Promise<PhiSpan[]>
 type DraftRequest = {
   sections: { item: R8ItemNumber; text: string }[]
   missingItems: R8ItemNumber[]
+  phiTexts?: string[]
   outputPath?: string
 }
 
@@ -45,7 +46,8 @@ export const assertEthicsExportPhiSafe = async (
 
 export const exportDraftAfterPhiCheck = async (request: DraftRequest): Promise<Uint8Array> => {
   await assertEthicsExportPhiSafe(
-    request.sections.map(({ text }) => text).filter((text) => text !== '【要記入】')
+    request.phiTexts ??
+      request.sections.map(({ text }) => text).filter((text) => text !== '【要記入】')
   )
   return createDraftDocx(request)
 }

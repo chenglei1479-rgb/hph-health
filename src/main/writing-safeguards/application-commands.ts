@@ -2,7 +2,7 @@ import { normalizeEthicsApprovalNumber } from '../../shared/writing-safeguards/e
 import type { EthicsProtocolState } from '../../shared/ethics-protocol/state'
 import { basename, join } from 'node:path'
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
-import { R8_ITEMS } from '../../shared/ethics-protocol/r8-items'
+import { buildEthicsDraftSections } from '../ethics-protocol/draft-sections'
 import { inspectDocx } from '../ethics-protocol/docx-import'
 import { exportDraftAfterPhiCheck } from '../ethics-protocol/export-phi-gate'
 import {
@@ -133,13 +133,13 @@ const createWritingSafeguardsCommandOwner = (
       const projectId = request?.projectId?.trim() ?? ''
       if (!projectId) throw new Error('projectId is required.')
       const state = store.getProtocol(projectId)
-      const sections = R8_ITEMS.map(({ number }) => ({
-        item: number,
-        text: state.notApplicableReasons[number] ?? '【要記入】'
-      }))
+      const { sections, missingItems } = buildEthicsDraftSections(state)
       const bytes = await exportDraftAfterPhiCheck({
         sections,
-        missingItems: R8_ITEMS.map(({ number }) => number)
+        missingItems,
+        phiTexts: Object.values(state.notApplicableReasons).filter((reason): reason is string =>
+          Boolean(reason?.trim())
+        )
       })
       return { fileName: '研究計画書_草案.docx', bytes: [...bytes] }
     }
