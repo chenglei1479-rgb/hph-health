@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { R8_ITEMS } from '../../../../shared/ethics-protocol/r8-items'
+import type { EthicsProtocolState } from '../../../../shared/ethics-protocol/state'
 
 type Choice = '' | 'yes' | 'no' | 'unknown'
 const conditional = new Set([18, 19, 22, 23, 24])
@@ -45,6 +46,9 @@ export const EthicsProtocolChecklist = ({
   const [choices, setChoices] = useState<Record<number, Choice>>({})
   const [excluded, setExcluded] = useState<Record<number, boolean>>({})
   const [reasons, setReasons] = useState<Record<number, string>>({})
+  const [metadata, setMetadata] = useState<
+    Pick<EthicsProtocolState, 'confirmedMappings' | 'importedDocxPath'>
+  >({ confirmedMappings: [] })
   useEffect(() => {
     if (!projectId || !window.api.writingSafeguards) return
     void window.api.writingSafeguards.getEthicsProtocol({ projectId }).then((protocol) => {
@@ -55,6 +59,10 @@ export const EthicsProtocolChecklist = ({
           Object.keys(protocol.notApplicableReasons).map((key) => [Number(key), true])
         )
       )
+      setMetadata({
+        confirmedMappings: protocol.confirmedMappings,
+        importedDocxPath: protocol.importedDocxPath
+      })
     })
   }, [projectId])
   const save = (): void => {
@@ -64,7 +72,8 @@ export const EthicsProtocolChecklist = ({
       protocol: {
         choices,
         notApplicableReasons: reasons,
-        confirmedMappings: []
+        confirmedMappings: metadata.confirmedMappings,
+        importedDocxPath: metadata.importedDocxPath
       }
     })
   }
