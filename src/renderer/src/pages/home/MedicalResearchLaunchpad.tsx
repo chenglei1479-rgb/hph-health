@@ -199,7 +199,7 @@ const MedicalResearchLaunchpad = ({
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3" data-testid="home-primary-entries">
           {entries.map(
-            ({ id, workflow, title, subtitle, description, hardRule, inputNotice, icon: Icon }) => (
+            ({ id, workflow, title, description, hardRule, inputNotice, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
@@ -221,12 +221,11 @@ const MedicalResearchLaunchpad = ({
                 </span>
                 <span className={cn(homeBodyClassName, 'mt-4')}>{title}</span>
                 <span
-                  data-testid={`home-entry-subtitle-${id}`}
+                  data-testid={`home-entry-description-${id}`}
                   className={cn(homeMutedClassName, 'mt-1')}
                 >
-                  {subtitle}
+                  {description}
                 </span>
-                <span className={cn(homeMutedClassName, 'mt-1')}>{description}</span>
                 {hardRule ? (
                   <span
                     data-testid="mentor-pack-hard-rule"

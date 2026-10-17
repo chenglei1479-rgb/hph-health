@@ -7499,7 +7499,7 @@
     "Prepare a conference abstract or paper": "准备学会摘要或论文",
     "Delete patient data on this device": "删除此设备上的患者数据",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "将删除 {{productName}} 内的数据。废弃或转让此设备时，请遵循所属机构的流程。",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "导入来源的原始文件（Excel 等）不会被 {{productName}} 删除。",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "导入来源的原始文件（Excel 等）不会被 {{productName}} 删除。请您按照研究计划书的方法自行删除。",
     "Check the retention period and storage location specified in the research protocol before you delete.": "请先确认研究计划书规定的保存期限和保存地点，然后再删除。",
     "Before deleting, export code and result tables that contain no patient data.": "删除前，请导出不含患者数据的代码和结果表。",
     "Confirm the patient data that will be deleted": "确认将删除的患者数据",
