@@ -6304,7 +6304,7 @@
     "Live AI outcomes. Manual decisions still determine collection membership.": "AI の判定をリアルタイムで表示します。コレクションへの追加は引き続き手動の判断を優先します。",
     "Continue setup": "セットアップを続行",
     "Compare with source version": "元のバージョンと比較",
-    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "このパックの到達点は学会抄録／短い英文草稿です。長い論文執筆は「論文」「英文学術写作」から進めてください。執筆前に倫理審査の承認番号を確認します（未記入はリマインドのみ、ブロックしません）。",
+    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "このパックの到達点は学会抄録／短い英文草稿です。長い論文執筆は「論文」「英語論文の執筆」から進めてください。執筆前に倫理審査の承認番号を確認します（未記入はリマインドのみ、ブロックしません）。",
     "Port": "ポート",
     "Pages {{start}}–{{end}}": "{{start}}～{{end}} ページ",
     "Not evaluated": "未評価",
@@ -6484,7 +6484,7 @@
     "Could not save conversation Skill import preference. Try again.": "会話からのスキルインポート設定を保存できませんでした。再試行してください。",
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "このコンピューターに暗号化して保存されます。秘密の値が画面に返されることはありません。",
     "Beaker": "ビーカー",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "倫理審査前の開題コミュニケーション向け。研究の問い・デザイン・次回指導医に確認すべき点まで。承認番号の強制入力なし。倫理通過後に表を持って相談する場合は「データ監査・統計相談資料」を使ってください。",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "倫理審査前の開題コミュニケーション向け。研究の問い・デザイン・次回指導医に確認すべき点まで。承認番号の強制入力なし。データの解析は「自分のデータを分析する」から。",
     "Retrieve disease models associated with an Alliance gene.": "Alliance の遺伝子に関連する疾患モデルを取得します。",
     "Saved credential unavailable": "保存済みの認証情報を利用できません",
     "No references in this group.": "このグループに文献はありません。",
@@ -7510,6 +7510,10 @@
     "Patient data stored for this project on this device was deleted.": "この端末に保存されていた、このプロジェクトの患者データを削除しました。",
     "Could not delete patient data for this project on this device. Try again.": "この端末の、このプロジェクトの患者データを削除できませんでした。もう一度お試しください。",
     "Deleting patient data on this device…": "この端末の患者データを削除しています…",
-    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "学術研究専用です。診断や治療には使用しないでください。架空データのみを使用してください。患者を特定できる情報をアップロードしないでください。情報源、方法、出力は研究者が確認してください。"
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "学術研究専用です。診断や治療には使用しないでください。架空データのみを使用してください。患者を特定できる情報をアップロードしないでください。情報源、方法、出力は研究者が確認してください。",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "選択した列の区分値は、多いものから最大 {{limit}} 種類だけ送ります。残りは {{omission}} と示します。",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "解析結果は送信前にマスキングチェックを行い、個別の行を含む出力は送信しません。",
+    "Details_privacy": "詳しく",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者データの分析はお使いの PC 内で行います。AI サービスには既定で、列名・データ型・行数、合成サンプル、先生が選択した列の区分値、および解析の集計結果を送信します。氏名やカルテ番号などの直接識別子は送りません。"
   }
 }

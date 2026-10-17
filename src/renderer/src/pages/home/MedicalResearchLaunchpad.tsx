@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import {
   homeBodyClassName,
@@ -29,6 +30,15 @@ import { nextStepAfter } from '../../../../shared/deliverable-next-step'
 import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-delivery-ledger'
 import { PackNextStepCard } from './PackNextStepCard'
 import { SampleAbstractDialog } from './SampleAbstractDialog'
+
+// Off until the PHI release gate merges. The sentence stays translated so the
+// home line can show it by flipping this flag; it is not rendered while false.
+export const SHOW_HOME_PATIENT_DATA_MASKING_NOTE = false
+
+// Same cap as CATEGORICAL_RELEASE_LIMIT in the schema-only release path.
+// The renderer does not import that main-process module.
+export const HOME_CATEGORICAL_VALUE_LIMIT = 12
+export const HOME_CATEGORICAL_OMISSION = '他 N 種類は省略'
 
 export type MedicalResearchWorkflow =
   | 'mentor-pack'
@@ -65,6 +75,7 @@ const MedicalResearchLaunchpad = ({
   const [researchTheme, setResearchTheme] = useState('')
   const [sampleOpen, setSampleOpen] = useState(false)
   const [stepsOpen, setStepsOpen] = useState(false)
+  const [patientDataDetailsOpen, setPatientDataDetailsOpen] = useState(false)
   const deliveryLedger = usePackDeliveryLedger()
   const exampleTheme = t(
     'I want to study the treatment effect of immune checkpoint inhibitors in patients with lung cancer.'
@@ -231,6 +242,50 @@ const MedicalResearchLaunchpad = ({
             )
           )}
         </div>
+        <div
+          data-testid="home-patient-data-note"
+          className={cn(homeMutedClassName, 'flex w-full min-w-0 flex-col gap-2 text-left')}
+        >
+          <p className="w-full min-w-0">
+            <span data-testid="home-patient-data-note-text">
+              {t(
+                'Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.'
+              )}
+            </span>
+            {SHOW_HOME_PATIENT_DATA_MASKING_NOTE ? (
+              <span data-testid="home-patient-data-masking-note">
+                {' '}
+                {t(
+                  'Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.'
+                )}
+              </span>
+            ) : null}{' '}
+            <Popover open={patientDataDetailsOpen} onOpenChange={setPatientDataDetailsOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  data-testid="home-patient-data-details"
+                  className="cursor-pointer font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:text-primary/80 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                  {t('Details', { context: 'privacy' })}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                data-testid="home-patient-data-details-panel"
+                className="w-[min(36rem,calc(100vw-2rem))] rounded-2xl bg-bg-000 p-4 text-left text-xs font-normal leading-5 text-text-300 shadow-card"
+              >
+                {t(
+                  'For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.',
+                  {
+                    limit: HOME_CATEGORICAL_VALUE_LIMIT,
+                    omission: HOME_CATEGORICAL_OMISSION
+                  }
+                )}
+              </PopoverContent>
+            </Popover>
+          </p>
+        </div>
         {deliveryLedger.lastCompletionId && !deliveryLedger.homeCardDismissed ? (
           <PackNextStepCard
             completionId={deliveryLedger.lastCompletionId}
@@ -307,7 +362,14 @@ const MedicalResearchLaunchpad = ({
                 type="button"
                 data-testid={`research-entry-${id}`}
                 disabled={!themeReady}
-                onClick={() => onSelectWorkflow(id, researchTheme.trim())}
+                onClick={() =>
+                  onSelectWorkflow(
+                    id === 'analysis'
+                      ? (entries.find((entry) => entry.id === 'analyze-data')?.workflow ?? id)
+                      : id,
+                    researchTheme.trim()
+                  )
+                }
                 className={cn(homeCardInteractiveClassName, 'min-h-36')}
               >
                 <span className="flex w-full items-start justify-between gap-4">
