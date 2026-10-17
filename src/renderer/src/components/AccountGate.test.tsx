@@ -61,6 +61,7 @@ it('does not mount the research workspace before login and distinguishes registr
   const login = vi.fn(async () => state({ pending: true }))
   await render({ getState: vi.fn(async () => state()), login, logout: vi.fn() })
   expect(host.querySelector('[data-testid="private-workspace"]')).toBeNull()
+  expect(document.documentElement.dataset.draLoginReady).toBe('1')
   expect(button('Continue with Google')).toBeDefined()
   await act(async () => button('Create a DRA account').click())
   expect(login).toHaveBeenCalledWith({ method: 'email', signup: true })

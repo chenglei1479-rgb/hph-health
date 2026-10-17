@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import config, { resolveWsl2BashPreviewBuildEnabled } from '../../electron.vite.config'
@@ -42,6 +43,9 @@ describe('electron Vite renderer configuration', () => {
     vi.stubEnv('DRA_PRERELEASE', 'true')
     expect(resolve({ command: 'build', mode: 'production' }).main?.define?.__DRA_PRERELEASE__).toBe(
       'false'
+    )
+    expect(readFileSync('scripts/build-backend.mjs', 'utf8')).toContain(
+      "__DRA_PRERELEASE__: process.env.DRA_PRERELEASE === '1' ? 'true' : 'false'"
     )
   })
 

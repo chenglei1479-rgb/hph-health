@@ -209,10 +209,11 @@ jobs:
 
       # The 40-minute job limit cancels the runner and skips later steps, which is why a
       # hung launch uploaded no log. This step limit fails the launch while the runner is
-      # still up so the upload below still runs.
-      - name: Launch the packaged app and wait for home
+      # still up so the upload below still runs. The script launches twice: the prerelease
+      # bypass, then a signed-out upgrade with beta.10-style user data.
+      - name: Launch the packaged app and wait for home or sign-in
         shell: bash
-        timeout-minutes: 15
+        timeout-minutes: 20
         env:
           SMOKE_PLATFORM_LABEL: ${{ matrix.label }}
         run: node scripts/ci/packaged-startup-smoke.mjs --artifact-dir packaged --timeout-ms 240000

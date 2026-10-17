@@ -1,19 +1,28 @@
 import { expect, it } from 'vitest'
 
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import {
   MAC_DITTO_TIMEOUT_MS,
   MAC_DMG_ATTACH_TIMEOUT_MS,
   MAC_DMG_DETACH_TIMEOUT_MS,
+  SIGNED_OUT_READY_LINES,
   WINDOWS_SMOKE_INSTALL_DIR,
+  beta10ResearchHistoryJson,
   declinedMachineApprovalLine,
+  rejectHomeThatStillRequiredLogin,
   macDmgAttachArgs,
   macDmgDetachArgs,
   macQuarantineClearCommand,
   packagedSmokeEnv,
+  signedOutSmokeEnv,
   smokeSettingsJson,
   windowsSilentInstallArgs,
   windowsSilentInstallCommand
 } from './packaged-startup-smoke.mjs'
+import { DRA_HOME_READY_LINE, DRA_LOGIN_READY_LINE } from './wait-for-packaged-startup.mjs'
 
 it('installs the Windows beta on a non-C: path that contains a space', () => {
   const setup = 'C:\\runner\\work\\DRA setup.exe'
@@ -73,6 +82,61 @@ it('seeds completed onboarding and launches the packaged app in prerelease mode'
   expect(env.PATH).toBe('/usr/bin')
   expect(env.OPEN_SCIENCE_CONFIG_ROOT).toContain('config root')
   expect(env.DRA_STARTUP_LOG_FILE).toContain('startup.log')
+})
+
+it('launches signed-out over beta.10 user data without the prerelease bypass', () => {
+  const paths = {
+    configRoot: '/Users/doctor/DRA Test/config root',
+    userData: '/Users/doctor/DRA Test/user data',
+    logFile: '/Users/doctor/DRA Test/startup.log'
+  }
+  const env = signedOutSmokeEnv(
+    {
+      PATH: '/usr/bin',
+      DRA_PRERELEASE: '1',
+      DRA_AUTH_MODE: 'test',
+      DRA_AUTH_ISSUER: 'https://tenant.example/',
+      DRA_AUTH_CLIENT_ID: 'client'
+    },
+    paths
+  )
+  expect(env.DRA_PRERELEASE).toBeUndefined()
+  expect(env.DRA_AUTH_MODE).toBeUndefined()
+  expect(env.DRA_AUTH_ISSUER).toBeUndefined()
+  expect(env.DRA_AUTH_CLIENT_ID).toBeUndefined()
+  expect(env.PATH).toBe('/usr/bin')
+  expect(env.OPEN_SCIENCE_CONFIG_ROOT).toBe(paths.configRoot)
+  expect(env.OPEN_SCIENCE_USER_DATA).toBe(paths.userData)
+  expect(JSON.parse(beta10ResearchHistoryJson())).toEqual({ session: 'retained' })
+  expect(SIGNED_OUT_READY_LINES).toEqual([DRA_HOME_READY_LINE, DRA_LOGIN_READY_LINE])
+  const source = readFileSync(new URL('./packaged-startup-smoke.mjs', import.meta.url), 'utf8')
+  expect(source).toContain('signedOutSmokeEnv(')
+  expect(source).toContain('seedBeta10UserData(')
+  expect(source).toContain('readyLines: SIGNED_OUT_READY_LINES')
+  expect(source).toContain('rejectAccountLoginAtHome: true')
+})
+
+it('rejects a home window that still logged account login required', () => {
+  const userData = join(tmpdir(), `dra-signed-out-${process.pid}`)
+  mkdirSync(join(userData, 'desktop-logs'), { recursive: true })
+  const ready = { ok: true, reason: 'ready', detail: `${DRA_HOME_READY_LINE}\n` }
+  writeFileSync(
+    join(userData, 'desktop-logs', 'main.log'),
+    'desktop operation failed DRA account login required.\n'
+  )
+  expect(rejectHomeThatStillRequiredLogin(userData, ready)).toMatchObject({
+    ok: false,
+    reason: 'login-required'
+  })
+  writeFileSync(join(userData, 'desktop-logs', 'main.log'), 'application-startup completed\n')
+  expect(rejectHomeThatStillRequiredLogin(userData, ready)).toEqual(ready)
+  expect(
+    rejectHomeThatStillRequiredLogin(userData, {
+      ok: true,
+      reason: 'ready',
+      detail: `${DRA_LOGIN_READY_LINE}\nDRA account login required\n`
+    }).ok
+  ).toBe(true)
 })
 
 it('records a declined hospital approval so the PHI gate stays closed', () => {

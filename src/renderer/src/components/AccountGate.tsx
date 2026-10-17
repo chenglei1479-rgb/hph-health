@@ -67,6 +67,15 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
     }
   }, [api])
 
+  // Packaged launch smoke reads this once the sign-in screen is actually shown.
+  useEffect(() => {
+    if (isDraPrerelease() || !api || !state?.required || state.user) return
+    document.documentElement.dataset.draLoginReady = '1'
+    return () => {
+      delete document.documentElement.dataset.draLoginReady
+    }
+  }, [api, state])
+
   const login = async (method: AccountLoginMethod, signup = false): Promise<void> => {
     if (!api || busy) return
     setBusy(true)

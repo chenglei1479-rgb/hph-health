@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute } from 'node:path'
 
 export const DRA_HOME_READY_LINE = 'DRA home window ready'
+export const DRA_LOGIN_READY_LINE = 'DRA login window ready'
 export const DRA_STARTUP_FAILURE_PREFIX = 'DRA could not finish starting.'
 
 const LOG_ENV = 'DRA_STARTUP_LOG_FILE'
@@ -29,7 +30,11 @@ const alreadyContains = (file: string, line: string): boolean => {
 export const recordPackagedStartupLine = (line: string, env: StartupEnv = process.env): void => {
   const file = packagedStartupLogFile(env)
   if (!file) return
-  if (line === DRA_HOME_READY_LINE && alreadyContains(file, DRA_HOME_READY_LINE)) return
+  if (
+    (line === DRA_HOME_READY_LINE && alreadyContains(file, DRA_HOME_READY_LINE)) ||
+    (line === DRA_LOGIN_READY_LINE && alreadyContains(file, DRA_LOGIN_READY_LINE))
+  )
+    return
   mkdirSync(dirname(file), { recursive: true })
   appendFileSync(file, line.endsWith('\n') ? line : `${line}\n`, 'utf8')
 }
@@ -95,12 +100,17 @@ export const watchPackagedHomeReady = (
     }
     void Promise.resolve()
       .then(() =>
-        contents.executeJavaScript?.("document.documentElement?.dataset?.draHomeReady === '1'")
+        contents.executeJavaScript?.(
+          "document.documentElement?.dataset?.draHomeReady === '1' ? 'home' : document.documentElement?.dataset?.draLoginReady === '1' ? 'login' : ''"
+        )
       )
       .then((ready) => {
-        if (ready !== true) return
+        if (ready !== true && ready !== 'home' && ready !== 'login') return
         clearInterval(timer)
-        recordPackagedStartupLine(DRA_HOME_READY_LINE, env)
+        recordPackagedStartupLine(
+          ready === 'login' ? DRA_LOGIN_READY_LINE : DRA_HOME_READY_LINE,
+          env
+        )
       })
       .catch(() => {
         // The page is not loaded yet, or the window was destroyed between polls.

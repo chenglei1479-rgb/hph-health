@@ -35,6 +35,9 @@ export async function createBackendBuilder({
         define: {
           'import.meta.url': '__entryUrl',
           __OPEN_SCIENCE_NATIVE_LOCALE_DIRECTORY__: JSON.stringify('native-locales'),
+          // Electron bakes this for the shell only. The Node backend must get the same
+          // value or a packaged beta requires DRA login and never leaves the splash.
+          __DRA_PRERELEASE__: process.env.DRA_PRERELEASE === '1' ? 'true' : 'false',
           ...windowsSigningBuildDefines(process.env),
           ...wsl2BuildDefines(process.platform, development, process.env)
         },

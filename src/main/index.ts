@@ -78,6 +78,11 @@ import {
 import { initializeNodeWindowsProfileKey } from './credential-identity/node-cipher'
 import { resolveBootstrapConfigRoot, resolveElectronProfile } from './storage/electron-profile'
 import { startOrAttachDesktopBackend, desktopBackendPaths } from './desktop-runtime-launcher'
+import {
+  blockedDesktopStartupState,
+  isDraAccountLoginRequired
+} from './desktop-startup-continuation'
+import { recordPackagedStartupFailure } from './startup-ready-marker'
 import { connectDesktopRuntime, type DesktopRuntimeClient } from './desktop-runtime-client'
 import { installDesktopRuntimeElectronAdapter } from './desktop-runtime-electron-adapter'
 import { createDesktopNativeHandler } from './desktop-native-electron'
@@ -601,6 +606,7 @@ async function startDesktop(): Promise<void> {
   const native = createDesktopNativeHandler((id) => relay?.documentFor(id), isApplicationWindow)
   let state: DatabaseStartupState = { phase: 'checking' }
   let ready = false
+  let startupResourcesReady = false
   let acceptStartupEvents = false
   let readiness: Promise<void> = Promise.resolve()
   const nativeChannels = new Set([
@@ -660,27 +666,46 @@ async function startDesktop(): Promise<void> {
     readiness = readiness
       .then(async () => {
         if (next.phase === 'ready' && !ready) {
-          preview = await createDesktopPreviewProxy(configRoot, client!.processId())
-          installRelay()
+          if (!startupResourcesReady) {
+            preview = await createDesktopPreviewProxy(configRoot, client!.processId())
+            installRelay()
+            // The web service lives in the Node backend (#3358) and logs to its own file; packaged
+            // certification parses the app stdout for this readiness line, so main re-publishes it.
+            webServiceLog.info(`Open-Science Web: http://127.0.0.1:${preview.port}/`, {
+              host: '127.0.0.1',
+              port: preview.port,
+              source: 'node-backend'
+            })
+            packageFiles.bind((path) => {
+              showMainWindow?.()
+              void client!.invokeHost('desktop:open-package', [path]).catch(reportError)
+            })
+            startupResourcesReady = true
+          }
+          try {
+            const settings = (await client!.invokeHost('settings:get-settings')) as SettingsSnapshot
+            icons?.setVariant(settings.appIconVariant)
+          } catch (error) {
+            // Signed-out is the sign-in screen (or beta local mode once the backend
+            // agrees). It must not skip the ready broadcast and leave the splash up.
+            if (!isDraAccountLoginRequired(error)) throw error
+            bootstrapLog.warn('desktop settings deferred until sign-in', {
+              error: projectDiagnosticError(error, { configRoot, home: app.getPath('home') })
+            })
+          }
           ready = true
-          // The web service lives in the Node backend (#3358) and logs to its own file; packaged
-          // certification parses the app stdout for this readiness line, so main re-publishes it.
-          webServiceLog.info(`Open-Science Web: http://127.0.0.1:${preview.port}/`, {
-            host: '127.0.0.1',
-            port: preview.port,
-            source: 'node-backend'
-          })
-          const settings = (await client!.invokeHost('settings:get-settings')) as SettingsSnapshot
-          icons?.setVariant(settings.appIconVariant)
-          packageFiles.bind((path) => {
-            showMainWindow?.()
-            void client!.invokeHost('desktop:open-package', [path]).catch(reportError)
-          })
         }
         state = next
         broadcast(DATABASE_STARTUP_CHANNELS.stateChanged, state)
       })
-      .catch(reportError)
+      .catch((error: unknown) => {
+        if (state.phase !== 'ready' && state.phase !== 'blocked') {
+          state = blockedDesktopStartupState()
+          broadcast(DATABASE_STARTUP_CHANNELS.stateChanged, state)
+          recordPackagedStartupFailure(error instanceof Error ? error.message : String(error))
+        }
+        reportError(error)
+      })
   }
   let runtimeStartupState: RuntimeStartupState = { phase: 'idle' }
   let startupWindow: BrowserWindow | undefined
@@ -1396,6 +1421,7 @@ async function startDesktop(): Promise<void> {
       notifications.dispose()
       relay?.uninstall()
       ready = false
+      startupResourcesReady = false
       launch = await startOrAttachDesktopBackend({
         configRoot: config.configRoot,
         profilePath: config.profilePath,
