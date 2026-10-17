@@ -1936,14 +1936,17 @@ describe('HomePage recent session ordering', () => {
     expect(container.textContent).not.toContain('執筆時の確認')
   })
 
-  it('keeps the configured wordmark and one tagline in the home header', async () => {
+  it('keeps the configured wordmark in the home header without a tagline or repo link', async () => {
     await renderHome()
     const brand = container.querySelector('header .dra-app-brand')
     expect(brand).not.toBeNull()
+    expect(brand?.closest('a')).toBeNull()
     expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('Baselio')
-    expect(brand?.querySelector('.dra-app-brand-tagline')?.textContent).toBe(
-      'AI Research Infrastructure for Medicine'
-    )
+    expect(brand?.querySelector('.dra-app-brand-tagline')).toBeNull()
+    expect(brand?.textContent).not.toContain('AI Research Infrastructure for Medicine')
+    expect(
+      container.querySelector('header a[href*="github.com/chenglei1479-rgb/hph-health"]')
+    ).toBeNull()
     const images = brand?.querySelectorAll('img')
     expect(images).toHaveLength(2)
     expect(images?.[0].getAttribute('src')).toMatch(/logo/)

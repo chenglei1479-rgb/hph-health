@@ -789,16 +789,9 @@ const HomePage = ({
       <main className="h-svh overflow-y-auto bg-bg-10 text-text-000">
         <div className="mx-auto w-full max-w-[1080px] px-4 py-6 pb-16 sm:px-8">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
+            <div className="flex min-w-0 items-center">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <a
-                  href={APP.links.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center text-text-000 hover:text-text-100"
-                >
-                  <AppBrand productName={APP.name} />
-                </a>
+                <AppBrand productName={APP.name} />
                 {hasCompleteSessionCatalog &&
                 (activeSessionCounts.waiting > 0 || activeSessionCounts.running > 0) ? (
                   <div className={cn(homeMutedClassName, 'flex items-center gap-2 font-medium')}>
