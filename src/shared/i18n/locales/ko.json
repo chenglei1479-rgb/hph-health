@@ -7501,7 +7501,7 @@
     "Prepare a conference abstract or paper": "학회 초록 또는 논문 준비하기",
     "Delete patient data on this device": "이 기기의 환자 데이터 삭제",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}}에 저장된 데이터를 삭제합니다. 기기를 폐기하거나 양도할 때는 소속 기관의 절차를 따르십시오.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "가져온 원본 파일(Excel 등)은 {{productName}}에서 삭제하지 않습니다.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "가져온 원본 파일(Excel 등)은 {{productName}}에서 삭제하지 않습니다. 연구 계획서의 방법에 따라 직접 삭제하세요.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "삭제하기 전에 연구계획서에 정해진 보관 기간과 보관 장소를 확인하세요.",
     "Before deleting, export code and result tables that contain no patient data.": "삭제하기 전에 환자 데이터가 없는 코드와 결과표를 내보내십시오.",
     "Confirm the patient data that will be deleted": "삭제할 환자 데이터를 확인",

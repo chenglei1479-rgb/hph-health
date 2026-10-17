@@ -7663,7 +7663,7 @@
     "Prepare a conference abstract or paper": "Abstract oder Manuskript für eine Tagung vorbereiten",
     "Delete patient data on this device": "Patientendaten auf diesem Gerät löschen",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}} löscht die darin gespeicherten Daten. Entsorgen oder übertragen Sie dieses Gerät nach dem Verfahren Ihrer Einrichtung.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "Importierte Originaldateien, etwa Excel-Arbeitsmappen, werden von {{productName}} nicht gelöscht.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "Importierte Originaldateien, etwa Excel-Arbeitsmappen, werden von {{productName}} nicht gelöscht. Löschen Sie sie selbst nach der im Forschungsprotokoll festgelegten Methode.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "Prüfen Sie vor dem Löschen die im Forschungsprotokoll festgelegte Aufbewahrungsfrist und den Aufbewahrungsort.",
     "Before deleting, export code and result tables that contain no patient data.": "Exportieren Sie vor dem Löschen Code und Ergebnistabellen, die keine Patientendaten enthalten.",
     "Confirm the patient data that will be deleted": "Bestätigen Sie, welche Patientendaten gelöscht werden",

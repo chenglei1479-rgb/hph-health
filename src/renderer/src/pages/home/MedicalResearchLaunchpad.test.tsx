@@ -143,12 +143,34 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(japanese.host.textContent).not.toContain(
       '解析結果は送信前にマスキングチェックを行い、個別の行を含む出力は送信しません。'
     )
-    expect(japanese.host.textContent).toContain(
-      'データの解析は「自分のデータを分析する」から。'
-    )
+    expect(japanese.host.textContent).toContain('データの解析は「自分のデータを分析する」から。')
     expect(japanese.host.textContent).not.toContain('データ監査・統計相談資料')
     expect(japanese.host.textContent).toContain('英語論文の執筆')
     expect(japanese.host.textContent).not.toContain('英文学術写作')
+    expect(
+      japanese.host.querySelector('[data-testid="home-entry-description-mentor-prep"]')?.textContent
+    ).toBe(
+      '倫理審査前の開題コミュニケーション向け。研究の問い・デザイン・次回指導医に確認すべき点まで。承認番号の強制入力なし。データの解析は「自分のデータを分析する」から。'
+    )
+    expect(
+      japanese.host.querySelector('[data-testid="home-entry-mentor-prep"]')?.textContent
+    ).not.toContain('指導医ミーティング用の一枚')
+    expect(
+      japanese.host.querySelector('[data-testid="home-entry-description-analyze-data"]')
+        ?.textContent
+    ).toBe(
+      '仮名化済みのCSVをアップロードし、変数と欠損を確認します。統計計画の承認後、再現可能な表・図・コードを作成します。'
+    )
+    expect(
+      japanese.host.querySelector('[data-testid="home-entry-analyze-data"]')?.textContent
+    ).not.toContain('再現可能な解析を実行します')
+    expect(
+      japanese.host.querySelector('[data-testid="home-entry-description-write-abstract"]')
+        ?.textContent
+    ).toContain('英語論文の執筆')
+    expect(
+      japanese.host.querySelector('[data-testid="home-entry-write-abstract"]')?.textContent
+    ).not.toContain('締め切り向けの短い原稿')
     expect(
       japanese.host.querySelector('[data-testid="home-patient-data-details"]')?.textContent
     ).toBe('詳しく')
@@ -160,7 +182,7 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(japanese.host.textContent).toContain(
       '患者の個別データを貼り付けないでください。相談は研究デザインと集計結果の要約にとどめてください。'
     )
-    expect(japanese.host.textContent).toContain(
+    expect(japanese.host.textContent).not.toContain(
       '締め切り向けの短い原稿。倫理番号と AI 利用の確認あり。'
     )
     expect(
@@ -191,6 +213,27 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(chinese.host.textContent).not.toContain('数据审计与统计咨询包')
     expect(chinese.host.textContent).toContain('英语论文撰写')
     expect(chinese.host.textContent).not.toContain('英文学术写作')
+    expect(
+      chinese.host.querySelector('[data-testid="home-entry-description-mentor-prep"]')?.textContent
+    ).toBe(
+      '用于伦理审查前的开题沟通：研究问题、设计和下次要向指导医师确认的事项。不强制填写批准号。数据分析请从「分析自己的数据」开始。'
+    )
+    expect(
+      chinese.host.querySelector('[data-testid="home-entry-mentor-prep"]')?.textContent
+    ).not.toContain('指导医师会议用的一页材料')
+    expect(
+      chinese.host.querySelector('[data-testid="home-entry-description-analyze-data"]')?.textContent
+    ).toBe('上传匿名化 CSV，检查变量与缺失值，确认统计方案后生成可复现的表格、图表和代码。')
+    expect(
+      chinese.host.querySelector('[data-testid="home-entry-analyze-data"]')?.textContent
+    ).not.toContain('确认统计计划后再运行可复现分析')
+    expect(
+      chinese.host.querySelector('[data-testid="home-entry-description-write-abstract"]')
+        ?.textContent
+    ).toContain('英语论文撰写')
+    expect(
+      chinese.host.querySelector('[data-testid="home-entry-write-abstract"]')?.textContent
+    ).not.toContain('面向截止日期的短稿')
     expect(
       chinese.host.querySelector('[data-testid="home-patient-data-details"]')?.textContent
     ).toBe('详细')

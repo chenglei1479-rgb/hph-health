@@ -7970,7 +7970,7 @@
     "Prepare a conference abstract or paper": "Подготовить тезисы конференции или статью",
     "Delete patient data on this device": "Удалить данные пациентов на этом устройстве",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}} удалит хранящиеся в нём данные. При утилизации или передаче устройства следуйте процедуре вашего учреждения.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "Исходные файлы, из которых выполнен импорт (например, книги Excel), {{productName}} не удаляет.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "Исходные файлы, из которых выполнен импорт (например, книги Excel), {{productName}} не удаляет. Удалите их самостоятельно в соответствии с методом, указанным в протоколе исследования.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "Перед удалением проверьте срок и место хранения, указанные в протоколе исследования.",
     "Before deleting, export code and result tables that contain no patient data.": "Перед удалением экспортируйте код и таблицы результатов, в которых нет данных пациентов.",
     "Confirm the patient data that will be deleted": "Подтвердите, какие данные пациентов будут удалены",

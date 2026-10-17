@@ -7503,7 +7503,7 @@
     "Prepare a conference abstract or paper": "学会抄録・論文を準備する",
     "Delete patient data on this device": "この端末の患者データを削除",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}} 内のデータを削除します。端末の廃棄・譲渡時は所属機関の手順に従ってください。",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "取り込み元の元ファイル（Excel 等）は {{productName}} では削除されません。",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "取り込み元の元ファイル（Excel 等）は {{productName}} では削除されません。ご自身で研究計画書の方法に従って削除してください。",
     "Check the retention period and storage location specified in the research protocol before you delete.": "研究計画書に定められた保管期間・保管場所を確認してから削除してください。",
     "Before deleting, export code and result tables that contain no patient data.": "削除する前に、患者データを含まないコードと結果表を書き出してください。",
     "Confirm the patient data that will be deleted": "削除する患者データを確認",

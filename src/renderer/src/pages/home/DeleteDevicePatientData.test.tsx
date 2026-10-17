@@ -58,7 +58,10 @@ it('asks twice and deletes only the one project after the second confirmation', 
   const review = document.body.querySelector('[data-testid="delete-device-patient-data-review"]')
   expect(review?.textContent).toContain(`${APP.name} will delete data it stores`)
   expect(review?.textContent).toContain("follow your institution's procedure")
-  expect(review?.textContent).toContain(`are not deleted by ${APP.name}`)
+  expect(review?.textContent).toContain(
+    `Original source files that were imported, such as Excel workbooks, are not deleted by ${APP.name}. Delete them yourself according to the method in the research protocol.`
+  )
+  expect(review?.textContent).not.toContain('DRA')
   expect(review?.textContent).toContain('research protocol before you delete')
   expect(review?.textContent).toContain(
     'export code and result tables that contain no patient data'
@@ -117,8 +120,10 @@ it('uses the device patient-data label in Japanese, Chinese, and English', async
     `${APP.name} 内のデータを削除します。端末の廃棄・譲渡時は所属機関の手順に従ってください。`
   )
   expect(review?.textContent).toContain(
-    `取り込み元の元ファイル（Excel 等）は ${APP.name} では削除されません。`
+    `取り込み元の元ファイル（Excel 等）は ${APP.name} では削除されません。ご自身で研究計画書の方法に従って削除してください。`
   )
+  expect(review?.textContent).not.toContain('DRA')
+  expect(review?.textContent).not.toContain('完全に消去')
   expect(review?.textContent).toContain(
     '研究計画書に定められた保管期間・保管場所を確認してから削除してください。'
   )
@@ -128,6 +133,12 @@ it('uses the device patient-data label in Japanese, Chinese, and English', async
   await renderDelete()
   expect(host?.textContent).toContain('删除此设备上的患者数据')
   expect(host?.textContent).not.toContain('この端末の患者データを削除')
+  await click('[data-testid="delete-device-patient-data"]')
+  expect(
+    document.body.querySelector('[data-testid="delete-device-patient-data-review"]')?.textContent
+  ).toContain(
+    `导入来源的原始文件（Excel 等）不会被 ${APP.name} 删除。请您按照研究计划书的方法自行删除。`
+  )
   await act(async () => root?.unmount())
 
   initI18n('zh-Hant')

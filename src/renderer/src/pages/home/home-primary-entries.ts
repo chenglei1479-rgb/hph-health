@@ -36,10 +36,10 @@ export const homePrimaryEntries = (t: Translate): HomePrimaryEntry[] => [
     workflow: 'analysis',
     title: t('Analyze your own data'),
     subtitle: t(
-      'Upload an anonymized CSV, review variables and missingness, approve a statistical plan, then create reproducible tables, figures, and code.'
+      'Upload an anonymized CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
     ),
     description: t(
-      'Upload an anonymized CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
+      'Upload an anonymized CSV, review variables and missingness, approve a statistical plan, then create reproducible tables, figures, and code.'
     )
   },
   {

@@ -7831,7 +7831,7 @@
     "Prepare a conference abstract or paper": "Préparer un résumé de congrès ou un article",
     "Delete patient data on this device": "Supprimer les données patients sur cet appareil",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}} supprime les données qu’il conserve. Pour mettre au rebut ou céder cet appareil, suivez la procédure de votre établissement.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "Les fichiers sources d’origine importés, tels que les classeurs Excel, ne sont pas supprimés par {{productName}}.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "Les fichiers sources d’origine importés, tels que les classeurs Excel, ne sont pas supprimés par {{productName}}. Supprimez-les vous-même selon la méthode du protocole de recherche.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "Vérifiez la durée et le lieu de conservation prévus dans le protocole de recherche avant de supprimer.",
     "Before deleting, export code and result tables that contain no patient data.": "Avant de supprimer, exportez le code et les tableaux de résultats qui ne contiennent pas de données patients.",
     "Confirm the patient data that will be deleted": "Confirmer les données patients qui seront supprimées",
