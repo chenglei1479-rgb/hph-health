@@ -7,7 +7,7 @@ type AppLogoProps = {
   alt?: string
 }
 
-// Solid deep-green b. The path fill is #2B5E4A; dark mode overrides it.
+// Traced once from design/brand/baselio-logo-final.png. Fill is the sampled green.
 const AppLogo = ({ className, alt = '' }: AppLogoProps): React.JSX.Element => {
   return (
     <span

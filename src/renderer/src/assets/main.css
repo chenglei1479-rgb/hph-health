@@ -1452,8 +1452,8 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
 .baselio-mark {
   display: inline-flex;
   flex-shrink: 0;
-  aspect-ratio: 0.6817;
-  color: var(--primary);
+  aspect-ratio: 1.0038;
+  color: #295846;
   line-height: 0;
 }
 .baselio-mark svg {
@@ -1464,7 +1464,7 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
 
 /* Wordmark. The class prefix is an internal identifier. */
 .dra-app-brand {
-  --dra-brand-name: var(--primary);
+  --dra-brand-name: #295846;
   display: inline-flex;
   max-width: 100%;
   min-width: 0;
@@ -1474,7 +1474,7 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
 }
 /* Quicksand 'baselio' ink is 0.75em (ascender). 1.833rem type makes that ink 22px. */
 .dra-app-brand-logo {
-  width: calc(1.375rem * 0.6817);
+  width: calc(1.375rem * 1.0038);
   height: 1.375rem;
 }
 .dra-app-brand-name {
@@ -1497,7 +1497,7 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
     gap: 0.4rem;
   }
   .dra-app-brand-logo {
-    width: calc(1.125rem * 0.6817);
+    width: calc(1.125rem * 1.0038);
     height: 1.125rem;
   }
   .dra-app-brand-name {
