@@ -1941,17 +1941,15 @@ describe('HomePage recent session ordering', () => {
     const brand = container.querySelector('header .dra-app-brand')
     expect(brand).not.toBeNull()
     expect(brand?.closest('a')).toBeNull()
-    expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('Baselio')
+    expect(brand?.getAttribute('aria-label')).toBe('Baselio')
+    expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('baselio')
     expect(brand?.querySelector('.dra-app-brand-tagline')).toBeNull()
+    expect(brand?.querySelector('.baselio-mark svg')).not.toBeNull()
+    expect(brand?.querySelector('img')).toBeNull()
     expect(brand?.textContent).not.toContain('AI Research Infrastructure for Medicine')
     expect(
       container.querySelector('header a[href*="github.com/chenglei1479-rgb/hph-health"]')
     ).toBeNull()
-    const images = brand?.querySelectorAll('img')
-    expect(images).toHaveLength(2)
-    expect(images?.[0].getAttribute('src')).toMatch(/logo/)
-    expect(images?.[0].className).toContain('dark:hidden')
-    expect(images?.[1].className).toContain('dark:block')
   })
 
   it('refreshes concurrent output in place, preserving focused rows, and resorts on a new visit', async () => {

@@ -1,18 +1,22 @@
-import type { ComponentPropsWithoutRef } from 'react'
+import markSvg from '@/assets/baselio-mark.svg?raw'
 
-import logoDarkUrl from '@/assets/logo-dark.png'
-import logoLightUrl from '@/assets/logo.png'
 import { cn } from '@/lib/utils'
 
-type AppLogoProps = Omit<ComponentPropsWithoutRef<'img'>, 'src'>
+type AppLogoProps = {
+  className?: string
+  alt?: string
+}
 
-// Both theme variants share the same dotted-ring mark as the native app icons.
-const AppLogo = ({ alt = '', className, ...props }: AppLogoProps): React.JSX.Element => {
+// Traced from the approved Baselio reference. currentColor follows the theme primary.
+const AppLogo = ({ className, alt = '' }: AppLogoProps): React.JSX.Element => {
   return (
-    <>
-      <img {...props} className={cn(className, 'dark:hidden')} src={logoLightUrl} alt={alt} />
-      <img {...props} className={cn(className, 'hidden dark:block')} src={logoDarkUrl} alt={alt} />
-    </>
+    <span
+      className={cn('baselio-mark', className)}
+      role={alt ? 'img' : undefined}
+      aria-label={alt || undefined}
+      aria-hidden={alt ? undefined : true}
+      dangerouslySetInnerHTML={{ __html: markSvg }}
+    />
   )
 }
 

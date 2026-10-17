@@ -19,6 +19,7 @@ import { PermissionUndoSnackbar } from '@/components/PermissionUndoSnackbar'
 import type { PermissionGrantView } from '../../../src/shared/permission-grants'
 import { usePermissionGrantsStore } from '@/stores/permission-grants-store'
 import { SessionCatalogRecoveryAlert } from '@/components/SessionCatalogRecoveryAlert'
+import { OpenScienceLogoLoader } from '@/components/OpenScienceLogoLoader'
 
 // Native boundaries only. Components, navigation, i18n, CSS and browser geometry are production code.
 // Missing APIs fail normally: do not use a catch-all proxy that could hide accidental dependencies.
@@ -137,6 +138,14 @@ export function Fixture(): React.JSX.Element {
   const undoPortal = useSettingsUndoPortal(
     undoFixture ? <PermissionUndoSnackbar allowsArchiveShortcut={() => !open} /> : null
   )
+  if (new URLSearchParams(location.search).has('splash')) {
+    return (
+      <main className="flex min-h-svh items-center justify-center bg-background">
+        <OpenScienceLogoLoader />
+      </main>
+    )
+  }
+
   return (
     <TooltipProvider>
       <HomePage canDeleteProjects hasCompleteSessionCatalog onOpenGlobalSearch={() => undefined} />

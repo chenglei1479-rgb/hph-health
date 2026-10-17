@@ -235,15 +235,13 @@ describe('AppVersionSection', () => {
       root.render(<AppVersionSection />)
     })
 
-    const sources = (): string[] =>
-      Array.from(container.querySelectorAll('img')).map((img) => img.getAttribute('src') ?? '')
-    expect(sources()).toEqual(['logo.png', 'logo-dark.png'])
+    expect(container.querySelector('.baselio-mark svg')).not.toBeNull()
+    expect(container.querySelector('img')).toBeNull()
     expect(document.documentElement.classList.contains('dark')).toBe(false)
 
     act(() => useThemeStore.getState().setPreference('dark'))
 
-    expect(sources()).toEqual(['logo.png', 'logo-dark.png'])
-    expect(container.querySelector('img[src="logo-dark.png"]')?.className).toContain('dark:block')
+    expect(container.querySelector('.baselio-mark svg')).not.toBeNull()
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
@@ -265,16 +263,14 @@ describe('AppVersionSection', () => {
       useThemeStore.getState().setPreference('system')
       root.render(<AppVersionSection />)
     })
-    expect(
-      Array.from(container.querySelectorAll('img')).map((img) => img.getAttribute('src'))
-    ).toEqual(['logo.png', 'logo-dark.png'])
+    expect(container.querySelector('.baselio-mark svg')).not.toBeNull()
     expect(document.documentElement.classList.contains('dark')).toBe(false)
 
     act(() => systemListener?.({ matches: true }))
 
     expect(useThemeStore.getState().preference).toBe('system')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
-    expect(container.querySelector('img[src="logo-dark.png"]')?.className).toContain('dark:block')
+    expect(container.querySelector('.baselio-mark svg')).not.toBeNull()
   })
 
   it('keeps the full update error available and routes retry to the existing owner', () => {

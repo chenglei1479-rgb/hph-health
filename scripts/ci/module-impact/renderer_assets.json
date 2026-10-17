@@ -1,6 +1,9 @@
 {
   "ownerPaths": [
     "src/renderer/src/assets/agent-markdown.css",
+    "src/renderer/src/assets/baselio-mark.svg",
+    "src/renderer/src/assets/fonts/Quicksand-OFL.txt",
+    "src/renderer/src/assets/fonts/quicksand-latin-600.woff2",
     "src/renderer/src/assets/diff-colors.test.ts",
     "src/renderer/src/assets/electron.svg",
     "src/renderer/src/assets/installation-assistant.css",

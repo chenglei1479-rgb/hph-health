@@ -17,7 +17,7 @@ export const AppBrand = ({
     <span className={cn('dra-app-brand', className)} aria-label={productName}>
       {showLogo ? <AppLogo className="dra-app-brand-logo" /> : null}
       <span className="dra-app-brand-name" aria-hidden="true">
-        {productName}
+        {showLogo ? 'baselio' : productName}
       </span>
     </span>
   )
