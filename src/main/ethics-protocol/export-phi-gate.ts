@@ -44,6 +44,8 @@ export const assertEthicsExportPhiSafe = async (
 }
 
 export const exportDraftAfterPhiCheck = async (request: DraftRequest): Promise<Uint8Array> => {
-  await assertEthicsExportPhiSafe(request.sections.map(({ text }) => text))
+  await assertEthicsExportPhiSafe(
+    request.sections.map(({ text }) => text).filter((text) => text !== '【要記入】')
+  )
   return createDraftDocx(request)
 }

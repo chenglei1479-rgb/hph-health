@@ -7543,6 +7543,8 @@
     "Medical care after the research": "研究実施後の医療提供",
     "Outsourcing": "業務委託",
     "Future research use and provision to other institutions": "将来の研究・他機関提供",
-    "Monitoring and auditing": "モニタリング及び監査"
+    "Monitoring and auditing": "モニタリング及び監査",
+    "Import institutional DOCX form": "所属機関の DOCX 書式を取り込む",
+    "Download incomplete DOCX draft": "未完成の DOCX 草案をダウンロード"
   }
 }

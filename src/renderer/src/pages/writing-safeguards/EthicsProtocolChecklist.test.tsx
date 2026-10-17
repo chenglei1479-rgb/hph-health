@@ -6,7 +6,7 @@ import { EthicsProtocolChecklist } from './EthicsProtocolChecklist'
 
 describe('EthicsProtocolChecklist', () => {
   it('renders 25 items with five unanswered three-way questions', () => {
-    render(<EthicsProtocolChecklist />)
+    render(<EthicsProtocolChecklist projectId="" />)
     expect(screen.getAllByRole('listitem')).toHaveLength(25)
     expect(screen.getAllByRole('radio')).toHaveLength(15)
     expect(
@@ -15,7 +15,7 @@ describe('EthicsProtocolChecklist', () => {
     expect(screen.getByText(/Baselio analyzes patient data/)).toBeTruthy()
   })
   it('renders English source keys when no translated locale is active', () => {
-    render(<EthicsProtocolChecklist />)
+    render(<EthicsProtocolChecklist projectId="" />)
     expect(
       screen.getAllByRole('heading', { name: 'Research protocol checklist' }).length
     ).toBeGreaterThan(0)

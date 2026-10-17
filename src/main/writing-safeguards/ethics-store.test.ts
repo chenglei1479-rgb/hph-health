@@ -23,4 +23,29 @@ describe('ethics approval store', () => {
     expect(raw).toContain('study-1')
     expect(raw).toContain('2026-04-01')
   })
+
+  it('persists checklist answers and doctor-confirmed heading mappings by project', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ethics-protocol-'))
+    const path = join(root, 'ethics-approval.json')
+    const store = createEthicsApprovalStore(path)
+    expect(store.getProtocol('study-1')).toEqual({
+      choices: {},
+      notApplicableReasons: {},
+      confirmedMappings: []
+    })
+    const protocol = {
+      choices: { 23: 'unknown' as const },
+      notApplicableReasons: { 19: '謝礼を設定しないため' },
+      confirmedMappings: [
+        {
+          heading: '研究方法',
+          item: 4 as const,
+          confirmedBy: 'doctor-1',
+          confirmedAt: '2026-10-17T12:00:00+09:00'
+        }
+      ]
+    }
+    store.setProtocol('study-1', protocol)
+    expect(createEthicsApprovalStore(path).getProtocol('study-1')).toEqual(protocol)
+  })
 })
