@@ -443,8 +443,12 @@ export const WEB_INVOKE_CHANNELS = {
   'variableDefinition.exportTemplate': 'variable-definition:export-template',
   'variableDefinition.generate': 'variable-definition:generate',
   'window.close': 'window:close',
+  'writingSafeguards.exportEthicsDraft': 'writing-safeguards:export-ethics-draft',
   'writingSafeguards.getEthicsApproval': 'writing-safeguards:get-ethics-approval',
-  'writingSafeguards.setEthicsApproval': 'writing-safeguards:set-ethics-approval'
+  'writingSafeguards.getEthicsProtocol': 'writing-safeguards:get-ethics-protocol',
+  'writingSafeguards.importEthicsDocx': 'writing-safeguards:import-ethics-docx',
+  'writingSafeguards.setEthicsApproval': 'writing-safeguards:set-ethics-approval',
+  'writingSafeguards.setEthicsProtocol': 'writing-safeguards:set-ethics-protocol'
 } as const
 
 export const WEB_EVENT_CHANNELS = {

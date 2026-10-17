@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest'
+import { emptyEthicsProtocolState } from '../../shared/ethics-protocol/state'
+import { buildEthicsDraftSections } from './draft-sections'
+
+describe('buildEthicsDraftSections', () => {
+  it('fills the body from doctor answers and excludes completed items from the missing list', () => {
+    const state = emptyEthicsProtocolState()
+    state.choices = { 18: 'yes', 19: 'no', 22: 'unknown' }
+    state.notApplicableReasons = { 3: '対象となる介入がないため' }
+
+    const draft = buildEthicsDraftSections(state)
+
+    expect(draft.sections.find(({ item }) => item === 18)?.text).toBe('はい')
+    expect(draft.sections.find(({ item }) => item === 19)?.text).toBe('いいえ')
+    expect(draft.sections.find(({ item }) => item === 3)?.text).toBe(
+      '該当なし（対象となる介入がないため）'
+    )
+    expect(draft.missingItems).not.toContain(3)
+    expect(draft.missingItems).not.toContain(18)
+    expect(draft.missingItems).not.toContain(19)
+    expect(draft.missingItems).toContain(22)
+  })
+
+  it('treats an empty not-applicable reason as missing', () => {
+    const state = emptyEthicsProtocolState()
+    state.notApplicableReasons = { 4: '   ' }
+
+    const draft = buildEthicsDraftSections(state)
+
+    expect(draft.sections.find(({ item }) => item === 4)?.text).toBe('【要記入】')
+    expect(draft.missingItems).toContain(4)
+  })
+})

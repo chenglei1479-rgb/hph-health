@@ -891,8 +891,12 @@ describe('preload bridge — public surface inventory', () => {
       'window.setZoomFactor',
       'window.showTitleBarMenu',
       'window.updateTitleBar',
+      'writingSafeguards.exportEthicsDraft',
       'writingSafeguards.getEthicsApproval',
-      'writingSafeguards.setEthicsApproval'
+      'writingSafeguards.getEthicsProtocol',
+      'writingSafeguards.importEthicsDocx',
+      'writingSafeguards.setEthicsApproval',
+      'writingSafeguards.setEthicsProtocol'
     ])
   })
 })

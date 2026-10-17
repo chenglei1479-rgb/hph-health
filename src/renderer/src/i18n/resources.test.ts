@@ -230,6 +230,35 @@ describe('supported catalog registration', () => {
 
 describe('runtime catalog fallback', () => {
   it.each([
+    ['de', 'Ja', 'NEIN', 'Fehlt'],
+    ['es', 'Sí', 'No', 'Falta'],
+    ['fr', 'Oui', 'Non', 'Manquant'],
+    ['ja', 'はい', 'いいえ', '不足'],
+    ['ko', '예', '아니요', '누락'],
+    ['ru', 'Да', 'Нет', 'Отсутствует'],
+    ['zh-Hans', '是', '否', '缺失'],
+    ['zh-Hant', '是', '否', '缺失']
+  ] as const)(
+    'keeps the shared yes/no/missing translations for %s separate from ethics copy',
+    (locale, yes, no, missing) => {
+      const instance = initI18n(locale)
+
+      expect(instance.t('Yes')).toBe(yes)
+      expect(instance.t('No')).toBe(no)
+      expect(instance.t('Missing')).toBe(missing)
+    }
+  )
+
+  it('uses contextual ethics checklist copy, including 未記入 in Japanese', () => {
+    const jaInstance = initI18n('ja')
+
+    expect(jaInstance.t('Ethics checklist: yes')).toBe('はい')
+    expect(jaInstance.t('Ethics checklist: no')).toBe('いいえ')
+    expect(jaInstance.t('Ethics checklist: unknown')).toBe('わからない')
+    expect(jaInstance.t('Ethics checklist: missing')).toBe('未記入')
+  })
+
+  it.each([
     [
       'ja',
       'セッション呼び出しの概要',
@@ -1514,8 +1543,7 @@ describe('mandatory product glossary', () => {
       integrityDetail:
         'Dieser Job bleibt sichtbar, aber die automatische Ergebnisanalyse ist angehalten, da sich sein gespeicherter Zustand nicht verarbeiten lässt.',
       loadFailed: 'Remote-Jobs konnten nicht geladen werden.',
-      harvestPending:
-        'Der Ergebnisabruf steht noch aus. DRA versucht es automatisch erneut.',
+      harvestPending: 'Der Ergebnisabruf steht noch aus. DRA versucht es automatisch erneut.',
       harvestFailed:
         'Der Ergebnisabruf ist fehlgeschlagen. Die Remote-Dateien wurden nicht verändert.',
       queued: 'In der Warteschlange',
@@ -1968,8 +1996,7 @@ describe('mandatory product glossary', () => {
   })
 
   it('rejects a native Subagent compound translated as generic Agent', () => {
-    const key =
-      'Return to the running tasks and stop their subagents before quitting DRA.'
+    const key = 'Return to the running tasks and stop their subagents before quitting DRA.'
 
     expect(
       subagentGlossaryOffenders('zh-Hans', [[key, '请返回正在运行的任务并停止其智能体。']])

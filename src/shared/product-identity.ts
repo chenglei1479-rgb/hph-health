@@ -9,6 +9,8 @@
 // The Electron userData directory and keychain/credential service names are
 // pinned separately and must not follow this value.
 export const PRODUCT_DISPLAY_NAME = 'Baselio'
+// Decorative Latin wordmark. It is a brand asset, not translatable prose.
+export const PRODUCT_WORDMARK = PRODUCT_DISPLAY_NAME.toLowerCase()
 
 // Japanese prose uses katakana. The Latin wordmark stays PRODUCT_DISPLAY_NAME.
 export const PRODUCT_DISPLAY_NAME_JA = 'ベースリオ'

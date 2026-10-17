@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import { AppLogo } from './AppLogo'
+import { PRODUCT_WORDMARK } from '../../../shared/product-identity'
 import {
   createLogoParticles,
   drawOpenScienceLogoFrame,
@@ -149,7 +150,7 @@ const OpenScienceLogoLoader = (): React.JSX.Element => {
         className="pointer-events-none absolute left-1/2 top-1/2 size-[min(200%,100vw)] -translate-x-1/2 -translate-y-1/2 text-foreground opacity-0"
       />
       <AppLogo className="h-16 w-auto" />
-      <span className="dra-app-brand-name text-[5.333rem]">baselio</span>
+      <span className="dra-app-brand-name text-[5.333rem]">{PRODUCT_WORDMARK}</span>
     </div>
   )
 }

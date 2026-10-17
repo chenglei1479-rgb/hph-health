@@ -16,6 +16,7 @@ import {
   type ExportFinding
 } from '../../../../shared/writing-safeguards/export-deidentify'
 import { writingSafeguardsCopy, type WritingSafeguardsCopy } from './copy'
+import { EthicsProtocolChecklist } from './EthicsProtocolChecklist'
 
 const downloadText = (filename: string, text: string): void => {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
@@ -218,6 +219,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
               {reminder}
             </p>
           ) : null}
+          <EthicsProtocolChecklist projectId={projectId} />
           <h3 className="font-medium">{copy.declarationTitle}</h3>
           {usages.map((usage, index) => (
             <div key={index} className="grid gap-1">
