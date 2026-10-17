@@ -28,11 +28,7 @@ const renderLaunchpad = async (
 
 it('shows three primary entries in order and keeps the six research entries behind one home control', async () => {
   initI18n('en')
-  const openProject = vi.fn()
-  const { host, root, select } = await renderLaunchpad(vi.fn(), {
-    recentProjects: [{ id: 'study-1', name: 'Lung cohort' }],
-    onOpenProject: openProject
-  })
+  const { host, root, select } = await renderLaunchpad()
   try {
     expect(host.querySelector('[data-testid="entry-step-1"]')?.textContent).toContain('Step 1')
     expect(host.textContent).toContain('Project setup')
@@ -56,9 +52,8 @@ it('shows three primary entries in order and keeps the six research entries behi
     expect(host.textContent).toContain(
       'Do not paste individual patient data. Keep the consultation to the study design and a summary of aggregate results.'
     )
-    expect(host.querySelector('[data-testid="continue-project-study-1"]')?.textContent).toContain(
-      'Lung cohort'
-    )
+    expect(host.querySelector('[data-testid="continue-project"]')).toBeNull()
+    expect(host.textContent).not.toContain('Continue a project')
     expect(host.querySelector('[data-testid="delete-local-copies"]')).toBeNull()
     expect(host.querySelector('[data-testid="delete-device-patient-data"]')).toBeNull()
     expect(host.querySelector('[data-testid="open-fictional-sample"]')).not.toBeNull()
@@ -76,17 +71,12 @@ it('shows three primary entries in order and keeps the six research entries behi
       host.querySelector<HTMLButtonElement>(`[data-testid="home-entry-${id}"]`)
     )
     expect(primary.every((button) => button?.disabled)).toBe(true)
-    const continueProject = host.querySelector<HTMLButtonElement>(
-      '[data-testid="continue-project-study-1"]'
-    )
-    expect(continueProject?.disabled).toBe(false)
 
     await act(async () => host.querySelector<HTMLButtonElement>('button')!.click())
     expect(primary.every((button) => button && !button.disabled)).toBe(true)
     await act(async () => primary[0]!.click())
     await act(async () => primary[1]!.click())
     await act(async () => primary[2]!.click())
-    await act(async () => continueProject?.click())
     await act(async () => toggle!.click())
     const entries = [
       'novelty',
@@ -106,7 +96,6 @@ it('shows three primary entries in order and keeps the six research entries behi
       'writing-pack',
       'evidence'
     ])
-    expect(openProject).toHaveBeenCalledWith('study-1')
     expect(document.body.querySelector('[data-testid="statistician-export-dialog"]')).toBeNull()
     expect(document.body.textContent).not.toContain('個体データ')
     expect(select.mock.calls[0][1].length).toBeGreaterThan(0)
@@ -123,7 +112,8 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(japanese.host.textContent).toContain('指導医と相談する準備')
     expect(japanese.host.textContent).toContain('自分のデータを分析する')
     expect(japanese.host.textContent).toContain('学会抄録・論文を準備する')
-    expect(japanese.host.textContent).toContain('プロジェクトを続ける')
+    expect(japanese.host.textContent).not.toContain('プロジェクトを続ける')
+    expect(japanese.host.querySelector('[data-testid="continue-project"]')).toBeNull()
     expect(japanese.host.textContent).not.toContain('統計資料の書き出し')
     expect(japanese.host.textContent).not.toContain('指導医相談資料')
     expect(japanese.host.textContent).toContain('このパックは患者データを読み込みません。')
@@ -148,6 +138,8 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(chinese.host.textContent).toContain('准备与指导医师咨询')
     expect(chinese.host.textContent).toContain('分析自己的数据')
     expect(chinese.host.textContent).toContain('准备学会摘要或论文')
+    expect(chinese.host.textContent).not.toContain('继续项目')
+    expect(chinese.host.querySelector('[data-testid="continue-project"]')).toBeNull()
     expect(chinese.host.textContent).not.toContain('仅汇总结果，不含原始数据')
     expect(chinese.host.textContent).toContain('此交付包不读取患者数据。')
     expect(chinese.host.textContent).not.toContain('ステップから始める')
@@ -177,63 +169,22 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
   }
 })
 
-const NOW = 1_700_000_000_000
-const DAY = 24 * 60 * 60 * 1000
-const LONG_TITLE =
-  '免疫チェックポイント阻害薬による肺がん治療効果を検討する多施設後方視的コホート研究'
-
-const recentProjectFixtures = [
-  { id: 'short', name: '肺コホート', updatedAt: NOW - 2 * 60 * 60 * 1000 },
-  { id: 'long', name: LONG_TITLE, updatedAt: NOW - 3 * DAY },
-  { id: 'mid', name: '再入院リスク', updatedAt: NOW - 5 * DAY },
-  { id: 'plan', name: '研究計画', updatedAt: NOW - 40 * 60 * 1000 },
-  { id: 'extra', name: '5件目のプロジェクト', updatedAt: NOW - 12 * DAY }
-]
-
-const projectCards = (host: HTMLElement): HTMLButtonElement[] => [
-  ...host.querySelectorAll<HTMLButtonElement>('[data-testid="continue-project-grid"] button')
-]
-
-it('renders equal recent-project cards, a show-all toggle, and localized updated times', async () => {
-  vi.useFakeTimers()
-  vi.setSystemTime(NOW)
+it('keeps the entry cards and secondary row aligned without a continue-project section', async () => {
   initI18n('en')
-  const english = await renderLaunchpad(vi.fn(), { recentProjects: recentProjectFixtures })
-  document.body.append(english.host)
+  const english = await renderLaunchpad()
   try {
-    const grid = english.host.querySelector('[data-testid="continue-project-grid"]')
-    expect(grid?.className).toContain('sm:grid-cols-2')
-    expect(grid?.querySelector('[data-testid="open-fictional-sample"]')).toBeNull()
-    const cards = projectCards(english.host)
-    expect(cards.map((card) => card.getAttribute('data-testid'))).toEqual([
-      'continue-project-short',
-      'continue-project-long',
-      'continue-project-mid',
-      'continue-project-plan'
-    ])
-    expect(english.host.querySelector('[data-testid="continue-project-extra"]')).toBeNull()
-    for (const card of cards) {
-      expect(card.className).toContain('h-24')
-      expect(card.className).toContain('w-full')
-      expect(card.className).toContain('min-w-0')
-      expect(card.className).toContain('rounded-2xl')
-      expect(card.className).toContain('shadow-card')
-      expect(card.className).not.toContain('border')
-    }
+    expect(english.host.querySelector('[data-testid="continue-project"]')).toBeNull()
+    expect(english.host.querySelector('[data-testid="recent-projects-toggle"]')).toBeNull()
+    expect(english.host.textContent).not.toContain('Continue a project')
+    expect(english.host.textContent).not.toContain('No recent projects yet.')
+    const entries = english.host.querySelector('[data-testid="home-primary-entries"]')
+    expect(entries?.className).toContain('lg:grid-cols-3')
     const entry = english.host.querySelector('[data-testid="home-entry-analyze-data"]')
+    expect(entry?.className).toContain('w-full')
+    expect(entry?.className).toContain('min-w-0')
     expect(entry?.className).toContain('rounded-2xl')
     expect(entry?.className).toContain('shadow-card')
     expect(entry?.className).not.toContain('border')
-    const longTitle = english.host.querySelector('[data-testid="continue-project-title-long"]')
-    expect(longTitle?.className).toContain('line-clamp-2')
-    expect(longTitle?.textContent).toBe(LONG_TITLE)
-    expect(
-      english.host.querySelector('[data-testid="continue-project-updated-short"]')?.textContent
-    ).toBe('Updated 2h')
-    expect(
-      english.host.querySelector('[data-testid="continue-project-updated-long"]')?.textContent
-    ).toBe('Updated 3d')
-
     const sample = english.host.querySelector<HTMLButtonElement>(
       '[data-testid="open-fictional-sample"]'
     )
@@ -241,72 +192,41 @@ it('renders equal recent-project cards, a show-all toggle, and localized updated
       '[data-testid="start-from-step"]'
     )
     const secondary = english.host.querySelector('[data-testid="home-secondary-actions"]')
+    expect(secondary?.className).toContain('w-full')
     expect(secondary?.contains(sample)).toBe(true)
     expect(secondary?.contains(expander)).toBe(true)
+    expect(sample?.className).toContain('w-full')
     expect(sample?.className).not.toContain('shadow-card')
     expect(expander?.className).not.toContain('shadow-card')
     expect(expander?.className).toContain('w-full')
     expect(sample?.textContent).toContain('No model call and no API key.')
     const disclaimer = english.host.querySelector('[data-testid="research-use-disclaimer"]')
+    expect(disclaimer?.className).toContain('w-full')
     expect(disclaimer?.className).toContain('bg-bg-200')
     expect(disclaimer?.textContent).toContain('Use fictional data only.')
     expect(disclaimer?.textContent).toContain('Do not upload identifiable patient information.')
     expect(english.host.querySelector('[data-testid="prerelease-banner"]')).toBeNull()
     expect(english.host.querySelector('[data-testid="delete-local-copies"]')).toBeNull()
     expect(english.host.querySelector('[data-testid="delete-device-patient-data"]')).toBeNull()
-
-    const toggle = english.host.querySelector<HTMLButtonElement>(
-      '[data-testid="recent-projects-toggle"]'
-    )
-    expect(toggle?.textContent).toBe('Show all projects')
-    expect(toggle?.getAttribute('aria-expanded')).toBe('false')
-    await act(async () => toggle?.click())
-    expect(projectCards(english.host)).toHaveLength(5)
-    expect(toggle?.textContent).toBe('Show fewer')
-    expect(toggle?.getAttribute('aria-expanded')).toBe('true')
-    await act(async () => toggle?.click())
-    expect(english.host.querySelector('[data-testid="continue-project-extra"]')).toBeNull()
-
-    const longCard = english.host.querySelector<HTMLButtonElement>(
-      '[data-testid="continue-project-long"]'
-    )
-    await act(async () => {
-      longCard?.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
-      await vi.advanceTimersByTimeAsync(400)
-    })
-    const tooltip = document.body.querySelector('[data-slot="tooltip-content"]')
-    expect(tooltip?.childNodes[0]?.textContent).toBe(LONG_TITLE)
   } finally {
-    english.host.remove()
     await act(async () => english.root.unmount())
   }
 
   initI18n('ja')
-  const japanese = await renderLaunchpad(vi.fn(), { recentProjects: recentProjectFixtures })
+  const japanese = await renderLaunchpad()
   try {
-    expect(
-      japanese.host.querySelector('[data-testid="continue-project-updated-long"]')?.textContent
-    ).toBe('3日前 に更新されました')
-    expect(
-      japanese.host.querySelector('[data-testid="continue-project-updated-short"]')?.textContent
-    ).toBe('2時間前 に更新されました')
-    expect(japanese.host.querySelector('[data-testid="recent-projects-toggle"]')?.textContent).toBe(
-      'すべてのプロジェクトを表示'
-    )
+    expect(japanese.host.querySelector('[data-testid="continue-project"]')).toBeNull()
+    expect(japanese.host.textContent).not.toContain('プロジェクトを続ける')
     expect(japanese.host.textContent).toContain('モデルは呼ばず、API キーも要りません。')
   } finally {
     await act(async () => japanese.root.unmount())
   }
 
   initI18n('zh-Hans')
-  const simplified = await renderLaunchpad(vi.fn(), { recentProjects: recentProjectFixtures })
+  const simplified = await renderLaunchpad()
   try {
-    expect(
-      simplified.host.querySelector('[data-testid="continue-project-updated-long"]')?.textContent
-    ).toBe('更新于 3 天前')
-    expect(
-      simplified.host.querySelector('[data-testid="recent-projects-toggle"]')?.textContent
-    ).toBe('显示所有项目')
+    expect(simplified.host.querySelector('[data-testid="continue-project"]')).toBeNull()
+    expect(simplified.host.textContent).not.toContain('继续项目')
     expect(simplified.host.textContent).toContain('不调用模型，也不需要 API 密钥。')
     expect(simplified.host.textContent).not.toContain('3日前')
   } finally {
@@ -314,17 +234,10 @@ it('renders equal recent-project cards, a show-all toggle, and localized updated
   }
 
   initI18n('zh-Hant')
-  const traditional = await renderLaunchpad(vi.fn(), { recentProjects: recentProjectFixtures })
+  const traditional = await renderLaunchpad()
   try {
-    expect(
-      traditional.host.querySelector('[data-testid="continue-project-updated-long"]')?.textContent
-    ).toBe('更新於 3 天前')
-    expect(
-      traditional.host.querySelector('[data-testid="continue-project-updated-short"]')?.textContent
-    ).toBe('更新於 2 小時前')
-    expect(
-      traditional.host.querySelector('[data-testid="recent-projects-toggle"]')?.textContent
-    ).toBe('顯示所有專案')
+    expect(traditional.host.querySelector('[data-testid="continue-project"]')).toBeNull()
+    expect(traditional.host.textContent).not.toContain('繼續專案')
     expect(traditional.host.textContent).toContain('不呼叫模型，也不需要 API 金鑰。')
     expect(
       traditional.host.querySelector('[data-testid="research-use-disclaimer"]')?.textContent

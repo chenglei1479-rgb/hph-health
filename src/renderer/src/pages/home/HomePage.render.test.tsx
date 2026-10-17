@@ -1925,9 +1925,12 @@ describe('HomePage recent session ordering', () => {
     expect(container.querySelector('[data-testid="export-statistician-package"]')).toBeNull()
     expect(container.querySelector('[data-testid="delete-local-copies"]')).toBeNull()
     expect(container.querySelector('[data-testid="delete-device-patient-data"]')).toBeNull()
-    expect(
-      container.querySelector('[data-testid="continue-project-project-1"]')?.textContent
-    ).toContain('Research project')
+    expect(container.querySelector('[data-testid="continue-project"]')).toBeNull()
+    expect(container.textContent).not.toContain('Continue a project')
+    expect(container.querySelector('[aria-label="Projects"]')?.textContent).toContain(
+      'Research project'
+    )
+    expect(container.querySelector('[aria-label="Recent sessions"]')).not.toBeNull()
     expect(container.querySelector('[data-testid="open-fictional-sample"]')).not.toBeNull()
     expect(container.textContent).not.toContain('変数定義表')
     expect(container.textContent).not.toContain('執筆時の確認')

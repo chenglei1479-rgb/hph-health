@@ -16,4 +16,4 @@ export const homeCardInteractiveClassName =
   'group flex w-full min-w-0 cursor-pointer flex-col rounded-2xl bg-bg-000 p-4 text-left shadow-card transition-colors hover:bg-bg-200 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-bg-000'
 
 export const homeIconTileClassName =
-  'inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-bg-200 text-text-100'
+  'inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-bg-200 text-primary'

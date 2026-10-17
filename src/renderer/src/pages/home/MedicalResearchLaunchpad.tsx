@@ -13,10 +13,8 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { relativeTimeParts, type RelativeTimeUnit } from '@/lib/format-relative-time'
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   homeBodyClassName,
   homeCardClassName,
@@ -50,33 +48,8 @@ type WorkflowCard = {
   icon: LucideIcon
 }
 
-export type RecentHomeProject = {
-  id: string
-  name: string
-  /** Epoch milliseconds of the latest project or session activity. */
-  updatedAt?: number
-}
-
-const RECENT_PROJECT_PREVIEW_COUNT = 4
-
-// Same compact buckets as the home session rows ("3d" / "3 天前"). The unit is a runtime value, so
-// it maps to English text rather than being interpolated into a key.
-const COMPACT_ELAPSED = {
-  minute: '{{count}}m',
-  hour: '{{count}}h',
-  day: '{{count}}d',
-  week: '{{count}}w',
-  month: '{{count}}mo',
-  year: '{{count}}y'
-} as const satisfies Record<Exclude<RelativeTimeUnit, 'now'>, string>
-
-const recentProjectCardClassName =
-  'flex h-24 w-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl bg-bg-000 px-4 py-3 text-left shadow-card transition-colors hover:bg-bg-200 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
-
 type MedicalResearchLaunchpadProps = {
   onSelectWorkflow: (workflow: MedicalResearchWorkflow, theme: string) => void
-  recentProjects?: readonly RecentHomeProject[]
-  onOpenProject?: (projectId: string) => void
 }
 
 const ENTRY_ICONS: Record<HomePrimaryEntryId, LucideIcon> = {
@@ -86,15 +59,12 @@ const ENTRY_ICONS: Record<HomePrimaryEntryId, LucideIcon> = {
 }
 
 const MedicalResearchLaunchpad = ({
-  onSelectWorkflow,
-  recentProjects = [],
-  onOpenProject = () => undefined
+  onSelectWorkflow
 }: MedicalResearchLaunchpadProps): React.JSX.Element => {
   const { t } = useTranslation()
   const [researchTheme, setResearchTheme] = useState('')
   const [sampleOpen, setSampleOpen] = useState(false)
   const [stepsOpen, setStepsOpen] = useState(false)
-  const [showAllProjects, setShowAllProjects] = useState(false)
   const deliveryLedger = usePackDeliveryLedger()
   const exampleTheme = t(
     'I want to study the treatment effect of immune checkpoint inhibitors in patients with lung cancer.'
@@ -148,16 +118,6 @@ const MedicalResearchLaunchpad = ({
     }
   ]
   const themeReady = researchTheme.trim().length > 0
-  const formatUpdated = (timestamp: number): string => {
-    const { unit, count } = relativeTimeParts(timestamp)
-    const time = unit === 'now' ? t('now') : t(COMPACT_ELAPSED[unit], { count, context: 'ago' })
-    return t('Updated {{time}}', { time })
-  }
-  const hasMoreProjects = recentProjects.length > RECENT_PROJECT_PREVIEW_COUNT
-  const visibleProjects =
-    showAllProjects || !hasMoreProjects
-      ? recentProjects
-      : recentProjects.slice(0, RECENT_PROJECT_PREVIEW_COUNT)
 
   return (
     <section
@@ -199,7 +159,7 @@ const MedicalResearchLaunchpad = ({
             <button
               type="button"
               onClick={() => setResearchTheme(exampleTheme)}
-              className="cursor-pointer text-left font-medium text-text-100 underline decoration-border-200 underline-offset-2 hover:text-text-000 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="cursor-pointer text-left font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:text-primary/80 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             >
               {exampleTheme}
             </button>
@@ -243,7 +203,7 @@ const MedicalResearchLaunchpad = ({
                     <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
                   </span>
                   <ArrowUpRight
-                    className="mt-1 size-4 text-text-300 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-text-100"
+                    className="mt-1 size-4 text-primary/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
                     strokeWidth={1.8}
                     aria-hidden="true"
                   />
@@ -271,70 +231,6 @@ const MedicalResearchLaunchpad = ({
             )
           )}
         </div>
-        <section
-          data-testid="continue-project"
-          aria-label={t('Continue a project')}
-          className="flex w-full min-w-0 flex-col gap-4"
-        >
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className={cn(homeTitleClassName, 'min-w-0')}>{t('Continue a project')}</h2>
-            {hasMoreProjects ? (
-              <button
-                type="button"
-                data-testid="recent-projects-toggle"
-                aria-expanded={showAllProjects}
-                aria-controls="continue-project-grid"
-                onClick={() => setShowAllProjects((open) => !open)}
-                className="shrink-0 cursor-pointer rounded-lg text-sm font-medium leading-5 text-text-100 underline-offset-2 hover:text-text-000 hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                {showAllProjects ? t('Show fewer') : t('Show all projects')}
-              </button>
-            ) : null}
-          </div>
-          {visibleProjects.length === 0 ? (
-            <p className={homeMutedClassName}>{t('No recent projects yet.')}</p>
-          ) : (
-            <TooltipProvider delayDuration={300}>
-              <div
-                id="continue-project-grid"
-                data-testid="continue-project-grid"
-                className="grid w-full grid-cols-1 items-stretch gap-4 sm:grid-cols-2"
-              >
-                {visibleProjects.map((project) => (
-                  <Tooltip key={project.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        data-testid={`continue-project-${project.id}`}
-                        onClick={() => onOpenProject(project.id)}
-                        className={recentProjectCardClassName}
-                      >
-                        <span
-                          data-testid={`continue-project-title-${project.id}`}
-                          className={cn(
-                            homeBodyClassName,
-                            'line-clamp-2 break-words [overflow-wrap:anywhere]'
-                          )}
-                        >
-                          {project.name}
-                        </span>
-                        {project.updatedAt !== undefined && Number.isFinite(project.updatedAt) ? (
-                          <span
-                            data-testid={`continue-project-updated-${project.id}`}
-                            className={cn(homeMutedClassName, 'mt-auto truncate pt-2')}
-                          >
-                            {formatUpdated(project.updatedAt)}
-                          </span>
-                        ) : null}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>{project.name}</TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            </TooltipProvider>
-          )}
-        </section>
         {deliveryLedger.lastCompletionId && !deliveryLedger.homeCardDismissed ? (
           <PackNextStepCard
             completionId={deliveryLedger.lastCompletionId}
@@ -360,7 +256,7 @@ const MedicalResearchLaunchpad = ({
           <span
             className={cn(
               homeBodyClassName,
-              'text-text-100 underline-offset-2 group-hover:underline'
+              'text-primary underline-offset-2 group-hover:underline'
             )}
           >
             {t('Fictional sample abstract')}
@@ -375,11 +271,11 @@ const MedicalResearchLaunchpad = ({
           aria-expanded={stepsOpen}
           aria-controls="research-step-entries"
           onClick={() => setStepsOpen((open) => !open)}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-lg py-2 text-left text-sm font-medium leading-5 text-text-100 hover:bg-bg-200 hover:text-text-000 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="flex w-full cursor-pointer items-center gap-2 rounded-lg py-2 text-left text-sm font-medium leading-5 text-primary hover:bg-bg-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           <ChevronDown
             className={cn(
-              'size-4 shrink-0 text-text-300 transition-transform',
+              'size-4 shrink-0 text-primary transition-transform',
               stepsOpen && 'rotate-180'
             )}
             strokeWidth={1.8}
@@ -419,7 +315,7 @@ const MedicalResearchLaunchpad = ({
                     <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
                   </span>
                   <ArrowUpRight
-                    className="mt-1 size-4 text-text-300 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-text-100"
+                    className="mt-1 size-4 text-primary/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
                     strokeWidth={1.8}
                     aria-hidden="true"
                   />

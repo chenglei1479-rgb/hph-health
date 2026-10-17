@@ -490,15 +490,6 @@ const HomePage = ({
     persistedSessions
   ])
 
-  const recentHomeProjects = useMemo(
-    () =>
-      projectSummaries.map(({ project: recentProject, lastActivityAt }) => ({
-        id: recentProject.id,
-        name: recentProject.name,
-        updatedAt: lastActivityAt
-      })),
-    [projectSummaries]
-  )
   const recentSessions = useRecentSessions(
     persistedSessions,
     isProjectsLoaded && !loadError && hasCompleteSessionCatalog
@@ -921,7 +912,7 @@ const HomePage = ({
                   }}
                 >
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="lg"
                     className="gap-2 px-3"
                     onClick={() => openCreateDialog()}
@@ -937,11 +928,7 @@ const HomePage = ({
           </header>
           <PackageOperationIndicator />
 
-          <MedicalResearchLaunchpad
-            onSelectWorkflow={selectMedicalWorkflow}
-            recentProjects={recentHomeProjects}
-            onOpenProject={(projectId) => openProject(projectId, 'user')}
-          />
+          <MedicalResearchLaunchpad onSelectWorkflow={selectMedicalWorkflow} />
           <EthicsWritingNotice open={ethicsReminderOpen} />
 
           {sessionUpdates.length > 0 ? (
@@ -1105,7 +1092,7 @@ const HomePage = ({
             >
               <h2 className={sectionHeadingClassName}>
                 <GalleryVerticalEnd
-                  className="size-4 text-text-300"
+                  className="size-4 text-primary"
                   strokeWidth={2}
                   aria-hidden="true"
                 />
@@ -1144,7 +1131,7 @@ const HomePage = ({
                   </p>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     size="sm"
                     className="mt-5 h-auto min-h-8 max-w-full gap-1.5 rounded-md px-3 py-1.5 text-xs whitespace-normal"
                     onClick={openCreateDialog}
@@ -1344,7 +1331,7 @@ const HomePage = ({
               aria-label={t('Recent sessions')}
             >
               <h2 className={sectionHeadingClassName}>
-                <Clock className="size-4 text-text-300" strokeWidth={2} aria-hidden="true" />
+                <Clock className="size-4 text-primary" strokeWidth={2} aria-hidden="true" />
                 {t('Recent sessions')}
               </h2>
               {recentSessions.length === 0 ? (
