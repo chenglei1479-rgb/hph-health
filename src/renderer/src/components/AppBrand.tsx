@@ -1,4 +1,5 @@
 import { APP } from '../../../shared/app-config'
+import { PRODUCT_WORDMARK } from '../../../shared/product-identity'
 import { cn } from '@/lib/utils'
 import { AppLogo } from './AppLogo'
 
@@ -17,7 +18,7 @@ export const AppBrand = ({
     <span className={cn('dra-app-brand', className)} aria-label={productName}>
       {showLogo ? <AppLogo className="dra-app-brand-logo" /> : null}
       <span className="dra-app-brand-name" aria-hidden="true">
-        {showLogo ? 'baselio' : productName}
+        {showLogo ? PRODUCT_WORDMARK : productName}
       </span>
     </span>
   )
