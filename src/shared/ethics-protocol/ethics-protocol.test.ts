@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { assessR8Applicability, validateNotApplicable } from './applicability'
+import {
+  assessConditionalR8Items,
+  assessR8Applicability,
+  validateNotApplicable
+} from './applicability'
 import {
   evaluateCompleteness,
   hasMeaningfulTemplateContent,
@@ -57,6 +61,35 @@ describe('R8 applicability', () => {
     expect(validateNotApplicable(conditional, '緊急状況下の研究ではないため')).toEqual({
       valid: true
     })
+  })
+
+  it('treats minor invasion as requiring items 20 and 21', () => {
+    const confirmed = {
+      value: 'minor-invasion' as const,
+      quote: '研究目的で少量の採血を行う。',
+      confirmedBy: 'researcher-1',
+      confirmedAt: '2026-10-17T10:00:00+09:00'
+    }
+    const results = assessConditionalR8Items({ nodes: { Q1a_侵襲: confirmed }, checklist: {} })
+    expect(results.filter(({ item }) => item === 20 || item === 21)).toEqual([
+      expect.objectContaining({ item: 20, applicability: 'required' }),
+      expect.objectContaining({ item: 21, applicability: 'required' })
+    ])
+  })
+
+  it('keeps every unanswered explicit checklist item pending', () => {
+    const results = assessConditionalR8Items({ nodes: {}, checklist: {} })
+    for (const number of [18, 19, 22, 23, 24]) {
+      expect(results.find(({ item }) => item === number)?.applicability).toBe('needs-review')
+    }
+  })
+
+  it('does not allow an unconfirmed node answer to determine applicability', () => {
+    const results = assessConditionalR8Items({
+      nodes: { Q1b_介入: { value: 'yes', quote: '割付を行う。' } },
+      checklist: {}
+    })
+    expect(results.find(({ item }) => item === 25)?.applicability).toBe('needs-review')
   })
 })
 
