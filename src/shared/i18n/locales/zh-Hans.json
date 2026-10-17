@@ -3744,7 +3744,7 @@
     "Context compaction failed": "上下文压缩失败",
     "This ready profile is only a candidate until you choose Use WSL2 Bash.": "此就绪配置仍是候选项，选择“使用 WSL2 Bash”后才会启用。",
     "Pause analysis": "暂停分析",
-    "Missing": "空缺",
+    "Missing": "缺失",
     "This will permanently delete \"{{title}}\". Imported files will be checked for cleanup the next time DRA starts. The entire package is kept if other research references it or references cannot be verified. Exported .science files are not deleted. This action cannot be undone.": "这将永久删除“{{title}}”。DRA 下次启动时会检查是否可以清理导入的文件。如果其他研究引用了这些文件，或无法核实引用情况，将保留整个导入包。已导出的 .science 文件不会被删除。此操作无法撤销。",
     "Based on an earlier immutable version.": "基于较早的不可变版本。",
     "Available after annotations are loaded and saved.": "标注加载并保存后可用。",
@@ -7513,7 +7513,6 @@
     "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "仅用于学术研究，不用于诊断或治疗。请仅使用虚构数据。请勿上传可识别患者身份的信息。研究者须核实来源、方法与输出内容。",
     "Research protocol checklist": "研究计划书检查清单",
     "Your institution’s form and ethics committee requirements take priority.": "所属机构的格式和伦理审查委员会要求优先",
-    "I don’t know": "不知道",
     "Not applicable": "不适用",
     "Reason it does not apply": "不适用理由",
     "Enter a reason.": "请填写理由",
@@ -7545,6 +7544,10 @@
     "Future research use and provision to other institutions": "未来研究及向其他机构提供",
     "Monitoring and auditing": "监查和审计",
     "Import institutional DOCX form": "导入所属机构的 DOCX 格式",
-    "Download incomplete DOCX draft": "下载未完成的 DOCX 草稿"
+    "Download incomplete DOCX draft": "下载未完成的 DOCX 草稿",
+    "Ethics checklist: yes": "是",
+    "Ethics checklist: no": "否",
+    "Ethics checklist: unknown": "不知道",
+    "Ethics checklist: missing": "未填写"
   }
 }

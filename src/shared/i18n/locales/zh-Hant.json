@@ -1219,7 +1219,7 @@
     "The selected permission changed before it could be revoked.": "所選權限在撤銷前已發生變更。",
     "Main model": "主模型",
     "Analysis": "分析",
-    "No": "No",
+    "No": "否",
     "Artifact suggestions": "Artifact 建議",
     "There are not enough comparable results for this criterion.": "沒有足夠的可比較結果來判斷此條件。",
     "Membership": "會員",
@@ -3744,7 +3744,7 @@
     "Context compaction failed": "內文壓縮失敗",
     "This ready profile is only a candidate until you choose Use WSL2 Bash.": "此就緒設定仍是候選項，選擇「使用 WSL2 Bash」後才會啟用。",
     "Pause analysis": "暫停分析",
-    "Missing": "Missing",
+    "Missing": "缺失",
     "This will permanently delete \"{{title}}\". Imported files will be checked for cleanup the next time DRA starts. The entire package is kept if other research references it or references cannot be verified. Exported .science files are not deleted. This action cannot be undone.": "這將永久刪除「{{title}}」。DRA 下次啟動時會檢查是否可以清理匯入的檔案。如果其他研究引用了這些檔案，或無法核實引用情況，將保留整個匯入套件。已匯出的 .science 檔案不會被刪除。此操作無法復原。",
     "Based on an earlier immutable version.": "基於較早的不可變版本。",
     "Available after annotations are loaded and saved.": "標註載入並儲存後可用。",
@@ -7318,7 +7318,7 @@
     "The translated PDF could not be prepared. Read the translated text in the sidebar.": "無法產生譯文 PDF。您仍可在側欄閱讀文字譯文。",
     "Configuration diagnostics": "設定診斷",
     "Review private data before sharing.": "分享前檢查隱私資料。",
-    "Yes": "Yes",
+    "Yes": "是",
     "Downloads a self-contained Codex ACP runtime — no Node.js or npm required.": "下載自帶執行環境的 Codex ACP 執行時 —— 無需 Node.js 或 npm。",
     "Add a public GitHub repository that follows the Specialist Marketplace protocol.": "新增遵循 Specialist Marketplace protocol 的公開 GitHub 儲存庫。",
     "Check failed": "檢查失敗",
@@ -7513,7 +7513,6 @@
     "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "僅供學術研究，不用於診斷或治療。請僅使用虛構資料。請勿上傳可識別患者身分的資訊。研究者須核實來源、方法與輸出內容。",
     "Research protocol checklist": "Research protocol checklist",
     "Your institution’s form and ethics committee requirements take priority.": "Your institution’s form and ethics committee requirements take priority.",
-    "I don’t know": "I don’t know",
     "Not applicable": "Not applicable",
     "Reason it does not apply": "Reason it does not apply",
     "Enter a reason.": "Enter a reason.",
@@ -7545,6 +7544,10 @@
     "Future research use and provision to other institutions": "Future research use and provision to other institutions",
     "Monitoring and auditing": "Monitoring and auditing",
     "Import institutional DOCX form": "Import institutional DOCX form",
-    "Download incomplete DOCX draft": "Download incomplete DOCX draft"
+    "Download incomplete DOCX draft": "Download incomplete DOCX draft",
+    "Ethics checklist: yes": "是",
+    "Ethics checklist: no": "否",
+    "Ethics checklist: unknown": "不知道",
+    "Ethics checklist: missing": "未填寫"
   }
 }

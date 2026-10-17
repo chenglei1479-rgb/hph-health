@@ -1281,7 +1281,7 @@
     "The selected permission changed before it could be revoked.": "L'autorisation sélectionnée a été modifiée avant de pouvoir être révoquée.",
     "Main model": "Modèle principal",
     "Analysis": "Analyse",
-    "No": "No",
+    "No": "Non",
     "Artifact suggestions": "Suggestions d'artefacts",
     "There are not enough comparable results for this criterion.": "Il n’y a pas assez de résultats comparables pour ce critère.",
     "Membership": "Abonnement",
@@ -3916,7 +3916,7 @@
     "Context compaction failed": "Échec du compactage du contexte",
     "This ready profile is only a candidate until you choose Use WSL2 Bash.": "Ce profil prêt reste un candidat tant que vous ne choisissez pas Utiliser Bash WSL2.",
     "Pause analysis": "Mettre l’analyse en pause",
-    "Missing": "Missing",
+    "Missing": "Manquant",
     "This will permanently delete \"{{title}}\". Imported files will be checked for cleanup the next time DRA starts. The entire package is kept if other research references it or references cannot be verified. Exported .science files are not deleted. This action cannot be undone.": "« {{title}} » sera supprimé définitivement. Au prochain démarrage d’DRA, les fichiers importés seront examinés pour déterminer s’ils peuvent être supprimés. Le paquet entier sera conservé si d’autres recherches y font référence ou si les références ne peuvent pas être vérifiées. Les fichiers .science exportés ne seront pas supprimés. Cette action est irréversible.",
     "Based on an earlier immutable version.": "À partir d’une version immuable antérieure.",
     "Available after annotations are loaded and saved.": "Disponible après le chargement et l’enregistrement des annotations.",
@@ -7641,7 +7641,7 @@
     "The translated PDF could not be prepared. Read the translated text in the sidebar.": "Le PDF traduit n’a pas pu être préparé. Vous pouvez lire la traduction du texte dans la barre latérale.",
     "Configuration diagnostics": "Diagnostic de configuration",
     "Review private data before sharing.": "Vérifiez les données privées avant le partage.",
-    "Yes": "Yes",
+    "Yes": "Oui",
     "Downloads a self-contained Codex ACP runtime — no Node.js or npm required.": "Télécharge un environnement d'exécution Codex ACP autonome — aucun Node.js ni npm requis.",
     "Add a public GitHub repository that follows the Specialist Marketplace protocol.": "Ajoutez un dépôt GitHub public conforme au Specialist Marketplace protocol.",
     "Check failed": "La vérification a échoué",
@@ -7841,7 +7841,6 @@
     "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Réservé à la recherche académique, sans usage diagnostique ou thérapeutique. Utilisez uniquement des données fictives. Ne téléversez pas de données permettant d’identifier un patient. Les chercheurs doivent vérifier les sources, méthodes et résultats.",
     "Research protocol checklist": "Research protocol checklist",
     "Your institution’s form and ethics committee requirements take priority.": "Your institution’s form and ethics committee requirements take priority.",
-    "I don’t know": "I don’t know",
     "Not applicable": "Not applicable",
     "Reason it does not apply": "Reason it does not apply",
     "Enter a reason.": "Enter a reason.",
@@ -7873,6 +7872,10 @@
     "Future research use and provision to other institutions": "Future research use and provision to other institutions",
     "Monitoring and auditing": "Monitoring and auditing",
     "Import institutional DOCX form": "Import institutional DOCX form",
-    "Download incomplete DOCX draft": "Download incomplete DOCX draft"
+    "Download incomplete DOCX draft": "Download incomplete DOCX draft",
+    "Ethics checklist: yes": "Oui",
+    "Ethics checklist: no": "Non",
+    "Ethics checklist: unknown": "Je ne sais pas",
+    "Ethics checklist: missing": "Non renseigné"
   }
 }

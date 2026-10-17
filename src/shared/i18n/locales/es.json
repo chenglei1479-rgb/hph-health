@@ -3916,7 +3916,7 @@
     "Context compaction failed": "Falló la compactación del contexto",
     "This ready profile is only a candidate until you choose Use WSL2 Bash.": "Este perfil preparado es solo un candidato hasta que seleccione Usar Bash de WSL2.",
     "Pause analysis": "Pausar análisis",
-    "Missing": "Missing",
+    "Missing": "Falta",
     "This will permanently delete \"{{title}}\". Imported files will be checked for cleanup the next time DRA starts. The entire package is kept if other research references it or references cannot be verified. Exported .science files are not deleted. This action cannot be undone.": "Se eliminará permanentemente «{{title}}». La próxima vez que se inicie DRA, se comprobará si es posible eliminar los archivos importados. Se conservará el paquete completo si otras investigaciones hacen referencia a él o si no se pueden verificar las referencias. Los archivos .science exportados no se eliminarán. Esta acción no se puede deshacer.",
     "Based on an earlier immutable version.": "Basado en una versión inmutable anterior.",
     "Available after annotations are loaded and saved.": "Disponible después de cargar y guardar las anotaciones.",
@@ -7641,7 +7641,7 @@
     "The translated PDF could not be prepared. Read the translated text in the sidebar.": "No se pudo preparar el PDF traducido. Puede leer la traducción del texto en la barra lateral.",
     "Configuration diagnostics": "Diagnóstico de configuración",
     "Review private data before sharing.": "Revisar los datos privados antes de compartir.",
-    "Yes": "Yes",
+    "Yes": "Sí",
     "Downloads a self-contained Codex ACP runtime — no Node.js or npm required.": "Descarga un entorno de ejecución autocontenido de Codex ACP; no requiere Node.js ni npm.",
     "Add a public GitHub repository that follows the Specialist Marketplace protocol.": "Agregue un repositorio público de GitHub compatible con Specialist Marketplace protocol.",
     "Check failed": "La verificación falló",
@@ -7841,7 +7841,6 @@
     "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Solo para investigación académica; no para diagnóstico ni tratamiento. Utilice solo datos ficticios. No cargue información que identifique a pacientes. Los investigadores deben verificar fuentes, métodos y resultados.",
     "Research protocol checklist": "Research protocol checklist",
     "Your institution’s form and ethics committee requirements take priority.": "Your institution’s form and ethics committee requirements take priority.",
-    "I don’t know": "I don’t know",
     "Not applicable": "Not applicable",
     "Reason it does not apply": "Reason it does not apply",
     "Enter a reason.": "Enter a reason.",
@@ -7873,6 +7872,10 @@
     "Future research use and provision to other institutions": "Future research use and provision to other institutions",
     "Monitoring and auditing": "Monitoring and auditing",
     "Import institutional DOCX form": "Import institutional DOCX form",
-    "Download incomplete DOCX draft": "Download incomplete DOCX draft"
+    "Download incomplete DOCX draft": "Download incomplete DOCX draft",
+    "Ethics checklist: yes": "Sí",
+    "Ethics checklist: no": "No",
+    "Ethics checklist: unknown": "No se sabe",
+    "Ethics checklist: missing": "Sin completar"
   }
 }

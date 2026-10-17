@@ -3744,7 +3744,7 @@
     "Context compaction failed": "コンテキストの圧縮に失敗しました",
     "This ready profile is only a candidate until you choose Use WSL2 Bash.": "この準備済みプロファイルは、「WSL2 Bash を使用」を選択するまで候補のままです。",
     "Pause analysis": "分析を一時停止",
-    "Missing": "空缺",
+    "Missing": "不足",
     "This will permanently delete \"{{title}}\". Imported files will be checked for cleanup the next time DRA starts. The entire package is kept if other research references it or references cannot be verified. Exported .science files are not deleted. This action cannot be undone.": "「{{title}}」を完全に削除します。次回の DRA 起動時に、インポートしたファイルを削除できるか確認します。他の研究から参照されている場合や、参照を確認できない場合は、パッケージ全体を保持します。エクスポート済みの .science ファイルは削除されません。この操作は取り消せません。",
     "Based on an earlier immutable version.": "以前の不変のバージョンに基づいています。",
     "Available after annotations are loaded and saved.": "注釈の読み込みと保存が完了すると利用できます。",
@@ -7513,7 +7513,6 @@
     "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "学術研究専用です。診断や治療には使用しないでください。架空データのみを使用してください。患者を特定できる情報をアップロードしないでください。情報源、方法、出力は研究者が確認してください。",
     "Research protocol checklist": "研究計画書チェックリスト",
     "Your institution’s form and ethics committee requirements take priority.": "所属機関の書式と倫理審査委員会の要求が優先されます",
-    "I don’t know": "わからない",
     "Not applicable": "該当なし",
     "Reason it does not apply": "該当しない理由",
     "Enter a reason.": "理由を入力してください",
@@ -7545,6 +7544,10 @@
     "Future research use and provision to other institutions": "将来の研究・他機関提供",
     "Monitoring and auditing": "モニタリング及び監査",
     "Import institutional DOCX form": "所属機関の DOCX 書式を取り込む",
-    "Download incomplete DOCX draft": "未完成の DOCX 草案をダウンロード"
+    "Download incomplete DOCX draft": "未完成の DOCX 草案をダウンロード",
+    "Ethics checklist: yes": "はい",
+    "Ethics checklist: no": "いいえ",
+    "Ethics checklist: unknown": "わからない",
+    "Ethics checklist: missing": "未記入"
   }
 }
