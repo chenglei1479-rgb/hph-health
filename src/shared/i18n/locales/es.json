@@ -6777,7 +6777,7 @@
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "Se almacena cifrada en este equipo. Los valores secretos nunca se devuelven a la interfaz.",
     "References: {{count}} / {{limit}}; package: {{size}} / {{total}}_one": "Referencias: {{count}} / {{limit}}; paquete: {{size}} / {{total}}",
     "Beaker": "Vaso de precipitados",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "Para la conversación previa a la revisión ética: la pregunta de investigación, el diseño y lo que debe confirmar con el tutor. No se exige un número de aprobación. Tras la aprobación ética, use el material de auditoría de datos y consulta estadística si la conversación necesita una tabla.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "Para la conversación previa a la revisión ética: la pregunta de investigación, el diseño y lo que debe confirmar con el tutor. No se exige un número de aprobación. Para el análisis de datos, comience desde «Analizar sus propios datos».",
     "Retrieve disease models associated with an Alliance gene.": "Obtener modelos de enfermedades asociados a un gen de Alliance.",
     "Saved credential unavailable": "Credencial guardada no disponible",
     "No references in this group.": "No hay referencias en este grupo.",
@@ -7827,7 +7827,7 @@
     "Prepare a conference abstract or paper": "Preparar un resumen de congreso o un artículo",
     "Delete patient data on this device": "Eliminar los datos de pacientes en este equipo",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}} eliminará los datos que almacena. Al desechar o transferir este equipo, siga el procedimiento de su institución.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "Los archivos de origen importados, como los libros de Excel, no los elimina {{productName}}.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "Los archivos de origen importados, como los libros de Excel, no los elimina {{productName}}. Elimínelos usted mismo según el método del protocolo de investigación.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "Antes de eliminar, compruebe el período y el lugar de conservación establecidos en el protocolo de investigación.",
     "Before deleting, export code and result tables that contain no patient data.": "Antes de eliminar, exporte el código y las tablas de resultados que no contienen datos de pacientes.",
     "Confirm the patient data that will be deleted": "Confirme los datos de pacientes que se eliminarán",
@@ -7838,6 +7838,10 @@
     "Patient data stored for this project on this device was deleted.": "Se eliminaron los datos de pacientes de este proyecto guardados en este equipo.",
     "Could not delete patient data for this project on this device. Try again.": "No se pudieron eliminar los datos de pacientes de este proyecto en este equipo. Inténtelo de nuevo.",
     "Deleting patient data on this device…": "Eliminando los datos de pacientes en este equipo…",
-    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Solo para investigación académica; no para diagnóstico ni tratamiento. Utilice solo datos ficticios. No cargue información que identifique a pacientes. Los investigadores deben verificar fuentes, métodos y resultados."
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Solo para investigación académica; no para diagnóstico ni tratamiento. Utilice solo datos ficticios. No cargue información que identifique a pacientes. Los investigadores deben verificar fuentes, métodos y resultados.",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "Para una columna que usted seleccione, se envían como máximo {{limit}} valores de categoría, primero los más frecuentes. El resto se muestra como {{omission}}.",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "Los resultados del análisis se comprueban mediante enmascaramiento antes de enviarlos, y no se envían las salidas que contienen filas individuales.",
+    "Details_privacy": "Detalles",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Los datos de pacientes se analizan en su equipo. De forma predeterminada, el servicio de IA recibe los nombres de columna, los tipos de datos, el número de filas, muestras sintéticas, los valores de categoría de las columnas que usted seleccione y los resultados agregados del análisis. No se envían identificadores directos como nombres o números de historia clínica."
   }
 }

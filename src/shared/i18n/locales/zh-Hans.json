@@ -6304,7 +6304,7 @@
     "Live AI outcomes. Manual decisions still determine collection membership.": "实时 AI 判定。合集是否收录仍以人工决定为准。",
     "Continue setup": "继续设置",
     "Compare with source version": "与源版本比较",
-    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "此交付包的终点是学会摘要或短篇英文草稿。长论文请从「论文撰写」或「英文学术写作」继续。撰写前会核对伦理审查批准号。未填写时仅提醒，不会阻止撰写。",
+    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "此交付包的终点是学会摘要或短篇英文草稿。长论文请从「论文撰写」或「英语论文撰写」继续。撰写前会核对伦理审查批准号。未填写时仅提醒，不会阻止撰写。",
     "Port": "端口",
     "Pages {{start}}–{{end}}": "第 {{start}}–{{end}} 页",
     "Not evaluated": "尚未评估",
@@ -6484,7 +6484,7 @@
     "Could not save conversation Skill import preference. Try again.": "无法保存对话技能导入设置。请重试。",
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "在此计算机上加密存储。密钥值绝不会返回到界面。",
     "Beaker": "烧杯",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "用于伦理审查前的开题沟通：研究问题、设计和下次要向指导医师确认的事项。不强制填写批准号。伦理通过后若要带着表咨询，请使用「数据审计与统计咨询包」。",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "用于伦理审查前的开题沟通：研究问题、设计和下次要向指导医师确认的事项。不强制填写批准号。数据分析请从「分析自己的数据」开始。",
     "Retrieve disease models associated with an Alliance gene.": "获取与 Alliance 基因相关的疾病模型。",
     "Saved credential unavailable": "保存的凭据不可用",
     "No references in this group.": "此分组没有题录。",
@@ -7499,7 +7499,7 @@
     "Prepare a conference abstract or paper": "准备学会摘要或论文",
     "Delete patient data on this device": "删除此设备上的患者数据",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "将删除 {{productName}} 内的数据。废弃或转让此设备时，请遵循所属机构的流程。",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "导入来源的原始文件（Excel 等）不会被 {{productName}} 删除。",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "导入来源的原始文件（Excel 等）不会被 {{productName}} 删除。请您按照研究计划书的方法自行删除。",
     "Check the retention period and storage location specified in the research protocol before you delete.": "请先确认研究计划书规定的保存期限和保存地点，然后再删除。",
     "Before deleting, export code and result tables that contain no patient data.": "删除前，请导出不含患者数据的代码和结果表。",
     "Confirm the patient data that will be deleted": "确认将删除的患者数据",
@@ -7510,6 +7510,10 @@
     "Patient data stored for this project on this device was deleted.": "已删除此项目在此设备上保存的患者数据。",
     "Could not delete patient data for this project on this device. Try again.": "无法删除此项目在此设备上的患者数据。请重试。",
     "Deleting patient data on this device…": "正在删除此设备上的患者数据…",
-    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "仅用于学术研究，不用于诊断或治疗。请仅使用虚构数据。请勿上传可识别患者身份的信息。研究者须核实来源、方法与输出内容。"
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "仅用于学术研究，不用于诊断或治疗。请仅使用虚构数据。请勿上传可识别患者身份的信息。研究者须核实来源、方法与输出内容。",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "对于您选定的列，最多发送 {{limit}} 个分类值，按出现次数从多到少。其余显示为 {{omission}}。",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "分析结果在发送前会做脱敏检查，含单个病例行的输出不会发送。",
+    "Details_privacy": "详细",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者数据在您的电脑上分析。默认向 AI 服务发送列名、数据类型、行数、合成样例、您选定的列的分类值，以及分析的汇总结果。姓名、病历号等直接标识符不会发送。"
   }
 }

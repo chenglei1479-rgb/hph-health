@@ -148,6 +148,7 @@ const CONTEXT_SUFFIXES = new Set([
   'files',
   'inUse',
   'language',
+  'privacy',
   'runtime',
   'specialists',
   'step',

@@ -6483,7 +6483,7 @@
     "Could not save conversation Skill import preference. Try again.": "대화 스킬 가져오기 설정을 저장할 수 없습니다. 다시 시도하세요.",
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "이 컴퓨터에 암호화되어 저장됩니다. 비밀 값은 인터페이스로 반환되지 않습니다.",
     "Beaker": "비커",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "윤리 심사 전 연구 주제 논의를 위한 자료입니다. 연구 질문, 설계, 다음에 지도교수에게 확인할 점까지입니다. 승인 번호는 필수가 아닙니다. 윤리 승인 후 표를 가지고 상담할 때는 「데이터 점검 및 통계 상담 자료」를 사용하세요.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "윤리 심사 전 연구 주제 논의를 위한 자료입니다. 연구 질문, 설계, 다음에 지도교수에게 확인할 점까지입니다. 승인 번호는 필수가 아닙니다. 데이터 분석은 「자신의 데이터 분석하기」에서 시작하세요.",
     "Retrieve disease models associated with an Alliance gene.": "Alliance 유전자와 관련된 질병 모델을 가져옵니다.",
     "Saved credential unavailable": "저장된 자격 증명을 사용할 수 없음",
     "No references in this group.": "이 그룹에 문헌이 없습니다.",
@@ -7497,7 +7497,7 @@
     "Prepare a conference abstract or paper": "학회 초록 또는 논문 준비하기",
     "Delete patient data on this device": "이 기기의 환자 데이터 삭제",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}}에 저장된 데이터를 삭제합니다. 기기를 폐기하거나 양도할 때는 소속 기관의 절차를 따르십시오.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "가져온 원본 파일(Excel 등)은 {{productName}}에서 삭제하지 않습니다.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "가져온 원본 파일(Excel 등)은 {{productName}}에서 삭제하지 않습니다. 연구 계획서의 방법에 따라 직접 삭제하세요.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "삭제하기 전에 연구계획서에 정해진 보관 기간과 보관 장소를 확인하세요.",
     "Before deleting, export code and result tables that contain no patient data.": "삭제하기 전에 환자 데이터가 없는 코드와 결과표를 내보내십시오.",
     "Confirm the patient data that will be deleted": "삭제할 환자 데이터를 확인",
@@ -7508,6 +7508,10 @@
     "Patient data stored for this project on this device was deleted.": "이 기기에 저장된 이 프로젝트의 환자 데이터를 삭제했습니다.",
     "Could not delete patient data for this project on this device. Try again.": "이 기기의 이 프로젝트 환자 데이터를 삭제하지 못했습니다. 다시 시도하세요.",
     "Deleting patient data on this device…": "이 기기의 환자 데이터를 삭제하는 중…",
-    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "학술 연구 전용이며 진단이나 치료 목적이 아닙니다. 가상 데이터만 사용하세요. 환자 식별 정보를 업로드하지 마세요. 연구자는 출처, 방법, 결과를 검증해야 합니다."
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "학술 연구 전용이며 진단이나 치료 목적이 아닙니다. 가상 데이터만 사용하세요. 환자 식별 정보를 업로드하지 마세요. 연구자는 출처, 방법, 결과를 검증해야 합니다.",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "선택한 열의 범주 값은 많은 순으로 최대 {{limit}}개만 보냅니다. 나머지는 {{omission}}으로 표시합니다.",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "분석 결과는 보내기 전에 마스킹 검사를 하며, 개별 행이 포함된 출력은 보내지 않습니다.",
+    "Details_privacy": "자세히",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "환자 데이터는 사용 중인 컴퓨터에서 분석합니다. AI 서비스에는 기본적으로 열 이름, 데이터 유형, 행 수, 합성 표본, 선택한 열의 범주 값, 그리고 분석의 집계 결과를 보냅니다. 이름이나 의무기록번호 같은 직접 식별자는 보내지 않습니다."
   }
 }

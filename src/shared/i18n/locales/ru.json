@@ -6902,7 +6902,7 @@
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "Хранится на этом компьютере в зашифрованном виде. Секретные значения никогда не возвращаются в интерфейс.",
     "References: {{count}} / {{limit}}; package: {{size}} / {{total}}_one": "Ссылки: {{count}} / {{limit}}; пакет: {{size}} / {{total}}",
     "Beaker": "Лабораторный стакан",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "Для обсуждения до этической экспертизы: вопрос исследования, дизайн и что подтвердить у научного руководителя в следующий раз. Номер утверждения не обязателен. После этического утверждения, если для обсуждения нужна таблица, используйте материалы аудита данных и статистической консультации.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "Для обсуждения до этической экспертизы: вопрос исследования, дизайн и что подтвердить у научного руководителя в следующий раз. Номер утверждения не обязателен. Анализ данных начинайте с «Анализировать свои данные».",
     "Retrieve disease models associated with an Alliance gene.": "Получить модели заболеваний, связанные с геном Alliance.",
     "Saved credential unavailable": "Сохранённые учётные данные недоступны",
     "No references in this group.": "В этой группе нет записей.",
@@ -7966,7 +7966,7 @@
     "Prepare a conference abstract or paper": "Подготовить тезисы конференции или статью",
     "Delete patient data on this device": "Удалить данные пациентов на этом устройстве",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}} удалит хранящиеся в нём данные. При утилизации или передаче устройства следуйте процедуре вашего учреждения.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "Исходные файлы, из которых выполнен импорт (например, книги Excel), {{productName}} не удаляет.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "Исходные файлы, из которых выполнен импорт (например, книги Excel), {{productName}} не удаляет. Удалите их самостоятельно в соответствии с методом, указанным в протоколе исследования.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "Перед удалением проверьте срок и место хранения, указанные в протоколе исследования.",
     "Before deleting, export code and result tables that contain no patient data.": "Перед удалением экспортируйте код и таблицы результатов, в которых нет данных пациентов.",
     "Confirm the patient data that will be deleted": "Подтвердите, какие данные пациентов будут удалены",
@@ -7977,6 +7977,10 @@
     "Patient data stored for this project on this device was deleted.": "Данные пациентов этого проекта, хранившиеся на этом устройстве, удалены.",
     "Could not delete patient data for this project on this device. Try again.": "Не удалось удалить данные пациентов этого проекта на этом устройстве. Повторите попытку.",
     "Deleting patient data on this device…": "Удаление данных пациентов на этом устройстве…",
-    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Только для академических исследований; не для диагностики или лечения. Используйте только вымышленные данные. Не загружайте данные, позволяющие идентифицировать пациента. Исследователи должны проверять источники, методы и результаты."
+    "For academic research only; not for diagnosis or treatment. Use fictional data only. Do not upload identifiable patient information. Researchers must verify sources, methods, and outputs.": "Только для академических исследований; не для диагностики или лечения. Используйте только вымышленные данные. Не загружайте данные, позволяющие идентифицировать пациента. Исследователи должны проверять источники, методы и результаты.",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "Для выбранного вами столбца отправляется не более {{limit}} категориальных значений, сначала самые частые. Остальные показываются как {{omission}}.",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "Результаты анализа перед отправкой проходят проверку маскирования, а выходные данные с отдельными строками не отправляются.",
+    "Details_privacy": "Подробнее",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Данные пациентов анализируются на вашем компьютере. По умолчанию сервис ИИ получает имена столбцов, типы данных, число строк, синтетические образцы, категориальные значения выбранных вами столбцов и сводные результаты анализа. Прямые идентификаторы, такие как имена или номера медицинских карт, не отправляются."
   }
 }
