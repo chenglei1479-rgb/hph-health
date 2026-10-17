@@ -54,7 +54,7 @@ export const deliverableCardCopy = (
     title: t('Mentor discussion pack'),
     subtitle: t('A one-page brief for a mentor meeting, focused on study-design consultation.'),
     description: t(
-      'For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.'
+      'For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from "Analyze your own data".'
     ),
     hardRule: t('This pack does not load patient data.'),
     inputNotice: t(

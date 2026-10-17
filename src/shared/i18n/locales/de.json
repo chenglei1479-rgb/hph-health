@@ -6630,7 +6630,6 @@
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "Wird auf diesem Computer verschlüsselt gespeichert. Geheime Werte werden niemals an die Benutzeroberfläche zurückgegeben.",
     "References: {{count}} / {{limit}}; package: {{size}} / {{total}}_one": "Referenzen: {{count}} / {{limit}}; Paket: {{size}} / {{total}}",
     "Beaker": "Becherglas",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "Für die Besprechung vor der Ethikprüfung: Forschungsfrage, Design und was als Nächstes mit der Betreuung zu klären ist. Eine Freigabenummer ist nicht erforderlich. Nach der Ethikfreigabe verwenden Sie das Paket zur Datenprüfung und statistischen Beratung, wenn die Besprechung eine Tabelle braucht.",
     "Retrieve disease models associated with an Alliance gene.": "Mit einem Alliance-Gen verknüpfte Krankheitsmodelle abrufen.",
     "Saved credential unavailable": "Gespeicherte Anmeldeinformationen nicht verfügbar",
     "No references in this group.": "Keine Referenzen in dieser Gruppe.",
@@ -7795,6 +7794,11 @@
     "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "Installationen verwalteter CLIs können registry.npmjs.org kontaktieren, mit registry.npmmirror.com als Ausweichlösung.",
     "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "Offizielle Marktplätze für Fähigkeiten und Spezialisten können github.com, api.github.com und raw.githubusercontent.com kontaktieren. Sie sind in dieser Beta standardmäßig aktiv und lassen sich deaktivieren.",
     "No telemetry is sent. Auto-update is off.": "Es werden keine Telemetriedaten gesendet. Automatische Updates sind deaktiviert.",
-    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "Externe Ziele, die diese App kontaktieren kann. Es werden keine Telemetriedaten gesendet, und automatische Updates sind deaktiviert."
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "Externe Ziele, die diese App kontaktieren kann. Es werden keine Telemetriedaten gesendet, und automatische Updates sind deaktiviert.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "Für die Besprechung vor der Ethikprüfung: Forschungsfrage, Design und was als Nächstes mit der Betreuung zu klären ist. Eine Freigabenummer ist nicht erforderlich. Die Datenanalyse starten Sie über „Eigene Daten analysieren“.",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "Für eine von Ihnen ausgewählte Spalte werden höchstens {{limit}} Kategoriewerte gesendet, die häufigsten zuerst. Weitere Werte werden als {{omission}} angezeigt.",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "Analyseergebnisse werden vor dem Senden maskiert geprüft, und Ausgaben mit einzelnen Zeilen werden nicht gesendet.",
+    "Details_privacy": "Details",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Patientendaten werden auf Ihrem Computer analysiert. Standardmäßig erhält der KI-Dienst Spaltennamen, Datentypen, die Zeilenanzahl, synthetische Stichproben, die Kategoriewerte der von Ihnen ausgewählten Spalten und aggregierte Analyseergebnisse. Direkte Identifikatoren wie Namen oder Krankenaktennummern werden nicht gesendet."
   }
 }

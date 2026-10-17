@@ -6310,7 +6310,7 @@
     "Live AI outcomes. Manual decisions still determine collection membership.": "即時 AI 判定。合集是否收錄仍以人工決定為準。",
     "Continue setup": "繼續設定",
     "Compare with source version": "與來源版本比較",
-    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "此交付包的終點是學會摘要或短篇英文草稿。長論文請從「論文撰寫」或「英文學術寫作」繼續。撰寫前會核對倫理審查批准號。未填寫時僅提醒，不會阻止撰寫。",
+    "This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.": "此交付包的終點是學會摘要或短篇英文草稿。長論文請從「論文撰寫」或「英語論文撰寫」繼續。撰寫前會核對倫理審查批准號。未填寫時僅提醒，不會阻止撰寫。",
     "Port": "通訊埠",
     "Pages {{start}}–{{end}}": "第 {{start}}–{{end}} 頁",
     "Not evaluated": "尚未評估",
@@ -6490,7 +6490,6 @@
     "Could not save conversation Skill import preference. Try again.": "無法儲存對話技能匯入設定。請再試一次。",
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "在此電腦上加密儲存。祕密值絕不會傳回介面。",
     "Beaker": "燒杯",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "用於倫理審查前的開題溝通：研究問題、設計和下次要向指導醫師確認的事項。不強制填寫批准號。倫理通過後若要帶著表諮詢，請使用「資料審查與統計諮詢包」。",
     "Retrieve disease models associated with an Alliance gene.": "取得與 Alliance 基因相關的疾病模型。",
     "Saved credential unavailable": "儲存的認證資料無法使用",
     "No references in this group.": "此群組沒有題錄。",
@@ -7635,6 +7634,11 @@
     "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "安裝受管理的 CLI 時可能連線至 registry.npmjs.org，並以 registry.npmmirror.com 作為後備。",
     "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "官方技能與專家市集可能連線至 github.com、api.github.com 與 raw.githubusercontent.com。此測試版預設開啟，可以關閉。",
     "No telemetry is sent. Auto-update is off.": "不傳送遙測資料。自動更新已關閉。",
-    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "此應用程式可能連線的外部位址。不傳送遙測資料，自動更新已關閉。"
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "此應用程式可能連線的外部位址。不傳送遙測資料，自動更新已關閉。",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "用於倫理審查前的開題溝通：研究問題、設計和下次要向指導醫師確認的事項。不強制填寫批准號。資料分析請從「分析自己的資料」開始。",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "對於您選定的欄，最多傳送 {{limit}} 個分類值，依出現次數由多到少。其餘顯示為 {{omission}}。",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "分析結果在傳送前會做脫敏檢查，含單一個案行的輸出不會傳送。",
+    "Details_privacy": "詳細",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者資料在您的電腦上分析。預設向 AI 服務傳送欄名、資料類型、行數、合成樣例、您選定的欄的分類值，以及分析的匯總結果。姓名、病歷號等直接識別符不會傳送。"
   }
 }

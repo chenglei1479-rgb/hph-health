@@ -6908,7 +6908,6 @@
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "Хранится на этом компьютере в зашифрованном виде. Секретные значения никогда не возвращаются в интерфейс.",
     "References: {{count}} / {{limit}}; package: {{size}} / {{total}}_one": "Ссылки: {{count}} / {{limit}}; пакет: {{size}} / {{total}}",
     "Beaker": "Лабораторный стакан",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "Для обсуждения до этической экспертизы: вопрос исследования, дизайн и что подтвердить у научного руководителя в следующий раз. Номер утверждения не обязателен. После этического утверждения, если для обсуждения нужна таблица, используйте материалы аудита данных и статистической консультации.",
     "Retrieve disease models associated with an Alliance gene.": "Получить модели заболеваний, связанные с геном Alliance.",
     "Saved credential unavailable": "Сохранённые учётные данные недоступны",
     "No references in this group.": "В этой группе нет записей.",
@@ -8102,6 +8101,11 @@
     "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "Установка управляемых CLI может обращаться к registry.npmjs.org, а registry.npmmirror.com используется как резервный.",
     "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "Официальные маркетплейсы навыков и специалистов могут обращаться к github.com, api.github.com и raw.githubusercontent.com. В этой бете они включены по умолчанию и могут быть отключены.",
     "No telemetry is sent. Auto-update is off.": "Телеметрия не отправляется. Автообновление отключено.",
-    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "Внешние адреса, к которым может обращаться это приложение. Телеметрия не отправляется, автообновление отключено."
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "Внешние адреса, к которым может обращаться это приложение. Телеметрия не отправляется, автообновление отключено.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "Для обсуждения до этической экспертизы: вопрос исследования, дизайн и что подтвердить у научного руководителя в следующий раз. Номер утверждения не обязателен. Анализ данных начинайте с «Анализировать свои данные».",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "Для выбранного вами столбца отправляется не более {{limit}} категориальных значений, сначала самые частые. Остальные показываются как {{omission}}.",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "Результаты анализа перед отправкой проходят проверку маскирования, а выходные данные с отдельными строками не отправляются.",
+    "Details_privacy": "Подробнее",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Данные пациентов анализируются на вашем компьютере. По умолчанию сервис ИИ получает имена столбцов, типы данных, число строк, синтетические образцы, категориальные значения выбранных вами столбцов и сводные результаты анализа. Прямые идентификаторы, такие как имена или номера медицинских карт, не отправляются."
   }
 }
