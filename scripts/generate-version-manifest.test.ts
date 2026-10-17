@@ -16,8 +16,9 @@ const VERSION = '0.1.2'
 const CDN = 'https://cdn.example.com'
 const PREFIX = 'open-science'
 
-// The full set of installer filenames a complete release produces (matches electron-builder.yml
-// artifactName templates with the aipoch- prefix).
+// Historical publication filenames still accepted by release-artifact-validation.
+// electron-builder.yml artifactName templates are Baselio-${version}-... and are
+// locked by src/main/app-branding.test.ts.
 const INSTALLERS = {
   'mac-arm64': `aipoch-open-science-${VERSION}-mac-arm64.dmg`,
   'mac-x64': `aipoch-open-science-${VERSION}-mac-x64.dmg`,

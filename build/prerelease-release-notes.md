@@ -2,6 +2,8 @@
 
 これは署名されていない内部テスト用ビルドです。個人のコンピュータにのみインストールしてください。病院の PC にはインストールしないでください。
 
+インストーラーのファイル名は Baselio-<version>-mac-arm64.dmg、Baselio-<version>-mac-x64.dmg、Baselio-<version>-win-x64-setup.exe です。
+
 同梱されている架空のデモデータ（240 症例の再入院データセット）だけを使ってください。実際の患者データは決して使わないでください。
 
 Notebook 用の Python（pandas、numpy、scipy、statsmodels、matplotlib、openpyxl、lifelines）はインストーラーに入っています。初回起動時にダウンロードしません。
@@ -21,6 +23,8 @@ Windows SmartScreen で止められた場合は、「詳細情報」>「実行�
 ## 中文
 
 这是未签名的内部测试版本。请只安装在个人电脑上，不要安装在医院电脑上。
+
+安装包文件名为 Baselio-<version>-mac-arm64.dmg、Baselio-<version>-mac-x64.dmg、Baselio-<version>-win-x64-setup.exe。
 
 请只使用随附的虚构演示数据（240 例再入院数据集），切勿使用真实患者数据。
 

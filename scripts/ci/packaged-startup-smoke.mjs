@@ -13,7 +13,7 @@ import {
   writeSync
 } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
@@ -143,8 +143,15 @@ const walk = (directory) => {
 }
 
 const findArtifact = (directory, suffix) => {
-  const matches = walk(directory).filter((file) => file.toLowerCase().endsWith(suffix))
-  if (matches.length === 0) throw new Error(`No ${suffix} artifact under ${directory}.`)
+  const matches = walk(directory).filter((file) => {
+    const name = basename(file)
+    return name.startsWith('Baselio-') && name.toLowerCase().endsWith(suffix)
+  })
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one Baselio ${suffix} artifact under ${directory}; found ${matches.length}.`
+    )
+  }
   return matches[0]
 }
 
@@ -469,6 +476,7 @@ const assertMacArchitecture = (binary) => {
 
 const runMac = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   const dmg = findArtifact(artifactDir, '.dmg')
+  note(`macOS installer: ${basename(dmg)}`)
   const paths = macSmokePaths()
   mkdirSync(dirname(paths.app), { recursive: true })
   mkdirSync(paths.configRoot, { recursive: true })
@@ -515,6 +523,7 @@ const mapWindowsDrive = () => {
 
 const runWindows = async ({ artifactDir, timeoutMs, workspaceLogs, label }) => {
   const setup = findArtifact(artifactDir, '-setup.exe')
+  note(`Windows installer: ${basename(setup)}`)
   spawnSync(
     'powershell.exe',
     ['-NoProfile', '-Command', `Unblock-File -LiteralPath '${setup.replaceAll("'", "''")}'`],

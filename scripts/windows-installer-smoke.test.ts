@@ -72,14 +72,14 @@ describe('Windows installer smoke plan', () => {
   it('selects one setup executable and rejects ambiguous artifacts', async () => {
     const root = await mkdtemp(join(tmpdir(), 'open-science-installer-artifacts-'))
     await writeFile(join(root, 'portable.zip'), '')
-    await writeFile(join(root, 'aipoch-medresearch-agent-0.8.0-win-x64-setup.exe'), '')
+    await writeFile(join(root, 'Baselio-0.8.0-win-x64-setup.exe'), '')
 
     await expect(findSetupInstaller(root)).resolves.toBe(
-      join(root, 'aipoch-medresearch-agent-0.8.0-win-x64-setup.exe')
+      join(root, 'Baselio-0.8.0-win-x64-setup.exe')
     )
 
     await mkdir(join(root, 'nested'))
-    await writeFile(join(root, 'aipoch-medresearch-agent-0.9.0-win-x64-setup.exe'), '')
+    await writeFile(join(root, 'Baselio-0.9.0-win-x64-setup.exe'), '')
     await expect(findSetupInstaller(root)).rejects.toThrow(/exactly one Windows setup executable/)
   })
 
@@ -102,8 +102,8 @@ describe('Windows installer smoke plan', () => {
   })
 
   it('derives the packaged version from stable and nightly installer names', () => {
-    expect(installerVersion('aipoch-medresearch-agent-0.8.0-win-x64-setup.exe')).toBe('0.8.0')
-    expect(installerVersion('aipoch-medresearch-agent-0.8.0-nightly.abc1234-win-x64-setup.exe')).toBe(
+    expect(installerVersion('Baselio-0.8.0-win-x64-setup.exe')).toBe('0.8.0')
+    expect(installerVersion('Baselio-0.8.0-nightly.abc1234-win-x64-setup.exe')).toBe(
       '0.8.0-nightly.abc1234'
     )
   })

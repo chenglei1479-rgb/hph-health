@@ -111,7 +111,9 @@ win:
     - '!credential_secret.exe'
   executableName: medresearch-agent
   icon: build/icon.ico
-  artifactName: aipoch-${name}-${version}-win-${arch}.${ext}
+  # File names are Baselio-<version>-.... ${name} is medresearch-agent and must not
+  # appear here; an upstream aipoch- prefix leaked into the beta.12 assets.
+  artifactName: Baselio-${version}-win-${arch}.${ext}
   # AppContainer profiles and firewall rules require a product uninstaller, so Windows ships only
   # through NSIS. A portable ZIP could be deleted without releasing those durable resources.
   target:
@@ -134,7 +136,7 @@ win:
     - from: packages/notebook-network-sandbox/vendor/wsl2/manifest.json
       to: notebook-network-sandbox/wsl2/manifest.json
 nsis:
-  artifactName: aipoch-${name}-${version}-win-${arch}-setup.${ext}
+  artifactName: Baselio-${version}-win-${arch}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -160,7 +162,7 @@ mac:
   # volume still uses the legacy, explicitly-designed ICNS artwork.
   icon: build/icon.icon
   darkModeSupport: true
-  artifactName: aipoch-${name}-${version}-mac-${arch}.${ext}
+  artifactName: Baselio-${version}-mac-${arch}.${ext}
   # Minimum macOS to run the app (written to Info.plist LSMinimumSystemVersion). macOS 12 (Monterey)
   # and up; below this the OS refuses to launch. Independent of the CI build runner's macOS version.
   minimumSystemVersion: '12.0.0'
@@ -213,7 +215,7 @@ dmg:
   # Stable macOS releases require a primary signature on the outer DMG in addition to the signed app
   # and notarization ticket. Nightly and certificate-free builds override this to false in build.yml.
   sign: true
-  artifactName: aipoch-${name}-${version}-mac-${arch}.${ext}
+  artifactName: Baselio-${version}-mac-${arch}.${ext}
 linux:
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
@@ -242,13 +244,13 @@ linux:
     - from: build/deb-cli-launcher
       to: open-science-cli
 appImage:
-  artifactName: aipoch-${name}-${version}-linux-${arch}.${ext}
+  artifactName: Baselio-${version}-linux-${arch}.${ext}
 deb:
   fpm:
     - build/deb-copyright=/usr/share/doc/open-science/copyright
   afterInstall: build/deb-after-install.tpl
   afterRemove: build/deb-after-remove.tpl
-  artifactName: aipoch-${name}_${version}_${arch}.${ext}
+  artifactName: Baselio_${version}_${arch}.${ext}
   depends:
     - libgtk-3-0
     - libnotify4

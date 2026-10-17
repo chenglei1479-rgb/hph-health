@@ -102,12 +102,26 @@ it('builds unsigned macOS dmg and Windows NSIS packages and publishes a prerelea
   expect(packageStep?.env).toEqual({ NODE_OPTIONS: '--max-old-space-size=6144' })
   expect(packageStep?.run).toContain('build/prerelease-electron-builder.cjs')
   expect(packageStep?.run).toContain('--${{ matrix.platform }}')
+  const checkNames = build?.steps?.find((step) => step.name === 'Check the installer file name')
+  expect(checkNames?.run).toContain('dist/Baselio-*-mac-arm64.dmg')
+  expect(checkNames?.run).toContain('dist/Baselio-*-mac-x64.dmg')
+  expect(checkNames?.run).toContain('dist/Baselio-*-win-x64-setup.exe')
+  expect(names?.indexOf('Check the installer file name')).toBeGreaterThan(packageIndex)
+  expect(names?.indexOf('Upload installers')).toBeGreaterThan(
+    names?.indexOf('Check the installer file name') ?? -1
+  )
   const raw = readFileSync('.github/workflows/prerelease.yml', 'utf8')
   expect(raw).not.toContain('--max-old-space-size=8192')
   expect(raw).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
   expect(raw).toContain("DRA_PRERELEASE: '1'")
   expect(raw).not.toMatch(/^\s*CSC_LINK:/m)
   expect(raw).toContain('Prerelease builds must not use a signing certificate.')
+  expect(raw).toContain('dist/Baselio-*.dmg')
+  expect(raw).toContain('dist/Baselio-*-setup.exe')
+  expect(raw).toContain('dist/**/Baselio-*.dmg')
+  expect(raw).toContain('dist/**/Baselio-*-setup.exe')
+  expect(raw).not.toContain('dist/*.dmg')
+  expect(raw).not.toContain('dist/*-setup.exe')
 
   const release = workflow.jobs.release
   expect(release?.permissions).toEqual({ contents: 'write' })
@@ -145,6 +159,10 @@ it('launches the packaged app on Windows, Apple silicon, and Intel macOS before 
 it('writes the release body in Japanese and Chinese', () => {
   const notes = readFileSync('build/prerelease-release-notes.md', 'utf8')
   expect(notes).toContain('署名されていない内部テスト用ビルド')
+  expect(notes).toContain(
+    'Baselio-<version>-mac-arm64.dmg、Baselio-<version>-mac-x64.dmg、Baselio-<version>-win-x64-setup.exe'
+  )
+  expect(notes).not.toContain('aipoch-')
   expect(notes).toContain('病院の PC')
   expect(notes).toContain('240 症例の再入院データセット')
   expect(notes).toContain('実際の患者データは決して使わない')

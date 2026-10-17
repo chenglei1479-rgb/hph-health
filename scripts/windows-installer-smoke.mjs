@@ -101,7 +101,7 @@ const findSetupInstaller = async (directory) => {
 }
 
 const installerVersion = (installer) => {
-  const match = basename(installer).match(/^aipoch-medresearch-agent-(.+)-win-x64-setup\.exe$/i)
+  const match = basename(installer).match(/^Baselio-(.+)-win-x64-setup\.exe$/)
   if (!match) throw new Error(`Cannot derive the app version from installer: ${installer}`)
   return match[1]
 }
