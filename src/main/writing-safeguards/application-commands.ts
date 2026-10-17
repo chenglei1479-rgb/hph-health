@@ -1,5 +1,6 @@
 import { normalizeEthicsApprovalNumber } from '../../shared/writing-safeguards/ethics-approval'
 import type { EthicsProtocolState } from '../../shared/ethics-protocol/state'
+import { mapHeading, type HeadingCandidate } from '../../shared/ethics-protocol/heading-mapper'
 import { basename, join } from 'node:path'
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { buildEthicsDraftSections } from '../ethics-protocol/draft-sections'
@@ -34,7 +35,7 @@ type WritingSafeguardsCommandOwner = Readonly<{
   ) => EthicsProtocolState
   importEthicsDocx: (
     request: { projectId?: string; fileName?: string; bytes?: number[] } | undefined
-  ) => { fileName: string }
+  ) => { fileName: string; headingCandidates: HeadingCandidate[] }
   exportEthicsDraft: (
     request: { projectId?: string } | undefined
   ) => Promise<{ fileName: string; bytes: number[] }>
@@ -119,15 +120,30 @@ const createWritingSafeguardsCommandOwner = (
       const filePath = join(directory, fileName)
       const temporaryPath = `${filePath}.importing.docx`
       writeFileSync(temporaryPath, Uint8Array.from(request?.bytes ?? []), { mode: 0o600 })
+      let headingCandidates: HeadingCandidate[]
       try {
-        inspectDocx(temporaryPath)
+        const inspection = inspectDocx(temporaryPath)
+        headingCandidates = [
+          ...new Set(
+            inspection.parts.flatMap(({ text }) =>
+              text
+                .split(/\r?\n/gu)
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0 && line.length <= 160)
+            )
+          )
+        ].map(mapHeading)
       } catch (error) {
         rmSync(temporaryPath, { force: true })
         throw error
       }
       renameSync(temporaryPath, filePath)
-      store.setProtocol(projectId, { ...store.getProtocol(projectId), importedDocxPath: filePath })
-      return { fileName }
+      store.setProtocol(projectId, {
+        ...store.getProtocol(projectId),
+        importedDocxPath: filePath,
+        headingCandidates
+      })
+      return { fileName, headingCandidates }
     },
     exportEthicsDraft: async (request) => {
       const projectId = request?.projectId?.trim() ?? ''

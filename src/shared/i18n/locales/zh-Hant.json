@@ -7548,6 +7548,11 @@
     "Ethics checklist: yes": "是",
     "Ethics checklist: no": "否",
     "Ethics checklist: unknown": "不知道",
-    "Ethics checklist: missing": "未填寫"
+    "Ethics checklist: missing": "未填寫",
+    "Institutional heading mappings": "Institutional heading mappings",
+    "Confirming doctor": "Confirming doctor",
+    "Select checklist item": "Select checklist item",
+    "Mapping unknown": "Mapping unknown",
+    "Confirm heading mappings": "Confirm heading mappings"
   }
 }

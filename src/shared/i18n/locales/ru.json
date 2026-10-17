@@ -8015,6 +8015,11 @@
     "Ethics checklist: yes": "Да",
     "Ethics checklist: no": "Нет",
     "Ethics checklist: unknown": "Не знаю",
-    "Ethics checklist: missing": "Не заполнено"
+    "Ethics checklist: missing": "Не заполнено",
+    "Institutional heading mappings": "Institutional heading mappings",
+    "Confirming doctor": "Confirming doctor",
+    "Select checklist item": "Select checklist item",
+    "Mapping unknown": "Mapping unknown",
+    "Confirm heading mappings": "Confirm heading mappings"
   }
 }

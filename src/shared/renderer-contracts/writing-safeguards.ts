@@ -1,5 +1,6 @@
 import { callable, LOCAL } from './definition'
 import type { EthicsProtocolState } from '../ethics-protocol/state'
+import type { HeadingCandidate } from '../ethics-protocol/heading-mapper'
 
 export const contracts = {
   'writingSafeguards.getEthicsApproval': callable<
@@ -19,7 +20,7 @@ export const contracts = {
       projectId: string
       fileName: string
       bytes: number[]
-    }) => Promise<{ fileName: string }>
+    }) => Promise<{ fileName: string; headingCandidates: HeadingCandidate[] }>
   >()('writing-safeguards', ['writing-safeguards:import-ethics-docx', LOCAL]),
   'writingSafeguards.exportEthicsDraft': callable<
     (request: { projectId: string }) => Promise<{ fileName: string; bytes: number[] }>

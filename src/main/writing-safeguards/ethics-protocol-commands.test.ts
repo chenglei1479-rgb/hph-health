@@ -17,8 +17,14 @@ describe('ethics protocol commands', () => {
     })
     expect(
       owner.importEthicsDocx({ projectId: 'study-1', fileName: 'form.docx', bytes: [...source] })
-    ).toEqual({ fileName: 'form.docx' })
+    ).toEqual({
+      fileName: 'form.docx',
+      headingCandidates: [
+        expect.objectContaining({ heading: '架空の書式', item: null, status: '対応不明' })
+      ]
+    })
     expect(store.getProtocol('study-1').importedDocxPath).toContain('form.docx')
+    expect(store.getProtocol('study-1').headingCandidates).toHaveLength(1)
     store.setProtocol('study-1', {
       ...store.getProtocol('study-1'),
       choices: { 18: 'yes', 19: 'no' },

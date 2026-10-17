@@ -7546,6 +7546,11 @@
     "Ethics checklist: yes": "예",
     "Ethics checklist: no": "아니요",
     "Ethics checklist: unknown": "모름",
-    "Ethics checklist: missing": "미입력"
+    "Ethics checklist: missing": "미입력",
+    "Institutional heading mappings": "Institutional heading mappings",
+    "Confirming doctor": "Confirming doctor",
+    "Select checklist item": "Select checklist item",
+    "Mapping unknown": "Mapping unknown",
+    "Confirm heading mappings": "Confirm heading mappings"
   }
 }

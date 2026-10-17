@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { R8_ITEMS } from '../../../../shared/ethics-protocol/r8-items'
+import { R8_ITEMS, type R8ItemNumber } from '../../../../shared/ethics-protocol/r8-items'
 import type { EthicsProtocolState } from '../../../../shared/ethics-protocol/state'
+import { confirmHeadingMapping } from '../../../../shared/ethics-protocol/heading-mapper'
 
-type Choice = '' | 'yes' | 'no' | 'unknown'
-const conditional = new Set([18, 19, 22, 23, 24])
+type ConditionalItemNumber = keyof EthicsProtocolState['choices']
+const conditional: ReadonlySet<R8ItemNumber> = new Set([18, 19, 22, 23, 24])
+const isConditional = (number: R8ItemNumber): number is ConditionalItemNumber =>
+  conditional.has(number)
 /* i18n copy uses English source-text keys in the renderer catalog. */
 type ChecklistCopy = Record<
   | 'title'
@@ -17,7 +20,12 @@ type ChecklistCopy = Record<
   | 'reason'
   | 'reasonRequired'
   | 'draft'
-  | 'outsourcing',
+  | 'outsourcing'
+  | 'mappingTitle'
+  | 'mappingDoctor'
+  | 'mappingSelect'
+  | 'mappingUnknown'
+  | 'mappingConfirm',
   string
 >
 const copy = (t: (key: string) => string): ChecklistCopy => ({
@@ -31,6 +39,11 @@ const copy = (t: (key: string) => string): ChecklistCopy => ({
   reason: t('Reason it does not apply'),
   reasonRequired: t('Enter a reason.'),
   draft: t('Draft'),
+  mappingTitle: t('Institutional heading mappings'),
+  mappingDoctor: t('Confirming doctor'),
+  mappingSelect: t('Select checklist item'),
+  mappingUnknown: t('Mapping unknown'),
+  mappingConfirm: t('Confirm heading mappings'),
   outsourcing: t(
     'Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.'
   )
@@ -43,12 +56,14 @@ export const EthicsProtocolChecklist = ({
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const c = copy(t)
-  const [choices, setChoices] = useState<Record<number, Choice>>({})
+  const [choices, setChoices] = useState<EthicsProtocolState['choices']>({})
   const [excluded, setExcluded] = useState<Record<number, boolean>>({})
-  const [reasons, setReasons] = useState<Record<number, string>>({})
+  const [reasons, setReasons] = useState<EthicsProtocolState['notApplicableReasons']>({})
   const [metadata, setMetadata] = useState<
-    Pick<EthicsProtocolState, 'confirmedMappings' | 'importedDocxPath'>
+    Pick<EthicsProtocolState, 'confirmedMappings' | 'headingCandidates' | 'importedDocxPath'>
   >({ confirmedMappings: [] })
+  const [mappingSelections, setMappingSelections] = useState<Record<string, string>>({})
+  const [confirmingDoctor, setConfirmingDoctor] = useState('')
   useEffect(() => {
     if (!projectId || !window.api.writingSafeguards) return
     void window.api.writingSafeguards.getEthicsProtocol({ projectId }).then((protocol) => {
@@ -61,8 +76,22 @@ export const EthicsProtocolChecklist = ({
       )
       setMetadata({
         confirmedMappings: protocol.confirmedMappings,
+        headingCandidates: protocol.headingCandidates,
         importedDocxPath: protocol.importedDocxPath
       })
+      setMappingSelections(
+        Object.fromEntries(
+          (protocol.headingCandidates ?? []).map((candidate) => [
+            candidate.heading,
+            String(
+              protocol.confirmedMappings.find(({ heading }) => heading === candidate.heading)
+                ?.item ??
+                candidate.item ??
+                ''
+            )
+          ])
+        )
+      )
     })
   }, [projectId])
   const save = (): void => {
@@ -73,6 +102,7 @@ export const EthicsProtocolChecklist = ({
         choices,
         notApplicableReasons: reasons,
         confirmedMappings: metadata.confirmedMappings,
+        headingCandidates: metadata.headingCandidates,
         importedDocxPath: metadata.importedDocxPath
       }
     })
@@ -80,12 +110,44 @@ export const EthicsProtocolChecklist = ({
   const importDocx = (file: File): void => {
     if (!projectId || !window.api.writingSafeguards) return
     void file.arrayBuffer().then((buffer) =>
-      window.api.writingSafeguards.importEthicsDocx({
-        projectId,
-        fileName: file.name,
-        bytes: [...new Uint8Array(buffer)]
-      })
+      window.api.writingSafeguards
+        .importEthicsDocx({
+          projectId,
+          fileName: file.name,
+          bytes: [...new Uint8Array(buffer)]
+        })
+        .then(({ headingCandidates }) => {
+          setMetadata((old) => ({ ...old, headingCandidates }))
+          setMappingSelections(
+            Object.fromEntries(
+              headingCandidates.map((candidate) => [
+                candidate.heading,
+                String(candidate.item ?? '')
+              ])
+            )
+          )
+        })
     )
+  }
+  const confirmMappings = (): void => {
+    const doctor = confirmingDoctor.trim()
+    if (!doctor) return
+    const confirmedAt = new Date().toISOString()
+    const confirmedMappings = (metadata.headingCandidates ?? []).flatMap((candidate) => {
+      const item = Number(mappingSelections[candidate.heading])
+      return item >= 1 && item <= 25
+        ? [confirmHeadingMapping(candidate, item as R8ItemNumber, doctor, confirmedAt)]
+        : []
+    })
+    const protocol = {
+      choices,
+      notApplicableReasons: reasons,
+      confirmedMappings,
+      headingCandidates: metadata.headingCandidates,
+      importedDocxPath: metadata.importedDocxPath
+    }
+    setMetadata((old) => ({ ...old, confirmedMappings }))
+    void window.api.writingSafeguards.setEthicsProtocol({ projectId, protocol })
   }
   const downloadDraft = (): void => {
     if (!projectId || !window.api.writingSafeguards) return
@@ -113,14 +175,14 @@ export const EthicsProtocolChecklist = ({
               </strong>{' '}
               <span>{c.draft}</span> <span>{c.blank}</span>
             </div>
-            {conditional.has(item.number) ? (
+            {isConditional(item.number) ? (
               <div role="group" aria-label={`${item.number}`} className="flex gap-2">
                 {(['yes', 'no', 'unknown'] as const).map((value) => (
                   <label key={value}>
                     <input
                       type="radio"
                       name={`ethics-${item.number}`}
-                      checked={choices[item.number] === value}
+                      checked={choices[item.number as ConditionalItemNumber] === value}
                       onChange={() => setChoices((old) => ({ ...old, [item.number]: value }))}
                     />
                     {c[value]}
@@ -156,6 +218,43 @@ export const EthicsProtocolChecklist = ({
           </li>
         ))}
       </ol>
+      {metadata.headingCandidates?.length ? (
+        <fieldset className="space-y-2">
+          <legend>{c.mappingTitle}</legend>
+          <label>
+            {c.mappingDoctor}
+            <input
+              value={confirmingDoctor}
+              onChange={(event) => setConfirmingDoctor(event.target.value)}
+            />
+          </label>
+          {metadata.headingCandidates.map((candidate) => (
+            <label key={candidate.heading} className="block">
+              {candidate.heading}
+              <select
+                aria-label={`${c.mappingSelect}: ${candidate.heading}`}
+                value={mappingSelections[candidate.heading] ?? candidate.item ?? ''}
+                onChange={(event) =>
+                  setMappingSelections((old) => ({
+                    ...old,
+                    [candidate.heading]: event.target.value
+                  }))
+                }
+              >
+                <option value="">{c.mappingUnknown}</option>
+                {R8_ITEMS.map((item) => (
+                  <option key={item.number} value={item.number}>
+                    {item.number}. {t(item.title)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+          <button type="button" disabled={!confirmingDoctor.trim()} onClick={confirmMappings}>
+            {c.mappingConfirm}
+          </button>
+        </fieldset>
+      ) : null}
       <button type="button" disabled={!projectId} onClick={save}>
         {t('Save')}
       </button>

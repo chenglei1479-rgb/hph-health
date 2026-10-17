@@ -15,7 +15,7 @@ export type ConfirmedHeadingMapping = HeadingCandidate & {
 
 const aliases: Record<R8ItemNumber, readonly string[]> = Object.fromEntries(
   R8_ITEMS.map(({ number, title }) => [number, [title]])
-) as Record<R8ItemNumber, readonly string[]>
+) as unknown as Record<R8ItemNumber, readonly string[]>
 
 Object.assign(aliases, {
   1: ['研究の名称', '研究課題名', '研究タイトル'],

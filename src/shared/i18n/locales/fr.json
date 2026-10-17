@@ -7876,6 +7876,11 @@
     "Ethics checklist: yes": "Oui",
     "Ethics checklist: no": "Non",
     "Ethics checklist: unknown": "Je ne sais pas",
-    "Ethics checklist: missing": "Non renseigné"
+    "Ethics checklist: missing": "Non renseigné",
+    "Institutional heading mappings": "Institutional heading mappings",
+    "Confirming doctor": "Confirming doctor",
+    "Select checklist item": "Select checklist item",
+    "Mapping unknown": "Mapping unknown",
+    "Confirm heading mappings": "Confirm heading mappings"
   }
 }

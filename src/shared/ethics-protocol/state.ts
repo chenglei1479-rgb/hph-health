@@ -1,4 +1,5 @@
 import type { R8ItemNumber } from './r8-items'
+import type { HeadingCandidate } from './heading-mapper'
 
 export type EthicsChecklistChoice = 'yes' | 'no' | 'unknown'
 export type EthicsProtocolState = {
@@ -10,6 +11,7 @@ export type EthicsProtocolState = {
     confirmedBy: string
     confirmedAt: string
   }>
+  headingCandidates?: HeadingCandidate[]
   importedDocxPath?: string
 }
 
