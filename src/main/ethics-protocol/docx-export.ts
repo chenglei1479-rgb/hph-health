@@ -5,6 +5,7 @@ import {
   R8_RULESET_VERSION,
   type R8ItemNumber
 } from '../../shared/ethics-protocol/r8-items'
+import ja from '../../shared/i18n/locales/ja.json'
 
 export const DRAFT_HEADER = '草案・未完成'
 export const DRAFT_FOOTER =
@@ -16,6 +17,8 @@ const xml = (value: string): string =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 const paragraph = (value: string): string =>
   `<w:p><w:r><w:rPr><w:rFonts w:eastAsia="游明朝" w:ascii="MS Mincho"/></w:rPr><w:t xml:space="preserve">${xml(value)}</w:t></w:r></w:p>`
+const itemTitle = (number: R8ItemNumber): string =>
+  ja.renderer[R8_ITEMS[number - 1].title as keyof typeof ja.renderer] ?? R8_ITEMS[number - 1].title
 
 export const assertSubmissionReady = (
   sections: DraftSection[],
@@ -31,13 +34,13 @@ export const createDraftDocx = ({
   outputPath
 }: DraftOptions): Uint8Array => {
   const list = missingItems.length
-    ? missingItems.map((item) => `${item}. ${R8_ITEMS[item - 1].title}`).join('、')
+    ? missingItems.map((item) => `${item}. ${itemTitle(item)}`).join('、')
     : 'なし'
   const body = [
     paragraph('未記入の項目'),
     paragraph(list),
     ...sections.flatMap(({ item, text }) => [
-      paragraph(`${item}. ${R8_ITEMS[item - 1].title}`),
+      paragraph(`${item}. ${itemTitle(item)}`),
       paragraph(text)
     ])
   ].join('')

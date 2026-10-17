@@ -219,7 +219,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
               {reminder}
             </p>
           ) : null}
-          <EthicsProtocolChecklist locale={locale} />
+          <EthicsProtocolChecklist />
           <h3 className="font-medium">{copy.declarationTitle}</h3>
           {usages.map((usage, index) => (
             <div key={index} className="grid gap-1">
