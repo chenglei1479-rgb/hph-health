@@ -19,40 +19,42 @@ type IcoEntry = {
 const APP_ICON_SIZES = [16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 128, 256]
 const TRAY_ICON_SIZES = [16, 20, 24, 32, 40, 48, 64, 256]
 const LIGHT_SMALL_FRAME_HASHES = {
-  16: '77b2212664b48c5a40a005e123362e99f246586de24e88820606b0873425f1d2',
-  20: '1bbd3d62a478c9edf7b22add9cb3739e4fecbd472c811f7c9c754c9a4e7fcb9e',
-  24: '3370727feb206786056691651c99735fd206c7c031bc9f9d6e0cd188ff6aa844'
+  16: 'b03f7879b3404572ed985fb76622d031e0e67096a15a65cef06a6672205bd77e',
+  20: '4afde27d581a2b196c121b346fe2580772a4149aeab6819d6fe7985e9c81d5cf',
+  24: 'f86c3ddf59c0a3928e094c135ce1fcae4765f0165c06e45669d122a09d19469f',
+  32: 'b259175cfbb069e84be476cf69b3510ffcd15cbb954298df9f0e24c780faf447'
 }
 const DARK_SMALL_FRAME_HASHES = {
-  16: 'dc8485993ef13fa9c91941abbf9c675c3779568a1e211c718a80de3183a7d9c2',
-  20: 'a226f67a6014f0375af17372fdb3691d2bbf5bcf0706d68819c3802cb38a3ac5',
-  24: '7ec444bf13db3575c4db867853cb04c04ab3984452f6a6cfe536ba44aed985d7'
+  16: 'b03f7879b3404572ed985fb76622d031e0e67096a15a65cef06a6672205bd77e',
+  20: '4afde27d581a2b196c121b346fe2580772a4149aeab6819d6fe7985e9c81d5cf',
+  24: 'f86c3ddf59c0a3928e094c135ce1fcae4765f0165c06e45669d122a09d19469f',
+  32: 'b259175cfbb069e84be476cf69b3510ffcd15cbb954298df9f0e24c780faf447'
 }
 const ICON_ASSETS = [
   {
     relativePath: 'build/icon.ico',
     expectedSizes: APP_ICON_SIZES,
-    expectedSha256: '264ae20edd2f6be43164286b89f2f86a9601c858f181a3f5d37a73b3490b1794'
+    expectedSha256: '29888f2d5e69c5099ba26aeaf5231688656407ab5b6f41c5104a572ea5686451'
   },
   {
     relativePath: 'resources/icon-light.ico',
     expectedSizes: APP_ICON_SIZES,
-    expectedSha256: '264ae20edd2f6be43164286b89f2f86a9601c858f181a3f5d37a73b3490b1794'
+    expectedSha256: '29888f2d5e69c5099ba26aeaf5231688656407ab5b6f41c5104a572ea5686451'
   },
   {
     relativePath: 'resources/icon-dark.ico',
     expectedSizes: APP_ICON_SIZES,
-    expectedSha256: '336c5f30c65dc65f8500b9b93d0139ba7a291dec82632162dbc54b48ebdf4893'
+    expectedSha256: '29888f2d5e69c5099ba26aeaf5231688656407ab5b6f41c5104a572ea5686451'
   },
   {
     relativePath: 'resources/tray-light.ico',
     expectedSizes: TRAY_ICON_SIZES,
-    expectedSha256: 'e74600b52ba9d6905a76ba256a75ad0266d2a6cdd23c0b79fc45ede6846f6dcb'
+    expectedSha256: '111df86c206becf2851b2a0c1415e08eabcc524be6cad4817cae1e85815889ae'
   },
   {
     relativePath: 'resources/tray-dark.ico',
     expectedSizes: TRAY_ICON_SIZES,
-    expectedSha256: '5ddaa180a54d4f01738927da9546c0bb5f037b67420bbea93cf935c6bfda3180'
+    expectedSha256: '111df86c206becf2851b2a0c1415e08eabcc524be6cad4817cae1e85815889ae'
   }
 ]
 
@@ -109,7 +111,7 @@ describe('Windows icon assets', () => {
     { relativePath: 'build/icon.ico', expectedHashes: LIGHT_SMALL_FRAME_HASHES },
     { relativePath: 'resources/icon-light.ico', expectedHashes: LIGHT_SMALL_FRAME_HASHES },
     { relativePath: 'resources/icon-dark.ico', expectedHashes: DARK_SMALL_FRAME_HASHES }
-  ])('keeps the dotted-ring mark recognizable in the small frames of $relativePath', (asset) => {
+  ])('keeps the Baselio b mark recognizable in the small frames of $relativePath', (asset) => {
     const { bytes, entries } = readIco(asset.relativePath)
     const smallFrameHashes = Object.fromEntries(
       entries

@@ -2,13 +2,13 @@
   "fill-specializations": [
     {
       "value": {
-        "solid": "display-p3:0.96859,0.96876,0.95789,1.00000"
+        "solid": "display-p3:0.16863,0.36863,0.29020,1.00000"
       }
     },
     {
       "appearance": "dark",
       "value": {
-        "solid": "display-p3:0.16463,0.16468,0.15755,1.00000"
+        "solid": "display-p3:0.16863,0.36863,0.29020,1.00000"
       }
     }
   ],
@@ -28,7 +28,7 @@
           "fill-specializations": [
             {
               "value": {
-                "solid": "display-p3:0.16463,0.16468,0.15755,1.00000"
+                "solid": "display-p3:1.00000,1.00000,1.00000,1.00000"
               }
             },
             {
@@ -43,8 +43,11 @@
           "name": "black",
           "opacity": 1,
           "position": {
-            "scale": 2.2,
-            "translation-in-points": [0, 0]
+            "scale": 1.35,
+            "translation-in-points": [
+              0,
+              0
+            ]
           }
         }
       ],
@@ -59,7 +62,9 @@
     }
   ],
   "supported-platforms": {
-    "circles": ["watchOS"],
+    "circles": [
+      "watchOS"
+    ],
     "squares": "shared"
   }
 }

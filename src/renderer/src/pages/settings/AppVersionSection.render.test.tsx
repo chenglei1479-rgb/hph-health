@@ -109,7 +109,7 @@ describe('AppVersionSection', () => {
     expect(dialog).toContain('Notices (NOTICE)')
     expect(dialog).toContain('Third-party notices')
     expect(dialog).toContain('Apache License')
-    expect(dialog).toContain('modified from AIPOCH Open-Science v0.36.0')
+    expect(dialog).toContain('modified from AIPOCH Open-Science v1.0.0')
     expect(dialog).toContain('THIRD-PARTY NOTICES')
     expect(dialog).toContain('AIPOCH Open-Science をベースに開発')
     expect(document.body.querySelector('img[alt*="AIPOCH"], img[src*="aipoch"]')).toBeNull()
@@ -130,48 +130,41 @@ describe('AppVersionSection', () => {
     expect(links.every((link) => link.target === '_blank' && link.rel === 'noreferrer')).toBe(true)
   })
 
-  it.each([
-    ['en', '/docs/'],
-    ['zh-Hans', '/docs/zh-Hans/'],
-    ['zh-Hant', '/docs/zh-Hant/'],
-    ['ja', '/docs/ja/'],
-    ['ko', '/docs/ko/'],
-    ['fr', '/docs/fr/'],
-    ['ru', '/docs/ru/'],
-    ['de', '/docs/de/'],
-    ['es', '/docs/es/']
-  ] as const)('opens the documentation homepage for the active %s locale', async (locale, path) => {
-    await act(async () => {
-      useLocaleStore.getState().setPreference(locale)
-      root.render(<AppVersionSection />)
-    })
+  it.each(['en', 'zh-Hans', 'zh-Hant', 'ja', 'ko', 'fr', 'ru', 'de', 'es'] as const)(
+    'opens the Baselio documentation for the active %s locale',
+    async (locale) => {
+      await act(async () => {
+        useLocaleStore.getState().setPreference(locale)
+        root.render(<AppVersionSection />)
+      })
 
-    const link = container.querySelector<HTMLAnchorElement>(
-      '[data-settings-anchor="general.help-center"]'
-    )!
-    expect(link.href).toBe(`https://www.aipoch.com${path}`)
-    expect(link.getAttribute('aria-label')).toBe(i18next.t('Open Help Center in your browser'))
-    expect(link.target).toBe('_blank')
-    expect(link.rel).toBe('noreferrer')
-  })
+      const link = container.querySelector<HTMLAnchorElement>(
+        '[data-settings-anchor="general.help-center"]'
+      )!
+      expect(link.href).toBe('https://github.com/chenglei1479-rgb/hph-health#readme')
+      expect(link.getAttribute('aria-label')).toBe(i18next.t('Open Help Center in your browser'))
+      expect(link.target).toBe('_blank')
+      expect(link.rel).toBe('noreferrer')
+    }
+  )
 
-  it('updates the existing help link after a language switch and resolves System through the app', async () => {
+  it('keeps the Baselio README target valid after a language switch and System resolution', async () => {
     act(() => root.render(<AppVersionSection />))
     const link = container.querySelector<HTMLAnchorElement>(
       '[data-settings-anchor="general.help-center"]'
     )!
-    expect(link.href).toBe('https://www.aipoch.com/docs/')
+    expect(link.href).toBe('https://github.com/chenglei1479-rgb/hph-health#readme')
 
     await act(async () => useLocaleStore.getState().setPreference('es'))
-    expect(link.href).toBe('https://www.aipoch.com/docs/es/')
+    expect(link.href).toBe('https://github.com/chenglei1479-rgb/hph-health#readme')
 
     vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['zh-TW', 'en-US'])
     await act(async () => useLocaleStore.getState().setPreference('system'))
     expect(useLocaleStore.getState().preference).toBe('system')
-    expect(link.href).toBe('https://www.aipoch.com/docs/zh-Hant/')
+    expect(link.href).toBe('https://github.com/chenglei1479-rgb/hph-health#readme')
 
     await act(async () => useLocaleStore.getState().setPreference('en'))
-    expect(link.href).toBe('https://www.aipoch.com/docs/')
+    expect(link.href).toBe('https://github.com/chenglei1479-rgb/hph-health#readme')
   })
 
   it('reveals resource details and primary-colored icons on pointer hover or keyboard focus', () => {

@@ -1,3 +1,4 @@
+import type { Locale } from '../../shared/locale'
 import { createLogger } from '@aipoch/diagnostics/node'
 import type {
   ApproveRemotePairingRequest,
@@ -22,6 +23,7 @@ import {
 import { RemoteAccessRepository } from './repository'
 
 type RemoteAccessServiceDeps = {
+  getLocale?: () => Locale
   repository?: RemoteAccessRepository
   detectRemoteIt?: typeof detectRemoteIt
   enableRemoteIt?: typeof enableRemoteItServices
@@ -123,6 +125,7 @@ export class RemoteAccessService {
     const context: { service?: RemoteAccessService } = {}
     const pairingOptions: Parameters<typeof RemoteSessionPairingManager.create>[0] = {
       repository,
+      getLocale: options.getLocale,
       isAllowedRemoteHost: (hostname) => context.service?.isAllowedRemoteHost(hostname) === true,
       isEnabled: () => context.service?.runtimeEnabled === true,
       authorizationGeneration: () => context.service?.authorizationGeneration ?? 0,

@@ -413,7 +413,7 @@ const readSettings = <T>(read: () => Promise<T>, epoch: number): Promise<T> => {
 }
 
 let settingsLoadPromise: Promise<boolean> | undefined
-const SAFE_SETTINGS_LOAD_ERROR = 'DRA could not load settings. Retry to continue.'
+const SAFE_SETTINGS_LOAD_ERROR = 'Baselio could not load settings. Retry to continue.'
 
 // Keep raw IPC diagnostics in the developer channel while renderer state remains path-safe.
 const reportSettingsLoadError = (

@@ -56,7 +56,7 @@ it.each(['mac', 'win', 'linux'] as const)(
       expect(thirdPartyText).toContain('openpyxl')
       expect(thirdPartyText).toContain('lifelines')
       expect(await readFile(join(destination, 'NOTICE'), 'utf8')).toContain(
-        'modified from AIPOCH Open-Science v0.36.0'
+        'modified from AIPOCH Open-Science v1.0.0'
       )
     } finally {
       await rm(destination, { recursive: true, force: true })
@@ -96,9 +96,16 @@ it('uses the original license with informational NSIS copy and a normal Next but
   const root = resolve(__dirname, '..')
   const config = load(await readFile(join(root, 'electron-builder.yml'), 'utf8')) as Configuration
   expect(config.nsis?.oneClick).toBe(false)
-  expect(await readFile(join(root, config.nsis!.license!), 'utf8')).toBe(
-    await readFile(join(root, 'LICENSE'), 'utf8')
-  )
+  expect(config.nsis?.license).toBeUndefined()
+  expect(config.nsis?.multiLanguageInstaller).toBe(true)
+  expect(config.nsis?.installerLanguages).toEqual(['ja_JP', 'zh_CN', 'en_US'])
+  const original = await readFile(join(root, 'LICENSE'))
+  for (const language of ['en_US', 'ja_JP', 'zh_CN']) {
+    const localized = await readFile(join(root, `build/license_${language}.txt`))
+    expect(localized.subarray(-original.length)).toEqual(original)
+    expect(localized.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]))
+    expect(localized.toString('utf8')).toContain('Baselio')
+  }
   const include = await readFile(join(root, config.nsis!.include!), 'utf8')
   expect(include).toContain('!include "${BUILD_RESOURCES_DIR}\\installer.nsh"')
   expect(include).not.toContain('!include "${BUILD_RESOURCES_DIR}/installer.nsh"')

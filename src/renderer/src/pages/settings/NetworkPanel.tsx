@@ -287,7 +287,7 @@ const NetworkPanel = ({
                   {connectivity !== 'probe-failed' ? (
                     <li>
                       {t(
-                        'Check the proxy used by Open-Science. A working browser connection may use different proxy settings.'
+                        'Check the proxy used by Baselio. A working browser connection may use different proxy settings.'
                       )}
                     </li>
                   ) : (

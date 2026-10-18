@@ -1556,7 +1556,7 @@ async function startDesktop(): Promise<void> {
               defaultId: 0,
               cancelId: 0,
               title: translate('Move in progress'),
-              message: translate('Open-Science is still moving your data.'),
+              message: translate('Baselio is still moving your data.'),
               detail: translate(
                 'Your data is safe either way, but quitting now leaves the move unfinished — you may need to start it again. Keep the app open until it finishes.'
               )
