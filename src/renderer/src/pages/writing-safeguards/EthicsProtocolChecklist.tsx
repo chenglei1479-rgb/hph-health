@@ -64,6 +64,11 @@ export const EthicsProtocolChecklist = ({
   >({ confirmedMappings: [] })
   const [mappingSelections, setMappingSelections] = useState<Record<string, string>>({})
   const [confirmingDoctor, setConfirmingDoctor] = useState('')
+  const isMissing = (number: R8ItemNumber): boolean => {
+    if (reasons[number]?.trim()) return false
+    if (!isConditional(number)) return true
+    return choices[number] !== 'yes' && choices[number] !== 'no'
+  }
   useEffect(() => {
     if (!projectId || !window.api.writingSafeguards) return
     void window.api.writingSafeguards.getEthicsProtocol({ projectId }).then((protocol) => {
@@ -173,7 +178,10 @@ export const EthicsProtocolChecklist = ({
               <strong>
                 {item.number}. {t(item.title)}
               </strong>{' '}
-              <span>{c.draft}</span> <span>{c.blank}</span>
+              <span>{c.draft}</span>{' '}
+              {isMissing(item.number) ? (
+                <span data-ethics-missing={item.number}>{c.blank}</span>
+              ) : null}
             </div>
             {isConditional(item.number) ? (
               <div role="group" aria-label={`${item.number}`} className="flex gap-2">
@@ -194,9 +202,17 @@ export const EthicsProtocolChecklist = ({
               <input
                 type="checkbox"
                 checked={excluded[item.number] ?? false}
-                onChange={(event) =>
-                  setExcluded((old) => ({ ...old, [item.number]: event.target.checked }))
-                }
+                onChange={(event) => {
+                  const checked = event.target.checked
+                  setExcluded((old) => ({ ...old, [item.number]: checked }))
+                  if (!checked) {
+                    setReasons((old) => {
+                      const next = { ...old }
+                      delete next[item.number]
+                      return next
+                    })
+                  }
+                }}
               />
               {c.na}
             </label>

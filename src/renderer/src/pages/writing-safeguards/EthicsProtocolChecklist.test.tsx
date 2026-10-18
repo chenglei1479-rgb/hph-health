@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EthicsProtocolChecklist } from './EthicsProtocolChecklist'
 
@@ -27,6 +27,20 @@ describe('EthicsProtocolChecklist', () => {
     ).toBeGreaterThan(0)
     expect(screen.getAllByText('Yes').length).toBeGreaterThan(0)
     expect(screen.queryByText('Ethics checklist: yes')).toBeNull()
+  })
+
+  it('hides the missing marker only after an answer or a not-applicable reason is entered', () => {
+    const { container } = render(<EthicsProtocolChecklist projectId="" />)
+    expect(container.querySelector('[data-ethics-missing="18"]')).not.toBeNull()
+    const item18 = within(container).getByRole('group', { name: '18' })
+    fireEvent.click(within(item18).getByRole('radio', { name: 'Yes' }))
+    expect(container.querySelector('[data-ethics-missing="18"]')).toBeNull()
+
+    const item3 = within(container).getAllByRole('listitem')[2]
+    fireEvent.click(within(item3).getByRole('checkbox', { name: 'Not applicable' }))
+    expect(container.querySelector('[data-ethics-missing="3"]')).not.toBeNull()
+    fireEvent.change(within(item3).getByRole('textbox'), { target: { value: 'No intervention' } })
+    expect(container.querySelector('[data-ethics-missing="3"]')).toBeNull()
   })
 
   it('lets a doctor correct and confirm imported heading mappings through the protocol API', async () => {
