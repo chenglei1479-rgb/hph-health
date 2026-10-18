@@ -22,11 +22,7 @@ import {
   type ApplicationCommandInstallation,
   type ApplicationCommandRegistrar
 } from './application-command-router'
-import {
-  bookmarkApplicationCommandGroup,
-  registerBookmarkApplicationCommands,
-  type BookmarkCommandOwner
-} from './bookmarks/application-commands'
+
 import {
   computeApplicationCommandGroup,
   registerComputeApplicationCommands,
@@ -42,21 +38,13 @@ import {
   registerHostApplicationCommands,
   type HostApplicationCommandDependencies
 } from './host-application-commands'
-import {
-  literatureApplicationCommandGroup,
-  registerLiteratureApplicationCommands,
-  type LiteratureCommandOwner
-} from './literature/application-commands'
+
 import {
   pdfTranslationApplicationCommandGroup,
   registerPdfTranslationApplicationCommands
 } from './literature/pdf-translation/application-commands'
 import type { PdfTranslationOwner } from './literature/pdf-translation/index'
-import {
-  memoryApplicationCommandGroup,
-  registerMemoryApplicationCommands,
-  type MemoryCommandOwner
-} from './memory/application-commands'
+
 import {
   installNotebookApplicationCommands,
   notebookApplicationCommands,
@@ -71,20 +59,12 @@ import {
   runtimeApplicationCommandGroup,
   type RuntimeApplicationCommandDependencies
 } from './notebook/runtime-application-commands'
-import {
-  pdfAnnotationApplicationCommandGroup,
-  registerPdfAnnotationApplicationCommands,
-  type PdfAnnotationCommandOwner
-} from './pdf-annotations/application-commands'
+
 import {
   permissionGrantApplicationCommandGroup,
   registerPermissionGrantApplicationCommands
 } from './permission-grants/application-commands'
-import {
-  registerSessionReplayCommands,
-  sessionReplayCommandGroup,
-  type SessionReplayCommandOwner
-} from './session-replay/application-commands'
+
 import {
   registerCoreSettingsApplicationCommands,
   settingsCoreApplicationCommandGroup,

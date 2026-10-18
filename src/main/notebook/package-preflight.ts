@@ -1,7 +1,7 @@
 import type { NotebookLanguage } from '../../shared/notebook'
-import type { PackageInspectionResult } from './environment-state-tracker'
+import type { PackageInspectionResult } from '@aipoch/environment'
 
-type NotebookPackagePreflight = {
+export type NotebookPackagePreflight = {
   scope: 'package-metadata'
   status: 'available' | 'blocked' | 'unknown'
   missingPackages: string[]
@@ -18,7 +18,7 @@ type NotebookPackagePreflight = {
 
 // Metadata inspection neither executes analysis nor authorizes an install. In particular, do not
 // turn a failed inventory scan into a missing-package result or claim that model quota was checked.
-const packagePreflight = (
+export const packagePreflight = (
   language: NotebookLanguage,
   inspection: PackageInspectionResult
 ): NotebookPackagePreflight => {

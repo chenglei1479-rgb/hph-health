@@ -43,7 +43,7 @@ import {
   analyzePowerShellCodeRisk,
   type NotebookCodeRisk
 } from '@aipoch/notebook-code-risk'
-import type { GrantedLocalRoot } from '../../shared/local-fs'
+
 import type { PackageMirror } from '../../shared/mirror'
 import type {
   AbortNotebookCodeCellRequest,
@@ -79,9 +79,9 @@ import type {
   ShellRuntimeBinding
 } from '../../shared/notebook'
 import type { GrantedLocalRoot } from '../../shared/local-fs'
-import { publishUserFile } from '../user-file-publisher'
+
 import { confirmDeidentifiedExports } from '../writing-safeguards/export-confirm'
-import { NotebookBackgroundRunError } from '../../shared/notebook'
+
 import {
   NOTEBOOK_STATE_HISTORY_FRAME_ID_LIMIT_BYTES,
   NOTEBOOK_STATE_HISTORY_PAGE_LIMIT,

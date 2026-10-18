@@ -22,7 +22,7 @@ import type { PersistedChatSession } from '../../shared/session-persistence'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
 import { publishUserFile } from '../user-file-publisher'
 import { confirmDeidentifiedExports } from '../writing-safeguards/export-confirm'
-import { createLogger, diagnosticErrorFields } from '../logger'
+
 import { createLogger, diagnosticErrorFields } from '@aipoch/diagnostics/node'
 
 const log = createLogger('conversation-export')

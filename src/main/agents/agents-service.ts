@@ -22,9 +22,7 @@ import {
   type CustomMcpFailureAvailability
 } from '../connectors/custom-mcp'
 import { getConnectorTools } from '../connectors/registry'
-import type { SpecialistService } from '../specialist/service'
-import type { SessionBindingService } from '../specialist/session-binding'
-import type { SpecialistView } from '../../shared/specialist'
+
 import type { StoredConnectors } from '../settings/types'
 import type { SpecialistDeleteRequest, SpecialistDeleteResult } from '@aipoch/specialists'
 import {
