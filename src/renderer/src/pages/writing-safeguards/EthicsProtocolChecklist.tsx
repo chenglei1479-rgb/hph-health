@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { R8_ITEMS, type R8ItemNumber } from '../../../../shared/ethics-protocol/r8-items'
 import type { EthicsProtocolState } from '../../../../shared/ethics-protocol/state'
 import { confirmHeadingMapping } from '../../../../shared/ethics-protocol/heading-mapper'
-import { hasMeaningfulTemplateContent } from '../../../../shared/ethics-protocol/completeness'
+import {
+  evaluateR8ItemCompleteness,
+  formatNotApplicableText
+} from '../../../../shared/ethics-protocol/completeness'
 
 type ConditionalItemNumber = keyof EthicsProtocolState['choices']
 const conditional: ReadonlySet<R8ItemNumber> = new Set([18, 19, 22, 23, 24])
@@ -17,6 +20,7 @@ type ChecklistCopy = Record<
   | 'no'
   | 'unknown'
   | 'blank'
+  | 'partial'
   | 'na'
   | 'reason'
   | 'reasonRequired'
@@ -37,6 +41,7 @@ const copy = (t: (key: string, options?: { context: string }) => string): Checkl
   no: t('No', { context: 'ethics' }),
   unknown: t('I don’t know', { context: 'ethics' }),
   blank: t('Missing', { context: 'ethics' }),
+  partial: t('Partially missing'),
   na: t('Not applicable'),
   reason: t('Reason it does not apply'),
   reasonRequired: t('Enter a reason.'),
@@ -70,10 +75,17 @@ export const EthicsProtocolChecklist = ({
   >({ confirmedMappings: [] })
   const [mappingSelections, setMappingSelections] = useState<Record<string, string>>({})
   const [confirmingDoctor, setConfirmingDoctor] = useState('')
-  const isMissing = (number: R8ItemNumber): boolean => {
-    if (reasons[number]?.trim()) return false
-    if (!isConditional(number)) return !hasMeaningfulTemplateContent(sectionTexts[number] ?? '')
-    return choices[number] !== 'yes' && choices[number] !== 'no'
+  const itemStatus = (number: R8ItemNumber): '空缺' | '部分空缺' | '記載あり' => {
+    const reason = reasons[number]?.trim()
+    if (reason) return evaluateR8ItemCompleteness(number, formatNotApplicableText(number, reason))
+    if (!isConditional(number)) {
+      return evaluateR8ItemCompleteness(number, sectionTexts[number] ?? '')
+    }
+    const answer = choices[number]
+    return evaluateR8ItemCompleteness(
+      number,
+      answer === 'yes' ? 'はい' : answer === 'no' ? 'いいえ' : ''
+    )
   }
   useEffect(() => {
     if (!projectId || !window.api.writingSafeguards) return
@@ -188,8 +200,10 @@ export const EthicsProtocolChecklist = ({
                 {item.number}. {t(item.title)}
               </strong>{' '}
               <span>{c.draft}</span>{' '}
-              {isMissing(item.number) ? (
-                <span data-ethics-missing={item.number}>{c.blank}</span>
+              {itemStatus(item.number) !== '記載あり' ? (
+                <span data-ethics-missing={item.number}>
+                  {itemStatus(item.number) === '部分空缺' ? c.partial : c.blank}
+                </span>
               ) : null}
             </div>
             {isConditional(item.number) ? (

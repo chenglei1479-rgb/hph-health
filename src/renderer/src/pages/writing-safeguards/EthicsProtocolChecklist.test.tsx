@@ -52,6 +52,14 @@ describe('EthicsProtocolChecklist', () => {
     expect(container.querySelector('[data-ethics-missing="1"]')).not.toBeNull()
     fireEvent.change(section1, { target: { value: 'Doctor-authored protocol text' } })
     expect(container.querySelector('[data-ethics-missing="1"]')).toBeNull()
+
+    const section21 = within(container).getByRole('textbox', {
+      name: 'Protocol section content 21'
+    })
+    fireEvent.change(section21, { target: { value: '補償なし' } })
+    expect(container.querySelector('[data-ethics-missing="21"]')?.textContent).toBe(
+      'Partially missing'
+    )
   })
 
   it('lets a doctor correct and confirm imported heading mappings through the protocol API', async () => {

@@ -55,4 +55,23 @@ describe('buildEthicsDraftSections', () => {
       expect(draft.missingItems).toContain(1)
     }
   )
+
+  it('keeps partial item content in the body while listing it as missing', () => {
+    const state = emptyEthicsProtocolState()
+    state.sectionTexts = {
+      6: '期間内の該当全例を対象とする。理由：選択バイアスを避けるため。',
+      21: '補償なし'
+    }
+    state.notApplicableReasons = { 16: '成人のみを対象とするため' }
+
+    const draft = buildEthicsDraftSections(state)
+
+    expect(draft.missingItems).not.toContain(6)
+    expect(draft.missingItems).not.toContain(16)
+    expect(draft.sections.find(({ item }) => item === 16)?.text).toBe(
+      '該当なし（理由：成人のみを対象とするため）'
+    )
+    expect(draft.sections.find(({ item }) => item === 21)?.text).toBe('補償なし')
+    expect(draft.missingItems).toContain(21)
+  })
 })

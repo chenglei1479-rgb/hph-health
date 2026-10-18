@@ -1,6 +1,10 @@
 import { R8_ITEMS, type R8ItemNumber } from '../../shared/ethics-protocol/r8-items'
 import type { EthicsProtocolState } from '../../shared/ethics-protocol/state'
-import { hasMeaningfulTemplateContent } from '../../shared/ethics-protocol/completeness'
+import {
+  evaluateR8ItemCompleteness,
+  formatNotApplicableText,
+  hasMeaningfulTemplateContent
+} from '../../shared/ethics-protocol/completeness'
 
 export type EthicsDraftSection = { item: R8ItemNumber; text: string }
 
@@ -20,9 +24,11 @@ export const buildEthicsDraftSections = (
     const rawSectionText = state.sectionTexts?.[number]?.trim()
     const sectionText =
       rawSectionText && hasMeaningfulTemplateContent(rawSectionText) ? rawSectionText : undefined
-    const text = reason ? `該当なし（${reason}）` : (answer ?? sectionText ?? '【要記入】')
+    const text = reason
+      ? formatNotApplicableText(number, reason)
+      : (answer ?? sectionText ?? '【要記入】')
 
-    if (text === '【要記入】') missingItems.push(number)
+    if (evaluateR8ItemCompleteness(number, text) !== '記載あり') missingItems.push(number)
     return { item: number, text }
   })
 
