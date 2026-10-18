@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
+import { pdfTranslationResourceDirectory } from '@aipoch/pdf-translation/resources'
 
 import { strToU8, zipSync } from 'fflate'
 import { PDFDocument, rgb, type PDFFont } from 'pdf-lib'
@@ -40,10 +40,7 @@ const sheetTitle = (name: string, index: number): string => {
   return cleaned.length > 0 ? cleaned : `results${index + 1}`
 }
 
-const fontPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '../../../resources/pdf-translation/NotoSansSC-Regular.otf'
-)
+const fontPath = join(pdfTranslationResourceDirectory(), 'NotoSansSC-Regular.otf')
 
 const zip = (files: Record<string, string>): Uint8Array =>
   zipSync(Object.fromEntries(Object.entries(files).map(([path, xml]) => [path, strToU8(xml)])))
