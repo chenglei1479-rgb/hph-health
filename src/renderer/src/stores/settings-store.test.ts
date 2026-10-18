@@ -980,7 +980,7 @@ describe('settings store: startup loading', () => {
       expect(useSettingsStore.getState()).toMatchObject({
         isLoading: false,
         isLoaded: false,
-        loadError: 'Open-Science could not load settings. Retry to continue.'
+        loadError: 'Baselio could not load settings. Retry to continue.'
       })
       await expect(loading).resolves.toBe(false)
       finish({ ...snapshot([]), onboardingCompletedAt: 111 })
@@ -1062,7 +1062,7 @@ describe('settings store: startup loading', () => {
     expect(useSettingsStore.getState()).toMatchObject({
       isLoaded: false,
       isLoading: false,
-      loadError: 'Open-Science could not load settings. Retry to continue.'
+      loadError: 'Baselio could not load settings. Retry to continue.'
     })
     await expect(useSettingsStore.getState().load({ force: true })).resolves.toBe(true)
   })

@@ -628,7 +628,7 @@ async function main(): Promise<void> {
     }
     abortStartupIfStopping()
     const { createWebServiceController } = await import('./web-service')
-    remoteAccess = await RemoteAccessService.create()
+    remoteAccess = await RemoteAccessService.create({ getLocale: () => localeOwner.snapshot().locale })
     runtime.bindRemoteAccess(remoteAccess)
     web = createWebServiceController({
       ...runtime,

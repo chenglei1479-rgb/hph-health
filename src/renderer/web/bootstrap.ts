@@ -59,7 +59,7 @@ document.documentElement.setAttribute(WEB_EVENT_SURFACE_ATTRIBUTE, 'true')
 
 const authorizationExpiredMessage = (): string =>
   t(
-    'Access authorization has expired. Reopen the Web link from Open-Science on the host computer, or return to the remote access entry page to pair again.'
+    'Access authorization has expired. Reopen the Web link from Baselio on the host computer, or return to the remote access entry page to pair again.'
   )
 
 class AuthorizationExpiredError extends Error {}

@@ -28,7 +28,7 @@ export async function recoverDesktopBackendStartup(
     const { response } = await dialog.showMessageBox({
       type: 'error',
       title: 'Open-Science',
-      message: translate('Open-Science could not start the backend.'),
+      message: translate('Baselio could not start the backend.'),
       detail: `${detail}\n\nSTARTUP_STAGE: ${error.stage}`,
       buttons: [
         ...(error.canRetry ? [translate('Retry startup')] : []),

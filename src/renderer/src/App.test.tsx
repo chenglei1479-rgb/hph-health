@@ -1362,7 +1362,7 @@ describe('App startup routing', () => {
   })
 
   it('translates the settings startup failure description in Chinese', async () => {
-    mocks.settings.loadError = 'Open-Science could not load settings. Retry to continue.'
+    mocks.settings.loadError = 'Baselio could not load settings. Retry to continue.'
     mocks.settings.load.mockResolvedValue(false)
     await i18next.changeLanguage('zh-Hans')
     try {
@@ -1407,7 +1407,7 @@ describe('App startup routing', () => {
     await render()
 
     const shell = container.querySelector('[role="alert"]')
-    expect(shell?.textContent).toContain('Open-Science could not load settings. Retry to continue.')
+    expect(shell?.textContent).toContain('Baselio could not load settings. Retry to continue.')
     expect(shell?.textContent).not.toContain('settings IPC unavailable')
     expect(shell?.querySelector('section > svg[aria-hidden="true"]')).not.toBeNull()
     expect(shell?.classList.contains('min-h-svh')).toBe(true)

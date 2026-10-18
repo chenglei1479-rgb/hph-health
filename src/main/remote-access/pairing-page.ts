@@ -1,11 +1,13 @@
 import { randomBytes } from 'node:crypto'
 
 import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
-import openScienceLogoSvg from './open-science-logo.svg?raw'
+import baselioMarkSvg from '../../renderer/src/assets/baselio-mark.svg?raw'
+import type { Locale } from '../../shared/locale'
+import { translateNativeMessage } from '../locale/main-process-messages'
 
 export const REMOTE_PAIR_STATUS_PATH = '/__open_science_remote/pair/status'
 
-const openScienceLogo = openScienceLogoSvg.replace(
+const baselioMark = baselioMarkSvg.replace(
   '<svg ',
   '<svg class="brand-logo" aria-hidden="true" focusable="false" '
 )
@@ -23,7 +25,10 @@ export const renderPairingPage = (params: {
   browser: string
   platform: string
   expiresAt: number
+  locale?: Locale
 }): { html: string; nonce: string } => {
+  const locale = params.locale ?? 'en'
+  const translate = (key: string): string => translateNativeMessage(locale, key)
   const nonce = randomBytes(18).toString('base64')
   const code = escapeHtml(params.code)
   const browser = escapeHtml(params.browser)
@@ -37,7 +42,7 @@ export const renderPairingPage = (params: {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-      <title>Connect to DRA</title>
+      <title>${escapeHtml(translate('Connect to Baselio'))}</title>
     <style>
       :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       * { box-sizing: border-box; }
@@ -69,7 +74,7 @@ export const renderPairingPage = (params: {
   <body>
     <main class="card">
       <div class="brand">
-        ${openScienceLogo}
+        ${baselioMark}
         <div class="brand-name">${escapeHtml(PRODUCT_DISPLAY_NAME)}</div>
       </div>
       <h1>Approve this browser</h1>
@@ -121,7 +126,7 @@ export const renderPairingPage = (params: {
           if (Date.now() >= expiry) { expire(); return; }
           if (signal.aborted) return;
           if (result.status === 'approved') {
-            finish('approved', 'Approved. Opening DRA…');
+            finish('approved', ${JSON.stringify(translate('Approved. Opening Baselio…')).replaceAll('<', '\\u003c')});
             pollTimer = window.setTimeout(() => window.location.replace('/'), 300);
             return;
           }

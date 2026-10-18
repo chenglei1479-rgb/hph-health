@@ -1,3 +1,4 @@
+import type { Locale } from '../../shared/locale'
 import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
@@ -63,6 +64,7 @@ type RemoteSessionAccess =
 
 type PairingManagerOptions = {
   repository: RemoteAccessRepository
+  getLocale?: () => Locale
   isAllowedRemoteHost: (hostname: string) => boolean
   isEnabled: () => boolean
   authorizationGeneration?: () => number
@@ -492,7 +494,7 @@ export class RemoteSessionPairingManager {
       return 'handled'
     }
     const pending = admission.pending
-    const page = renderPairingPage(pending)
+    const page = renderPairingPage({ ...pending, locale: this.options.getLocale?.() })
     response.writeHead(200, {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',

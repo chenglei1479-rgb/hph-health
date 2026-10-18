@@ -390,7 +390,9 @@ describe('NSIS installer include (build/installer.nsh)', () => {
     expect(include).toContain('$$_.ExecutablePath')
     expect(include).not.toContain('$$_.Path.')
     expect(include).toContain('taskkill /F /IM "${APP_EXECUTABLE_FILENAME}"')
-    expect(readFileSync(join(repoRoot, 'build/installer-strings.nsh'), 'utf8')).toContain('$(uninstallFailed): $R0')
+    expect(readFileSync(join(repoRoot, 'build/installer-strings.nsh'), 'utf8')).toContain(
+      '$(uninstallFailed): $R0'
+    )
     expect(include).toContain('SetErrorLevel 2')
   })
 

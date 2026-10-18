@@ -146,3 +146,25 @@ describe('Pairing page recovery', () => {
     expect(reload).toHaveBeenCalledOnce()
   })
 })
+
+it.each([
+  ['en', 'Connect to Baselio', 'Approved. Opening Baselio…'],
+  ['ja', 'Baselio（ベースリオ）に接続', '承認されました。Baselio を開いています…'],
+  ['zh-Hans', '连接到 Baselio', '已批准。正在打开 Baselio…']
+] as const)(
+  'uses the selected %s application locale for Baselio pairing copy',
+  (locale, title, approved) => {
+    const { html } = renderPairingPage({
+      code: '123456',
+      browser: 'Safari',
+      platform: 'iOS/iPadOS',
+      expiresAt: Date.now() + 60_000,
+      locale
+    })
+    document.documentElement.innerHTML = html
+    expect(document.title).toBe(title)
+    expect(html).toContain(JSON.stringify(approved))
+    expect(document.querySelector('svg.brand-logo')?.getAttribute('fill')).toBe('#285745')
+    expect(html).not.toContain('DRA')
+  }
+)
