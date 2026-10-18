@@ -50,7 +50,7 @@ function findNsisCompiler(): string | undefined {
 
 const nsisCompiler = findNsisCompiler()
 
-describe.skipIf(!nsisCompiler).each(['OpenScience', 'Open-Science'])(
+describe.skipIf(!nsisCompiler).each(['MedResearchAgent', 'MedResearch-Agent'])(
   'NSIS data preservation native behavior (%s)',
   (folder) => {
     it.each([
@@ -70,8 +70,8 @@ describe.skipIf(!nsisCompiler).each(['OpenScience', 'Open-Science'])(
       try {
         const install = join(parent, 'open-science')
         const data = join(install, folder)
-        const slot = folder === 'OpenScience' ? 'per-user' : 'per-user-branded'
-        const backup = join(parent, `.open-science-update-data-${slot}`)
+        const slot = folder === 'MedResearchAgent' ? 'per-user' : 'per-user-branded'
+        const backup = join(parent, `.medresearch-agent-update-data-${slot}`)
         const conflict = scenario === 'backup-conflict' || scenario === 'backup-file'
         if (scenario !== 'missing-parent' && scenario !== 'invalid-parent') mkdirSync(parent)
         if (scenario === 'existing-data' || conflict) {
@@ -427,7 +427,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
   it('runs the retry with TEMP and TMP on the old installation volume', () => {
     // electron-builder's updated uninstall atomically moves the old installation into the
     // uninstaller's $PLUGINSDIR. A custom D: install with the ordinary C: TEMP turns that into a
-    // cross-volume move/copy — including a nested OpenScience data root — and can abort with exit
+    // cross-volume move/copy — including a nested MedResearchAgent data root — and can abort with exit
     // code 2. The recovery attempt must give the child uninstaller a same-volume plugin directory,
     // then restore this installer's environment after ExecWait returns.
     const recovery =
@@ -444,8 +444,8 @@ describe('NSIS installer include (build/installer.nsh)', () => {
     expect(recovery.lastIndexOf('("TMP", "$R4")')).toBeGreaterThan(retryAt)
   })
 
-  it('preserves a nested OpenScience data root around the uninstall retry', () => {
-    // The reporter's configured data root is <install dir>\OpenScience. An updated NSIS
+  it('preserves a nested MedResearchAgent data root around the uninstall retry', () => {
+    // The reporter's configured data root is <install dir>\MedResearchAgent. An updated NSIS
     // uninstaller moves every child of the install directory into its disposable $PLUGINSDIR, so
     // a successful retry must first move that data root to a separate sibling and restore it
     // before the new installer continues.
@@ -459,16 +459,16 @@ describe('NSIS installer include (build/installer.nsh)', () => {
       include.match(/!macro uninstallFailureRecoveryAt DIR([\s\S]*?)!macroend/)?.[1] ?? ''
     )
       .replace(
-        '!insertmacro preserveRetryDataRoot ${DIR} $retryLegacyDataBackup OpenScience',
-        preserve.replaceAll('${BACKUP}', '$R7').replaceAll('${FOLDER}', 'OpenScience')
+        '!insertmacro preserveRetryDataRoot ${DIR} $retryLegacyDataBackup MedResearchAgent',
+        preserve.replaceAll('${BACKUP}', '$R7').replaceAll('${FOLDER}', 'MedResearchAgent')
       )
       .replace(
-        '!insertmacro restoreRetryDataRoot ${DIR} $retryLegacyDataBackup ${REGISTERED_BACKUP} OpenScience',
-        restore.replaceAll('${BACKUP}', '$R7').replaceAll('${FOLDER}', 'OpenScience')
+        '!insertmacro restoreRetryDataRoot ${DIR} $retryLegacyDataBackup ${REGISTERED_BACKUP} MedResearchAgent',
+        restore.replaceAll('${BACKUP}', '$R7').replaceAll('${FOLDER}', 'MedResearchAgent')
       )
-    const preserveAt = recovery.indexOf('Rename "${DIR}\\OpenScience" "$R7"')
+    const preserveAt = recovery.indexOf('Rename "${DIR}\\MedResearchAgent" "$R7"')
     const retryAt = recovery.indexOf('ExecWait')
-    const restoreAt = recovery.indexOf('Rename "$R7" "${DIR}\\OpenScience"')
+    const restoreAt = recovery.indexOf('Rename "$R7" "${DIR}\\MedResearchAgent"')
     const preserveErrorAt = recovery.indexOf('Could not safely preserve')
     const preserveQuitAt = recovery.indexOf('Quit', preserveErrorAt)
     const restoreErrorAt = recovery.indexOf('The preserved data remains at: $R7')
@@ -488,7 +488,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
   })
 
   it('keeps registered data backups outside the install tree until recovery finishes', () => {
-    // A still-running old process can recreate <install>\OpenScience after customInit moved the
+    // A still-running old process can recreate <install>\MedResearchAgent after customInit moved the
     // registered data aside. Run force-kill + retry before restoring the authoritative backup in
     // both uninstall hooks. If recovery also preserves a newly-created directory, retain it at
     // its unique sibling path instead of overwriting either copy or feeding it to the uninstaller.
@@ -517,12 +517,12 @@ describe('NSIS installer include (build/installer.nsh)', () => {
       '!insertmacro uninstallFailureRecoveryAt $perUserInstallDirCache $perUserDataBackup'
     )
     expect(conflictBranch).toContain('Additional data created during the update remains at: $R7')
-    expect(conflictBranch).not.toContain('Rename "$R7" "${DIR}\\OpenScience"')
+    expect(conflictBranch).not.toContain('Rename "$R7" "${DIR}\\MedResearchAgent"')
   })
 
   it('protects registered nested data roots before the first old-uninstaller attempt', () => {
     // Recovery-only protection is too late: the first old uninstaller can succeed after moving
-    // <install>\OpenScience into its disposable $PLUGINSDIR. customInit runs before the install
+    // <install>\MedResearchAgent into its disposable $PLUGINSDIR. customInit runs before the install
     // section, so it must move registered data roots out first; each post-uninstall hook restores
     // its root even when the first attempt returns zero.
     const init = include.match(/!macro customInit([\s\S]*?)!macroend/)?.[1] ?? ''
@@ -743,7 +743,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
   })
 
   it('records actionable cleanup failure reasons in the NSIS detail log', () => {
-    expect(include).toContain('Open-Science Notebook cleanup failure code=$0')
+    expect(include).toContain('MedResearch-Agent Notebook cleanup failure code=$0')
     for (const code of [
       'parent-path-unresolved',
       'backup-already-exists',
@@ -751,7 +751,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
       'restore-destination-exists',
       'restore-rename-failed'
     ]) {
-      expect(include).toContain(`Open-Science data protection failure code=${code}`)
+      expect(include).toContain(`MedResearch-Agent data protection failure code=${code}`)
     }
   })
 })
@@ -760,7 +760,7 @@ it('protects both re-created branded data folders before retrying the old uninst
   const include = readFileSync(join(process.cwd(), 'build/installer.nsh'), 'utf8')
   const recovery =
     include.match(/!macro uninstallFailureRecoveryAt DIR[\s\S]*?!macroend/)?.[0] ?? ''
-  for (const name of ['OpenScience', 'Open-Science']) {
+  for (const name of ['MedResearchAgent', 'MedResearch-Agent']) {
     expect(recovery).toMatch(
       new RegExp('!insertmacro preserveRetryDataRoot[^\\n]+ ' + name + '(?:\\n|$)')
     )

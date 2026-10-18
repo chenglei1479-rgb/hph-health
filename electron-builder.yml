@@ -174,14 +174,14 @@ mac:
     # Electron locates its Helper bundles using this internal name. Keep it aligned with productName.
     CFBundleName: Baselio
     CFBundleDisplayName: Baselio
-    NSCameraUsageDescription: Application requests access to the device's camera.
-    NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    NSDesktopFolderUsageDescription: DRA needs access to Desktop files to browse, open, and save your research files.
-    NSDocumentsFolderUsageDescription: DRA needs access to Documents files to browse, open, and save your research files.
-    NSDownloadsFolderUsageDescription: DRA needs access to Downloads files to browse, open, and save your research files.
-    NSNetworkVolumesUsageDescription: DRA needs access to network volumes to browse, open, and save your research files.
-    NSRemovableVolumesUsageDescription: DRA needs access to removable volumes to browse, open, and save your research files.
-    NSLocalNetworkUsageDescription: DRA needs local network access to connect to compute hosts and services you configure.
+    NSCameraUsageDescription: Baselio needs access to the device's camera.
+    NSMicrophoneUsageDescription: Baselio needs access to the device's microphone.
+    NSDesktopFolderUsageDescription: Baselio needs access to Desktop files to browse, open, and save your research files.
+    NSDocumentsFolderUsageDescription: Baselio needs access to Documents files to browse, open, and save your research files.
+    NSDownloadsFolderUsageDescription: Baselio needs access to Downloads files to browse, open, and save your research files.
+    NSNetworkVolumesUsageDescription: Baselio needs access to network volumes to browse, open, and save your research files.
+    NSRemovableVolumesUsageDescription: Baselio needs access to removable volumes to browse, open, and save your research files.
+    NSLocalNetworkUsageDescription: Baselio needs local network access to connect to compute hosts and services you configure.
   notarize: false
   extraResources:
     # Ship the ad-hoc-signed micromamba mach-O at Contents/Resources/micromamba, where
