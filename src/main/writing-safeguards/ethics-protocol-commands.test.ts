@@ -2,13 +2,15 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { strToU8, unzipSync, zipSync } from 'fflate'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createWritingSafeguardsCommandOwner } from './application-commands'
 import { createEthicsApprovalStore } from './ethics-store'
 
-vi.mock('../phi/detect', () => ({ detectPhi: () => [] }))
+const detectPhiMock = vi.hoisted(() => vi.fn(() => []))
+vi.mock('../phi/detect', () => ({ detectPhi: detectPhiMock }))
 
 describe('ethics protocol commands', () => {
+  beforeEach(() => detectPhiMock.mockImplementation(() => []))
   it('imports a validated DOCX into project storage and exports a real draft DOCX', async () => {
     const root = mkdtempSync(join(tmpdir(), 'ethics-commands-'))
     const store = createEthicsApprovalStore(join(root, 'state.json'))
@@ -19,9 +21,9 @@ describe('ethics protocol commands', () => {
         '<w:document><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:t>架空の書式</w:t></w:p><w:p><w:t>保存しない本文</w:t></w:p></w:document>'
       )
     })
-    expect(
+    await expect(
       owner.importEthicsDocx({ projectId: 'study-1', fileName: 'form.docx', bytes: [...source] })
-    ).toEqual({
+    ).resolves.toEqual({
       fileName: 'form.docx',
       headingCandidates: [
         expect.objectContaining({ heading: '架空の書式', item: null, status: '対応不明' })
@@ -49,5 +51,29 @@ describe('ethics protocol commands', () => {
     expect(missingList).not.toMatch(/(?:^|、)1\. /u)
     expect(missingList).not.toMatch(/(?:^|、)18\. /u)
     expect(missingList).not.toMatch(/(?:^|、)19\. /u)
+  })
+
+  it('does not save any import state when heading PHI detection fails closed', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ethics-commands-phi-'))
+    const store = createEthicsApprovalStore(join(root, 'state.json'))
+    const owner = createWritingSafeguardsCommandOwner(store, join(root, 'protocols'), async () => {
+      throw new Error('heading PHI scan failed closed')
+    })
+    const before = {
+      ...store.getProtocol('study-1'),
+      sectionTexts: { 1: '既存の架空研究' }
+    }
+    store.setProtocol('study-1', before)
+    const source = zipSync({
+      '[Content_Types].xml': strToU8('<Types/>'),
+      'word/document.xml': strToU8(
+        '<w:document><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:t>研究の名称</w:t></w:p></w:document>'
+      )
+    })
+
+    await expect(
+      owner.importEthicsDocx({ projectId: 'study-1', fileName: 'form.docx', bytes: [...source] })
+    ).rejects.toThrow()
+    expect(store.getProtocol('study-1')).toEqual(before)
   })
 })

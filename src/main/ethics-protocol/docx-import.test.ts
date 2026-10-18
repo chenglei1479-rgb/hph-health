@@ -3,9 +3,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { strToU8, zipSync } from 'fflate'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { copyDocxToProject, DOCX_ONLY_MESSAGE, inspectDocx } from './docx-import'
+import {
+  copyDocxToProject,
+  DOCX_ONLY_MESSAGE,
+  inspectDocx,
+  inspectPhiSafeDocxHeadings
+} from './docx-import'
 
 const makeDocx = (): Uint8Array =>
   zipSync({
@@ -45,13 +50,18 @@ describe('local DOCX import', () => {
       source,
       zipSync({
         '[Content_Types].xml': strToU8('<Types/>'),
+        'word/styles.xml': strToU8(
+          '<w:styles><w:style w:type="paragraph" w:styleId="1"><w:name w:val="見出し 1"/></w:style></w:styles>'
+        ),
         'word/document.xml': strToU8(
           '<w:document><w:body>' +
-            '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>研究の名称</w:t></w:r></w:p>' +
+            '<w:p><w:pPr><w:pStyle w:val="1"/></w:pPr><w:r><w:t>研究の名称</w:t></w:r></w:p>' +
             '<w:p><w:r><w:t>2. 研究の実施体制</w:t></w:r></w:p>' +
+            '<w:p><w:pPr><w:numPr/></w:pPr><w:r><w:t>3. これは番号付きだが六十字を超えるため候補にしない非常に長い本文見出しのような文章であり保存してはいけない追加の文章です</w:t></w:r></w:p>' +
+            '<w:p><w:pPr><w:numPr/></w:pPr><w:r><w:t>4. これは番号付きの本文です。</w:t></w:r></w:p>' +
             '<w:p><w:r><w:t>これは保存してはいけない通常の本文です。</w:t></w:r></w:p>' +
             '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>研究方法</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>記入欄</w:t></w:r></w:p></w:tc></w:tr>' +
-            '<w:tr><w:tc><w:p><w:r><w:t>患者に関する本文</w:t></w:r></w:p></w:tc></w:tr></w:tbl>' +
+            '<w:tr><w:tc><w:p><w:r><w:t>研究期間</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>患者に関する回答本文</w:t></w:r></w:p></w:tc></w:tr></w:tbl>' +
             '</w:body></w:document>'
         )
       })
@@ -61,8 +71,47 @@ describe('local DOCX import', () => {
       '研究の名称',
       '2. 研究の実施体制',
       '研究方法',
-      '記入欄'
+      '研究期間'
     ])
+  })
+
+  it('drops PHI headings and fails closed when heading detection errors or times out', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ethics-docx-phi-'))
+    const source = join(root, '架空PHI確認.docx')
+    writeFileSync(
+      source,
+      zipSync({
+        '[Content_Types].xml': strToU8('<Types/>'),
+        'word/document.xml': strToU8(
+          '<w:document><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:t>研究の名称</w:t></w:p><w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:t>患者 山田太郎</w:t></w:p></w:document>'
+        )
+      })
+    )
+    await expect(
+      inspectPhiSafeDocxHeadings(source, {
+        scan: (text) =>
+          text.includes('山田')
+            ? [{ start: 3, end: 7, category: 'PERSON_NAME', text: '山田太郎' }]
+            : []
+      })
+    ).resolves.toEqual(['研究の名称'])
+    await expect(
+      inspectPhiSafeDocxHeadings(source, {
+        scan: () => {
+          throw new Error('scanner failed')
+        }
+      })
+    ).rejects.toThrow('failed closed')
+
+    vi.useFakeTimers()
+    const pending = inspectPhiSafeDocxHeadings(source, {
+      scan: () => new Promise(() => undefined),
+      timeoutMs: 20
+    })
+    const assertion = expect(pending).rejects.toThrow('failed closed')
+    await vi.advanceTimersByTimeAsync(20)
+    await assertion
+    vi.useRealTimers()
   })
 
   it('copies into a project directory without changing the source bytes', () => {

@@ -4,7 +4,7 @@ import { mapHeading, type HeadingCandidate } from '../../shared/ethics-protocol/
 import { basename, join } from 'node:path'
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { buildEthicsDraftSections } from '../ethics-protocol/draft-sections'
-import { inspectDocx } from '../ethics-protocol/docx-import'
+import { inspectPhiSafeDocxHeadings } from '../ethics-protocol/docx-import'
 import { exportDraftAfterPhiCheck } from '../ethics-protocol/export-phi-gate'
 import {
   defineApplicationCommand,
@@ -35,7 +35,7 @@ type WritingSafeguardsCommandOwner = Readonly<{
   ) => EthicsProtocolState
   importEthicsDocx: (
     request: { projectId?: string; fileName?: string; bytes?: number[] } | undefined
-  ) => { fileName: string; headingCandidates: HeadingCandidate[] }
+  ) => Promise<{ fileName: string; headingCandidates: HeadingCandidate[] }>
   exportEthicsDraft: (
     request: { projectId?: string } | undefined
   ) => Promise<{ fileName: string; bytes: number[] }>
@@ -93,7 +93,8 @@ const writingSafeguardsApplicationCommandGroup = defineApplicationCommandGroup(
 
 const createWritingSafeguardsCommandOwner = (
   store: EthicsApprovalStore,
-  protocolRoot = join(process.cwd(), '.ethics-protocols')
+  protocolRoot = join(process.cwd(), '.ethics-protocols'),
+  inspectHeadings = inspectPhiSafeDocxHeadings
 ): WritingSafeguardsCommandOwner =>
   Object.freeze({
     getEthicsApproval: (request) => ({
@@ -111,7 +112,7 @@ const createWritingSafeguardsCommandOwner = (
         request?.projectId ?? '',
         request?.protocol ?? { choices: {}, notApplicableReasons: {}, confirmedMappings: [] }
       ),
-    importEthicsDocx: (request) => {
+    importEthicsDocx: async (request) => {
       const projectId = request?.projectId?.trim() ?? ''
       if (!projectId) throw new Error('projectId is required.')
       const fileName = basename(request?.fileName ?? '')
@@ -122,8 +123,7 @@ const createWritingSafeguardsCommandOwner = (
       writeFileSync(temporaryPath, Uint8Array.from(request?.bytes ?? []), { mode: 0o600 })
       let headingCandidates: HeadingCandidate[]
       try {
-        const inspection = inspectDocx(temporaryPath)
-        headingCandidates = inspection.headings.map(mapHeading)
+        headingCandidates = (await inspectHeadings(temporaryPath)).map(mapHeading)
       } catch (error) {
         rmSync(temporaryPath, { force: true })
         throw error
