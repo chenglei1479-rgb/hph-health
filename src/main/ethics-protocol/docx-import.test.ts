@@ -62,6 +62,8 @@ describe('local DOCX import', () => {
             '<w:p><w:r><w:t>これは保存してはいけない通常の本文です。</w:t></w:r></w:p>' +
             '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>研究方法</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>記入欄</w:t></w:r></w:p></w:tc></w:tr>' +
             '<w:tr><w:tc><w:p><w:r><w:t>研究期間</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>患者に関する回答本文</w:t></w:r></w:p></w:tc></w:tr></w:tbl>' +
+            '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>患者ID</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>測定日</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>測定値</w:t></w:r></w:p></w:tc></w:tr>' +
+            '<w:tr><w:tc><w:p><w:r><w:t>架空001</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>2026-01-01</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>42</w:t></w:r></w:p></w:tc></w:tr></w:tbl>' +
             '</w:body></w:document>'
         )
       })

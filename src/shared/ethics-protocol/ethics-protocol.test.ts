@@ -69,19 +69,22 @@ describe('R8 applicability', () => {
     })
   })
 
-  it('treats minor invasion as requiring items 20 and 21', () => {
-    const confirmed = {
-      value: 'minor-invasion' as const,
-      quote: '軽微な侵襲として研究目的で少量の採血を行う。',
-      confirmedBy: 'researcher-1',
-      confirmedAt: '2026-10-17T10:00:00+09:00'
+  it.each(['minor-invasion', '軽微な侵襲'] as const)(
+    'treats the original invasion value %s as requiring items 20 and 21',
+    (value) => {
+      const confirmed = {
+        value,
+        quote: '軽微な侵襲として研究目的で少量の採血を行う。',
+        confirmedBy: 'researcher-1',
+        confirmedAt: '2026-10-17T10:00:00+09:00'
+      }
+      const results = assessConditionalR8Items({ nodes: { Q1a_侵襲: confirmed }, checklist: {} })
+      expect(results.filter(({ item }) => item === 20 || item === 21)).toEqual([
+        expect.objectContaining({ item: 20, applicability: 'required' }),
+        expect.objectContaining({ item: 21, applicability: 'required' })
+      ])
     }
-    const results = assessConditionalR8Items({ nodes: { Q1a_侵襲: confirmed }, checklist: {} })
-    expect(results.filter(({ item }) => item === 20 || item === 21)).toEqual([
-      expect.objectContaining({ item: 20, applicability: 'required' }),
-      expect.objectContaining({ item: 21, applicability: 'required' })
-    ])
-  })
+  )
 
   it('keeps every unanswered explicit checklist item pending', () => {
     const results = assessConditionalR8Items({ nodes: {}, checklist: {} })
@@ -139,11 +142,14 @@ describe('template completeness', () => {
     )
   })
 
-  it.each([16, 20, 25])('requires the structured not-applicable reason for item %s', (item) => {
-    expect(evaluateR8ItemCompleteness(item, '該当なし')).toBe('部分空缺')
-    expect(evaluateR8ItemCompleteness(item, '本院では不要')).toBe('部分空缺')
-    expect(evaluateR8ItemCompleteness(item, formatNotApplicableText(item, '対象外のため'))).toBe(
-      '記載あり'
-    )
-  })
+  it.each(Array.from({ length: 10 }, (_, index) => index + 16))(
+    'requires the structured not-applicable reason for item %s',
+    (item) => {
+      expect(evaluateR8ItemCompleteness(item, '該当なし')).toBe('部分空缺')
+      expect(evaluateR8ItemCompleteness(item, '本院では不要')).toBe('部分空缺')
+      expect(evaluateR8ItemCompleteness(item, formatNotApplicableText(item, '対象外のため'))).toBe(
+        '記載あり'
+      )
+    }
+  )
 })

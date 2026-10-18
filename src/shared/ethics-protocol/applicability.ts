@@ -1,7 +1,7 @@
 import { R8_ITEMS, type R8ItemNumber } from './r8-items'
 
 export type ConfirmedAnswer = {
-  value: 'yes' | 'no' | 'unknown' | 'unanswered' | 'minor-invasion'
+  value: 'yes' | 'no' | 'unknown' | 'unanswered' | 'minor-invasion' | '軽微な侵襲'
   quote?: string
   confirmedBy?: string
   confirmedAt?: string
@@ -90,8 +90,8 @@ export const assessConditionalR8Items = (inputs: ConditionalInputs): Applicabili
     fromConfirmedAnswer(17, proxy),
     fromConfirmedAnswer(18, inputs.checklist[18]),
     fromConfirmedAnswer(19, inputs.checklist[19]),
-    fromConfirmedAnswer(20, invasion, ['yes', 'minor-invasion']),
-    fromConfirmedAnswer(21, invasion, ['yes', 'minor-invasion']),
+    fromConfirmedAnswer(20, invasion, ['yes', 'minor-invasion', '軽微な侵襲']),
+    fromConfirmedAnswer(21, invasion, ['yes', 'minor-invasion', '軽微な侵襲']),
     fromConfirmedAnswer(22, inputs.checklist[22]),
     fromConfirmedAnswer(23, inputs.checklist[23]),
     fromConfirmedAnswer(24, inputs.checklist[24]),

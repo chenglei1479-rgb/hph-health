@@ -31,6 +31,7 @@ describe('ethics approval store', () => {
     expect(store.getProtocol('study-1')).toEqual({
       choices: {},
       sectionTexts: {},
+      notApplicableItems: [],
       notApplicableReasons: {},
       confirmedMappings: []
     })
@@ -57,6 +58,7 @@ describe('ethics approval store', () => {
     const protocol = {
       choices: { 18: 'yes' as const },
       sectionTexts: { 1: '架空研究' },
+      notApplicableItems: [16 as const],
       notApplicableReasons: { 16: '成人のみを対象とするため' },
       confirmedMappings: [
         {

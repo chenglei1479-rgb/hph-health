@@ -65,7 +65,9 @@ const extractHeadingCandidates = (xml: string, headingStyleIds: ReadonlySet<stri
     const cellsToKeep =
       rows.length > 0 && rows.every((row) => row.length === 2)
         ? rows.map((row) => row[0])
-        : (rows[0] ?? [])
+        : rows.length === 1
+          ? rows[0]
+          : []
     for (const text of cellsToKeep) {
       if (text && text.length <= 160) candidates.push(text)
     }

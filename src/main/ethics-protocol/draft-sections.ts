@@ -20,13 +20,16 @@ export const buildEthicsDraftSections = (
   const missingItems: R8ItemNumber[] = []
   const sections = R8_ITEMS.map(({ number }) => {
     const reason = state.notApplicableReasons[number]?.trim()
+    const markedNotApplicable = state.notApplicableItems?.includes(number) ?? false
     const answer = choiceText(state.choices[number as keyof EthicsProtocolState['choices']])
     const rawSectionText = state.sectionTexts?.[number]?.trim()
     const sectionText =
       rawSectionText && hasMeaningfulTemplateContent(rawSectionText) ? rawSectionText : undefined
     const text = reason
       ? formatNotApplicableText(number, reason)
-      : (answer ?? sectionText ?? '【要記入】')
+      : markedNotApplicable
+        ? '該当なし'
+        : (answer ?? sectionText ?? '【要記入】')
 
     if (evaluateR8ItemCompleteness(number, text) !== '記載あり') missingItems.push(number)
     return { item: number, text }

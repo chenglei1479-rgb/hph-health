@@ -78,6 +78,9 @@ export const EthicsProtocolChecklist = ({
   const itemStatus = (number: R8ItemNumber): '空缺' | '部分空缺' | '記載あり' => {
     const reason = reasons[number]?.trim()
     if (reason) return evaluateR8ItemCompleteness(number, formatNotApplicableText(number, reason))
+    if (excluded[number] && number >= 16) {
+      return evaluateR8ItemCompleteness(number, '該当なし')
+    }
     if (!isConditional(number)) {
       return evaluateR8ItemCompleteness(number, sectionTexts[number] ?? '')
     }
@@ -95,7 +98,10 @@ export const EthicsProtocolChecklist = ({
       setSectionTexts(protocol.sectionTexts ?? {})
       setExcluded(
         Object.fromEntries(
-          Object.keys(protocol.notApplicableReasons).map((key) => [Number(key), true])
+          [
+            ...(protocol.notApplicableItems ?? []),
+            ...Object.keys(protocol.notApplicableReasons).map(Number)
+          ].map((number) => [number, true])
         )
       )
       setMetadata({
@@ -125,6 +131,9 @@ export const EthicsProtocolChecklist = ({
       protocol: {
         choices,
         sectionTexts,
+        notApplicableItems: Object.entries(excluded).flatMap(([number, checked]) =>
+          checked ? [Number(number) as R8ItemNumber] : []
+        ),
         notApplicableReasons: reasons,
         confirmedMappings: metadata.confirmedMappings,
         headingCandidates: metadata.headingCandidates,
@@ -167,6 +176,9 @@ export const EthicsProtocolChecklist = ({
     const protocol = {
       choices,
       sectionTexts,
+      notApplicableItems: Object.entries(excluded).flatMap(([number, checked]) =>
+        checked ? [Number(number) as R8ItemNumber] : []
+      ),
       notApplicableReasons: reasons,
       confirmedMappings,
       headingCandidates: metadata.headingCandidates,

@@ -74,4 +74,14 @@ describe('buildEthicsDraftSections', () => {
     expect(draft.sections.find(({ item }) => item === 21)?.text).toBe('補償なし')
     expect(draft.missingItems).toContain(21)
   })
+
+  it('keeps a checked not-applicable item without a reason partially missing', () => {
+    const state = emptyEthicsProtocolState()
+    state.notApplicableItems = [16]
+
+    const draft = buildEthicsDraftSections(state)
+
+    expect(draft.sections.find(({ item }) => item === 16)?.text).toBe('該当なし')
+    expect(draft.missingItems).toContain(16)
+  })
 })

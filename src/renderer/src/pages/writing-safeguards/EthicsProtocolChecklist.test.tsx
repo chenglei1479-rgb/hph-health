@@ -60,6 +60,13 @@ describe('EthicsProtocolChecklist', () => {
     expect(container.querySelector('[data-ethics-missing="21"]')?.textContent).toBe(
       'Partially missing'
     )
+
+    const item16 = within(container).getAllByRole('listitem')[15]
+    fireEvent.click(within(item16).getByRole('checkbox', { name: 'Not applicable' }))
+    expect(container.querySelector('[data-ethics-missing="16"]')?.textContent).toBe(
+      'Partially missing'
+    )
+    expect(container.textContent).not.toMatch(/科学的に妥当|scientifically (?:valid|sound)/iu)
   })
 
   it('lets a doctor correct and confirm imported heading mappings through the protocol API', async () => {
@@ -70,6 +77,7 @@ describe('EthicsProtocolChecklist', () => {
         writingSafeguards: {
           getEthicsProtocol: vi.fn().mockResolvedValue({
             choices: {},
+            notApplicableItems: [16],
             notApplicableReasons: {},
             confirmedMappings: [],
             headingCandidates: [
@@ -97,6 +105,7 @@ describe('EthicsProtocolChecklist', () => {
     expect(setEthicsProtocol.mock.calls[0][0]).toMatchObject({
       projectId: 'study-1',
       protocol: {
+        notApplicableItems: [16],
         confirmedMappings: [
           expect.objectContaining({
             heading: '独自の研究方法欄',
