@@ -1296,8 +1296,8 @@ describe('App startup routing', () => {
     expect(shell?.classList.contains('bg-background')).toBe(true)
     expect(shell?.classList.contains('text-foreground')).toBe(true)
     expect(shell?.classList.contains('text-muted-foreground')).toBe(false)
-    const logo = shell?.querySelector<HTMLCanvasElement>(
-      'canvas[data-testid="open-science-logo-loader"]'
+    const logo = shell?.querySelector<HTMLDivElement>(
+      '[data-testid="open-science-logo-loader"]'
     )
     expect(logo).not.toBeNull()
     expect(logo?.getAttribute('aria-hidden')).toBe('true')
@@ -1369,7 +1369,7 @@ describe('App startup routing', () => {
       await render()
       const notice = container.querySelector('[role="alert"]')
       expect(notice?.textContent).toContain('无法加载设置')
-      expect(notice?.textContent).toContain('Open-Science 无法加载设置。请重试以继续。')
+      expect(notice?.textContent).toContain('Baselio 无法加载设置。请重试以继续。')
       expect(notice?.textContent).not.toContain('could not load settings')
     } finally {
       await act(async () => {
@@ -1734,11 +1734,11 @@ describe('App startup routing', () => {
     expect(mocks.getInfo).toHaveBeenCalledOnce()
   })
 
-  it('continues the startup animation while the initial session snapshot loads', async () => {
+  it('keeps the startup mark while the initial session snapshot loads', async () => {
     await render()
 
-    const settingsLogo = container.querySelector<HTMLCanvasElement>(
-      '[data-testid="settings-startup-loading"] canvas[data-testid="open-science-logo-loader"]'
+    const settingsLogo = container.querySelector<HTMLDivElement>(
+      '[data-testid="settings-startup-loading"] [data-testid="open-science-logo-loader"]'
     )
     expect(settingsLogo).not.toBeNull()
 
@@ -1755,7 +1755,7 @@ describe('App startup routing', () => {
     expect(shell?.classList.contains('text-foreground')).toBe(true)
     expect(shell?.classList.contains('text-muted-foreground')).toBe(false)
     expect(
-      shell?.querySelector<HTMLCanvasElement>('canvas[data-testid="open-science-logo-loader"]')
+      shell?.querySelector<HTMLDivElement>('[data-testid="open-science-logo-loader"]')
     ).toBe(settingsLogo)
     expect(container.querySelector('[data-testid="home-page"]')).toBeNull()
   })
