@@ -2,9 +2,11 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { strToU8, unzipSync, zipSync } from 'fflate'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createWritingSafeguardsCommandOwner } from './application-commands'
 import { createEthicsApprovalStore } from './ethics-store'
+
+vi.mock('../phi/detect', () => ({ detectPhi: () => [] }))
 
 describe('ethics protocol commands', () => {
   it('imports a validated DOCX into project storage and exports a real draft DOCX', async () => {

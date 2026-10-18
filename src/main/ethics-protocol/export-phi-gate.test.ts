@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { assertEthicsExportPhiSafe, EthicsExportPhiError } from './export-phi-gate'
+import {
+  assertEthicsExportPhiSafe,
+  EthicsExportPhiError,
+  exportDraftAfterPhiCheck
+} from './export-phi-gate'
 
 describe('ethics export PHI gate', () => {
   it('blocks existing PHI detector matches', async () => {
@@ -31,5 +35,25 @@ describe('ethics export PHI gate', () => {
     await expect(
       assertEthicsExportPhiSafe(['架空の研究計画'], { scan: () => [] })
     ).resolves.toBeUndefined()
+  })
+  it('scans every DOCX section and appends caller-provided text', async () => {
+    const scan = vi.fn(() => [])
+    await exportDraftAfterPhiCheck(
+      {
+        sections: [
+          { item: 1, text: '【要記入】' },
+          { item: 2, text: 'Doctor-authored body' }
+        ],
+        missingItems: [1],
+        phiTexts: ['Additional source text']
+      },
+      { scan }
+    )
+
+    expect(scan.mock.calls.map(([text]) => text)).toEqual([
+      '【要記入】',
+      'Doctor-authored body',
+      'Additional source text'
+    ])
   })
 })
