@@ -1,0 +1,39 @@
+{
+  "nodes": [
+    "Q0a_研究該当性",
+    "Q0b_適用除外",
+    "Q0c_加工ルート",
+    "Q0c2_対応表の所在",
+    "Q0d1_計画に基づく投薬・機器使用",
+    "Q0d1b_特定臨床研究（企業資金・適応外）",
+    "Q0d2_研究目的の負担ある追加検査",
+    "Q0d3_治験・再生医療",
+    "Q1a_侵襲",
+    "Q1b_介入",
+    "Q2_試料",
+    "Q3_情報",
+    "Q4a_多機関",
+    "Q4b_自機関の役割",
+    "Q4c_外国提供",
+    "Q4d_代諾・アセント",
+    "Q4e_遺伝学的検査",
+    "Q5_事前の系統的解析計画"
+  ],
+  "answer_record_schema": {
+    "description": "每个节点答案的审计记录结构（CTO 约定，2026-10-13）",
+    "fields": {
+      "node_id": "节点 id，对应 nodes 的键",
+      "value": "はい / いいえ / 不確定 / 未回答 等显式取值",
+      "answer_source": "model_extracted | physician_answered | checklist_ticked",
+      "evidence_quote": "model_extracted 时必填：医生原话中的依据句；否则为 null",
+      "confirmed_by": "研究責任者 的用户 id；model_extracted 时出结论前必填",
+      "confirmed_at": "确认时间，ISO 8601 带时区；model_extracted 时必填",
+      "rule_set_version": "规则集版本号"
+    },
+    "constraints": [
+      "answer_source=model_extracted 且 evidence_quote 不是场景原文中的原话 → value 强制为 不確定 并追问",
+      "answer_source=model_extracted 且缺 confirmed_by/confirmed_at → 不得输出判定结论",
+      "清单项默认未勾选；わからない 视为 不確定"
+    ]
+  }
+}

@@ -50,6 +50,18 @@ function findNsisCompiler(): string | undefined {
 
 const nsisCompiler = findNsisCompiler()
 
+it('packages the single R8 fallback DOCX template', () => {
+  const config = load(readFileSync(join(repoRoot, 'electron-builder.yml'), 'utf8')) as {
+    extraResources: Array<{ from: string; to: string }>
+  }
+  expect(config.extraResources.filter(({ to }) => /\.(?:docx|dotx|doc)$/u.test(to))).toEqual([
+    { from: 'build/ethics-protocol-fallback.docx', to: 'ethics-protocol-fallback.docx' }
+  ])
+  expect(
+    readFileSync(join(repoRoot, 'build/ethics-protocol-fallback.docx')).length
+  ).toBeGreaterThan(500)
+})
+
 describe.skipIf(!nsisCompiler).each(['MedResearchAgent', 'MedResearch-Agent'])(
   'NSIS data preservation native behavior (%s)',
   (folder) => {

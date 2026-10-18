@@ -75,6 +75,8 @@ extraResources:
   # Keep the project license readable outside app.asar on every platform.
   - from: LICENSE
     to: LICENSE.txt
+  - from: build/ethics-protocol-fallback.docx
+    to: ethics-protocol-fallback.docx
   - from: NOTICE
     to: NOTICE
   - from: THIRD_PARTY_NOTICES.txt
