@@ -15,7 +15,9 @@ describe('ethics protocol commands', () => {
     const owner = createWritingSafeguardsCommandOwner(store, join(root, 'protocols'))
     const source = zipSync({
       '[Content_Types].xml': strToU8('<Types/>'),
-      'word/document.xml': strToU8('<w:document><w:t>架空の書式</w:t></w:document>')
+      'word/document.xml': strToU8(
+        '<w:document><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:t>架空の書式</w:t></w:p><w:p><w:t>保存しない本文</w:t></w:p></w:document>'
+      )
     })
     expect(
       owner.importEthicsDocx({ projectId: 'study-1', fileName: 'form.docx', bytes: [...source] })

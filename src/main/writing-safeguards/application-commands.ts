@@ -123,16 +123,7 @@ const createWritingSafeguardsCommandOwner = (
       let headingCandidates: HeadingCandidate[]
       try {
         const inspection = inspectDocx(temporaryPath)
-        headingCandidates = [
-          ...new Set(
-            inspection.parts.flatMap(({ text }) =>
-              text
-                .split(/\r?\n/gu)
-                .map((line) => line.trim())
-                .filter((line) => line.length > 0 && line.length <= 160)
-            )
-          )
-        ].map(mapHeading)
+        headingCandidates = inspection.headings.map(mapHeading)
       } catch (error) {
         rmSync(temporaryPath, { force: true })
         throw error

@@ -38,6 +38,33 @@ describe('local DOCX import', () => {
     expect(JSON.stringify(inspection.parts)).not.toContain('架空 著者')
   })
 
+  it('keeps heading styles, numbered paragraphs, and table headers while excluding body text', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ethics-docx-headings-'))
+    const source = join(root, '架空見出し.docx')
+    writeFileSync(
+      source,
+      zipSync({
+        '[Content_Types].xml': strToU8('<Types/>'),
+        'word/document.xml': strToU8(
+          '<w:document><w:body>' +
+            '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>研究の名称</w:t></w:r></w:p>' +
+            '<w:p><w:r><w:t>2. 研究の実施体制</w:t></w:r></w:p>' +
+            '<w:p><w:r><w:t>これは保存してはいけない通常の本文です。</w:t></w:r></w:p>' +
+            '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>研究方法</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>記入欄</w:t></w:r></w:p></w:tc></w:tr>' +
+            '<w:tr><w:tc><w:p><w:r><w:t>患者に関する本文</w:t></w:r></w:p></w:tc></w:tr></w:tbl>' +
+            '</w:body></w:document>'
+        )
+      })
+    )
+
+    expect(inspectDocx(source).headings).toEqual([
+      '研究の名称',
+      '2. 研究の実施体制',
+      '研究方法',
+      '記入欄'
+    ])
+  })
+
   it('copies into a project directory without changing the source bytes', () => {
     const root = mkdtempSync(join(tmpdir(), 'ethics-docx-'))
     const source = join(root, 'template.docx')
