@@ -220,48 +220,50 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
             </p>
           ) : null}
           <EthicsProtocolChecklist projectId={projectId} />
-          <h3 className="font-medium">{copy.declarationTitle}</h3>
-          {usages.map((usage, index) => (
-            <div key={index} className="grid gap-1">
+          <section data-writing-safeguards-disclosure>
+            <h3 className="font-medium">{copy.declarationTitle}</h3>
+            {usages.map((usage, index) => (
+              <div key={index} className="grid gap-1">
+                <input
+                  aria-label={copy.feature}
+                  value={usage.feature}
+                  onChange={(event) => updateUsage(index, { feature: event.target.value })}
+                />
+                <input
+                  aria-label={copy.model}
+                  value={usage.model}
+                  onChange={(event) => updateUsage(index, { model: event.target.value })}
+                />
+                <input
+                  aria-label={copy.purpose}
+                  value={usage.purpose}
+                  onChange={(event) => updateUsage(index, { purpose: event.target.value })}
+                />
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setUsageEdits((current) => [
+                  ...(current ?? defaultAiUsageRecords(locale)),
+                  emptyUsage()
+                ])
+              }
+            >
+              {copy.addUsage}
+            </button>
+            <label className="flex items-start gap-2">
               <input
-                aria-label={copy.feature}
-                value={usage.feature}
-                onChange={(event) => updateUsage(index, { feature: event.target.value })}
+                type="checkbox"
+                checked={includeCoi}
+                onChange={(event) => setIncludeCoi(event.target.checked)}
               />
-              <input
-                aria-label={copy.model}
-                value={usage.model}
-                onChange={(event) => updateUsage(index, { model: event.target.value })}
-              />
-              <input
-                aria-label={copy.purpose}
-                value={usage.purpose}
-                onChange={(event) => updateUsage(index, { purpose: event.target.value })}
-              />
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() =>
-              setUsageEdits((current) => [
-                ...(current ?? defaultAiUsageRecords(locale)),
-                emptyUsage()
-              ])
-            }
-          >
-            {copy.addUsage}
-          </button>
-          <label className="flex items-start gap-2">
-            <input
-              type="checkbox"
-              checked={includeCoi}
-              onChange={(event) => setIncludeCoi(event.target.checked)}
-            />
-            <span>{copy.coi}</span>
-          </label>
-          <button type="button" onClick={rebuild}>
-            {copy.rebuild}
-          </button>
+              <span>{copy.coi}</span>
+            </label>
+            <button type="button" onClick={rebuild}>
+              {copy.rebuild}
+            </button>
+          </section>
           <label className="block">
             <span>{copy.declaration}</span>
             <textarea
@@ -283,7 +285,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
               onChange={(event) => setManuscript(event.target.value)}
             />
           </label>
-          <label className="block">
+          <label className="block" data-writing-safeguards-export-files>
             <span>{copy.files}</span>
             <input
               className="mt-1 block w-full"
@@ -302,7 +304,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
             />
           </label>
           {findings.length > 0 ? (
-            <div>
+            <div data-writing-safeguards-findings>
               <p>{copy.findings}</p>
               <ul>
                 {findings.map((finding) => (
