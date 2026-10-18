@@ -75,6 +75,21 @@ describe('Japan research access and response boundaries', () => {
     expect(r.records[0].Title).toBe('肺癌,試験\n追加行')
     expect(r.mode).toBe('user-provided-public-export')
   })
+  it.each(['jrct', 'umin'])(
+    'excludes personal and unknown columns from %s results and matching',
+    (source) => {
+      const id = source === 'jrct' ? 'jRCT1234567890' : 'UMIN000000001'
+      const csv =
+        'ID,Title,Status,研究責任者,実施責任者,所属,電話,メール,問い合わせ先,Unknown\n' +
+        `${id},架空試験,recruiting,架空 太郎,架空 花子,架空病院,090-0000-1234,fiction@example.invalid,架空窓口,カルテ番号：0098765`
+      const result = searchRegistryExport({ source, csv, query: '架空試験' })
+      expect(result.records).toEqual([{ ID: id, Title: '架空試験', Status: 'recruiting' }])
+      expect(searchRegistryExport({ source, csv, query: '架空 太郎' }).total).toBe(0)
+      expect(JSON.stringify(result)).not.toMatch(
+        /架空 太郎|架空 花子|架空病院|090-0000-1234|fiction@|0098765/
+      )
+    }
+  )
   it('requires source ids and unambiguous CSV headers', () => {
     expect(() =>
       searchRegistryExport({ source: 'jrct', query: 'a', csv: 'id,title\n1,a' })
