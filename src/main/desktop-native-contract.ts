@@ -326,6 +326,23 @@ export function parseDesktopNativeResult(
         .parse(result)
     case 'save-dialog':
       return z.object({ canceled: z.boolean(), filePath: path.optional() }).strict().parse(result)
+    case 'phi-review':
+      return z
+        .object({
+          confirmed: z.boolean(),
+          extraSpans: z
+            .array(
+              z
+                .object({
+                  start: z.number().int().nonnegative(),
+                  end: z.number().int().nonnegative()
+                })
+                .strict()
+            )
+            .optional()
+        })
+        .strict()
+        .parse(result)
     case 'message-box':
       return z
         .object({

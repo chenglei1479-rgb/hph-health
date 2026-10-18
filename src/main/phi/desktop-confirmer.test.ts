@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRemoteDesktopFileInteraction } from '../desktop-interaction'
-import type { DesktopNativeOperation } from '../desktop-native-contract'
+import { parseDesktopNativeResult, type DesktopNativeOperation } from '../desktop-native-contract'
 import { fetchProviderRequest } from '../settings/provider-fetch'
 import { englishNativeTranslator } from '../locale/main-process-messages'
 import { createDesktopPhiConfirmer } from './desktop-confirmer'
@@ -38,6 +38,21 @@ const sendRequest = (send: typeof fetch): Promise<Response> =>
   })
 
 describe('Node model requests require the authenticated desktop review', () => {
+  it('validates manual masking marks across the native response boundary', () => {
+    const operation = {
+      operation: 'phi-review',
+      preview: { text: 'review', highlights: [] },
+      labels: {}
+    } as unknown as DesktopNativeOperation
+    const decision = { confirmed: true, extraSpans: [{ start: 0, end: 3 }] }
+    expect(parseDesktopNativeResult(operation, decision)).toEqual(decision)
+    expect(() =>
+      parseDesktopNativeResult(operation, {
+        confirmed: true,
+        extraSpans: [{ start: -1, end: 3 }]
+      })
+    ).toThrow()
+  })
   it.each([true, false])('sends only after the doctor confirms: %s', async (confirmed) => {
     let finish!: (value: unknown) => void
     const request = vi.fn<
@@ -47,9 +62,9 @@ describe('Node model requests require the authenticated desktop review', () => {
         signal?: AbortSignal
       ) => Promise<unknown>
     >(
-      () =>
+      (operation) =>
         new Promise((resolve) => {
-          finish = resolve
+          finish = (result) => resolve(parseDesktopNativeResult(operation, result))
         })
     )
     const interaction = createRemoteDesktopFileInteraction(request)

@@ -168,7 +168,8 @@
     "Open-Science is still moving your data.": "Open-Science sigue trasladando sus datos.",
     "The privacy check could not finish. Nothing was sent. Please try again.": "No se pudo completar la comprobación de privacidad. No se ha enviado nada. Vuelva a intentarlo.",
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "No se puede comprobar si este adjunto contiene información de pacientes. No se ha enviado nada. Utilice texto que se pueda comprobar.",
-    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "Esta conexión de agente no permite comprobar la información de pacientes en cada solicitud al modelo y no está disponible en la beta. Seleccione un proveedor de API con una conexión comprobada."
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "Esta conexión de agente no permite comprobar la información de pacientes en cada solicitud al modelo y no está disponible en la beta. Seleccione un proveedor de API con una conexión comprobada.",
+    "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "Los términos de búsqueda se han modificado durante la comprobación de privacidad. La búsqueda no se ha enviado. Retire la información de pacientes y vuelva a intentarlo."
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Las nuevas conversaciones pueden ejecutar comandos, cambiar archivos, ejecutar código Notebook y acceder a la red sin preguntar primero. Las conversaciones existentes no cambian.",

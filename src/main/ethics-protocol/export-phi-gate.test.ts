@@ -37,7 +37,7 @@ describe('ethics export PHI gate', () => {
     ).resolves.toBeUndefined()
   })
   it('scans every DOCX section and appends caller-provided text', async () => {
-    const scan = vi.fn(() => [])
+    const scan = vi.fn<(text: string) => []>(() => [])
     await exportDraftAfterPhiCheck(
       {
         sections: [

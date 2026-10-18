@@ -518,11 +518,19 @@ export async function releaseModelBoundValue<T>(value: T, projectId: string): Pr
 
 export async function checkConnectorQueryArgs(args: Record<string, unknown>): Promise<void> {
   refuseConnectorQueryArgs(args)
-  // Keep the existing hard refusal and query semantics. Scan the original at the same release
-  // boundary (approval/redaction/review), even when the detector found no patient spans.
+  // A model-release preview must never approve a masked query while the connector sends its
+  // original. Refuse changed queries rather than searching for a pseudonym or sending raw PHI.
   for (const [key, value] of Object.entries(args)) {
     if (CONNECTOR_QUERY_KEYS.has(key) && typeof value === 'string') {
-      await assertModelBoundTextReleased(value, currentPhiProject())
+      const released = await assertModelBoundTextReleased(value, currentPhiProject())
+      if (released !== value) {
+        const translate = blockTranslator
+        throw new PhiGateError(
+          translate(
+            'The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.'
+          )
+        )
+      }
     }
   }
   await assertModelBoundTextReleased('', currentPhiProject())

@@ -47,7 +47,7 @@ describe('connector query PHI boundary', () => {
     )
     expect(fetchImpl).not.toHaveBeenCalled()
   })
-  it('retains the existing whole-query disease-name policy for literature searches', async () => {
+  it('sends an unchanged released literature query', async () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
       .mockResolvedValue(
@@ -57,10 +57,19 @@ describe('connector query PHI boundary', () => {
         )
       )
     const engine = new ParserEngine({ fetchImpl, retries: 0, policy: draConnectorFetchPolicy })
-    await engine.call(search, { query: '肺癌' }, {})
+    await engine.call(search, { query: 'glioblastoma' }, {})
     expect(fetchImpl).toHaveBeenCalledOnce()
-    expect(String(fetchImpl.mock.calls[0][0])).toContain(encodeURIComponent('肺癌'))
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('glioblastoma')
   })
+  it.each(['架空太郎', '肺癌'])(
+    'never sends the original when the shared gate changes a short query: %s',
+    async (query) => {
+      const fetchImpl = vi.fn<typeof fetch>()
+      const engine = new ParserEngine({ fetchImpl, retries: 0, policy: draConnectorFetchPolicy })
+      await expect(engine.call(search, { query }, {})).rejects.toThrow(/search terms changed/)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    }
+  )
   it.each(['throw', 'uninitialized', 'timeout'])('sends no search request on %s', async (fault) => {
     const fetchImpl = vi.fn<typeof fetch>()
     const engine = new ParserEngine({ fetchImpl, retries: 0, policy: draConnectorFetchPolicy })
