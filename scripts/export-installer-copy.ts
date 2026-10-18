@@ -15,7 +15,7 @@ const languages = [
 const output = [
   '# Baselio installer text export',
   '',
-  'Generated with `NSISDIR=<electron-builder NSIS bundle> node scripts/export-installer-copy.mjs`.',
+  'Generated with `NSISDIR=<electron-builder NSIS bundle> node scripts/export-installer-copy.ts`.',
   '',
   'Source: electron-builder 26.15.3, NSIS 3.0.4.1. This is a source-backed text export, not a Windows screenshot. Runtime file paths and error codes remain placeholders. NSIS ampersands mark keyboard shortcuts.',
   '',
@@ -92,7 +92,7 @@ const groups = [
     ]
   ]
 ]
-const readable = (value, builtin) =>
+const readable = (value: string, builtin: Map<string, string>): string =>
   value
     .replaceAll('$(^NameDA)', 'Baselio')
     .replaceAll('$(^Name)', 'Baselio')
@@ -100,8 +100,9 @@ const readable = (value, builtin) =>
     .replaceAll('$_CLICK', builtin.get('^ClickNext') ?? '$_CLICK')
     .replaceAll('$\\r$\\n', '\n')
     .replaceAll('$\\"', '"')
-const emit = (key, value, builtin) =>
+const emit = (key: string, value: string, builtin: Map<string, string>): void => {
   output.push(`**${key}**`, '', '```text', readable(value, builtin), '```', '')
+}
 for (const [locale, lcid, name] of languages) {
   const directory = join(nsisDir, 'Contrib/Language files')
   const mui = readFileSync(join(directory, name + '.nsh'), 'utf8')

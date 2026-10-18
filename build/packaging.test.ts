@@ -535,7 +535,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
     expect(userCheck).toContain(
       '!insertmacro uninstallFailureRecoveryAt $perUserInstallDirCache $perUserDataBackup'
     )
-    expect(conflictBranch).toContain('StrCpy $baselioMessageBackup \"$R7\"')
+    expect(conflictBranch).toContain('StrCpy $baselioMessageBackup "$R7"')
     expect(conflictBranch).toContain('$(BaselioDetail16)')
     expect(conflictBranch).not.toContain('Rename "$R7" "${DIR}\\MedResearchAgent"')
   })

@@ -200,6 +200,9 @@ mac:
     - from: resources/bin/mac/${arch}/micromamba
       to: micromamba
 dmg:
+  # The multilingual BOM text files belong to NSIS. Keep the existing DMG drag-to-install
+  # license document without introducing a macOS SLA/legacy-encoding conversion.
+  license: null
   # Bzip2 reduces the full desktop payload without changing the installed application.
   format: UDBZ
   title: Baselio

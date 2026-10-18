@@ -1,6 +1,6 @@
 # Baselio installer text export
 
-Generated with `NSISDIR=<electron-builder NSIS bundle> node scripts/export-installer-copy.mjs`.
+Generated with `NSISDIR=<electron-builder NSIS bundle> node scripts/export-installer-copy.ts`.
 
 Source: electron-builder 26.15.3, NSIS 3.0.4.1. This is a source-backed text export, not a Windows screenshot. Runtime file paths and error codes remain placeholders. NSIS ampersands mark keyboard shortcuts.
 

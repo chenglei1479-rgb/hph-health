@@ -10,7 +10,10 @@ const read = (path: string): string => readFileSync(join(root, path), 'utf8')
 const require = createRequire(import.meta.url)
 const { computeLicensePage } = require('app-builder-lib/out/targets/nsis/nsisLicense')
 const { LangConfigurator } = require('app-builder-lib/out/targets/nsis/nsisLang')
-const config = load(read('electron-builder.yml')) as { nsis: Record<string, unknown> }
+const config = load(read('electron-builder.yml')) as {
+  nsis: Record<string, unknown>
+  dmg: { license: null }
+}
 const strings = read('build/installer-strings.nsh')
 const entries = [...strings.matchAll(/^LangString (\w+) (\d+) "(.*)"$/gm)]
 const translations = new Map<string, Map<string, string>>()
@@ -66,6 +69,19 @@ describe('NSIS localization integration', () => {
     expect(config.nsis.displayLanguageSelector).toBe(true)
     expect(selector).toContain('GetUserDefaultUILanguage()')
     expect(selector).toContain('StrCpy $LANGUAGE 1033')
+  })
+
+  it('keeps NSIS Unicode license files out of the DMG SLA encoding path', async () => {
+    const { addLicenseToDmg } = require('dmg-builder/out/dmgLicense')
+    expect(config.dmg.license).toBeNull()
+    // This is the real DMG license resolver. An accidental return to convention discovery
+    // tries to read the resources list and fails before a slow native DMG build.
+    const packager = {
+      get resourceList(): never {
+        throw new Error('DMG must not auto-discover the NSIS license files')
+      }
+    }
+    expect(await addLicenseToDmg(packager, config.dmg.license)).toBeNull()
   })
 
   it('makes the installed electron-builder select a complete original license per language', async () => {

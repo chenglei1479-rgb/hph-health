@@ -48,4 +48,4 @@ export const APP = {
 
 // The current documentation destination is a repository README anchor. It is shared by all
 // app locales; appending locale directories would corrupt that anchor.
-export const getDocumentationUrl = (_locale: Locale): string => APP.links.docs
+export const getDocumentationUrl: (locale: Locale) => string = () => APP.links.docs
