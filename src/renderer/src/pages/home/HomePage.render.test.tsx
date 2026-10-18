@@ -1942,7 +1942,7 @@ describe('HomePage recent session ordering', () => {
     expect(brand).not.toBeNull()
     expect(brand?.closest('a')).toBeNull()
     expect(brand?.getAttribute('aria-label')).toBe('Baselio')
-    expect(brand?.querySelector('.dra-app-brand-name')?.textContent).toBe('baselio')
+    expect(brand?.querySelector('.baselio-horizontal svg title')?.textContent).toBe('Baselio')
     expect(brand?.querySelector('.dra-app-brand-tagline')).toBeNull()
     expect(brand?.querySelector('.baselio-horizontal svg')).not.toBeNull()
     expect(brand?.querySelector('img')).toBeNull()

@@ -5,7 +5,7 @@
 
 import { PRODUCT_DISPLAY_NAME } from './product-identity'
 
-import { DEFAULT_LOCALE, type Locale } from './locale'
+import type { Locale } from './locale'
 
 const GITHUB_OWNER = 'chenglei1479-rgb'
 const GITHUB_REPO = 'hph-health'
@@ -46,7 +46,6 @@ export const APP = {
   }
 } as const
 
-// The documentation site uses the same locale identifiers as the app. English lives at the root;
-// translated homepages use a locale subdirectory. Callers supply the already-resolved app locale.
-export const getDocumentationUrl = (locale: Locale): string =>
-  `${APP.links.docs}${locale === DEFAULT_LOCALE ? '' : `${locale}/`}`
+// The current documentation destination is a repository README anchor. It is shared by all
+// app locales; appending locale directories would corrupt that anchor.
+export const getDocumentationUrl = (_locale: Locale): string => APP.links.docs
