@@ -11,6 +11,8 @@ import {
   installMachineApproval,
   installPhiConfirmer,
   installPhiGate,
+  installMachineApprovalTranslator,
+  MODEL_RELEASE_RETRY_MESSAGE,
   MODEL_RELEASE_TIMEOUT_MS,
   releaseModelBoundValue,
   releasePromptContent
@@ -19,6 +21,7 @@ import { createMemoryPhiVault } from './store'
 import { gateNotebookOutputs } from '../notebook/schema-only/release-model-text'
 import { releaseCategoricalValuesForModel } from '../notebook/schema-only/categorical-release'
 import { buildSchemaModelContext } from '../notebook/schema-only/model-context'
+import { englishNativeTranslator, translateNativeMessage } from '../locale/main-process-messages'
 
 // Entirely fictional, never drawn from holdout or patient records.
 const PHI =
@@ -34,6 +37,7 @@ afterEach(() => {
   vi.useRealTimers()
   installPhiConfirmer(null)
   installMachineApproval(null)
+  installMachineApprovalTranslator(englishNativeTranslator)
   installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
 })
 
@@ -220,4 +224,85 @@ it('checks an inherited Request body and object keys', async () => {
   })
   await fetchProviderRequest(send, request)
   for (const value of forbidden) expect(String(send.mock.calls[0][1]?.body)).not.toContain(value)
+})
+
+it.each([
+  { input: [{ type: 'input_image', image_url: 'https://example.invalid/fiction.png' }] },
+  { messages: [{ content: [{ type: 'image', source: { type: 'base64', data: 'fiction' } }] }] },
+  { input: [{ type: 'input_file', file_id: 'fiction-file' }] },
+  { input: [{ type: 'input_audio', input_audio: { data: 'fiction', format: 'wav' } }] },
+  { input: [{ type: 'input_text', text: 'data:image/png;base64,fiction' }] }
+])('never sends opaque provider content: %j', async (body) => {
+  const send = vi.fn<typeof fetch>()
+  await expect(
+    fetchProviderRequest(send, 'https://provider.invalid/v1/messages', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+  ).rejects.toThrow(/attachment/)
+  expect(send).not.toHaveBeenCalled()
+})
+
+it.each([{}, [], { messages: [] }])(
+  'requires a working scanner even for an empty body: %j',
+  async (body) => {
+    const send = vi.fn<typeof fetch>()
+    installPhiGate(createClosedGate('blocked'))
+    await expect(
+      fetchProviderRequest(send, 'https://provider.invalid/v1/messages', {
+        method: 'POST',
+        body: JSON.stringify(body)
+      })
+    ).rejects.toThrow(/privacy check/)
+    expect(send).not.toHaveBeenCalled()
+  }
+)
+
+it('permits tool schema properties named file_id without treating them as uploaded files', async () => {
+  const send = vi.fn<typeof fetch>(async () => new Response('{}'))
+  await fetchProviderRequest(send, 'https://provider.invalid/v1/messages', {
+    method: 'POST',
+    body: JSON.stringify({
+      tools: [
+        {
+          type: 'function',
+          parameters: {
+            type: 'object',
+            properties: { file_id: { type: 'string' }, image_url: { type: 'string' } }
+          }
+        }
+      ]
+    })
+  })
+  expect(send).toHaveBeenCalledOnce()
+})
+
+it.each(['en', 'ja', 'zh-Hans'] as const)(
+  'localizes scanner failure using the selected %s application language',
+  async (locale) => {
+    installMachineApprovalTranslator((key, options) => translateNativeMessage(locale, key, options))
+    installPhiGate(createClosedGate('/fiction/private/scanner-failed'))
+    const send = vi.fn<typeof fetch>()
+    await expect(
+      fetchProviderRequest(send, 'https://provider.invalid/v1/messages', {
+        method: 'POST',
+        body: JSON.stringify({ messages: [{ content: 'Aggregate study design.' }] })
+      })
+    ).rejects.toThrow(translateNativeMessage(locale, MODEL_RELEASE_RETRY_MESSAGE))
+    expect(send).not.toHaveBeenCalled()
+  }
+)
+
+it('sends nothing when machine-approval lookup throws, including for clean text', async () => {
+  installMachineApproval(() => {
+    throw new Error('fictional approval read failure')
+  })
+  const send = vi.fn<typeof fetch>()
+  await expect(
+    fetchProviderRequest(send, 'https://provider.invalid/v1/messages', {
+      method: 'POST',
+      body: JSON.stringify({ messages: [{ content: 'Aggregate study design.' }] })
+    })
+  ).rejects.toThrow(MODEL_RELEASE_RETRY_MESSAGE)
+  expect(send).not.toHaveBeenCalled()
 })

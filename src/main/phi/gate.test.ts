@@ -32,7 +32,7 @@ describe('PHI hard gate', () => {
       routeNotification: () => undefined
     } as unknown as ProviderPromptExecutionInput
     try {
-      await expect(executor.execute(input)).rejects.toThrow(/blocked|PHI/)
+      await expect(executor.execute(input)).rejects.toThrow(/privacy check/)
       expect(prompt).not.toHaveBeenCalled()
     } finally {
       installMachineApproval(null)
@@ -53,7 +53,7 @@ describe('PHI hard gate', () => {
           method: 'POST',
           body: JSON.stringify({ messages: [{ role: 'user', content: '患者：山田 太郎' }] })
         })
-      ).rejects.toThrow(/blocked|PHI/)
+      ).rejects.toThrow(/privacy check/)
       expect(fetchImpl).not.toHaveBeenCalled()
     } finally {
       installMachineApproval(null)

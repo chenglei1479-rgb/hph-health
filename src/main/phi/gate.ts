@@ -89,6 +89,24 @@ function activeGate(): PhiGate {
   return gate
 }
 
+function releaseThroughInstalledGate(text: string, projectId: string): PhiResult {
+  try {
+    const result = activeGate().release(text, projectId)
+    if (
+      !result ||
+      typeof result.text !== 'string' ||
+      !Array.isArray(result.replacements) ||
+      !Array.isArray(result.warnings)
+    ) {
+      throw modelReleaseError()
+    }
+    return result
+  } catch {
+    // Vault/scanner errors can contain local paths. Use one localized retry surface.
+    throw modelReleaseError()
+  }
+}
+
 async function assertModelBoundRelease<T>(operation: () => Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
@@ -200,7 +218,7 @@ function assertMachineMaySend(texts: readonly string[]): void {
   try {
     approved = machineApproved()
   } catch {
-    approved = false
+    throw modelReleaseError()
   }
   if (approved) return
   const grouped = texts.map((text) => patientSpans(text))
@@ -234,7 +252,7 @@ function collectStrings(value: unknown, out: string[]): void {
 }
 
 function releasedPreview(text: string, projectId: string): PhiPreview {
-  const result = activeGate().release(text, projectId)
+  const result = releaseThroughInstalledGate(text, projectId)
   if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
   if (result.replacements.length === 0) return { text: result.text, highlights: [] }
   return previewFromResult(text, result.replacements)
@@ -340,6 +358,7 @@ async function releasePromptContentImpl<T>(content: T, projectId: string): Promi
     assertMachineMaySend(
       content.map((block) => blockText(block)).filter((text): text is string => text != null)
     )
+    if (content.length === 0) releaseThroughInstalledGate('', projectId)
     const prepared: PreparedBlock[] = []
     const segments: string[] = []
     let cursor = 0
@@ -454,15 +473,16 @@ async function guardProviderBodyImpl(
   notePhiProject(projectId)
   let parsed: unknown
   try {
-    assertScannableModelValue(parsed)
     parsed = JSON.parse(body)
   } catch {
     return releaseModelText(body, projectId)
   }
   try {
+    assertScannableModelValue(parsed)
     const texts: string[] = []
     collectStrings(parsed, texts)
     assertMachineMaySend(texts)
+    if (texts.length === 0) releaseThroughInstalledGate('', projectId)
     const tokens: PhiReplacement[] = []
     const walked = walkRelease(parsed, projectId, tokens)
     const text = JSON.stringify(walked)
@@ -615,7 +635,7 @@ export function assertScannableModelValue(value: unknown): void {
 
 function walkRelease(value: unknown, projectId: string, tokens: PhiReplacement[]): unknown {
   if (typeof value === 'string') {
-    const result = activeGate().release(value, projectId)
+    const result = releaseThroughInstalledGate(value, projectId)
     if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
     tokens.push(...result.replacements)
     return result.text
