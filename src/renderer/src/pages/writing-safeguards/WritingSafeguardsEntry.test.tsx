@@ -85,7 +85,9 @@ describe('writing safeguards', () => {
     if (!(declaration instanceof HTMLTextAreaElement)) return
     expect(declaration.value).toContain('全責任を負い')
     expect(declaration.value).toContain('full responsibility')
-    const checkbox = host.querySelector('input[type="checkbox"]')
+    const checkbox = host.querySelector(
+      '[data-writing-safeguards-disclosure] input[type="checkbox"]'
+    )
     await act(async () => {
       if (!(checkbox instanceof HTMLInputElement)) return
       checkbox.click()
@@ -139,8 +141,9 @@ describe('writing safeguards', () => {
     })
     expect(createObjectURL).not.toHaveBeenCalled()
     expect(host.textContent).toContain('カルテ番号')
-    const confirm = host.querySelectorAll('input[type="checkbox"]')
-    const confirmBox = [...confirm].at(-1)
+    const confirmBox = host.querySelector(
+      '[data-writing-safeguards-findings] input[type="checkbox"]'
+    )
     await act(async () => {
       if (!(confirmBox instanceof HTMLInputElement)) return
       confirmBox.click()
@@ -162,7 +165,7 @@ describe('writing safeguards', () => {
       }
     }
     vi.stubGlobal('FileReader', ImmediateReader)
-    const input = host.querySelector('input[type="file"]')
+    const input = host.querySelector('[data-writing-safeguards-export-files] input[type="file"]')
     const file = new File(['生年月日: 1980-04-12\n'], 'note.md', { type: 'text/markdown' })
     Object.defineProperty(input, 'files', { configurable: true, value: [file] })
     await act(async () => {

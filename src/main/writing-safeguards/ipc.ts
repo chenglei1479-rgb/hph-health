@@ -13,4 +13,16 @@ export const registerWritingSafeguardsIpc = (owner: WritingSafeguardsCommandOwne
   ipcMainHandle('writing-safeguards:set-ethics-approval', (_event, request: EthicsRequest) =>
     owner.setEthicsApproval(request)
   )
+  ipcMainHandle('writing-safeguards:get-ethics-protocol', (_event, request: EthicsRequest) =>
+    owner.getEthicsProtocol(request)
+  )
+  ipcMainHandle('writing-safeguards:set-ethics-protocol', (_event, request) =>
+    owner.setEthicsProtocol(request)
+  )
+  ipcMainHandle('writing-safeguards:import-ethics-docx', (_event, request) =>
+    owner.importEthicsDocx(request)
+  )
+  ipcMainHandle('writing-safeguards:export-ethics-draft', (_event, request) =>
+    owner.exportEthicsDraft(request)
+  )
 }

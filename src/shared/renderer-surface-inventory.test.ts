@@ -357,7 +357,14 @@ const REMOTE_LOCAL_ONLY_CHANNELS: GroupedInventory = {
   update: ['apply', 'cancel', 'download', 'recheck', 'recover'],
   uploads: ['stage-local-path'],
   'variable-definition': ['export-template', 'generate'],
-  'writing-safeguards': ['get-ethics-approval', 'set-ethics-approval'],
+  'writing-safeguards': [
+    'get-ethics-approval',
+    'get-ethics-protocol',
+    'export-ethics-draft',
+    'import-ethics-docx',
+    'set-ethics-approval',
+    'set-ethics-protocol'
+  ],
   'statistician-review': ['export-package']
 }
 

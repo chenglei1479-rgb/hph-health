@@ -74,6 +74,8 @@ extraResources:
   # Keep the project license readable outside app.asar on every platform.
   - from: LICENSE
     to: LICENSE.txt
+  - from: build/ethics-protocol-fallback.docx
+    to: ethics-protocol-fallback.docx
   # Keep the copied third-party provider icon paths' MIT notice readable in every packaged app.
   - from: src/renderer/src/assets/provider-icons/LobeHub-icons-LICENSE
     to: LobeHub-icons-LICENSE

@@ -764,7 +764,8 @@ export const createApplicationModules = async (
   const writingSafeguards = createWritingSafeguardsCommandOwner(
     createEthicsApprovalStore(
       join(getUserDataPath(), 'writing-safeguards', 'ethics-approval.json')
-    )
+    ),
+    join(getUserDataPath(), 'writing-safeguards', 'ethics-protocols')
   )
   const statisticianReview = createStatisticianReviewCommandOwner(translate)
   const variableDefinition = createVariableDefinitionService({
