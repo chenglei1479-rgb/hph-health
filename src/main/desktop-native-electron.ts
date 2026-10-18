@@ -9,6 +9,7 @@ import { writeFile, rm } from 'node:fs/promises'
 import type { DesktopNativeHandler } from './desktop-native-contract'
 import { desktopNativeRequestSchema } from './desktop-native-contract'
 import { printConversationPdf } from './session-persistence/conversation-pdf-electron'
+import { reviewPhiPreviewInElectron } from './phi/confirm-window'
 
 // Only the authenticated main-process connection reaches this handler. No renderer-facing native
 // RPC is installed. A caller identity must still resolve to the current application document.
@@ -40,6 +41,12 @@ export function createDesktopNativeHandler(
     const parent = windowFor()!
     let result: unknown
     switch (request.operation) {
+      case 'phi-review':
+        result = await reviewPhiPreviewInElectron(request.preview, request.labels, {
+          parent,
+          signal
+        })
+        break
       case 'office-frame':
         result =
           createOfficePreviewFrameProcessResolver({

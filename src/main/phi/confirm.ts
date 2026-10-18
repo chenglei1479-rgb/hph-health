@@ -1,3 +1,4 @@
+import type { NativeTranslator } from '../locale/main-process-messages'
 import type { PhiCategory } from './detect'
 import type { PhiReplacement } from './deidentify'
 
@@ -22,7 +23,10 @@ export interface PhiConfirmDecision {
   extraSpans?: readonly PhiSpanMark[]
 }
 
-export type PhiConfirmer = (preview: PhiPreview) => Promise<PhiConfirmDecision>
+export type PhiConfirmer = (
+  preview: PhiPreview,
+  signal?: AbortSignal
+) => Promise<PhiConfirmDecision>
 
 export interface PhiConfirmLabels {
   title: string
@@ -30,6 +34,18 @@ export interface PhiConfirmLabels {
   confirm: string
   cancel: string
   mark: string
+}
+
+export function phiConfirmLabels(translate: NativeTranslator): PhiConfirmLabels {
+  return {
+    title: translate('Review de-identified text'),
+    explanation: translate(
+      'Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.'
+    ),
+    confirm: translate('Confirm send'),
+    cancel: translate('Cancel'),
+    mark: translate('Mark selection')
+  }
 }
 
 const CONFIRM_PREFIX = 'PHI_CONFIRM '

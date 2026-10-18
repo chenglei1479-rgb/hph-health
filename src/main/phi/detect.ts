@@ -518,11 +518,12 @@ function detectFacilities(spans: PhiSpan[], map: NormMap, norm: string): void {
 }
 
 function detectNames(spans: PhiSpan[], map: NormMap, norm: string): void {
-  const stop =
-    '(?=\\s*(?:年齢|享年|Age\\b|生年月日|カルテ|男性|女性|[MTSHR]\\d|昭和|平成|令和|大正|明治|\\d{4}年|\\d{1,3}\\s*(?:歳|才|y)|$))'
+  const nextField =
+    '(?:年齢|享年|Age\\b|生年月日|カルテ|男性|女性|[MTSHR]\\d|昭和|平成|令和|大正|明治|\\d{4}年|\\d{1,3}\\s*(?:歳|才|y))'
+  const stop = `(?=\\s*(?:${nextField}|$))`
   // One continuation line is part of the name when the age label is on the next line.
   const patient = withIndices(
-    `患者(?:氏名|名|イニシャル)?\\s*[:|]\\s*([^\\n|]{1,80}?(?:\\n[^\\n]{1,16}?)?)${stop}`
+    `患者(?:氏名|名|イニシャル)?\\s*[:|]\\s*([^\\n|]{1,80}?(?:\\n(?!\\s*${nextField})[^\\n]{1,16}?)?)${stop}`
   )
   let match: IndexedMatch | null
   while ((match = patient.exec(norm) as IndexedMatch | null)) {

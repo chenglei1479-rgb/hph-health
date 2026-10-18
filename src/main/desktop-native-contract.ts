@@ -191,6 +191,41 @@ export const desktopNativeOperationSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('message-box'), options: desktopMessageOptionsSchema }).strict(),
   z
     .object({
+      operation: z.literal('phi-review'),
+      preview: z
+        .object({
+          text: z.string().max(8 * 1024 * 1024),
+          highlights: z.array(
+            z
+              .object({
+                start: z.number().int().nonnegative(),
+                end: z.number().int().nonnegative(),
+                category: z.enum([
+                  'PERSON_NAME',
+                  'PHYSICIAN_NAME',
+                  'DATE',
+                  'ADDRESS',
+                  'PHONE',
+                  'EMAIL',
+                  'FACILITY',
+                  'KARTE_NO',
+                  'INSURER_NO',
+                  'INSURED_ID',
+                  'MY_NUMBER',
+                  'MANUAL'
+                ])
+              })
+              .strict()
+          )
+        })
+        .strict(),
+      labels: z
+        .object({ title: text, explanation: text, confirm: text, cancel: text, mark: text })
+        .strict()
+    })
+    .strict(),
+  z
+    .object({
       operation: z.literal('conversation-pdf'),
       htmlPath: path,
       timeoutMs: z.number().int().positive().max(120_000),

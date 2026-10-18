@@ -275,8 +275,10 @@ export const createApplicationModules = async (
       (await settingsBootstrap.settingsRepository.getSettings()).localePreference
     )
   const translate = suppliedTranslator ?? localeOwner.t.bind(localeOwner)
-  const { installMachineApprovalTranslator } = await import('./phi/gate')
+  const { installMachineApprovalTranslator, installPhiConfirmer } = await import('./phi/gate')
   installMachineApprovalTranslator(translate)
+  const { createDesktopPhiConfirmer } = await import('./phi/desktop-confirmer')
+  installPhiConfirmer(createDesktopPhiConfirmer(translate))
   if (!suppliedLocaleOwner) {
     await modules.add(undefined, () => {
       const unsubscribe = localeOwner.subscribe((snapshot) =>

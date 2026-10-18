@@ -262,7 +262,7 @@ async function review(preview: PhiPreview, projectId: string): Promise<string> {
   if (!confirmer) return preview.text
   let decision: PhiConfirmDecision
   try {
-    decision = await confirmer(preview)
+    decision = await confirmWithDeadline(preview)
   } catch (error) {
     failClosed(error)
   }
@@ -430,10 +430,23 @@ async function releasePromptContentImpl<T>(content: T, projectId: string): Promi
 async function decisionFor(preview: PhiPreview): Promise<PhiConfirmDecision> {
   if (!confirmer) return { confirmed: true }
   try {
-    const decision = await confirmer(preview)
+    const decision = await confirmWithDeadline(preview)
     return decision?.confirmed === true ? decision : { confirmed: false }
   } catch (error) {
     failClosed(error)
+  }
+}
+
+async function confirmWithDeadline(preview: PhiPreview): Promise<PhiConfirmDecision> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(modelReleaseError()), MODEL_RELEASE_TIMEOUT_MS)
+  try {
+    if (!confirmer) throw modelReleaseError()
+    const decision = await confirmer(preview, controller.signal)
+    controller.signal.throwIfAborted()
+    return decision
+  } finally {
+    clearTimeout(timer)
   }
 }
 
