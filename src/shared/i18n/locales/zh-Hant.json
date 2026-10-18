@@ -49,7 +49,8 @@
     "System notifications from DRA are working.": "DRA 系統通知運作正常。",
     "Close window": "關閉視窗",
     "Wait for all Session activity and pending approvals to finish before forking.": "請等待所有工作階段活動和待處理核准結束後再建立副本。",
-    "Approval needed": "需要批准"
+    "Approval needed": "需要批准",
+    "System notifications from Open-Science are working.": "Open-Science 系統通知運作正常。"
   },
   "native": {
     "The agent finished without a clean completion status.": "智能體在沒有正常完成狀態的情況下結束。",
@@ -160,7 +161,12 @@
     "The agent stopped early — the answer hit the model's length limit.": "智能體提前停止——回覆已達到模型的長度限制。",
     "Your unsaved changes will be lost.": "未儲存的變更將會遺失。",
     "Connect to Baselio": "連線至 Baselio",
-    "Approved. Opening Baselio…": "已核准。正在開啟 Baselio…"
+    "Approved. Opening Baselio…": "已核准。正在開啟 Baselio…",
+    "Open-Science could not start the backend.": "Open-Science 無法啟動後端。",
+    "Open-Science is still moving your data.": "Open-Science 仍在移動你的資料。",
+    "The privacy check could not finish. Nothing was sent. Please try again.": "隱私檢查未能完成，未傳送任何內容。請重試。",
+    "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "無法檢查此附件中的患者資訊，未傳送任何內容。請使用可檢查的文字。",
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "此智能體連線無法檢查每次模型請求中的患者資訊，因此在測試版中無法使用。請選擇使用受檢查連線的 API 服務商。"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新對話可以無需詢問直接執行指令、修改檔案、執行 Notebook 程式碼和存取網路。既有對話不受影響。",
@@ -7557,6 +7563,21 @@
     "I don’t know_ethics": "不知道",
     "Missing_ethics": "未填寫",
     "Protocol section content": "Protocol section content",
-    "Partially missing": "Partially missing"
+    "Partially missing": "Partially missing",
+    "The update cannot keep your current settings. Cancel to continue working, or check again after updating Open-Science separately.": "此次更新無法保留目前設定。您可以取消並繼續工作，或另行更新 Open-Science 後重新檢查。",
+    "Open-Science could not load settings. Retry to continue.": "Open-Science 無法載入設定。請重試以繼續。",
+    "Open-Science is still working on it. You can wait, try again, or save a report.": "Open-Science 仍在處理。你可以繼續等待、重試或儲存報告。",
+    "Another Open-Science is using the service": "另一個 Open-Science 正在使用背景服務",
+    "Reinstall Open-Science using its installer or package manager, then check the installation. This button checks files; it does not repair them. Keep your configuration and data folders.": "請使用安裝程式或套件管理員重新安裝 Open-Science，再檢查安裝。此按鈕僅檢查檔案，不會修復檔案。請保留設定和資料資料夾。",
+    "The running version differs from this app. Finish any work in other Open-Science windows, then stop the service to continue.": "正在執行的版本與此應用程式不同。請先完成其他 Open-Science 視窗中的工作，再停止服務並繼續。",
+    "Continue opening Open-Science?": "繼續開啟 Open-Science？",
+    "Update Open-Science using its installer or package manager, then check again. You can cancel to continue working with this version.": "請使用安裝程式或套件管理員更新 Open-Science，然後重新檢查。您也可以取消，繼續使用目前版本。",
+    "Update Open-Science now?": "現在更新 Open-Science？",
+    "It is taking longer than usual. Open-Science is closing it for you. Please wait.": "耗時比平常長。Open-Science 正在為你關閉它，請稍候。",
+    "Access authorization has expired. Reopen the Web link from Open-Science on the host computer, or return to the remote access entry page to pair again.": "存取授權已失效。請從主機上的 Open-Science 重新開啟 Web 連結，或返回遠端存取入口頁面重新配對。",
+    "Check the proxy used by Open-Science. A working browser connection may use different proxy settings.": "請檢查 Open-Science 使用的代理。瀏覽器連線正常時，可能使用了不同的代理設定。",
+    "Open-Science needs to close it before opening your projects. Finish any work in other Open-Science windows first.": "開啟專案前，Open-Science 需要先關閉它。請先處理好其他 Open-Science 視窗中的工作。",
+    "Open-Science couldn't start": "Open-Science 無法啟動",
+    "Open-Science cannot verify whether commands from an earlier session are still running. If they are, their results may be lost during the update. Back up the old launch records and retry?": "Open-Science 無法確認先前工作階段中的命令是否仍在執行。如果仍在執行，更新可能導致其結果遺失。是否備份舊的啟動記錄並重試？"
   }
 }

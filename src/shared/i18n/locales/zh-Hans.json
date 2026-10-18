@@ -49,7 +49,8 @@
     "System notifications from DRA are working.": "DRA 系统通知工作正常。",
     "Close window": "关闭窗口",
     "Wait for all Session activity and pending approvals to finish before forking.": "请等待所有会话活动和待处理审批结束后再创建副本。",
-    "Approval needed": "需要批准"
+    "Approval needed": "需要批准",
+    "System notifications from Open-Science are working.": "Open-Science 系统通知工作正常。"
   },
   "native": {
     "The agent finished without a clean completion status.": "智能体在没有正常完成状态的情况下结束。",
@@ -160,7 +161,12 @@
     "The agent stopped early — the answer hit the model's length limit.": "智能体提前停止——回答已达到模型的长度限制。",
     "Your unsaved changes will be lost.": "未保存的更改将会丢失。",
     "Connect to Baselio": "连接到 Baselio",
-    "Approved. Opening Baselio…": "已批准。正在打开 Baselio…"
+    "Approved. Opening Baselio…": "已批准。正在打开 Baselio…",
+    "Open-Science could not start the backend.": "Open-Science 无法启动后端。",
+    "Open-Science is still moving your data.": "Open-Science 仍在迁移你的数据。",
+    "The privacy check could not finish. Nothing was sent. Please try again.": "隐私检查未能完成，未发送任何内容。请重试。",
+    "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "无法检查此附件中的患者信息，未发送任何内容。请使用可检查的文本。",
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "此智能体连接无法检查每次模型请求中的患者信息，因此在测试版中不可用。请选择使用受检查连接的 API 服务商。"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新对话可以无需询问直接运行命令、修改文件、执行 Notebook 代码和访问网络。已有对话不受影响。",
@@ -7557,6 +7563,21 @@
     "I don’t know_ethics": "不知道",
     "Missing_ethics": "未填写",
     "Protocol section content": "方案项目正文",
-    "Partially missing": "部分未填写"
+    "Partially missing": "部分未填写",
+    "The update cannot keep your current settings. Cancel to continue working, or check again after updating Open-Science separately.": "此次更新无法保留当前设置。您可以取消并继续工作，或单独更新 Open-Science 后重新检查。",
+    "Open-Science could not load settings. Retry to continue.": "Open-Science 无法加载设置。请重试以继续。",
+    "Open-Science is still working on it. You can wait, try again, or save a report.": "Open-Science 仍在处理。你可以继续等待、重试或保存报告。",
+    "Another Open-Science is using the service": "另一个 Open-Science 正在使用后台服务",
+    "Reinstall Open-Science using its installer or package manager, then check the installation. This button checks files; it does not repair them. Keep your configuration and data folders.": "请使用安装程序或软件包管理器重新安装 Open-Science，再检查安装。此按钮仅检查文件，不会修复文件。请保留配置和数据文件夹。",
+    "The running version differs from this app. Finish any work in other Open-Science windows, then stop the service to continue.": "正在运行的版本与此应用不同。请先完成其他 Open-Science 窗口中的工作，再停止服务并继续。",
+    "Continue opening Open-Science?": "继续打开 Open-Science？",
+    "Update Open-Science using its installer or package manager, then check again. You can cancel to continue working with this version.": "请使用安装程序或软件包管理器更新 Open-Science，然后重新检查。您也可以取消，继续使用当前版本。",
+    "Update Open-Science now?": "现在更新 Open-Science？",
+    "It is taking longer than usual. Open-Science is closing it for you. Please wait.": "耗时比平时长。Open-Science 正在为你关闭它，请稍候。",
+    "Access authorization has expired. Reopen the Web link from Open-Science on the host computer, or return to the remote access entry page to pair again.": "访问授权已失效。请从主机上的 Open-Science 重新打开 Web 链接，或返回远程访问入口页面重新配对。",
+    "Check the proxy used by Open-Science. A working browser connection may use different proxy settings.": "请检查 Open-Science 使用的代理。浏览器连接正常时，可能使用了不同的代理设置。",
+    "Open-Science needs to close it before opening your projects. Finish any work in other Open-Science windows first.": "打开项目前，Open-Science 需要先关闭它。请先处理好其他 Open-Science 窗口中的工作。",
+    "Open-Science couldn't start": "Open-Science 无法启动",
+    "Open-Science cannot verify whether commands from an earlier session are still running. If they are, their results may be lost during the update. Back up the old launch records and retry?": "Open-Science 无法确认先前会话中的命令是否仍在运行。如果仍在运行，更新可能导致其结果丢失。是否备份旧的启动记录并重试？"
   }
 }

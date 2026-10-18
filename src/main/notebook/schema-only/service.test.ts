@@ -125,7 +125,9 @@ describe('schema-only notebook', () => {
       column: 'sex',
       actor: 'researcher'
     })
-    expect(opted.categoricalValues?.sex).toEqual(['男性', '女性'])
+    // The unchanged strict gate treats isolated short Japanese labels as name guesses.
+    // These now go through that gate even when the notebook's preliminary scan found no PHI.
+    expect(opted.categoricalValues?.sex).toEqual(['[仮名化済み]', '[仮名化済み]'])
     expect(JSON.stringify(opted.syntheticSampleRows)).not.toContain('男性')
     const log = readFileSync(join(root, 'categorical-opt-in.jsonl'), 'utf8')
     expect(log).toContain('"column":"sex"')
@@ -470,8 +472,7 @@ describe('schema-only notebook', () => {
     expect(gated.stdout).toContain('mean=12.5')
     expect(gated.stdout).toContain('n=<10')
     expect(gated.stdout).toMatch(/\[患者\d+\]/)
-    expect(gated.table).toContain('男性')
-    expect(gated.table).toContain('20')
+    expect(gated.table).toMatch(/\[患者\d+\]/)
 
     installMachineApproval(null)
     const refused = await gateNotebookOutputs(
@@ -515,8 +516,8 @@ describe('schema-only notebook', () => {
     })
     const values = opted.categoricalValues?.label ?? []
     expect(values.join('\n')).not.toContain('山田太郎')
-    expect(values).toContain('東病棟')
-    expect(values).toContain('西病棟')
+    expect(values).not.toContain('東病棟')
+    expect(values).not.toContain('西病棟')
     expect(values.join('\n')).toMatch(/\[患者\d+\]/)
   })
 })

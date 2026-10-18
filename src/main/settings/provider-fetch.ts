@@ -12,6 +12,10 @@ export const fetchProviderRequest = async (
   if (!isSecureProviderUrl(url)) throw new Error(PROVIDER_TRANSPORT_ERROR)
   // Provider requests carry credentials; never follow redirects to another selected or unselected URL.
   const guarded: RequestInit = { ...init, redirect: 'manual' }
-  if (init?.body != null) guarded.body = await guardProviderBody(init.body)
+  // Request objects can carry an inherited body even when init.body is absent. Never forward
+  // that uninspected body. Multipart, media and streaming uploads fail closed in the gate.
+  const body =
+    init?.body ?? (input instanceof Request && input.body ? await input.clone().text() : undefined)
+  guarded.body = await guardProviderBody(body)
   return fetchImpl(input, guarded)
 }

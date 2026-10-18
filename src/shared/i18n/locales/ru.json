@@ -49,7 +49,8 @@
     "System notifications from DRA are working.": "Системные уведомления DRA работают.",
     "Close window": "Закрыть окно",
     "Wait for all Session activity and pending approvals to finish before forking.": "Дождитесь завершения всех действий сессии и ожидающих подтверждений перед созданием ответвления.",
-    "Approval needed": "Требуется разрешение"
+    "Approval needed": "Требуется разрешение",
+    "System notifications from Open-Science are working.": "Системные уведомления Open-Science работают."
   },
   "native": {
     "The agent finished without a clean completion status.": "Агент завершил работу без корректного статуса завершения.",
@@ -163,7 +164,12 @@
     "The agent stopped early — the answer hit the model's length limit.": "Агент остановился досрочно — ответ достиг ограничения модели по длине.",
     "Your unsaved changes will be lost.": "Несохранённые изменения будут потеряны.",
     "Connect to Baselio": "Подключиться к Baselio",
-    "Approved. Opening Baselio…": "Одобрено. Открывается Baselio…"
+    "Approved. Opening Baselio…": "Одобрено. Открывается Baselio…",
+    "Open-Science could not start the backend.": "Open-Science не удалось запустить серверную часть.",
+    "Open-Science is still moving your data.": "Open-Science всё ещё переносит ваши данные.",
+    "The privacy check could not finish. Nothing was sent. Please try again.": "Не удалось завершить проверку конфиденциальности. Ничего не отправлено. Повторите попытку.",
+    "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "Невозможно проверить это вложение на наличие данных пациентов. Ничего не отправлено. Используйте текст, который можно проверить.",
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "Это подключение агента не позволяет проверять каждый запрос к модели на наличие данных пациентов и недоступно в бета-версии. Выберите поставщика API с проверяемым подключением."
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "В новых диалогах агент может без предварительного разрешения выполнять команды, изменять файлы, запускать код Notebook и обращаться к сети. Существующие диалоги не изменятся.",
@@ -8024,6 +8030,21 @@
     "I don’t know_ethics": "Не знаю",
     "Missing_ethics": "Не заполнено",
     "Protocol section content": "Protocol section content",
-    "Partially missing": "Partially missing"
+    "Partially missing": "Partially missing",
+    "The update cannot keep your current settings. Cancel to continue working, or check again after updating Open-Science separately.": "Обновление не может сохранить текущие настройки. Отмените его и продолжите работу или обновите Open-Science отдельно и проверьте снова.",
+    "Open-Science could not load settings. Retry to continue.": "Open-Science не удалось загрузить настройки. Повторите попытку, чтобы продолжить.",
+    "Open-Science is still working on it. You can wait, try again, or save a report.": "Open-Science всё ещё работает над этим. Можно подождать, повторить попытку или сохранить отчёт.",
+    "Another Open-Science is using the service": "Другая копия Open-Science использует службу",
+    "Reinstall Open-Science using its installer or package manager, then check the installation. This button checks files; it does not repair them. Keep your configuration and data folders.": "Переустановите Open-Science с помощью установщика или менеджера пакетов, затем проверьте установку. Эта кнопка проверяет файлы, но не исправляет их. Сохраните папки настроек и данных.",
+    "The running version differs from this app. Finish any work in other Open-Science windows, then stop the service to continue.": "Работающая версия отличается от этого приложения. Завершите работу в других окнах Open-Science, затем остановите службу для продолжения.",
+    "Continue opening Open-Science?": "Продолжить открытие Open-Science?",
+    "Update Open-Science using its installer or package manager, then check again. You can cancel to continue working with this version.": "Обновите Open-Science с помощью установщика или менеджера пакетов, затем проверьте снова. Можно отменить и продолжить работу с текущей версией.",
+    "Update Open-Science now?": "Обновить Open-Science сейчас?",
+    "It is taking longer than usual. Open-Science is closing it for you. Please wait.": "Это занимает больше времени, чем обычно. Open-Science закрывает её за вас. Подождите.",
+    "Access authorization has expired. Reopen the Web link from Open-Science on the host computer, or return to the remote access entry page to pair again.": "Срок действия разрешения на доступ истёк. Снова откройте веб-ссылку из Open-Science на главном компьютере или вернитесь на страницу удалённого доступа для повторного сопряжения.",
+    "Check the proxy used by Open-Science. A working browser connection may use different proxy settings.": "Проверьте прокси, используемый Open-Science. Рабочее подключение браузера может использовать другие настройки прокси.",
+    "Open-Science needs to close it before opening your projects. Finish any work in other Open-Science windows first.": "Чтобы открыть проекты, нужно сначала закрыть её. Завершите работу в других окнах Open-Science.",
+    "Open-Science couldn't start": "Не удалось запустить Open-Science",
+    "Open-Science cannot verify whether commands from an earlier session are still running. If they are, their results may be lost during the update. Back up the old launch records and retry?": "Open-Science не может проверить, выполняются ли ещё команды из предыдущего сеанса. Если да, их результаты могут быть потеряны во время обновления. Сохранить резервную копию старых записей запуска и повторить попытку?"
   }
 }

@@ -200,6 +200,7 @@ export default defineConfig({
     // documents the supported variables.
     setupFiles: [
       './test/setup-dotenv.ts',
+      './test/setup-phi.ts',
       './test/setup-jsdom-polyfills.ts',
       './test/setup-i18n.ts'
     ],

@@ -102,6 +102,8 @@ export const createSchemaNotebookService = (options: {
       if (withheld.has(column) || !allowed.has(column)) continue
       categoricalValues[column] = await releaseCategoricalValuesForModel(values, stored.projectId)
     }
+    // This local preview is not a send. The complete context is released again at the
+    // provider HTTP boundary, including names, dtypes, samples, and opted-in values.
     return buildSchemaModelContext({
       tableId: stored.tableId,
       rowCount: stored.rowCount,

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { assertPhiCheckedAgentProvider } from '../phi/agent-policy'
 import { join } from 'node:path'
 
 import type { GrantedLocalRoot } from '../../shared/local-fs'
@@ -164,6 +165,10 @@ export class AgentBackendResolver {
     context: AgentBackendResolutionContext = {}
   ): Promise<AgentSpawnConfig> {
     const settings = await this.readSettings()
+    const selected = settings.providers.find(
+      (provider) => provider.id === settings.activeProviderId
+    )
+    if (selected) assertPhiCheckedAgentProvider(selected.type)
     const executablePath = await this.runtime.resolveClaudeExecutable(settings.claude?.resolvedPath)
     const target = this.resolveConfiguredProviderTarget(settings, getAgentFramework('claude-code'))
     if (target.providerType === 'claude-shared' && target.disconnectedAt !== undefined) {
@@ -327,6 +332,7 @@ export class AgentBackendResolver {
       : undefined
     if (!storedProvider) throw new Error(NO_ACTIVE_PROVIDER_MESSAGE)
 
+    assertPhiCheckedAgentProvider(storedProvider.type)
     const target = this.providers.resolveRuntimeTarget(storedProvider, modelSelection, framework)
     if (!target.frameworkCompatible) {
       throw new Error(buildActiveModelIncompatibleMessage(framework.displayName))
