@@ -7545,14 +7545,14 @@
     "Monitoring and auditing": "监查和审计",
     "Import institutional DOCX form": "导入所属机构的 DOCX 格式",
     "Download incomplete DOCX draft": "下载未完成的 DOCX 草稿",
-    "Ethics checklist: yes": "是",
-    "Ethics checklist: no": "否",
-    "Ethics checklist: unknown": "不知道",
-    "Ethics checklist: missing": "未填写",
     "Institutional heading mappings": "机构表格标题对应",
     "Confirming doctor": "确认医生",
     "Select checklist item": "选择清单项目",
     "Mapping unknown": "对应不明",
-    "Confirm heading mappings": "确认标题对应"
+    "Confirm heading mappings": "确认标题对应",
+    "Yes_ethics": "是",
+    "No_ethics": "否",
+    "I don’t know_ethics": "不知道",
+    "Missing_ethics": "未填写"
   }
 }

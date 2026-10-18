@@ -25,6 +25,8 @@ describe('EthicsProtocolChecklist', () => {
     expect(
       screen.getAllByRole('heading', { name: 'Research protocol checklist' }).length
     ).toBeGreaterThan(0)
+    expect(screen.getAllByText('Yes').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Ethics checklist: yes')).toBeNull()
   })
 
   it('lets a doctor correct and confirm imported heading mappings through the protocol API', async () => {

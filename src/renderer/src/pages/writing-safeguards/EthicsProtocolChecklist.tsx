@@ -28,13 +28,13 @@ type ChecklistCopy = Record<
   | 'mappingConfirm',
   string
 >
-const copy = (t: (key: string) => string): ChecklistCopy => ({
+const copy = (t: (key: string, options?: { context: string }) => string): ChecklistCopy => ({
   title: t('Research protocol checklist'),
   precedence: t('Your institution’s form and ethics committee requirements take priority.'),
-  yes: t('Ethics checklist: yes'),
-  no: t('Ethics checklist: no'),
-  unknown: t('Ethics checklist: unknown'),
-  blank: t('Ethics checklist: missing'),
+  yes: t('Yes', { context: 'ethics' }),
+  no: t('No', { context: 'ethics' }),
+  unknown: t('I don’t know', { context: 'ethics' }),
+  blank: t('Missing', { context: 'ethics' }),
   na: t('Not applicable'),
   reason: t('Reason it does not apply'),
   reasonRequired: t('Enter a reason.'),

@@ -7545,14 +7545,14 @@
     "Monitoring and auditing": "Monitoring and auditing",
     "Import institutional DOCX form": "Import institutional DOCX form",
     "Download incomplete DOCX draft": "Download incomplete DOCX draft",
-    "Ethics checklist: yes": "是",
-    "Ethics checklist: no": "否",
-    "Ethics checklist: unknown": "不知道",
-    "Ethics checklist: missing": "未填寫",
     "Institutional heading mappings": "Institutional heading mappings",
     "Confirming doctor": "Confirming doctor",
     "Select checklist item": "Select checklist item",
     "Mapping unknown": "Mapping unknown",
-    "Confirm heading mappings": "Confirm heading mappings"
+    "Confirm heading mappings": "Confirm heading mappings",
+    "Yes_ethics": "是",
+    "No_ethics": "否",
+    "I don’t know_ethics": "不知道",
+    "Missing_ethics": "未填寫"
   }
 }

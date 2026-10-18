@@ -7545,14 +7545,14 @@
     "Monitoring and auditing": "モニタリング及び監査",
     "Import institutional DOCX form": "所属機関の DOCX 書式を取り込む",
     "Download incomplete DOCX draft": "未完成の DOCX 草案をダウンロード",
-    "Ethics checklist: yes": "はい",
-    "Ethics checklist: no": "いいえ",
-    "Ethics checklist: unknown": "わからない",
-    "Ethics checklist: missing": "未記入",
     "Institutional heading mappings": "機関書式の見出し対応",
     "Confirming doctor": "確認する医師",
     "Select checklist item": "チェックリスト項目を選択",
     "Mapping unknown": "対応不明",
-    "Confirm heading mappings": "見出し対応を確認"
+    "Confirm heading mappings": "見出し対応を確認",
+    "Yes_ethics": "はい",
+    "No_ethics": "いいえ",
+    "I don’t know_ethics": "わからない",
+    "Missing_ethics": "未記入"
   }
 }

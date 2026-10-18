@@ -7873,14 +7873,14 @@
     "Monitoring and auditing": "Monitoring and auditing",
     "Import institutional DOCX form": "Import institutional DOCX form",
     "Download incomplete DOCX draft": "Download incomplete DOCX draft",
-    "Ethics checklist: yes": "Sí",
-    "Ethics checklist: no": "No",
-    "Ethics checklist: unknown": "No se sabe",
-    "Ethics checklist: missing": "Sin completar",
     "Institutional heading mappings": "Institutional heading mappings",
     "Confirming doctor": "Confirming doctor",
     "Select checklist item": "Select checklist item",
     "Mapping unknown": "Mapping unknown",
-    "Confirm heading mappings": "Confirm heading mappings"
+    "Confirm heading mappings": "Confirm heading mappings",
+    "Yes_ethics": "Sí",
+    "No_ethics": "No",
+    "I don’t know_ethics": "No se sabe",
+    "Missing_ethics": "Sin completar"
   }
 }

@@ -145,6 +145,7 @@ const PLURAL_CATEGORIES = new Set(['zero', 'one', 'two', 'few', 'many', 'other']
 const CONTEXT_SUFFIXES = new Set([
   'ago',
   'duration',
+  'ethics',
   'files',
   'inUse',
   'language',
@@ -252,10 +253,10 @@ describe('runtime catalog fallback', () => {
   it('uses contextual ethics checklist copy, including 未記入 in Japanese', () => {
     const jaInstance = initI18n('ja')
 
-    expect(jaInstance.t('Ethics checklist: yes')).toBe('はい')
-    expect(jaInstance.t('Ethics checklist: no')).toBe('いいえ')
-    expect(jaInstance.t('Ethics checklist: unknown')).toBe('わからない')
-    expect(jaInstance.t('Ethics checklist: missing')).toBe('未記入')
+    expect(jaInstance.t('Yes', { context: 'ethics' })).toBe('はい')
+    expect(jaInstance.t('No', { context: 'ethics' })).toBe('いいえ')
+    expect(jaInstance.t('I don’t know', { context: 'ethics' })).toBe('わからない')
+    expect(jaInstance.t('Missing', { context: 'ethics' })).toBe('未記入')
   })
 
   it.each([
