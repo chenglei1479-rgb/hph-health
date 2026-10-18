@@ -49,7 +49,7 @@ export const createEthicsApprovalStore = (
       const id = requireProject(projectId)
       const stored = normalizeEthicsApprovalNumber(approvalNumber)
       const next = readMap(filePath)
-      next[id] = { approvalNumber: stored, updatedAt: now().toISOString() }
+      next[id] = { ...next[id], approvalNumber: stored, updatedAt: now().toISOString() }
       mkdirSync(dirname(filePath), { recursive: true })
       writeFileSync(filePath, `${JSON.stringify(next)}\n`, { encoding: 'utf8', mode: 0o600 })
       return stored
