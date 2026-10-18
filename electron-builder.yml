@@ -9,6 +9,7 @@ directories:
 beforePack: build/stage-desktop-runtime.cjs
 afterPack: build/deployment-pack.cjs
 afterSign: build/sign-windows.cjs
+afterAllArtifactBuild: build/verify-windows-release.cjs
 files:
   # Runtime code and resources are compiled/staged separately; repository tooling is not app data.
   - '!{scripts,test,e2e,docs,release-notes,patches,prisma}{,/**/*}'
@@ -74,6 +75,10 @@ extraResources:
   # Keep the project license readable outside app.asar on every platform.
   - from: LICENSE
     to: LICENSE.txt
+  - from: NOTICE
+    to: NOTICE
+  - from: THIRD_PARTY_NOTICES.txt
+    to: THIRD_PARTY_NOTICES.txt
   # Keep the copied third-party provider icon paths' MIT notice readable in every packaged app.
   - from: src/renderer/src/assets/provider-icons/LobeHub-icons-LICENSE
     to: LobeHub-icons-LICENSE
@@ -96,6 +101,7 @@ extraResources:
 # The afterSign hook supplements missing bundled PE signatures for Store submissions after
 # electron-builder edits/signs the launcher. Existing helper/vendor signatures are preserved.
 win:
+  forceCodeSigning: true
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
     - ext: science
@@ -146,7 +152,9 @@ nsis:
   perMachine: false
   allowElevation: false
   allowToChangeInstallationDirectory: true
-  license: LICENSE
+  multiLanguageInstaller: true
+  installerLanguages: [ja_JP, zh_CN, en_US]
+  displayLanguageSelector: true
   include: build/installer-license.nsh
 mac:
   # Windows ProgID is a persisted association identity; other platforms use a display name.
@@ -247,7 +255,7 @@ appImage:
   artifactName: Baselio-${version}-linux-${arch}.${ext}
 deb:
   fpm:
-    - build/deb-copyright=/usr/share/doc/open-science/copyright
+    - build/deb-copyright=/usr/share/doc/medresearch-agent/copyright
   afterInstall: build/deb-after-install.tpl
   afterRemove: build/deb-after-remove.tpl
   artifactName: Baselio_${version}_${arch}.${ext}

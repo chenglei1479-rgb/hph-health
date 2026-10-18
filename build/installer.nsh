@@ -1,3 +1,5 @@
+﻿!include "${BUILD_RESOURCES_DIR}\installer-strings.nsh"
+
 !macro customInstallMode
   # Notebook AppContainer profiles are per-user durable resources. A machine-wide installation
   # cannot safely create, identify, and remove one profile for every Windows account, so keep the
@@ -12,8 +14,8 @@
     nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\windows-notebook-sandbox-uninstall.ps1" -SandboxRoot "$INSTDIR\resources\notebook-network-sandbox\windows"'
     Pop $0
     StrCmp $0 "0" notebookSandboxCleanupComplete
-    DetailPrint `MedResearch Agent Notebook cleanup failure code=$0 sandboxRoot="$INSTDIR\resources\notebook-network-sandbox\windows"`
-    MessageBox MB_OK|MB_ICONSTOP "MedResearch Agent could not safely remove its owned Notebook isolation resources. The uninstall was stopped so the cleanup can be retried."
+    DetailPrint "$(BaselioDetail0)"
+    MessageBox MB_OK|MB_ICONSTOP "$(BaselioNotebookCleanupFailed)"
     Abort
     notebookSandboxCleanupComplete:
   ${endif}
@@ -84,36 +86,54 @@ FunctionEnd
       ${endif}
     ${endif}
     ${if} ${Errors}
-      DetailPrint `MedResearch Agent data protection failure code=parent-path-unresolved path="${DIR}\${FOLDER}"`
-      DetailPrint `Could not safely preserve "${DIR}\${FOLDER}"; its parent path could not be resolved.`
-      MessageBox MB_OK|MB_ICONSTOP "MedResearch Agent could not safely protect its data folder before updating.$\r$\nThe existing data was left untouched."
+      StrCpy $baselioMessageDir "${DIR}"
+      StrCpy $baselioMessageFolder "${FOLDER}"
+      DetailPrint "$(BaselioDetail1)"
+      StrCpy $baselioMessageDir "${DIR}"
+      StrCpy $baselioMessageFolder "${FOLDER}"
+      DetailPrint "$(BaselioDetail2)"
+      MessageBox MB_OK|MB_ICONSTOP "$(BaselioDataProtectionFailed)"
       StrCpy $dataProtectionFailed "1"
     ${else}
   StrCpy ${BACKUP} "$R2\.medresearch-agent-update-data-${SLOT}"
       ${if} ${FileExists} "${DIR}\${FOLDER}\*.*"
         ${if} ${FileExists} "${BACKUP}\*.*"
-          DetailPrint `MedResearch Agent data protection failure code=backup-already-exists path="${DIR}\${FOLDER}" backup="${BACKUP}"`
-          DetailPrint `Could not safely preserve "${DIR}\${FOLDER}" because the backup path already exists: ${BACKUP}`
-          MessageBox MB_OK|MB_ICONSTOP "MedResearch Agent found both the current data folder and an earlier update backup.$\r$\nNo data was changed. Please inspect:$\r$\n${BACKUP}"
+          StrCpy $baselioMessageDir "${DIR}"
+          StrCpy $baselioMessageBackup "${BACKUP}"
+          StrCpy $baselioMessageFolder "${FOLDER}"
+          DetailPrint "$(BaselioDetail3)"
+          StrCpy $baselioMessageDir "${DIR}"
+          StrCpy $baselioMessageBackup "${BACKUP}"
+          StrCpy $baselioMessageFolder "${FOLDER}"
+          DetailPrint "$(BaselioDetail4)"
+          StrCpy $baselioMessageBackup "${BACKUP}"
+          MessageBox MB_OK|MB_ICONSTOP "$(BaselioBackupConflict)"
           StrCpy ${BACKUP} ""
           StrCpy $dataProtectionFailed "1"
         ${else}
           ClearErrors
           Rename "${DIR}\${FOLDER}" "${BACKUP}"
           ${if} ${Errors}
-            DetailPrint `MedResearch Agent data protection failure code=preserve-rename-failed path="${DIR}\${FOLDER}" backup="${BACKUP}"`
-            DetailPrint `Could not safely preserve "${DIR}\${FOLDER}"; leaving the existing installation untouched.`
-            MessageBox MB_OK|MB_ICONSTOP "MedResearch Agent could not safely protect its data folder before updating.$\r$\nThe existing data was left untouched."
+            StrCpy $baselioMessageDir "${DIR}"
+            StrCpy $baselioMessageBackup "${BACKUP}"
+            StrCpy $baselioMessageFolder "${FOLDER}"
+            DetailPrint "$(BaselioDetail5)"
+            StrCpy $baselioMessageDir "${DIR}"
+            StrCpy $baselioMessageFolder "${FOLDER}"
+            DetailPrint "$(BaselioDetail6)"
+            MessageBox MB_OK|MB_ICONSTOP "$(BaselioDataProtectionFailed)"
             StrCpy ${BACKUP} ""
             StrCpy $dataProtectionFailed "1"
           ${else}
-            DetailPrint `Protected the data folder at: ${BACKUP}`
+            StrCpy $baselioMessageBackup "${BACKUP}"
+            DetailPrint "$(BaselioDetail7)"
           ${endif}
         ${endif}
       ${elseif} ${FileExists} "${BACKUP}\*.*"
         # A previous installer exited before it could restore. Adopt that deterministic backup
         # and restore it through the normal post-uninstall path.
-        DetailPrint `Found data preserved by an interrupted update at: ${BACKUP}`
+        StrCpy $baselioMessageBackup "${BACKUP}"
+        DetailPrint "$(BaselioDetail8)"
       ${else}
         StrCpy ${BACKUP} ""
       ${endif}
@@ -126,21 +146,33 @@ FunctionEnd
   ${andIf} "${BACKUP}" != ""
     ${if} ${FileExists} "${BACKUP}\*.*"
       ${if} ${FileExists} "${DIR}\${FOLDER}\*.*"
-        DetailPrint `MedResearch Agent data protection failure code=restore-destination-exists path="${DIR}\${FOLDER}" backup="${BACKUP}"`
-        DetailPrint `The preserved data remains at: ${BACKUP}`
-        MessageBox MB_OK|MB_ICONSTOP "MedResearch Agent could not restore its data folder because the destination already exists.$\r$\nThe preserved data remains at:$\r$\n${BACKUP}"
+        StrCpy $baselioMessageDir "${DIR}"
+        StrCpy $baselioMessageBackup "${BACKUP}"
+        StrCpy $baselioMessageFolder "${FOLDER}"
+        DetailPrint "$(BaselioDetail9)"
+        StrCpy $baselioMessageBackup "${BACKUP}"
+        DetailPrint "$(BaselioDetail10)"
+        StrCpy $baselioMessageBackup "${BACKUP}"
+        MessageBox MB_OK|MB_ICONSTOP "$(BaselioRestoreDestinationExists)"
         StrCpy $dataRestoreFailed "1"
       ${else}
         CreateDirectory "${DIR}"
         ClearErrors
         Rename "${BACKUP}" "${DIR}\${FOLDER}"
         ${if} ${Errors}
-          DetailPrint `MedResearch Agent data protection failure code=restore-rename-failed path="${DIR}\${FOLDER}" backup="${BACKUP}"`
-          DetailPrint `The preserved data remains at: ${BACKUP}`
-          MessageBox MB_OK|MB_ICONSTOP "MedResearch Agent could not restore its data folder after updating.$\r$\nThe preserved data remains at:$\r$\n${BACKUP}"
+          StrCpy $baselioMessageDir "${DIR}"
+          StrCpy $baselioMessageBackup "${BACKUP}"
+          StrCpy $baselioMessageFolder "${FOLDER}"
+          DetailPrint "$(BaselioDetail11)"
+          StrCpy $baselioMessageBackup "${BACKUP}"
+          DetailPrint "$(BaselioDetail10)"
+          StrCpy $baselioMessageBackup "${BACKUP}"
+          MessageBox MB_OK|MB_ICONSTOP "$(BaselioRestoreFailed)"
           StrCpy $dataRestoreFailed "1"
         ${else}
-          DetailPrint `Restored the data folder to: ${DIR}\${FOLDER}`
+          StrCpy $baselioMessageDir "${DIR}"
+          StrCpy $baselioMessageFolder "${FOLDER}"
+          DetailPrint "$(BaselioDetail12)"
           StrCpy ${BACKUP} ""
         ${endif}
       ${endif}
@@ -191,7 +223,7 @@ FunctionEnd
     ${elseif} $perMachineInstallDirCache != ""
       # The unelevated assisted outer process stops on the install-mode page while its elevated
       # inner process completes the install. The inner process runs this same protection path.
-      DetailPrint `Deferring machine data-folder protection to the elevated installer.`
+      DetailPrint "$(BaselioDetail13)"
     ${endif}
   ${endif}
   ${if} $dataProtectionFailed != "0"
@@ -269,7 +301,7 @@ FunctionEnd
       ${endif}
     ${endif}
     ${if} $R8 == "0"
-      DetailPrint `Deferring shared data-folder protection to the elevated installer.`
+      DetailPrint "$(BaselioDetail14)"
       ClearErrors
     ${endif}
   ${endif}
@@ -313,7 +345,7 @@ FunctionEnd
       Return
 
     ensureExistingUninstallerIsWritable_failed:
-      DetailPrint `Cannot replace the existing uninstaller: "$INSTDIR\${UNINSTALL_FILENAME}". Windows error: $R1.`
+      DetailPrint "$(BaselioDetail15)"
       ${if} ${Silent}
         # --updated + --force-run is the existing Restart to update handoff, including old clients.
         # Plain /S and non-relaunching update jobs must not wait for someone to dismiss a dialog.
@@ -325,12 +357,12 @@ FunctionEnd
         ${endif}
       ${endif}
       ${if} $R1 == 5
-        MessageBox MB_OK|MB_ICONEXCLAMATION|MB_SETFOREGROUND "MedResearch Agent could not finish updating.$\r$\n$\r$\nWindows denied access to:$\r$\n$INSTDIR\${UNINSTALL_FILENAME}$\r$\n$\r$\nClose this notice, then run the official MedResearch Agent installer as administrator to update this installation.$\r$\n$\r$\nWindows error: $R1"
+        MessageBox MB_OK|MB_ICONEXCLAMATION|MB_SETFOREGROUND "$(BaselioUpdateAccessDenied)"
       ${elseif} $R1 == 32
       ${orIf} $R1 == 33
-        MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION|MB_SETFOREGROUND "MedResearch Agent could not finish updating.$\r$\n$\r$\nAnother process is using:$\r$\n$INSTDIR\${UNINSTALL_FILENAME}$\r$\n$\r$\nClose the process using this file, then choose Retry. Choose Cancel to stop this update.$\r$\n$\r$\nWindows error: $R1" IDRETRY ensureExistingUninstallerIsWritable_retry
+        MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION|MB_SETFOREGROUND "$(BaselioUpdateFileInUse)" IDRETRY ensureExistingUninstallerIsWritable_retry
       ${else}
-        MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION|MB_SETFOREGROUND "MedResearch Agent could not finish updating.$\r$\n$\r$\nWindows could not replace:$\r$\n$INSTDIR\${UNINSTALL_FILENAME}$\r$\n$\r$\nChoose Retry to try again, or Cancel to stop this update. If the problem continues, report the file path and Windows error below.$\r$\n$\r$\nWindows error: $R1" IDRETRY ensureExistingUninstallerIsWritable_retry
+        MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION|MB_SETFOREGROUND "$(BaselioUpdateReplaceFailed)" IDRETRY ensureExistingUninstallerIsWritable_retry
       ${endif}
 
     ensureExistingUninstallerIsWritable_cancel:
@@ -392,8 +424,10 @@ FunctionEnd
       ${endif}
       ${if} ${Errors}
         Delete "${BACKUP}"
-        DetailPrint `Could not safely preserve "${DIR}\${FOLDER}"; leaving the existing installation untouched.`
-        MessageBox MB_OK|MB_ICONEXCLAMATION "$(uninstallFailed): $R0$\r$\nAny data already preserved for this retry remains at:$\r$\n$retryLegacyDataBackup$\r$\n$retryBrandedDataBackup"
+        StrCpy $baselioMessageDir "${DIR}"
+        StrCpy $baselioMessageFolder "${FOLDER}"
+        DetailPrint "$(BaselioDetail6)"
+        MessageBox MB_OK|MB_ICONEXCLAMATION "$(BaselioRetryPreservationFailed)"
         !insertmacro restoreAllNestedDataRoots
         SetErrorLevel 2
         Quit
@@ -409,8 +443,10 @@ FunctionEnd
         # customInit already holds the authoritative registered data outside the install tree.
         # Do not overwrite either copy if the old process recreated data before it was killed;
         # retain that additional directory at its unique sibling path for manual reconciliation.
-        DetailPrint `Additional data created during the update remains at: ${BACKUP}`
-        MessageBox MB_OK|MB_ICONEXCLAMATION "MedResearch Agent found additional data created while closing the previous version.$\r$\nYour original data will be restored; the additional data remains at:$\r$\n${BACKUP}"
+        StrCpy $baselioMessageBackup "${BACKUP}"
+        DetailPrint "$(BaselioDetail16)"
+        StrCpy $baselioMessageBackup "${BACKUP}"
+        MessageBox MB_OK|MB_ICONEXCLAMATION "$(BaselioAdditionalData)"
       ${else}
         # No registered backup exists (recovery can also be used independently). The retry may
         # have removed ${DIR}; recreate only the parent and put the retry-local data back before
@@ -419,8 +455,10 @@ FunctionEnd
         ClearErrors
         Rename "${BACKUP}" "${DIR}\${FOLDER}"
         ${if} ${Errors}
-          DetailPrint `The preserved data remains at: ${BACKUP}`
-          MessageBox MB_OK|MB_ICONSTOP "MedResearch Agent could not restore its data folder after updating.$\r$\nYour data remains at:$\r$\n${BACKUP}"
+          StrCpy $baselioMessageBackup "${BACKUP}"
+          DetailPrint "$(BaselioDetail10)"
+          StrCpy $baselioMessageBackup "${BACKUP}"
+          MessageBox MB_OK|MB_ICONSTOP "$(BaselioRetryRestoreFailed)"
           !insertmacro restoreAllNestedDataRoots
           SetErrorLevel 2
           Quit
@@ -432,9 +470,9 @@ FunctionEnd
 
 !macro uninstallFailureRecoveryAt DIR REGISTERED_BACKUP REGISTERED_BRANDED_BACKUP
   ${ifNot} ${FileExists} "${DIR}\${APP_EXECUTABLE_FILENAME}"
-    DetailPrint `Old uninstaller exited with $R0 but the previous installation is already removed; continuing.`
+    DetailPrint "$(BaselioDetail17)"
   ${else}
-    DetailPrint `Old uninstaller exited with $R0; closing leftover app processes and retrying once.`
+    DetailPrint "$(BaselioDetail18)"
     # Force-kill anything still running from the install dir, then retry. The PowerShell sweep
     # matches on ExecutablePath (Win32_Process has no Path property) with a trailing-backslash
     # boundary so a sibling directory can never match, and receives the directory as an ARGUMENT —
@@ -514,10 +552,10 @@ FunctionEnd
     !insertmacro restoreRetryDataRoot ${DIR} $retryBrandedDataBackup ${REGISTERED_BRANDED_BACKUP} MedResearch-Agent
     ${if} $R0 != 0
       ${ifNot} ${FileExists} "${DIR}\${APP_EXECUTABLE_FILENAME}"
-        DetailPrint `Retry exited with $R0 but the previous installation is already removed; continuing.`
+        DetailPrint "$(BaselioDetail19)"
       ${else}
-        MessageBox MB_OK|MB_ICONEXCLAMATION "$(uninstallFailed): $R0"
-        DetailPrint `Uninstall was not successful. Uninstaller error code: $R0.`
+        MessageBox MB_OK|MB_ICONEXCLAMATION "$(BaselioUninstallFailed)"
+        DetailPrint "$(BaselioDetail20)"
         !insertmacro restoreAllNestedDataRoots
         SetErrorLevel 2
         Quit
@@ -546,7 +584,7 @@ FunctionEnd
   # restores HKLM here and keeps HKCU protected for the following explicit pass.
   ${if} $installMode == "all"
     ${if} $perMachineInstallDirCache == $perUserInstallDirCache
-      DetailPrint `Keeping the shared data folder protected for the matching per-user uninstall pass.`
+      DetailPrint "$(BaselioDetail21)"
     ${else}
       !insertmacro restoreNestedDataRoot $perMachineInstallDirCache $perMachineDataBackup
       !insertmacro quitIfDataRestoreFailed
@@ -567,8 +605,8 @@ FunctionEnd
     # exit code. Empty cache means no per-user install was registered at install start; keep
     # electron-builder's default fatal handling rather than retry against an unknown directory.
     ${if} $perUserInstallDirCache == ""
-      MessageBox MB_OK|MB_ICONEXCLAMATION "$(uninstallFailed): $R0"
-      DetailPrint `Uninstall was not successful. Uninstaller error code: $R0.`
+      MessageBox MB_OK|MB_ICONEXCLAMATION "$(BaselioUninstallFailed)"
+      DetailPrint "$(BaselioDetail20)"
       !insertmacro restoreAllNestedDataRoots
       SetErrorLevel 2
       Quit

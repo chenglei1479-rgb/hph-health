@@ -111,6 +111,8 @@ SilentInstall silent
 Var backup
 Var dataProtectionFailed
 Var dataRestoreFailed
+LangString uninstallFailed 1033 "Uninstall failed"
+${readFileSync(join(repoRoot, 'build/installer-strings.nsh'), 'utf8')}
 ${observed}
 Section
 FileOpen $9 "${output}" w
@@ -388,7 +390,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
     expect(include).toContain('$$_.ExecutablePath')
     expect(include).not.toContain('$$_.Path.')
     expect(include).toContain('taskkill /F /IM "${APP_EXECUTABLE_FILENAME}"')
-    expect(include).toContain('$(uninstallFailed): $R0')
+    expect(readFileSync(join(repoRoot, 'build/installer-strings.nsh'), 'utf8')).toContain('$(uninstallFailed): $R0')
     expect(include).toContain('SetErrorLevel 2')
   })
 
@@ -469,9 +471,9 @@ describe('NSIS installer include (build/installer.nsh)', () => {
     const preserveAt = recovery.indexOf('Rename "${DIR}\\MedResearchAgent" "$R7"')
     const retryAt = recovery.indexOf('ExecWait')
     const restoreAt = recovery.indexOf('Rename "$R7" "${DIR}\\MedResearchAgent"')
-    const preserveErrorAt = recovery.indexOf('Could not safely preserve')
+    const preserveErrorAt = recovery.indexOf('$(BaselioDetail6)')
     const preserveQuitAt = recovery.indexOf('Quit', preserveErrorAt)
-    const restoreErrorAt = recovery.indexOf('The preserved data remains at: $R7')
+    const restoreErrorAt = recovery.indexOf('$(BaselioDetail10)')
     const restoreQuitAt = recovery.indexOf('Quit', restoreErrorAt)
     const retryResultAt = recovery.indexOf('${if} $R0 != 0', retryAt)
     const clearPreservedPathAt = recovery.indexOf('StrCpy $R7 ""', restoreAt)
@@ -516,7 +518,8 @@ describe('NSIS installer include (build/installer.nsh)', () => {
     expect(userCheck).toContain(
       '!insertmacro uninstallFailureRecoveryAt $perUserInstallDirCache $perUserDataBackup'
     )
-    expect(conflictBranch).toContain('Additional data created during the update remains at: $R7')
+    expect(conflictBranch).toContain('StrCpy $baselioMessageBackup \"$R7\"')
+    expect(conflictBranch).toContain('$(BaselioDetail16)')
     expect(conflictBranch).not.toContain('Rename "$R7" "${DIR}\\MedResearchAgent"')
   })
 
@@ -606,7 +609,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
     expect(init).toContain('$perMachineInstallDirCache == $perUserInstallDirCache')
     expect(probeAt).toBeGreaterThan(-1)
     expect(probeAt).toBeLessThan(preserveAt)
-    expect(init).toContain('Deferring shared data-folder protection to the elevated installer.')
+    expect(init).toContain('$(BaselioDetail14)')
   })
 
   it('normalizes registered Windows paths before testing whether they share a directory', () => {
@@ -649,7 +652,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
     ).toHaveLength(2)
     expect(afterRetry.indexOf(removedCheck)).toBeGreaterThan(afterRetry.indexOf('${if} $R0 != 0'))
     expect(afterRetry.indexOf(removedCheck)).toBeLessThan(
-      afterRetry.indexOf('MessageBox MB_OK|MB_ICONEXCLAMATION "$(uninstallFailed): $R0"')
+      afterRetry.indexOf('MessageBox MB_OK|MB_ICONEXCLAMATION "$(BaselioUninstallFailed)"')
     )
   })
 
@@ -743,7 +746,8 @@ describe('NSIS installer include (build/installer.nsh)', () => {
   })
 
   it('records actionable cleanup failure reasons in the NSIS detail log', () => {
-    expect(include).toContain('MedResearch-Agent Notebook cleanup failure code=$0')
+    const strings = readFileSync(join(repoRoot, 'build/installer-strings.nsh'), 'utf8')
+    expect(strings).toContain('Baselio Notebook cleanup failure code=$0')
     for (const code of [
       'parent-path-unresolved',
       'backup-already-exists',
@@ -751,7 +755,7 @@ describe('NSIS installer include (build/installer.nsh)', () => {
       'restore-destination-exists',
       'restore-rename-failed'
     ]) {
-      expect(include).toContain(`MedResearch-Agent data protection failure code=${code}`)
+      expect(strings).toContain(`Baselio data protection failure code=${code}`)
     }
   })
 })
