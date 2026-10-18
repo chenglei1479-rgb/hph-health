@@ -123,8 +123,11 @@ SilentInstall silent
 Var backup
 Var dataProtectionFailed
 Var dataRestoreFailed
+Var retryLegacyDataBackup
+Var retryBrandedDataBackup
+!define UNINSTALL_FILENAME "Uninstall Baselio.exe"
 LangString uninstallFailed 1033 "Uninstall failed"
-${readFileSync(join(repoRoot, 'build/installer-strings.nsh'), 'utf8')}
+${readFileSync(join(repoRoot, 'build/installer-strings.nsh'), 'utf8').replace(/^\uFEFF/, '')}
 ${observed}
 Section
 FileOpen $9 "${output}" w

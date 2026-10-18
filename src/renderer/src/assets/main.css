@@ -1510,3 +1510,9 @@ html[data-windows-titlebar] .windows-app-content :is(.min-h-svh, .min-h-screen) 
 /* The supplied flat lockup keeps its exact geometry, color, and lettering. */
 .baselio-horizontal { display: inline-flex; width: 5.5rem; }
 .baselio-horizontal svg { display: block; width: 100%; height: auto; }
+
+/* Use the supplied white flat-logo palette on dark surfaces. */
+.dark .baselio-horizontal svg g,
+.dark .baselio-splash-mark svg g {
+  fill: #ffffff;
+}
