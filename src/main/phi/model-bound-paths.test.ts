@@ -163,12 +163,15 @@ describe('local model-bound producers', () => {
     ['categorical values', () => releaseCategoricalValuesForModel([PHI], 'fiction')]
   ] as const
   it.each(producers)('%s is released or refused', async (_name, produce) => {
+    let result: unknown
     try {
-      const released = JSON.stringify(await produce())
-      for (const value of forbidden) expect(released).not.toContain(value)
+      result = await produce()
     } catch (error) {
       expect(error).toBeInstanceOf(Error)
+      return
     }
+    const released = JSON.stringify(result)
+    for (const value of forbidden) expect(released).not.toContain(value)
   })
   it.each(producers)('%s fails closed when the gate is unavailable', async (_name, produce) => {
     installPhiGate(createClosedGate('blocked'))

@@ -125,7 +125,9 @@ export class ParserEngine {
     for (const key of descriptor.required ?? []) {
       if (args[key] == null) throw new Error(`missing required arg: ${key}`)
     }
-    await this.policy.guardQueryArgs?.(args)
+    const argsCheck = this.policy.guardQueryArgs?.(args)
+    if (argsCheck) await argsCheck
+    signal?.throwIfAborted()
     const totalTimeoutMs = descriptor.totalTimeoutMs ?? this.totalTimeoutMs
     const deadline = Date.now() + totalTimeoutMs
     const controller = new AbortController()
@@ -199,7 +201,9 @@ export class ParserEngine {
         politeHostname = ''
       }
       if (politeHostname) this.policy.assertOutboundHost?.(politeHostname)
-      await this.policy.guardQueryUrl?.(url)
+      const urlCheck = this.policy.guardQueryUrl?.(url)
+      if (urlCheck) await urlCheck
+      signal?.throwIfAborted()
       const polite = this.policy.isPoliteHost?.(politeHostname) ?? false
       const method = String(init?.method ?? 'GET').toUpperCase()
       // Vitest injects fetch and runs many catalogue calls back to back. Production waits and caches.
