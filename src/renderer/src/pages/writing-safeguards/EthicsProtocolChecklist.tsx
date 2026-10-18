@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { R8_ITEMS, type R8ItemNumber } from '../../../../shared/ethics-protocol/r8-items'
 import type { EthicsProtocolState } from '../../../../shared/ethics-protocol/state'
 import { confirmHeadingMapping } from '../../../../shared/ethics-protocol/heading-mapper'
+import { hasMeaningfulTemplateContent } from '../../../../shared/ethics-protocol/completeness'
 
 type ConditionalItemNumber = keyof EthicsProtocolState['choices']
 const conditional: ReadonlySet<R8ItemNumber> = new Set([18, 19, 22, 23, 24])
@@ -71,7 +72,7 @@ export const EthicsProtocolChecklist = ({
   const [confirmingDoctor, setConfirmingDoctor] = useState('')
   const isMissing = (number: R8ItemNumber): boolean => {
     if (reasons[number]?.trim()) return false
-    if (!isConditional(number)) return !sectionTexts[number]?.trim()
+    if (!isConditional(number)) return !hasMeaningfulTemplateContent(sectionTexts[number] ?? '')
     return choices[number] !== 'yes' && choices[number] !== 'no'
   }
   useEffect(() => {

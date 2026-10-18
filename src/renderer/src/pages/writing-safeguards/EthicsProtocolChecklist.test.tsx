@@ -48,6 +48,8 @@ describe('EthicsProtocolChecklist', () => {
       name: 'Protocol section content 1'
     })
     expect(container.querySelector('[data-ethics-missing="1"]')).not.toBeNull()
+    fireEvent.change(section1, { target: { value: '〇〇' } })
+    expect(container.querySelector('[data-ethics-missing="1"]')).not.toBeNull()
     fireEvent.change(section1, { target: { value: 'Doctor-authored protocol text' } })
     expect(container.querySelector('[data-ethics-missing="1"]')).toBeNull()
   })

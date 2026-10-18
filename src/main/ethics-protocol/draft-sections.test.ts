@@ -42,4 +42,17 @@ describe('buildEthicsDraftSections', () => {
     )
     expect(draft.missingItems).not.toContain(1)
   })
+
+  it.each(['【要記入】', '〇〇', '※ 記入例を削除してください'])(
+    'keeps placeholder-only section text missing: %s',
+    (placeholder) => {
+      const state = emptyEthicsProtocolState()
+      state.sectionTexts = { 1: placeholder }
+
+      const draft = buildEthicsDraftSections(state)
+
+      expect(draft.sections.find(({ item }) => item === 1)?.text).toBe('【要記入】')
+      expect(draft.missingItems).toContain(1)
+    }
+  )
 })
