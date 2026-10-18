@@ -8020,6 +8020,7 @@
     "Yes_ethics": "Да",
     "No_ethics": "Нет",
     "I don’t know_ethics": "Не знаю",
-    "Missing_ethics": "Не заполнено"
+    "Missing_ethics": "Не заполнено",
+    "Protocol section content": "Protocol section content"
   }
 }

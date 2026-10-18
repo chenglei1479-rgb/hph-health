@@ -32,6 +32,7 @@ describe('ethics protocol commands', () => {
     store.setProtocol('study-1', {
       ...store.getProtocol('study-1'),
       choices: { 18: 'yes', 19: 'no' },
+      sectionTexts: { 1: 'Doctor-authored study title' },
       notApplicableReasons: { 3: 'none' }
     })
     const exported = await owner.exportEthicsDraft({ projectId: 'study-1' })
@@ -42,8 +43,10 @@ describe('ethics protocol commands', () => {
     expect(document).toContain('該当なし（none）')
     expect(document).toContain('はい')
     expect(document).toContain('いいえ')
+    expect(document).toContain('Doctor-authored study title')
     const missingList = [...document.matchAll(/<w:t[^>]*>(.*?)<\/w:t>/gu)][1]?.[1]
     expect(missingList).not.toMatch(/(?:^|、)3\. /u)
+    expect(missingList).not.toMatch(/(?:^|、)1\. /u)
     expect(missingList).not.toMatch(/(?:^|、)18\. /u)
     expect(missingList).not.toMatch(/(?:^|、)19\. /u)
   })

@@ -4,6 +4,7 @@ import type { HeadingCandidate } from './heading-mapper'
 export type EthicsChecklistChoice = 'yes' | 'no' | 'unknown'
 export type EthicsProtocolState = {
   choices: Partial<Record<18 | 19 | 22 | 23 | 24, EthicsChecklistChoice>>
+  sectionTexts?: Partial<Record<R8ItemNumber, string>>
   notApplicableReasons: Partial<Record<R8ItemNumber, string>>
   confirmedMappings: Array<{
     heading: string
@@ -17,6 +18,7 @@ export type EthicsProtocolState = {
 
 export const emptyEthicsProtocolState = (): EthicsProtocolState => ({
   choices: {},
+  sectionTexts: {},
   notApplicableReasons: {},
   confirmedMappings: []
 })

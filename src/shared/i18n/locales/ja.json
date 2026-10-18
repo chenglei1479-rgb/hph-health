@@ -7553,6 +7553,7 @@
     "Yes_ethics": "はい",
     "No_ethics": "いいえ",
     "I don’t know_ethics": "わからない",
-    "Missing_ethics": "未記入"
+    "Missing_ethics": "未記入",
+    "Protocol section content": "計画書項目の記載内容"
   }
 }

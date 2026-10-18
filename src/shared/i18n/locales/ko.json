@@ -7551,6 +7551,7 @@
     "Yes_ethics": "예",
     "No_ethics": "아니요",
     "I don’t know_ethics": "모름",
-    "Missing_ethics": "미입력"
+    "Missing_ethics": "미입력",
+    "Protocol section content": "Protocol section content"
   }
 }

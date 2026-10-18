@@ -16,7 +16,8 @@ export const buildEthicsDraftSections = (
   const sections = R8_ITEMS.map(({ number }) => {
     const reason = state.notApplicableReasons[number]?.trim()
     const answer = choiceText(state.choices[number as keyof EthicsProtocolState['choices']])
-    const text = reason ? `該当なし（${reason}）` : (answer ?? '【要記入】')
+    const sectionText = state.sectionTexts?.[number]?.trim()
+    const text = reason ? `該当なし（${reason}）` : (answer ?? sectionText ?? '【要記入】')
 
     if (text === '【要記入】') missingItems.push(number)
     return { item: number, text }

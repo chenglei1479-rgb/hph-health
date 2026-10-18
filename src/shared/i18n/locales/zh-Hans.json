@@ -7553,6 +7553,7 @@
     "Yes_ethics": "是",
     "No_ethics": "否",
     "I don’t know_ethics": "不知道",
-    "Missing_ethics": "未填写"
+    "Missing_ethics": "未填写",
+    "Protocol section content": "方案项目正文"
   }
 }

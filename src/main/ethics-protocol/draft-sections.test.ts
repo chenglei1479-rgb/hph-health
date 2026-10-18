@@ -30,4 +30,16 @@ describe('buildEthicsDraftSections', () => {
     expect(draft.sections.find(({ item }) => item === 4)?.text).toBe('【要記入】')
     expect(draft.missingItems).toContain(4)
   })
+
+  it('exports doctor-authored content for non-conditional sections', () => {
+    const state = emptyEthicsProtocolState()
+    state.sectionTexts = { 1: '架空研究に関する医師の記載内容' }
+
+    const draft = buildEthicsDraftSections(state)
+
+    expect(draft.sections.find(({ item }) => item === 1)?.text).toBe(
+      '架空研究に関する医師の記載内容'
+    )
+    expect(draft.missingItems).not.toContain(1)
+  })
 })

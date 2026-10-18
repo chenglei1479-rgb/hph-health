@@ -25,7 +25,8 @@ type ChecklistCopy = Record<
   | 'mappingDoctor'
   | 'mappingSelect'
   | 'mappingUnknown'
-  | 'mappingConfirm',
+  | 'mappingConfirm'
+  | 'sectionContent',
   string
 >
 const copy = (t: (key: string, options?: { context: string }) => string): ChecklistCopy => ({
@@ -44,6 +45,7 @@ const copy = (t: (key: string, options?: { context: string }) => string): Checkl
   mappingSelect: t('Select checklist item'),
   mappingUnknown: t('Mapping unknown'),
   mappingConfirm: t('Confirm heading mappings'),
+  sectionContent: t('Protocol section content'),
   outsourcing: t(
     'Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.'
   )
@@ -59,6 +61,9 @@ export const EthicsProtocolChecklist = ({
   const [choices, setChoices] = useState<EthicsProtocolState['choices']>({})
   const [excluded, setExcluded] = useState<Record<number, boolean>>({})
   const [reasons, setReasons] = useState<EthicsProtocolState['notApplicableReasons']>({})
+  const [sectionTexts, setSectionTexts] = useState<
+    NonNullable<EthicsProtocolState['sectionTexts']>
+  >({})
   const [metadata, setMetadata] = useState<
     Pick<EthicsProtocolState, 'confirmedMappings' | 'headingCandidates' | 'importedDocxPath'>
   >({ confirmedMappings: [] })
@@ -66,7 +71,7 @@ export const EthicsProtocolChecklist = ({
   const [confirmingDoctor, setConfirmingDoctor] = useState('')
   const isMissing = (number: R8ItemNumber): boolean => {
     if (reasons[number]?.trim()) return false
-    if (!isConditional(number)) return true
+    if (!isConditional(number)) return !sectionTexts[number]?.trim()
     return choices[number] !== 'yes' && choices[number] !== 'no'
   }
   useEffect(() => {
@@ -74,6 +79,7 @@ export const EthicsProtocolChecklist = ({
     void window.api.writingSafeguards.getEthicsProtocol({ projectId }).then((protocol) => {
       setChoices(protocol.choices)
       setReasons(protocol.notApplicableReasons)
+      setSectionTexts(protocol.sectionTexts ?? {})
       setExcluded(
         Object.fromEntries(
           Object.keys(protocol.notApplicableReasons).map((key) => [Number(key), true])
@@ -105,6 +111,7 @@ export const EthicsProtocolChecklist = ({
       projectId,
       protocol: {
         choices,
+        sectionTexts,
         notApplicableReasons: reasons,
         confirmedMappings: metadata.confirmedMappings,
         headingCandidates: metadata.headingCandidates,
@@ -146,6 +153,7 @@ export const EthicsProtocolChecklist = ({
     })
     const protocol = {
       choices,
+      sectionTexts,
       notApplicableReasons: reasons,
       confirmedMappings,
       headingCandidates: metadata.headingCandidates,
@@ -197,7 +205,15 @@ export const EthicsProtocolChecklist = ({
                   </label>
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <textarea
+                aria-label={`${c.sectionContent} ${item.number}`}
+                value={sectionTexts[item.number] ?? ''}
+                onChange={(event) =>
+                  setSectionTexts((old) => ({ ...old, [item.number]: event.target.value }))
+                }
+              />
+            )}
             <label>
               <input
                 type="checkbox"

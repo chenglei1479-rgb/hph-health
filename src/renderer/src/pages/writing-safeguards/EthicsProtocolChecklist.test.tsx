@@ -39,8 +39,17 @@ describe('EthicsProtocolChecklist', () => {
     const item3 = within(container).getAllByRole('listitem')[2]
     fireEvent.click(within(item3).getByRole('checkbox', { name: 'Not applicable' }))
     expect(container.querySelector('[data-ethics-missing="3"]')).not.toBeNull()
-    fireEvent.change(within(item3).getByRole('textbox'), { target: { value: 'No intervention' } })
+    fireEvent.change(within(item3).getByRole('textbox', { name: 'Reason it does not apply 3' }), {
+      target: { value: 'No intervention' }
+    })
     expect(container.querySelector('[data-ethics-missing="3"]')).toBeNull()
+
+    const section1 = within(container).getByRole('textbox', {
+      name: 'Protocol section content 1'
+    })
+    expect(container.querySelector('[data-ethics-missing="1"]')).not.toBeNull()
+    fireEvent.change(section1, { target: { value: 'Doctor-authored protocol text' } })
+    expect(container.querySelector('[data-ethics-missing="1"]')).toBeNull()
   })
 
   it('lets a doctor correct and confirm imported heading mappings through the protocol API', async () => {
