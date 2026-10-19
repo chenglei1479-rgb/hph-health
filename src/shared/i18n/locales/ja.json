@@ -49,8 +49,7 @@
     "System notifications from DRA are working.": "DRA のシステム通知は正常に動作しています。",
     "Close window": "ウィンドウを閉じる",
     "Wait for all Session activity and pending approvals to finish before forking.": "すべてのセッション処理と保留中の承認が完了してから複製してください。",
-    "Approval needed": "承認が必要です",
-    "System notifications from Open-Science are working.": "Open-Science のシステム通知は正常に動作しています。"
+    "Approval needed": "承認が必要です"
   },
   "native": {
     "The agent finished without a clean completion status.": "エージェントは正常な完了ステータスなしで終了しました。",
@@ -162,8 +161,6 @@
     "Your unsaved changes will be lost.": "保存されていない変更は失われます。",
     "Connect to Baselio": "Baselio（ベースリオ）に接続",
     "Approved. Opening Baselio…": "承認されました。Baselio を開いています…",
-    "Open-Science could not start the backend.": "Open-Science はバックエンドを起動できませんでした。",
-    "Open-Science is still moving your data.": "Open-Science はまだデータを移動しています。",
     "The privacy check could not finish. Nothing was sent. Please try again.": "プライバシーチェックを完了できませんでした。何も送信していません。もう一度お試しください。",
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "この添付ファイルは患者情報のチェックに対応していません。何も送信していません。チェック可能なテキストを使用してください。",
     "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "このエージェント接続では、モデルへのすべてのリクエストについて患者情報をチェックできないため、ベータ版では利用できません。チェックに対応した接続を使用する API プロバイダーを選択してください。",
@@ -7564,21 +7561,6 @@
     "I don’t know_ethics": "わからない",
     "Missing_ethics": "未記入",
     "Protocol section content": "計画書項目の記載内容",
-    "Partially missing": "一部未記入",
-    "The update cannot keep your current settings. Cancel to continue working, or check again after updating Open-Science separately.": "この更新では現在の設定を維持できません。キャンセルして作業を続けるか、Open-Science を別途更新してから再確認してください。",
-    "Open-Science could not load settings. Retry to continue.": "Open-Science は設定を読み込めませんでした。続行するには再試行してください。",
-    "Open-Science is still working on it. You can wait, try again, or save a report.": "Open-Science はまだ処理中です。待つか、もう一度試すか、レポートを保存できます。",
-    "Another Open-Science is using the service": "別の Open-Science がサービスを使用しています",
-    "Reinstall Open-Science using its installer or package manager, then check the installation. This button checks files; it does not repair them. Keep your configuration and data folders.": "インストーラーまたはパッケージマネージャーで Open-Science を再インストールし、インストールを確認してください。このボタンはファイルを確認するだけで、修復はしません。設定とデータのフォルダーは保持してください。",
-    "The running version differs from this app. Finish any work in other Open-Science windows, then stop the service to continue.": "実行中のバージョンがこのアプリと異なります。他の Open-Science ウィンドウでの作業を終え、サービスを停止して続行してください。",
-    "Continue opening Open-Science?": "Open-Science の起動を続けますか？",
-    "Update Open-Science using its installer or package manager, then check again. You can cancel to continue working with this version.": "インストーラーまたはパッケージマネージャーで Open-Science を更新してから再確認してください。キャンセルすると現在のバージョンで作業を続けられます。",
-    "Update Open-Science now?": "今すぐ Open-Science を更新しますか？",
-    "It is taking longer than usual. Open-Science is closing it for you. Please wait.": "通常より時間がかかっています。Open-Science が終了処理を行っています。しばらくお待ちください。",
-    "Access authorization has expired. Reopen the Web link from Open-Science on the host computer, or return to the remote access entry page to pair again.": "アクセス認証の有効期限が切れました。ホスト側の Open-Science から Web リンクを開き直すか、リモートアクセスの入口ページに戻って再度ペアリングしてください。",
-    "Check the proxy used by Open-Science. A working browser connection may use different proxy settings.": "Open-Science が使用するプロキシを確認してください。ブラウザーの接続には異なるプロキシ設定が使われている場合があります。",
-    "Open-Science needs to close it before opening your projects. Finish any work in other Open-Science windows first.": "プロジェクトを開く前に、Open-Science はそれを終了する必要があります。ほかの Open-Science ウィンドウでの作業を先に済ませてください。",
-    "Open-Science couldn't start": "Open-Science を開始できませんでした",
-    "Open-Science cannot verify whether commands from an earlier session are still running. If they are, their results may be lost during the update. Back up the old launch records and retry?": "Open-Science は、以前のセッションのコマンドがまだ実行中かどうかを確認できません。実行中の場合、更新中に結果が失われる可能性があります。古い起動記録をバックアップして再試行しますか？"
+    "Partially missing": "一部未記入"
   }
 }

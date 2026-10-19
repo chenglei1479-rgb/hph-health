@@ -49,8 +49,7 @@
     "System notifications from DRA are working.": "Las notificaciones del sistema de DRA funcionan.",
     "Close window": "Cerrar ventana",
     "Wait for all Session activity and pending approvals to finish before forking.": "Espere a que terminen todas las actividades de la sesión y las aprobaciones pendientes antes de bifurcar.",
-    "Approval needed": "Se necesita aprobación",
-    "System notifications from Open-Science are working.": "Las notificaciones del sistema de Open-Science funcionan."
+    "Approval needed": "Se necesita aprobación"
   },
   "native": {
     "The agent finished without a clean completion status.": "El agente finalizó sin un estado de finalización correcto.",
@@ -164,8 +163,6 @@
     "Your unsaved changes will be lost.": "Se perderán los cambios sin guardar.",
     "Connect to Baselio": "Conectarse a Baselio",
     "Approved. Opening Baselio…": "Aprobado. Abriendo Baselio…",
-    "Open-Science could not start the backend.": "Open-Science no ha podido iniciar el backend.",
-    "Open-Science is still moving your data.": "Open-Science sigue trasladando sus datos.",
     "The privacy check could not finish. Nothing was sent. Please try again.": "No se pudo completar la comprobación de privacidad. No se ha enviado nada. Vuelva a intentarlo.",
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "No se puede comprobar si este adjunto contiene información de pacientes. No se ha enviado nada. Utilice texto que se pueda comprobar.",
     "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "Esta conexión de agente no permite comprobar la información de pacientes en cada solicitud al modelo y no está disponible en la beta. Seleccione un proveedor de API con una conexión comprobada.",
@@ -7892,21 +7889,6 @@
     "I don’t know_ethics": "No se sabe",
     "Missing_ethics": "Sin completar",
     "Protocol section content": "Protocol section content",
-    "Partially missing": "Partially missing",
-    "The update cannot keep your current settings. Cancel to continue working, or check again after updating Open-Science separately.": "La actualización no puede conservar la configuración actual. Cancele para seguir trabajando o actualice Open-Science por separado y vuelva a comprobar.",
-    "Open-Science could not load settings. Retry to continue.": "Open-Science no pudo cargar la configuración. Vuelva a intentarlo para continuar.",
-    "Open-Science is still working on it. You can wait, try again, or save a report.": "Open-Science sigue trabajando en ello. Puede esperar, volver a intentarlo o guardar un informe.",
-    "Another Open-Science is using the service": "Otro Open-Science está usando el servicio",
-    "Reinstall Open-Science using its installer or package manager, then check the installation. This button checks files; it does not repair them. Keep your configuration and data folders.": "Reinstale Open-Science con su instalador o gestor de paquetes y compruebe la instalación. Este botón comprueba los archivos, pero no los repara. Conserve las carpetas de configuración y datos.",
-    "The running version differs from this app. Finish any work in other Open-Science windows, then stop the service to continue.": "La versión en ejecución difiere de esta aplicación. Termine el trabajo en otras ventanas de Open-Science y detenga el servicio para continuar.",
-    "Continue opening Open-Science?": "¿Continuar abriendo Open-Science?",
-    "Update Open-Science using its installer or package manager, then check again. You can cancel to continue working with this version.": "Actualice Open-Science con su instalador o gestor de paquetes y vuelva a comprobar. Puede cancelar para seguir trabajando con esta versión.",
-    "Update Open-Science now?": "¿Actualizar Open-Science ahora?",
-    "It is taking longer than usual. Open-Science is closing it for you. Please wait.": "Está tardando más de lo habitual. Open-Science la está cerrando por usted. Espere un momento.",
-    "Access authorization has expired. Reopen the Web link from Open-Science on the host computer, or return to the remote access entry page to pair again.": "La autorización de acceso ha caducado. Vuelva a abrir el enlace Web desde Open-Science en el equipo anfitrión o regrese a la página de acceso remoto para volver a emparejar.",
-    "Check the proxy used by Open-Science. A working browser connection may use different proxy settings.": "Revise el proxy que utiliza Open-Science. Una conexión del navegador que funciona puede utilizar otros ajustes de proxy.",
-    "Open-Science needs to close it before opening your projects. Finish any work in other Open-Science windows first.": "Open-Science debe cerrarla antes de abrir sus proyectos. Termine primero su trabajo en otras ventanas de Open-Science.",
-    "Open-Science couldn't start": "Open-Science no se pudo iniciar",
-    "Open-Science cannot verify whether commands from an earlier session are still running. If they are, their results may be lost during the update. Back up the old launch records and retry?": "Open-Science no puede verificar si los comandos de una sesión anterior siguen ejecutándose. Si es así, sus resultados podrían perderse durante la actualización. ¿Desea respaldar los registros antiguos de inicio y reintentar?"
+    "Partially missing": "Partially missing"
   }
 }

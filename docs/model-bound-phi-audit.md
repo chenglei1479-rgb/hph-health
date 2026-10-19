@@ -1,12 +1,12 @@
 # Model-bound content and PHI release
 
-Audited against main `85c1480` and the implementation in this PR. This is a public, source-derived technical inventory. It does not contain patient records or private requirements. Test names below use fictional data only; the frozen PHI holdout was not read.
+Audited against main `62d0b9d` (#41) and the implementation in this PR. This is a public, source-derived technical inventory. It does not contain patient records or private requirements. Test names below use fictional data only; the frozen PHI holdout was not read.
 
 ## Release boundary and failures
 
 `src/main/phi/gate.ts:assertModelBoundRelease` is the common fail-closed entry behind `assertModelBoundTextReleased` / `releaseModelText`, `releasePromptContent`, `guardProviderBody`, and `releaseModelBoundValue`. It requires an explicitly installed gate, applies the existing machine approval, de-identification and confirmation behavior, and limits an asynchronous release/review to 60 seconds. An uninitialized gate, exception or expired review cannot return a payload. A late confirmation cannot resume a rejected send. The retry error uses the main-process translator bound to the application's locale owner; ja, zh-Hans and en are supported, with translations also supplied for the other shipped locales.
 
-A labeled patient-name boundary was tightened so a following chart-number field cannot consume the name and hide it behind an overlapping identifier. Detection thresholds are unchanged, and dev-set scores remain at baseline.
+Detection logic **did change** in `phi/detect.ts:detectNames` (the `nextField`, `stop` and patient-pattern continuation boundary around lines 521–526): a continuation line beginning with an age, birthday, chart-number, sex or era/date field cannot be consumed as part of the patient name. This prevents overlap with a chart identifier from hiding the preceding name. Detection thresholds and high-risk retention policy were not changed. `phi/name-boundary.test.ts` covers fictional examples. The dev-only comparison against the current main is recorded below.
 
 An unapproved machine still hard-refuses detected patient PHI; approved machines retain the existing vault-backed pseudonyms, date shifts, age generalization and per-message confirmation. High-risk original-text retention rules are unchanged. No bypass option or new external host was added. Recognition is rule-based, not a guarantee of anonymization. The detector still classifies some short Japanese labels as names: newly covered categorical/aggregate paths can consequently be masked or refused.
 
@@ -107,3 +107,36 @@ This PR does not edit home copy or `SHOW_HOME_PATIENT_DATA_MASKING_NOTE`. PR #39
 - **Are those columns returned to the model now? No.** `MODEL_REGISTRY_COLUMNS` and `isModelRegistryColumn` allow only exact normalized non-personal headers. Every other header, including unfamiliar contact aliases, is excluded before matching and result construction. Tests cover both registries and malicious/unknown personal columns.
 - **Other jRCT/UMIN import adapter? No.** Repository references resolve to the supplied-CSV tool and manual resource guidance; there is no separate live registry importer added here.
 - Allowed fields are still untrusted free text. The agent-facing result goes through shared PHI release, and the final provider body is checked again. Local single-detail UI is unchanged. No online search, scraping, altered User-Agent, telemetry or new domain is introduced.
+
+## Dev evaluation against main #41
+
+Both runs used `EVAL_DATE=2026-10-13` and `node scripts/eval-jp-phi.mjs` (which runs `phi/dev-eval.test.ts`). Only the dev entities, records and gold were evaluated; holdout was not opened.
+
+| Metric                       | main `62d0b9d`     | This PR after rebase |
+| ---------------------------- | ------------------ | -------------------- |
+| Patient overlap TP / FP / FN | 676 / 24 / 0       | 676 / 24 / 0         |
+| Patient overlap P / R / F1   | .966 / 1 / .983    | .966 / 1 / .983      |
+| Patient exact TP / FP / FN   | 664 / 36 / 12      | 664 / 36 / 12        |
+| Patient exact P / R / F1     | .949 / .982 / .965 | .949 / .982 / .965   |
+
+The continuation-boundary fix addresses an additional regression case; the dev score is unchanged, not improved. No threshold, workflow or frozen fixture was changed.
+
+## Confirmation frequency: characterized, not changed
+
+There is **no fixed maximum number of confirmation windows per agent turn**. With the production confirmer installed, `gate.ts:review` calls it even when `highlights` is empty, including empty gate-health checks. Each prompt release, complete provider-body release, tool preflight, query check and agent-facing result release can therefore prompt separately. Additional tool calls, notebook output fields and provider retries add more reviews. Concurrent notebook output release can also request multiple windows.
+
+`phi/turn-review-count.test.ts` executes the actual ACP prompt executor, provider HTTP boundary and ConnectorService/ParserEngine with a local stubbed tool (no external search). It waits for the entire agent turn, including tool responses. For this specific no-PHI flow:
+
+| Tool round trips | Provider HTTP sends | Confirmation calls |
+| ---------------- | ------------------- | ------------------ |
+| 0                | 1                   | 2                  |
+| 1                | 2                   | 7                  |
+| 3                | 4                   | 17                 |
+
+In that fixture the count is `2 + 5 × tool_round_trips`: initial ACP prompt + initial HTTP body, then tool preflight + query release + query health check + tool-result release + next provider HTTP body. Every recorded preview has zero highlights. This is a measured example, not an upper bound; online tools also check URLs and can add prompts.
+
+**Proposal only; not implemented in this PR:** keep automatic scanning, approval checks and fail-closed behavior at every boundary. Separate automatic validation from interactive consent so empty/clean health probes do not open a window. Present one combined review of newly detected PHI immediately before an outbound payload is authorized. Bind the decision to the exact released bytes, destination, project, machine-approval state and turn, with a short expiry; reuse a decision only for identical already-reviewed content at a later boundary. Changed content, new PHI, manual masking, approval changes or expiry require a fresh decision. Never introduce a session-wide “allow all” flag; review errors/timeouts still block. Native tool reads and later responses must continue to be scanned. This needs its own implementation and consent-invalidation tests before changing current behavior.
+
+## Japanese export-header compatibility
+
+Existing repository CSV examples use `ID,Title`; they do not establish a complete Japanese export schema. The review supplied the real header spellings `jRCT番号`, `UMIN試験ID` and `実施状況`. These are now explicit allowlist aliases, together with nonpersonal title/condition/intervention/date fields. `connector-builtins/src/japan-research.test.ts` has one fixture for each source using these header spellings and wholly fictional values. It searches by the Japanese ID column and checks that ID, title, status, disease, intervention and date remain, while 研究責任者, 所属, 電話, メール and 問い合わせ先 are absent and cannot affect matching. This is local schema compatibility testing; no live registry lookup or export download was performed.

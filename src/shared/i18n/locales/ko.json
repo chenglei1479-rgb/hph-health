@@ -49,8 +49,7 @@
     "System notifications from DRA are working.": "DRA 시스템 알림이 정상적으로 작동합니다.",
     "Close window": "창 닫기",
     "Wait for all Session activity and pending approvals to finish before forking.": "모든 세션 활동과 대기 중인 승인이 완료된 후 복제하세요.",
-    "Approval needed": "승인 필요",
-    "System notifications from Open-Science are working.": "Open-Science 시스템 알림이 정상적으로 작동합니다."
+    "Approval needed": "승인 필요"
   },
   "native": {
     "The agent finished without a clean completion status.": "에이전트가 정상 완료 상태 없이 종료되었습니다.",
@@ -162,8 +161,6 @@
     "Your unsaved changes will be lost.": "저장하지 않은 변경 사항이 사라집니다.",
     "Connect to Baselio": "Baselio에 연결",
     "Approved. Opening Baselio…": "승인되었습니다. Baselio를 여는 중…",
-    "Open-Science could not start the backend.": "Open-Science에서 백엔드를 시작하지 못했습니다.",
-    "Open-Science is still moving your data.": "Open-Science에서 아직 데이터를 이동하고 있습니다.",
     "The privacy check could not finish. Nothing was sent. Please try again.": "개인정보 확인을 완료하지 못했습니다. 아무것도 전송하지 않았습니다. 다시 시도해 주세요.",
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "이 첨부 파일의 환자 정보를 확인할 수 없습니다. 아무것도 전송하지 않았습니다. 확인 가능한 텍스트를 사용해 주세요.",
     "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "이 에이전트 연결은 모든 모델 요청에서 환자 정보를 확인할 수 없어 베타에서 사용할 수 없습니다. 확인 가능한 연결을 사용하는 API 제공업체를 선택해 주세요.",
@@ -7562,21 +7559,6 @@
     "I don’t know_ethics": "모름",
     "Missing_ethics": "미입력",
     "Protocol section content": "Protocol section content",
-    "Partially missing": "Partially missing",
-    "The update cannot keep your current settings. Cancel to continue working, or check again after updating Open-Science separately.": "이번 업데이트는 현재 설정을 유지할 수 없습니다. 취소하여 작업을 계속하거나 Open-Science를 별도로 업데이트한 후 다시 확인하세요.",
-    "Open-Science could not load settings. Retry to continue.": "Open-Science에서 설정을 불러오지 못했습니다. 계속하려면 다시 시도하세요.",
-    "Open-Science is still working on it. You can wait, try again, or save a report.": "Open-Science가 아직 처리 중입니다. 기다리거나 다시 시도하거나 보고서를 저장할 수 있습니다.",
-    "Another Open-Science is using the service": "다른 Open-Science가 서비스를 사용하고 있습니다",
-    "Reinstall Open-Science using its installer or package manager, then check the installation. This button checks files; it does not repair them. Keep your configuration and data folders.": "설치 프로그램이나 패키지 관리자로 Open-Science를 다시 설치한 후 설치를 확인하세요. 이 버튼은 파일을 확인하며 복구하지는 않습니다. 설정 및 데이터 폴더는 유지하세요.",
-    "The running version differs from this app. Finish any work in other Open-Science windows, then stop the service to continue.": "실행 중인 버전이 이 앱과 다릅니다. 다른 Open-Science 창에서 작업을 마친 후 서비스를 중지하고 계속하세요.",
-    "Continue opening Open-Science?": "Open-Science를 계속 여시겠습니까?",
-    "Update Open-Science using its installer or package manager, then check again. You can cancel to continue working with this version.": "설치 프로그램이나 패키지 관리자로 Open-Science를 업데이트한 후 다시 확인하세요. 취소하면 현재 버전으로 작업을 계속할 수 있습니다.",
-    "Update Open-Science now?": "지금 Open-Science를 업데이트하시겠습니까?",
-    "It is taking longer than usual. Open-Science is closing it for you. Please wait.": "평소보다 오래 걸리고 있습니다. Open-Science가 대신 종료하고 있으니 잠시만 기다려 주세요.",
-    "Access authorization has expired. Reopen the Web link from Open-Science on the host computer, or return to the remote access entry page to pair again.": "접근 인증이 만료되었습니다. 호스트 컴퓨터의 Open-Science에서 Web 링크를 다시 열거나 원격 접근 시작 페이지로 돌아가 다시 페어링하세요.",
-    "Check the proxy used by Open-Science. A working browser connection may use different proxy settings.": "Open-Science가 사용하는 프록시를 확인하세요. 정상 작동하는 브라우저 연결은 다른 프록시 설정을 사용할 수 있습니다.",
-    "Open-Science needs to close it before opening your projects. Finish any work in other Open-Science windows first.": "프로젝트를 열기 전에 Open-Science가 이를 종료해야 합니다. 다른 Open-Science 창에서 하던 작업을 먼저 마무리해 주세요.",
-    "Open-Science couldn't start": "Open-Science를 시작하지 못했습니다",
-    "Open-Science cannot verify whether commands from an earlier session are still running. If they are, their results may be lost during the update. Back up the old launch records and retry?": "Open-Science는 이전 세션의 명령이 아직 실행 중인지 확인할 수 없습니다. 실행 중이라면 업데이트 중에 결과가 손실될 수 있습니다. 이전 실행 기록을 백업하고 다시 시도하시겠습니까?"
+    "Partially missing": "Partially missing"
   }
 }
