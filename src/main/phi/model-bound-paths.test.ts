@@ -131,12 +131,13 @@ describe.each(['mentor-pack', 'consultation-pack', 'writing-pack', 'future-pack'
       }
       if (pack === 'mentor-pack') expect(send).not.toHaveBeenCalled()
     })
-    it.each(['throw', 'timeout'])('never dispatches on %s', async (fault) => {
+    it.each(['throw', 'uninitialized', 'timeout'])('never dispatches on %s', async (fault) => {
       const { input, send, executor } = fixture()
       // Safe input ensures even a pack with no PHI must pass the working gate.
       const safeInput = { ...input, content: `Package mode: ${pack}\nAggregate study design.` }
       if (fault === 'throw') installPhiGate(createClosedGate('blocked'))
-      else {
+      if (fault === 'uninitialized') installPhiGate(null)
+      if (fault === 'timeout') {
         vi.useFakeTimers()
         installPhiConfirmer(() => new Promise(() => undefined))
       }
