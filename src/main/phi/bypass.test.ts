@@ -56,7 +56,7 @@ describe('PHI gate bypass', () => {
 
   it('guards provider HTTP bodies inside fetchProviderRequest', () => {
     const source = readFileSync(join(ROOT, 'src/main/settings/provider-fetch.ts'), 'utf8')
-    const guardAt = source.indexOf('guardProviderBody')
+    const guardAt = source.indexOf('return sendPhiChecked(')
     const fetchAt = source.indexOf('return fetchImpl')
     expect(guardAt).toBeGreaterThan(-1)
     expect(fetchAt).toBeGreaterThan(guardAt)

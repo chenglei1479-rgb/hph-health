@@ -1,6 +1,6 @@
 import { detectPhi, type PhiSpan } from '../../phi/detect'
 import { assertModelBoundTextReleased, PhiGateError } from '../../phi/gate'
-import { isOrdinaryLabelAggregate } from '../../phi/ordinary-label'
+import { hasOnlyOrdinaryLabelPhi } from '../../phi/ordinary-label'
 
 // detectPhi treats an entire short Japanese string as a personal name. Aggregate labels such as
 // 男性 / 内科 are that shape. The connector query gate ignores only that whole-string guess;
@@ -31,11 +31,7 @@ export const releaseTextThroughPhiGate = async (
 ): Promise<string> => {
   try {
     const spans = detectPhi(text)
-    if (
-      isOrdinaryLabelAggregate(text) &&
-      spans.length > 0 &&
-      spans.every((span) => isWholeStringNameGuess(text, span))
-    ) {
+    if (hasOnlyOrdinaryLabelPhi(text, spans)) {
       // Preserve only the reviewed subset of main's label exception; exercise the installed
       // scanner, approval reader and review deadline. Faults must never return the label.
       await assertModelBoundTextReleased('', projectId)

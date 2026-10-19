@@ -23,6 +23,7 @@ import type {
 import {
   refuseMentorPackIndividualPatientData,
   releasePromptContent,
+  withPhiTurn,
   restoreModelValue
 } from '../phi/gate'
 
@@ -233,7 +234,11 @@ class AcpProviderPromptExecutor {
     }
   }
 
-  async execute(input: ProviderPromptExecutionInput): Promise<ProviderPromptOutcome> {
+  execute(input: ProviderPromptExecutionInput): Promise<ProviderPromptOutcome> {
+    return withPhiTurn(input.cwd, input.isCurrent, () => this.executeTurn(input))
+  }
+
+  private async executeTurn(input: ProviderPromptExecutionInput): Promise<ProviderPromptOutcome> {
     const providerSessionId = input.session.sessionId
     const token = Symbol(providerSessionId)
     const adapter = this.adapterFor(input.frameworkId)

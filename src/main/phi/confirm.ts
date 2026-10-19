@@ -68,7 +68,7 @@ export function previewFromResult(original: string, replacements: PhiReplacement
 
 export function highlightTokens(
   text: string,
-  tokens: ReadonlyArray<{ replacement: string; category: PhiCategory }>
+  tokens: ReadonlyArray<{ replacement: string; category: PhiCategory | 'MANUAL' }>
 ): PhiHighlight[] {
   const used: Array<{ start: number; end: number }> = []
   const highlights: PhiHighlight[] = []

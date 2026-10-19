@@ -77,8 +77,14 @@ describe('PHI pre-send confirmation', () => {
     installMachineApproval(() => true)
     installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
     installPhiConfirmer(async () => ({ confirmed: false }))
-    const prompt = vi.fn(async () => ({ stopReason: 'end_turn' }))
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const prompt = vi.fn(async (content: unknown) => {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/messages', {
+        method: 'POST',
+        body: JSON.stringify({ content })
+      })
+      return { stopReason: 'end_turn' }
+    })
     const executor = new AcpProviderPromptExecutor({
       backendGeneration: {
         openCodeUsageApi: () => undefined,
@@ -89,7 +95,10 @@ describe('PHI pre-send confirmation', () => {
       session: {
         sessionId: 'phi-confirm',
         prompt,
-        nextUpdate: async () => ({ kind: 'stop', response: { stopReason: 'end_turn' } })
+        nextUpdate: async () => {
+          await prompt.mock.results[0]?.value
+          return { kind: 'stop', response: { stopReason: 'end_turn' } }
+        }
       },
       content: '患者：山田 太郎',
       cwd: '/tmp/phi-confirm',
@@ -101,14 +110,14 @@ describe('PHI pre-send confirmation', () => {
       routeNotification: () => undefined
     } as unknown as ProviderPromptExecutionInput
     try {
-      await expect(executor.execute(input)).rejects.toThrow(/dismissed/)
-      expect(prompt).not.toHaveBeenCalled()
+      await expect(executor.execute(input)).rejects.toThrow(/privacy check/)
+      expect(fetchImpl).not.toHaveBeenCalled()
       await expect(
         fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/messages', {
           method: 'POST',
           body: JSON.stringify({ messages: [{ content: '患者：山田 太郎' }] })
         })
-      ).rejects.toThrow(/dismissed/)
+      ).rejects.toThrow(/privacy check/)
       expect(fetchImpl).not.toHaveBeenCalled()
     } finally {
       installPhiConfirmer(null)
@@ -130,9 +139,14 @@ describe('PHI pre-send confirmation', () => {
       const start = preview.text.indexOf('未検出')
       return { confirmed: true, extraSpans: [{ start, end: start + '未検出'.length }] }
     })
-    const prompt = vi.fn<(content: Array<{ text: string }>) => Promise<{ stopReason: string }>>(
-      async () => ({ stopReason: 'end_turn' })
-    )
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const prompt = vi.fn(async (content: unknown) => {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/messages', {
+        method: 'POST',
+        body: JSON.stringify({ content })
+      })
+      return { stopReason: 'end_turn' }
+    })
     const executor = new AcpProviderPromptExecutor({
       backendGeneration: {
         openCodeUsageApi: () => undefined,
@@ -144,7 +158,10 @@ describe('PHI pre-send confirmation', () => {
         session: {
           sessionId: 'phi-mark',
           prompt,
-          nextUpdate: async () => ({ kind: 'stop', response: { stopReason: 'end_turn' } })
+          nextUpdate: async () => {
+            await prompt.mock.results[0]?.value
+            return { kind: 'stop', response: { stopReason: 'end_turn' } }
+          }
         },
         content: [{ type: 'text', text: '所見に未検出と記載。患者：山田 太郎' }],
         cwd: '/tmp/phi-mark',
@@ -155,12 +172,17 @@ describe('PHI pre-send confirmation', () => {
         onAccepted: () => undefined,
         routeNotification: () => undefined
       } as unknown as ProviderPromptExecutionInput)
-      const sent = prompt.mock.calls[0]?.[0] as Array<{ text: string }>
+      const sent = JSON.parse(String(fetchImpl.mock.calls[0][1]?.body)).content as Array<{
+        text: string
+      }>
       expect(sent[0].text).not.toContain('未検出')
       expect(sent[0].text).not.toContain('山田')
       expect(sent[0].text).toContain('[追記1]')
       expect(vault.store('/tmp/phi-mark').restore(sent[0].text)).toContain('未検出')
-      expect(vault.store('/tmp/phi-mark').restore(sent[0].text)).toContain('山田')
+      // Later scans can wrap an existing pseudonym; both vault mappings remain local.
+      expect(
+        vault.store('/tmp/phi-mark').restore(vault.store('/tmp/phi-mark').restore(sent[0].text))
+      ).toContain('山田')
     } finally {
       installPhiConfirmer(null)
       installMachineApproval(null)

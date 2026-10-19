@@ -7,7 +7,6 @@ import {
   installMachineApproval,
   installPhiConfirmer,
   installPhiGate,
-  MODEL_RELEASE_TIMEOUT_MS,
   PhiGateError
 } from '../phi/gate'
 import { ORDINARY_LABEL_VOCABULARY } from '../phi/ordinary-label'
@@ -52,6 +51,7 @@ describe('connector query PHI boundary', () => {
     ...Object.values(ORDINARY_LABEL_VOCABULARY).flat(),
     '東病棟',
     '西病棟',
+    '3階病棟',
     '内科',
     '外科',
     'glioblastoma'
@@ -71,6 +71,10 @@ describe('connector query PHI boundary', () => {
   })
   it.each([
     '山田太郎',
+    '仁科',
+    '保科',
+    '山田太郎内科',
+    '山田病棟',
     '未登録ラベル',
     '患者氏名：山田太郎',
     'カルテ番号：0098765',
@@ -82,7 +86,7 @@ describe('connector query PHI boundary', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
   it.each(
-    ['throw', 'uninitialized', 'timeout'].flatMap((fault) =>
+    ['throw', 'uninitialized', 'approval-error'].flatMap((fault) =>
       ['肺癌', 'あり', '不明', '東病棟'].map((query) => [fault, query] as const)
     )
   )('sends no search request on %s for %s', async (fault, query) => {
@@ -90,12 +94,12 @@ describe('connector query PHI boundary', () => {
     const engine = new ParserEngine({ fetchImpl, retries: 0, policy: draConnectorFetchPolicy })
     if (fault === 'throw') installPhiGate(createClosedGate('blocked'))
     if (fault === 'uninitialized') installPhiGate(null)
-    if (fault === 'timeout') {
-      vi.useFakeTimers()
-      installPhiConfirmer(() => new Promise(() => undefined))
+    if (fault === 'approval-error') {
+      installMachineApproval(() => {
+        throw new Error('approval unavailable')
+      })
     }
     const assertion = expect(engine.call(search, { query }, {})).rejects.toThrow()
-    if (fault === 'timeout') await vi.advanceTimersByTimeAsync(MODEL_RELEASE_TIMEOUT_MS)
     await assertion
     expect(fetchImpl).not.toHaveBeenCalled()
   })
