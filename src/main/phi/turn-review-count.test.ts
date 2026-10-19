@@ -273,3 +273,20 @@ it('does not reuse a decision after manual masking', async () => {
   expect(confirm).toHaveBeenCalledTimes(3)
   expect(send).toHaveBeenCalledTimes(3)
 })
+
+it('sends nothing when a synchronous scanner returns after the release deadline', async () => {
+  vi.useFakeTimers()
+  installPhiGate({
+    release: (text) => {
+      vi.setSystemTime(Date.now() + MODEL_RELEASE_TIMEOUT_MS)
+      return { text, replacements: [], warnings: [] }
+    },
+    restore: (text) => text
+  })
+  const confirm = vi.fn(async () => ({ confirmed: true }))
+  installPhiConfirmer(confirm)
+  const send = vi.fn<typeof fetch>()
+  await expect(request(send, body('study_design'))).rejects.toThrow()
+  expect(confirm).not.toHaveBeenCalled()
+  expect(send).not.toHaveBeenCalled()
+})

@@ -134,14 +134,18 @@ function releaseThroughInstalledGate(text: string, projectId: string): PhiResult
 
 async function assertModelBoundRelease<T>(operation: () => Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
+  const started = Date.now()
   try {
     activeGate()
-    return await Promise.race([
+    const released = await Promise.race([
       operation(),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => reject(modelReleaseError()), MODEL_RELEASE_TIMEOUT_MS)
       })
     ])
+    // A synchronous scanner can delay the timer itself; never authorize its late result.
+    if (Date.now() - started >= MODEL_RELEASE_TIMEOUT_MS) throw modelReleaseError()
+    return released
   } catch (error) {
     if (error instanceof PhiGateError) throw error
     throw modelReleaseError()
