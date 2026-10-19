@@ -131,21 +131,23 @@ describe.each(['mentor-pack', 'consultation-pack', 'writing-pack', 'future-pack'
       }
       if (pack === 'mentor-pack') expect(send).not.toHaveBeenCalled()
     })
-    it.each(['throw', 'uninitialized', 'timeout'])('never dispatches on %s', async (fault) => {
-      const { input, send, executor } = fixture()
-      // Safe input ensures even a pack with no PHI must pass the working gate.
-      const safeInput = { ...input, content: `Package mode: ${pack}\nAggregate study design.` }
-      if (fault === 'throw') installPhiGate(createClosedGate('blocked'))
-      if (fault === 'uninitialized') installPhiGate(null)
-      if (fault === 'timeout') {
-        vi.useFakeTimers()
-        installPhiConfirmer(() => new Promise(() => undefined))
+    it.each(['throw', 'uninitialized', 'approval-error'])(
+      'never dispatches on %s',
+      async (fault) => {
+        const { input, send, executor } = fixture()
+        // Safe input ensures even a pack with no PHI must pass the working gate.
+        const safeInput = { ...input, content: `Package mode: ${pack}\nAggregate study design.` }
+        if (fault === 'throw') installPhiGate(createClosedGate('blocked'))
+        if (fault === 'uninitialized') installPhiGate(null)
+        if (fault === 'approval-error')
+          installMachineApproval(() => {
+            throw new Error('approval unavailable')
+          })
+        const assertion = expect(executor.execute(safeInput)).rejects.toThrow()
+        await assertion
+        expect(send).not.toHaveBeenCalled()
       }
-      const assertion = expect(executor.execute(safeInput)).rejects.toThrow()
-      if (fault === 'timeout') await vi.advanceTimersByTimeAsync(MODEL_RELEASE_TIMEOUT_MS)
-      await assertion
-      expect(send).not.toHaveBeenCalled()
-    })
+    )
   }
 )
 
@@ -182,12 +184,11 @@ describe('local model-bound producers', () => {
     installPhiGate(createClosedGate('blocked'))
     await expect(produce()).rejects.toThrow()
   })
-  it.each(producers)('%s fails closed on timeout', async (_name, produce) => {
-    vi.useFakeTimers()
-    installPhiConfirmer(() => new Promise(() => undefined))
-    const assertion = expect(produce()).rejects.toThrow()
-    await vi.advanceTimersByTimeAsync(MODEL_RELEASE_TIMEOUT_MS)
-    await assertion
+  it.each(producers)('%s defers review until the actual send', async (_name, produce) => {
+    const confirm = vi.fn(async () => ({ confirmed: false }))
+    installPhiConfirmer(confirm)
+    await produce()
+    expect(confirm).not.toHaveBeenCalled()
   })
 })
 

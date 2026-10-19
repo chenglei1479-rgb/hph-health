@@ -20,6 +20,34 @@ export const ORDINARY_LABEL_VOCABULARY = {
     '慢性腎臓病',
     '脂質異常症'
   ],
+  department: [
+    '内科',
+    '外科',
+    '小児科',
+    '整形外科',
+    '皮膚科',
+    '眼科',
+    '耳鼻咽喉科',
+    '産婦人科',
+    '精神科',
+    '泌尿器科',
+    '脳神経外科',
+    '循環器内科',
+    '消化器内科',
+    '呼吸器内科',
+    '神経内科',
+    '腎臓内科',
+    '血液内科',
+    '糖尿病内科',
+    '心臓血管外科',
+    '呼吸器外科',
+    '消化器外科',
+    '形成外科',
+    '麻酔科',
+    '放射線科',
+    '救急科',
+    'リハビリテーション科'
+  ],
   medicalSearch: [
     '無作為化比較試験',
     '観察研究',
@@ -35,14 +63,13 @@ export const ORDINARY_LABEL_VOCABULARY = {
 } as const
 
 const ORDINARY_LABELS = new Set<string>(Object.values(ORDINARY_LABEL_VOCABULARY).flat())
-// Department/ward labels only: no spaces, digits, punctuation, personal marks or free prose.
-// Admission still requires main's whole-string name guess and no other PHI category.
-const WARD_OR_DEPARTMENT =
-  /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー〇]+(?:病棟|科)$/u
+// Only bounded directions, ward numbers, or floor numbers; arbitrary names never qualify.
+const MAX_WARD_LABEL_LENGTH = 8
+const WARD = /^(?:東|西|南|北|北東|北西|南東|南西|[0-9０-９〇一二三四五六七八九十百]+階?)病棟$/u
 
 export const isOrdinaryLabel = (text: string): boolean => {
   const value = text.trim()
-  return ORDINARY_LABELS.has(value) || WARD_OR_DEPARTMENT.test(value)
+  return ORDINARY_LABELS.has(value) || (value.length <= MAX_WARD_LABEL_LENGTH && WARD.test(value))
 }
 
 export function isOrdinaryLabelAggregate(text: string): boolean {
@@ -62,4 +89,21 @@ export function isOrdinaryLabelAggregate(text: string): boolean {
     }
   }
   return hasLabel
+}
+
+// Exact reviewed cells can also be classified as facilities (e.g. 3階病棟).
+// Never exempt dates/identifiers or a span crossing into unknown/free-text cells.
+export function hasOnlyOrdinaryLabelPhi(
+  text: string,
+  spans: readonly { start: number; end: number; category: string }[]
+): boolean {
+  if (!isOrdinaryLabelAggregate(text)) return false
+  const cells = [...text.matchAll(/[^,\r\n]+/gu)].filter((cell) => isOrdinaryLabel(cell[0]))
+  return spans.every(
+    (span) =>
+      ((span.category === 'PERSON_NAME' || span.category === 'PHYSICIAN_NAME') &&
+        text.slice(span.start, span.end) === text.trim()) ||
+      (['PERSON_NAME', 'PHYSICIAN_NAME', 'FACILITY'].includes(span.category) &&
+        cells.some((cell) => span.start >= cell.index && span.end <= cell.index + cell[0].length))
+  )
 }

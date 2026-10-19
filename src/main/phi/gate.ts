@@ -1,8 +1,8 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
 import { formatUnapprovedBlock } from './approval'
 import {
   applyManualSpans,
-  previewFromResult,
   highlightTokens,
   type PhiConfirmDecision,
   type PhiConfirmer,
@@ -13,7 +13,7 @@ import {
 import { deidentify, type PhiReplacement, type PhiResult } from './deidentify'
 import { detectPhi, type PhiCategory, type PhiSpan } from './detect'
 import type { PhiStore } from './store'
-import { isOrdinaryLabel } from './ordinary-label'
+import { hasOnlyOrdinaryLabelPhi, isOrdinaryLabel } from './ordinary-label'
 
 export interface PhiBlockedSpan {
   start: number
@@ -47,6 +47,7 @@ const PATIENT_PHI = new Set<PhiCategory>([
 
 interface PhiGate {
   release(text: string, projectId: string): PhiResult
+  highlights?(text: string, projectId: string): PhiHighlight[]
   restore(text: string, projectId: string): string
   manual?(original: string, projectId: string): string
 }
@@ -56,6 +57,29 @@ let confirmer: PhiConfirmer | null = null
 let machineApproved: () => boolean = () => false
 let blockTranslator: NativeTranslator = englishNativeTranslator
 let activeProjectId = 'default'
+// Each executor invocation owns a fresh scope, including concurrent turns of one session.
+const turns = new AsyncLocalStorage<{
+  projectId: string
+  active: boolean
+  isCurrent: () => boolean
+}>()
+export async function withPhiTurn<T>(
+  projectId: string,
+  isCurrent: () => boolean,
+  run: () => Promise<T>
+): Promise<T> {
+  const turn = { projectId, active: true, isCurrent }
+  return turns.run(turn, async () => {
+    try {
+      return await run()
+    } finally {
+      turn.active = false
+    }
+  })
+}
+// A decision is single-use and never cached, even for identical retries.
+export const PHI_CONSENT_EXPIRY_MS = 30_000
+
 const warnings = new Map<string, string[]>()
 
 export function installPhiGate(next: PhiGate | null): void {
@@ -126,9 +150,11 @@ async function assertModelBoundRelease<T>(operation: () => Promise<T>): Promise<
   }
 }
 
-/** Shared release entry. Approval, redaction, and per-message confirmation stay in the gate. */
+/** Automatic release entry: approval and redaction; interactive consent belongs to sending. */
 export function assertModelBoundTextReleased(text: string, projectId: string): Promise<string> {
-  return assertModelBoundRelease(() => releaseTextImpl(text, projectId))
+  return assertModelBoundRelease(() =>
+    releaseTextImpl(text, turns.getStore()?.projectId ?? projectId)
+  )
 }
 
 // Production installs a window confirmer. Unit tests leave this unset and therefore do not prompt.
@@ -151,7 +177,7 @@ export function notePhiProject(projectId: string): void {
 }
 
 export function currentPhiProject(): string {
-  return activeProjectId
+  return turns.getStore()?.projectId ?? activeProjectId
 }
 
 export function phiWarnings(projectId: string): readonly string[] {
@@ -170,6 +196,7 @@ export function createVaultBackedGate(vault: { store(projectId: string): PhiStor
   return {
     release: (text, projectId) => deidentify(text, open(projectId)),
     restore: (text, projectId) => open(projectId).restore(text),
+    highlights: (text, projectId) => open(projectId).highlights(text),
     manual: (original, projectId) => open(projectId).manual(original)
   }
 }
@@ -252,43 +279,13 @@ function collectStrings(value: unknown, out: string[]): void {
   }
 }
 
-function releasedPreview(text: string, projectId: string): PhiPreview {
-  const result = releaseThroughInstalledGate(text, projectId)
-  if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
-  if (result.replacements.length === 0) return { text: result.text, highlights: [] }
-  return previewFromResult(text, result.replacements)
-}
-
-async function review(preview: PhiPreview, projectId: string): Promise<string> {
-  if (!confirmer) return preview.text
-  let decision: PhiConfirmDecision
-  try {
-    decision = await confirmWithDeadline(preview)
-  } catch (error) {
-    failClosed(error)
-  }
-  if (!decision?.confirmed) {
-    throw new PhiGateError('PHI review was dismissed. The request was not sent.')
-  }
-  const extras = decision.extraSpans ?? []
-  if (extras.length === 0) return preview.text
-  try {
-    return applyManualSpans(preview.text, extras, (original) => {
-      if (!activeGate().manual) {
-        throw new Error('PHI review cannot store a manual redaction. The request was not sent.')
-      }
-      return activeGate().manual!(original, projectId)
-    })
-  } catch (error) {
-    failClosed(error)
-  }
-}
-
 async function releaseTextImpl(text: string, projectId: string): Promise<string> {
   try {
     notePhiProject(projectId)
     assertMachineMaySend([text])
-    return await review(releasedPreview(text, projectId), projectId)
+    const result = releaseThroughInstalledGate(text, projectId)
+    if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
+    return result.text
   } catch (error) {
     failClosed(error)
   }
@@ -296,7 +293,8 @@ async function releaseTextImpl(text: string, projectId: string): Promise<string>
 
 export const releaseModelText = assertModelBoundTextReleased
 
-export function restoreModelText(text: string, projectId = activeProjectId): string {
+export function restoreModelText(text: string, projectId = currentPhiProject()): string {
+  projectId = turns.getStore()?.projectId ?? projectId
   try {
     return activeGate().restore(text, projectId)
   } catch (error) {
@@ -308,7 +306,8 @@ export function restoreModelText(text: string, projectId = activeProjectId): str
   }
 }
 
-export function restoreModelValue<T>(value: T, projectId = activeProjectId): T {
+export function restoreModelValue<T>(value: T, projectId = currentPhiProject()): T {
+  projectId = turns.getStore()?.projectId ?? projectId
   return walk(value, projectId) as T
 }
 
@@ -338,98 +337,29 @@ function walk(value: unknown, projectId: string): unknown {
 
 type PromptBlock = { readonly type?: string; readonly text?: string; readonly content?: unknown }
 
-interface PreparedBlock {
-  block: unknown
-  text: string | null
-  previewStart: number
-  highlights: PhiHighlight[]
-}
-
 export function releasePromptContent<T>(content: T, projectId: string): Promise<T> {
-  return assertModelBoundRelease(() => releasePromptContentImpl(content, projectId))
-}
-
-async function releasePromptContentImpl<T>(content: T, projectId: string): Promise<T> {
-  try {
+  projectId = turns.getStore()?.projectId ?? projectId
+  return assertModelBoundRelease(async () => {
     notePhiProject(projectId)
     if (typeof content === 'string') return (await releaseModelText(content, projectId)) as T
-    if (!Array.isArray(content)) {
-      throw new PhiGateError('PHI gate cannot scan this prompt. The request was not sent.')
-    }
+    if (!Array.isArray(content)) throw modelReleaseError()
     assertMachineMaySend(
       content.map((block) => blockText(block)).filter((text): text is string => text != null)
     )
     if (content.length === 0) releaseThroughInstalledGate('', projectId)
-    const prepared: PreparedBlock[] = []
-    const segments: string[] = []
-    let cursor = 0
-    for (const block of content) {
+    return content.map((block) => {
       const text = blockText(block)
-      if (text == null) {
+      if (text == null || (block as PromptBlock).type !== 'text')
         throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
-      }
-      if ((block as PromptBlock).type !== 'text')
-        throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
-      const preview = releasedPreview(text, projectId)
-      if (segments.length > 0) cursor += 1
-      prepared.push({
-        block: preview.text === text ? block : { ...(block as PromptBlock), text: preview.text },
-        text: preview.text,
-        previewStart: cursor,
-        highlights: preview.highlights
-      })
-      segments.push(preview.text)
-      cursor += preview.text.length
-    }
-    const preview: PhiPreview = {
-      text: segments.join('\n'),
-      highlights: prepared.flatMap((item) =>
-        item.text == null
-          ? []
-          : item.highlights.map((highlight) => ({
-              ...highlight,
-              start: highlight.start + item.previewStart,
-              end: highlight.end + item.previewStart
-            }))
-      )
-    }
-    const decision = await decisionFor(preview)
-    if (!decision.confirmed) {
-      throw new PhiGateError('PHI review was dismissed. The request was not sent.')
-    }
-    const extras = new Map<number, PhiSpanMark[]>()
-    for (const span of decision.extraSpans ?? []) {
-      const index = prepared.findIndex(
-        (item) =>
-          item.text != null &&
-          span.start >= item.previewStart &&
-          span.end <= item.previewStart + item.text.length
-      )
-      if (index < 0) {
-        throw new PhiGateError('A marked span crossed a block boundary. The request was not sent.')
-      }
-      const owner = prepared[index]
-      const local = {
-        start: span.start - owner.previewStart,
-        end: span.end - owner.previewStart
-      }
-      const list = extras.get(index) ?? []
-      list.push(local)
-      extras.set(index, list)
-    }
-    return prepared.map((item, index) => {
-      const marks = extras.get(index)
-      if (!marks || item.text == null) return item.block
-      const text = redact(item.text, marks, projectId)
-      return { ...(item.block as PromptBlock), text }
+      const result = releaseThroughInstalledGate(text, projectId)
+      if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
+      return result.text === text ? block : { ...block, text: result.text }
     }) as T
-  } catch (error) {
-    failClosed(error)
-  }
+  })
 }
 
 async function decisionFor(preview: PhiPreview): Promise<PhiConfirmDecision> {
-  if (!confirmer) return { confirmed: true }
+  if (preview.highlights.length === 0 || !confirmer) return { confirmed: true }
   try {
     const decision = await confirmWithDeadline(preview)
     return decision?.confirmed === true ? decision : { confirmed: false }
@@ -440,10 +370,17 @@ async function decisionFor(preview: PhiPreview): Promise<PhiConfirmDecision> {
 
 async function confirmWithDeadline(preview: PhiPreview): Promise<PhiConfirmDecision> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(modelReleaseError()), MODEL_RELEASE_TIMEOUT_MS)
+  const timer = setTimeout(() => controller.abort(modelReleaseError()), PHI_CONSENT_EXPIRY_MS)
   try {
     if (!confirmer) throw modelReleaseError()
-    const decision = await confirmer(preview, controller.signal)
+    const decision = await Promise.race([
+      confirmer(preview, controller.signal),
+      new Promise<never>((_, reject) => {
+        controller.signal.addEventListener('abort', () => reject(modelReleaseError()), {
+          once: true
+        })
+      })
+    ])
     controller.signal.throwIfAborted()
     return decision
   } finally {
@@ -470,12 +407,15 @@ export function guardProviderBody(
   body: BodyInit | null | undefined,
   projectId = currentPhiProject()
 ): Promise<BodyInit | null | undefined> {
-  return assertModelBoundRelease(() => guardProviderBodyImpl(body, projectId))
+  return assertModelBoundRelease(() =>
+    guardProviderBodyImpl(body, turns.getStore()?.projectId ?? projectId)
+  )
 }
 
 async function guardProviderBodyImpl(
   body: BodyInit | null | undefined,
-  projectId: string
+  projectId: string,
+  tokens: PhiReplacement[] = []
 ): Promise<BodyInit | null | undefined> {
   if (body == null) {
     await assertModelBoundTextReleased('', projectId)
@@ -497,15 +437,67 @@ async function guardProviderBodyImpl(
     collectStrings(parsed, texts)
     assertMachineMaySend(texts)
     if (texts.length === 0) releaseThroughInstalledGate('', projectId)
-    const tokens: PhiReplacement[] = []
     const walked = walkRelease(parsed, projectId, tokens)
     const text = JSON.stringify(walked)
-    const reviewed = await review({ text, highlights: highlightTokens(text, tokens) }, projectId)
-    JSON.parse(reviewed)
-    return reviewed
+    return text
   } catch (error) {
     failClosed(error)
   }
+}
+
+/** Automatic preparation never grants consent. Only this actual outbound operation reviews.
+ * The immutable released bytes, destination, project and turn remain local to this call.
+ * No reusable authorization escapes; edits/retries/new PHI always start a new operation.
+ */
+export function sendPhiChecked<T>(
+  body: BodyInit | null | undefined,
+  destination: string,
+  send: (released: BodyInit | null | undefined) => Promise<T>,
+  projectId = currentPhiProject()
+): Promise<T> {
+  projectId = turns.getStore()?.projectId ?? projectId
+  return assertModelBoundRelease(async () => {
+    if (!destination) throw modelReleaseError()
+    const turn = turns.getStore()
+    const installed = activeGate()
+    const reviewer = confirmer
+    const approvalReader = machineApproved
+    const approved = approvalReader()
+    const tokens: PhiReplacement[] = []
+    const released = await guardProviderBodyImpl(body, projectId, tokens)
+    const text = typeof released === 'string' ? released : ''
+    // Vault provenance retains marks from earlier preparation and manual masking.
+    // Restore only for the local approval check; the restored value is never sent.
+    const restoredTexts: string[] = []
+    if (typeof released === 'string') collectStrings(JSON.parse(text), restoredTexts)
+    assertMachineMaySend(restoredTexts.map((value) => installed.restore(value, projectId)))
+    const highlights = installed.highlights?.(text, projectId) ?? []
+    // Custom scanners also contribute their replacements without needing a vault.
+    const preview = { text, highlights: [...highlights, ...highlightTokens(text, tokens)] }
+    const started = Date.now()
+    const decision = await decisionFor(preview)
+    if (!decision.confirmed) throw modelReleaseError()
+    const reviewed = redact(text, decision.extraSpans ?? [], projectId)
+    if (typeof released === 'string') JSON.parse(reviewed)
+    return () => {
+      let stillApproved: boolean
+      try {
+        stillApproved = approvalReader()
+      } catch {
+        throw modelReleaseError()
+      }
+      if (
+        Date.now() - started >= PHI_CONSENT_EXPIRY_MS ||
+        gate !== installed ||
+        confirmer !== reviewer ||
+        machineApproved !== approvalReader ||
+        stillApproved !== approved ||
+        (turn && (!turn.active || !turn.isCurrent() || turns.getStore() !== turn))
+      )
+        throw modelReleaseError()
+      return send(typeof released === 'string' ? reviewed : released)
+    }
+  }).then((dispatch) => dispatch())
 }
 
 /** Structured context/tool results are scanned including keys; the original is never returned. */
@@ -524,11 +516,7 @@ export async function checkConnectorQueryArgs(args: Record<string, unknown>): Pr
   for (const [key, value] of Object.entries(args)) {
     if (CONNECTOR_QUERY_KEYS.has(key) && typeof value === 'string') {
       const spans = patientSpans(value)
-      if (
-        isOrdinaryLabel(value) &&
-        spans.length > 0 &&
-        spans.every((span) => isWholeQueryNameGuess(value, span))
-      ) {
+      if (isOrdinaryLabel(value) && hasOnlyOrdinaryLabelPhi(value, spans)) {
         // A reviewed ordinary label is a narrower subset of main's whole-query guess.
         // Check gate health/deadline; all other queries still take strict release.
         await assertModelBoundTextReleased('', currentPhiProject())
@@ -594,7 +582,9 @@ export function refuseMentorPackIndividualPatientData(texts: readonly string[]):
 }
 
 export function refusePatientQuery(text: string): void {
-  const spans = patientSpans(text).filter((span) => !isWholeQueryNameGuess(text, span))
+  const detected = patientSpans(text)
+  if (isOrdinaryLabel(text) && hasOnlyOrdinaryLabelPhi(text, detected)) return
+  const spans = detected.filter((span) => !isWholeQueryNameGuess(text, span))
   if (spans.length === 0) return
   throw new PhiGateError(CONNECTOR_PATIENT_QUERY_MESSAGE, spans)
 }

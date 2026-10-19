@@ -1,3 +1,4 @@
+import { highlightTokens, type PhiHighlight } from './confirm'
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -44,6 +45,7 @@ export interface PhiStore {
   dateOffset(patientPseudonym: string): number
   rememberShift(shifted: string, original: string): void
   restore(text: string): string
+  highlights(text: string): PhiHighlight[]
   log(action: string, counts: Record<string, number>): void
 }
 
@@ -107,6 +109,19 @@ class ProjectStore implements PhiStore {
     }
     if (!existing) this.record.shifts.push({ shifted, original })
     this.persist('shift', {})
+  }
+
+  highlights(text: string): PhiHighlight[] {
+    return highlightTokens(text, [
+      ...this.record.entries.map((entry) => ({
+        replacement: entry.placeholder,
+        category: entry.category
+      })),
+      ...this.record.shifts.map((shift) => ({
+        replacement: shift.shifted,
+        category: 'DATE' as const
+      }))
+    ])
   }
 
   restore(text: string): string {

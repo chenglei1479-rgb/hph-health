@@ -4,8 +4,7 @@ import {
   createVaultBackedGate,
   installMachineApproval,
   installPhiConfirmer,
-  installPhiGate,
-  MODEL_RELEASE_TIMEOUT_MS
+  installPhiGate
 } from '../../phi/gate'
 import { ORDINARY_LABEL_VOCABULARY } from '../../phi/ordinary-label'
 import { createMemoryPhiVault } from '../../phi/store'
@@ -38,7 +37,8 @@ it('preserves benign Japanese labels but removes labeled names, chart numbers an
 it.each(paths)(
   '%s never sends on an unavailable, broken or expired gate',
   async (_name, produce) => {
-    for (const fault of ['uninitialized', 'throw', 'timeout']) {
+    for (const fault of ['uninitialized', 'throw', 'approval-error']) {
+      installMachineApproval(() => true)
       installPhiGate(
         fault === 'uninitialized'
           ? null
@@ -46,14 +46,14 @@ it.each(paths)(
             ? createClosedGate('broken')
             : createVaultBackedGate(createMemoryPhiVault())
       )
-      if (fault === 'timeout') {
-        vi.useFakeTimers()
-        installPhiConfirmer(() => new Promise(() => undefined))
+      if (fault === 'approval-error') {
+        installMachineApproval(() => {
+          throw new Error('approval unavailable')
+        })
       }
       const send = vi.fn()
       const pending = produce().then(send)
       const blocked = expect(pending).rejects.toThrow()
-      if (fault === 'timeout') await vi.advanceTimersByTimeAsync(MODEL_RELEASE_TIMEOUT_MS)
       await blocked
       expect(send).not.toHaveBeenCalled()
     }
@@ -67,6 +67,10 @@ it('does not exempt a name guess mixed with another PHI category', async () => {
 
 it.each([
   '山田太郎',
+  '仁科',
+  '保科',
+  '山田太郎内科',
+  '山田病棟',
   '未登録ラベル',
   'label,n\n山田太郎,20',
   'sex,n\n男性 John Smith,20',
@@ -82,8 +86,7 @@ it.each([
   '西病棟',
   '内科',
   '外科',
-  '〇〇病棟',
-  '〇〇科'
+  '3階病棟'
 ])('preserves listed categorical and aggregate label %s', async (label) => {
   expect(await releaseCategoricalValuesForModel([label], 'fiction')).toEqual([label])
   const table = `label,n\n${label},20`

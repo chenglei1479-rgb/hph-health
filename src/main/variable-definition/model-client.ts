@@ -1,5 +1,5 @@
 import { VARIABLE_DEFINITION_MISSING_KEY_MESSAGE } from '../../shared/variable-definition'
-import { guardProviderBody } from '../phi/gate'
+import { fetchProviderRequest } from '../settings/provider-fetch'
 import type { ProviderTextGenerationTarget } from '../settings/provider-text-generation'
 
 export type VariableDefinitionCompleter = (prompt: string) => Promise<string>
@@ -24,22 +24,23 @@ export const createOpenAiVariableDefinitionCompleter = (options: {
 }): VariableDefinitionCompleter => {
   const fetchImpl = options.fetchImpl ?? fetch
   return async (prompt) => {
-    const guarded = await guardProviderBody(
-      JSON.stringify({
-        model: options.model,
-        temperature: 0,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    )
-    if (typeof guarded !== 'string') throw new Error('変数定義のモデル呼び出しに失敗しました。')
-    const response = await fetchImpl(`${options.baseUrl.replace(/\/$/, '')}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(options.apiKey ? { authorization: `Bearer ${options.apiKey}` } : {})
-      },
-      body: guarded
+    const body = JSON.stringify({
+      model: options.model,
+      temperature: 0,
+      messages: [{ role: 'user', content: prompt }]
     })
+    const response = await fetchProviderRequest(
+      fetchImpl,
+      `${options.baseUrl.replace(/\/$/, '')}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(options.apiKey ? { authorization: `Bearer ${options.apiKey}` } : {})
+        },
+        body
+      }
+    )
     if (!response.ok) throw new Error('変数定義のモデル呼び出しに失敗しました。')
     const text = contentFrom(await response.json())
     if (!text.trim()) throw new Error('変数定義のモデルが空の応答を返しました。')
