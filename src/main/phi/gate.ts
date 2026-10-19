@@ -13,6 +13,7 @@ import {
 import { deidentify, type PhiReplacement, type PhiResult } from './deidentify'
 import { detectPhi, type PhiCategory, type PhiSpan } from './detect'
 import type { PhiStore } from './store'
+import { isOrdinaryLabel } from './ordinary-label'
 
 export interface PhiBlockedSpan {
   start: number
@@ -522,6 +523,17 @@ export async function checkConnectorQueryArgs(args: Record<string, unknown>): Pr
   // original. Refuse changed queries rather than searching for a pseudonym or sending raw PHI.
   for (const [key, value] of Object.entries(args)) {
     if (CONNECTOR_QUERY_KEYS.has(key) && typeof value === 'string') {
+      const spans = patientSpans(value)
+      if (
+        isOrdinaryLabel(value) &&
+        spans.length > 0 &&
+        spans.every((span) => isWholeQueryNameGuess(value, span))
+      ) {
+        // A reviewed ordinary label is a narrower subset of main's whole-query guess.
+        // Check gate health/deadline; all other queries still take strict release.
+        await assertModelBoundTextReleased('', currentPhiProject())
+        continue
+      }
       const released = await assertModelBoundTextReleased(value, currentPhiProject())
       if (released !== value) {
         const translate = blockTranslator

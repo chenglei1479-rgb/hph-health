@@ -10,6 +10,7 @@ import {
   MODEL_RELEASE_TIMEOUT_MS,
   PhiGateError
 } from '../phi/gate'
+import { ORDINARY_LABEL_VOCABULARY } from '../phi/ordinary-label'
 import { createMemoryPhiVault } from '../phi/store'
 import { ConnectorService, draConnectorFetchPolicy } from './service'
 
@@ -47,7 +48,14 @@ describe('connector query PHI boundary', () => {
     )
     expect(fetchImpl).not.toHaveBeenCalled()
   })
-  it('sends an unchanged released literature query', async () => {
+  it.each([
+    ...Object.values(ORDINARY_LABEL_VOCABULARY).flat(),
+    '東病棟',
+    '西病棟',
+    '内科',
+    '外科',
+    'glioblastoma'
+  ])('preserves the main whole-query label exception: %s', async (query) => {
     const fetchImpl = vi
       .fn<typeof fetch>()
       .mockResolvedValue(
@@ -57,20 +65,27 @@ describe('connector query PHI boundary', () => {
         )
       )
     const engine = new ParserEngine({ fetchImpl, retries: 0, policy: draConnectorFetchPolicy })
-    await engine.call(search, { query: 'glioblastoma' }, {})
+    await engine.call(search, { query }, {})
     expect(fetchImpl).toHaveBeenCalledOnce()
-    expect(String(fetchImpl.mock.calls[0][0])).toContain('glioblastoma')
+    expect(decodeURIComponent(String(fetchImpl.mock.calls[0][0]))).toContain(query)
   })
-  it.each(['架空太郎', '肺癌'])(
-    'never sends the original when the shared gate changes a short query: %s',
-    async (query) => {
-      const fetchImpl = vi.fn<typeof fetch>()
-      const engine = new ParserEngine({ fetchImpl, retries: 0, policy: draConnectorFetchPolicy })
-      await expect(engine.call(search, { query }, {})).rejects.toThrow(/search terms changed/)
-      expect(fetchImpl).not.toHaveBeenCalled()
-    }
-  )
-  it.each(['throw', 'uninitialized', 'timeout'])('sends no search request on %s', async (fault) => {
+  it.each([
+    '山田太郎',
+    '未登録ラベル',
+    '患者氏名：山田太郎',
+    'カルテ番号：0098765',
+    '生年月日：昭和9年2月3日'
+  ])('never sends a query with detected patient information: %s', async (query) => {
+    const fetchImpl = vi.fn<typeof fetch>()
+    const engine = new ParserEngine({ fetchImpl, retries: 0, policy: draConnectorFetchPolicy })
+    await expect(engine.call(search, { query }, {})).rejects.toThrow()
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+  it.each(
+    ['throw', 'uninitialized', 'timeout'].flatMap((fault) =>
+      ['肺癌', 'あり', '不明', '東病棟'].map((query) => [fault, query] as const)
+    )
+  )('sends no search request on %s for %s', async (fault, query) => {
     const fetchImpl = vi.fn<typeof fetch>()
     const engine = new ParserEngine({ fetchImpl, retries: 0, policy: draConnectorFetchPolicy })
     if (fault === 'throw') installPhiGate(createClosedGate('blocked'))
@@ -79,7 +94,7 @@ describe('connector query PHI boundary', () => {
       vi.useFakeTimers()
       installPhiConfirmer(() => new Promise(() => undefined))
     }
-    const assertion = expect(engine.call(search, { query: '肺癌' }, {})).rejects.toThrow()
+    const assertion = expect(engine.call(search, { query }, {})).rejects.toThrow()
     if (fault === 'timeout') await vi.advanceTimersByTimeAsync(MODEL_RELEASE_TIMEOUT_MS)
     await assertion
     expect(fetchImpl).not.toHaveBeenCalled()
