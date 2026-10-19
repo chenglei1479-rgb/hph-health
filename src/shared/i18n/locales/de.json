@@ -161,7 +161,11 @@
     "The agent stopped early — the answer hit the model's length limit.": "Der Agent wurde vorzeitig beendet – die Antwort hat die Längenbegrenzung des Modells erreicht.",
     "Your unsaved changes will be lost.": "Ihre ungespeicherten Änderungen gehen verloren.",
     "Connect to Baselio": "Mit Baselio verbinden",
-    "Approved. Opening Baselio…": "Genehmigt. Baselio wird geöffnet…"
+    "Approved. Opening Baselio…": "Genehmigt. Baselio wird geöffnet…",
+    "The privacy check could not finish. Nothing was sent. Please try again.": "Die Datenschutzprüfung konnte nicht abgeschlossen werden. Es wurde nichts gesendet. Bitte versuchen Sie es erneut.",
+    "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "Dieser Anhang kann nicht auf Patienteninformationen geprüft werden. Es wurde nichts gesendet. Verwenden Sie prüfbaren Text.",
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "Diese Agentenverbindung kann nicht jede Modellanfrage auf Patienteninformationen prüfen und ist in der Beta nicht verfügbar. Wählen Sie einen API-Anbieter mit geprüfter Verbindung.",
+    "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "Die Suchbegriffe wurden bei der Datenschutzprüfung geändert. Die Suche wurde nicht gesendet. Entfernen Sie Patienteninformationen und versuchen Sie es erneut."
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Neue Konversationen können Befehle ausführen, Dateien ändern, Notebook-Code ausführen und auf das Netzwerk zugreifen, ohne vorher zu fragen. Bestehende Konversationen bleiben unverändert.",

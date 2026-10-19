@@ -16,7 +16,8 @@ const mocks = vi.hoisted(() => ({
   parent: vi.fn(),
   openPath: vi.fn(),
   reveal: vi.fn(),
-  external: vi.fn()
+  external: vi.fn(),
+  review: vi.fn()
 }))
 vi.mock('electron', () => ({
   app: { getAppMetrics: mocks.metrics },
@@ -27,6 +28,7 @@ vi.mock('electron', () => ({
 vi.mock('./session-persistence/conversation-pdf-electron', () => ({
   printConversationPdf: mocks.print
 }))
+vi.mock('./phi/confirm-window', () => ({ reviewPhiPreviewInElectron: mocks.review }))
 beforeEach(() => vi.resetAllMocks())
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -42,6 +44,33 @@ function setup() {
 }
 
 describe('native operations requested by the Node runtime', () => {
+  it('uses the existing PHI review page only for the authenticated current window', async () => {
+    const value = setup()
+    const preview = { text: 'Fictional aggregate', highlights: [] }
+    const labels = {
+      title: 'Review',
+      explanation: 'Check',
+      confirm: 'Send',
+      cancel: 'Cancel',
+      mark: 'Mark'
+    }
+    mocks.review.mockResolvedValue({ confirmed: true, extraSpans: [{ start: 0, end: 3 }] })
+    await expect(
+      value.handler(
+        {
+          kind: 'native-request',
+          id: 1,
+          clientId: value.clientId,
+          request: { operation: 'phi-review', preview, labels }
+        },
+        value.signal.signal
+      )
+    ).resolves.toEqual({ confirmed: true, extraSpans: [{ start: 0, end: 3 }] })
+    expect(mocks.review).toHaveBeenCalledWith(preview, labels, {
+      parent: value.window,
+      signal: value.signal.signal
+    })
+  })
   it('parents native dialogs to the current document and strips Electron-only result fields', async () => {
     const value = setup()
     const path = join(tmpdir(), 'chosen.science')

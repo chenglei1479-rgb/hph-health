@@ -6,16 +6,12 @@ import type { ArtifactReproducibilityCheckState } from '../shared/artifact-repro
 import type { SessionSummary } from '../shared/session-persistence'
 import { type AppIconPreview, type AppIconVariant } from '../shared/settings'
 import type { UploadTransferProgress } from '../shared/uploads'
-import { createAcpRuntime } from './acp/runtime-composition'
-import type { ApplicationCommandComposition } from './application-command-composition-contract'
-import { createApplicationEventModule, type ApplicationEventSource } from './application-events'
-import { type ApplicationModuleBuilder } from './application-runtime'
-import { ArchiveCoordinator } from './archive/coordinator'
+
 import { composeAgentActivation } from './composition/agent-activation'
 import { composeAgentCompletion, composeAgentWorkflows } from './composition/agent-completion'
 import { composeAgentControls } from './composition/agent-controls'
 import { composeAgentRuntime } from './composition/agent-runtime'
-import { registerApplicationCommandComposition } from './composition/application-commands'
+
 import { composeArtifactSurfaces } from './composition/artifact-surfaces'
 import { composeBackendLifecycle } from './composition/backend-lifecycle'
 import { composeBackgroundResults } from './composition/background-results'
@@ -279,6 +275,10 @@ export const createApplicationModules = async (
       (await settingsBootstrap.settingsRepository.getSettings()).localePreference
     )
   const translate = suppliedTranslator ?? localeOwner.t.bind(localeOwner)
+  const { installMachineApprovalTranslator, installPhiConfirmer } = await import('./phi/gate')
+  installMachineApprovalTranslator(translate)
+  const { createDesktopPhiConfirmer } = await import('./phi/desktop-confirmer')
+  installPhiConfirmer(createDesktopPhiConfirmer(translate))
   if (!suppliedLocaleOwner) {
     await modules.add(undefined, () => {
       const unsubscribe = localeOwner.subscribe((snapshot) =>

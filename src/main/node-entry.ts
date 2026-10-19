@@ -532,10 +532,14 @@ async function main(): Promise<void> {
     startupReporter.phase('runtime')
     const { createCoreRuntime } = await import('./core-runtime')
     configureDesktopFileInteraction(
-      createRemoteDesktopFileInteraction(async (request, callerId) => {
+      createRemoteDesktopFileInteraction(async (request, callerId, signal) => {
         if (!desktop) throw new DesktopCapabilityUnavailable(request.operation)
         const caller = currentDesktopCaller()
-        return desktop.requestNative(request, callerId ?? caller?.clientId, caller?.signal)
+        const reviewSignal =
+          signal && caller?.signal
+            ? AbortSignal.any([signal, caller.signal])
+            : (signal ?? caller?.signal)
+        return desktop.requestNative(request, callerId ?? caller?.clientId, reviewSignal)
       })
     )
     configureDesktopShellInteraction(

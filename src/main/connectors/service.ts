@@ -22,14 +22,14 @@ import {
   CONNECTOR_TOOL_RULE_MAX_COUNT
 } from '@aipoch/specialists'
 import { type SpecialistView } from '../../shared/specialist'
-import { refuseConnectorQueryArgs, refuseConnectorQueryUrl } from '../phi/gate'
-import { assertOutboundEndpointRegistered } from '../../shared/outbound-endpoints'
 import {
-  isPoliteHost,
-  readPoliteCache,
-  reservePoliteSlot,
-  writePoliteCache
-} from './polite-fetch'
+  assertModelBoundTextReleased,
+  checkConnectorQueryArgs,
+  checkConnectorQueryUrl,
+  releaseModelBoundValue
+} from '../phi/gate'
+import { assertOutboundEndpointRegistered } from '../../shared/outbound-endpoints'
+import { isPoliteHost, readPoliteCache, reservePoliteSlot, writePoliteCache } from './polite-fetch'
 
 type McpClientManagerLike = {
   listTools(config: CustomMcpServerConfig, signal?: AbortSignal): Promise<Array<{ name: string }>>
@@ -105,8 +105,8 @@ export const CONNECTOR_USER_AGENT =
 // Installed on the packaged connector engine. Package tests construct ParserEngine without this
 // policy so they do not need the desktop PHI vault or the egress registry.
 export const draConnectorFetchPolicy = {
-  guardQueryArgs: refuseConnectorQueryArgs,
-  guardQueryUrl: refuseConnectorQueryUrl,
+  guardQueryArgs: checkConnectorQueryArgs,
+  guardQueryUrl: checkConnectorQueryUrl,
   assertOutboundHost: assertOutboundEndpointRegistered,
   isPoliteHost,
   readPoliteCache,
@@ -321,6 +321,21 @@ export class ConnectorService {
   }
 
   async call(
+    connector: string,
+    method: string,
+    args: Record<string, unknown>,
+    context: ConnectorCallContext = {},
+    signal?: AbortSignal
+  ): Promise<unknown> {
+    // Authorize first in dispatch; then release only agent-facing results. UI detail views keep
+    // their local display behavior. Failure never substitutes the original result.
+    await assertModelBoundTextReleased('', context.projectId ?? context.sessionId ?? 'default')
+    const result = await this.dispatch(connector, method, args, context, signal)
+    if (context.origin !== 'agent') return result
+    return releaseModelBoundValue(result, context.projectId ?? context.sessionId ?? 'default')
+  }
+
+  private async dispatch(
     connector: string,
     method: string,
     args: Record<string, unknown>,
@@ -691,10 +706,14 @@ export class ConnectorService {
       authorization
     )
 
+    const releasedArgs = await releaseModelBoundValue(
+      args,
+      context.projectId ?? context.sessionId ?? 'default'
+    )
     try {
       const result = signal
-        ? await this.deps.mcpClientManager.call(config, method, args, signal)
-        : await this.deps.mcpClientManager.call(config, method, args)
+        ? await this.deps.mcpClientManager.call(config, method, releasedArgs, signal)
+        : await this.deps.mcpClientManager.call(config, method, releasedArgs)
       this.publishCustomServerRecovery(custom.id, failureEpoch)
       return result
     } catch (error) {

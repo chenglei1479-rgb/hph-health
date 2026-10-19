@@ -130,7 +130,9 @@ describe('PHI pre-send confirmation', () => {
       const start = preview.text.indexOf('未検出')
       return { confirmed: true, extraSpans: [{ start, end: start + '未検出'.length }] }
     })
-    const prompt = vi.fn(async () => ({ stopReason: 'end_turn' }))
+    const prompt = vi.fn<(content: Array<{ text: string }>) => Promise<{ stopReason: string }>>(
+      async () => ({ stopReason: 'end_turn' })
+    )
     const executor = new AcpProviderPromptExecutor({
       backendGeneration: {
         openCodeUsageApi: () => undefined,

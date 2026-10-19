@@ -10,7 +10,6 @@ import type { LogFileStatus, OpenLogFileResult, RevealLogFileResult } from '../l
 
 import type { MachineApprovalStatus, SetMachineApprovalRequest } from '../machine-approval'
 
-import type { NetworkInfo } from '../network'
 import { NETWORK_SYSTEM_RESUMED_CHANNEL, type NetworkInfo } from '../network'
 
 import type { CliLauncherStatus } from '../cli'

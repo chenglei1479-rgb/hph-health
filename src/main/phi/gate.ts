@@ -12,7 +12,8 @@ import {
 } from './confirm'
 import { deidentify, type PhiReplacement, type PhiResult } from './deidentify'
 import { detectPhi, type PhiCategory, type PhiSpan } from './detect'
-import { createMemoryPhiVault, type PhiStore } from './store'
+import type { PhiStore } from './store'
+import { isOrdinaryLabel } from './ordinary-label'
 
 export interface PhiBlockedSpan {
   start: number
@@ -50,38 +51,84 @@ interface PhiGate {
   manual?(original: string, projectId: string): string
 }
 
-const memory = createMemoryPhiVault()
-const memoryStores = new Map<string, PhiStore>()
-
-function memoryStore(projectId: string): PhiStore {
-  const existing = memoryStores.get(projectId)
-  if (existing) return existing
-  const store = memory.store(projectId)
-  memoryStores.set(projectId, store)
-  return store
-}
-
-const memoryGate: PhiGate = {
-  release(text, projectId) {
-    return deidentify(text, memoryStore(projectId))
-  },
-  restore(text, projectId) {
-    return memoryStore(projectId).restore(text)
-  },
-  manual(original, projectId) {
-    return memoryStore(projectId).manual(original)
-  }
-}
-
-let gate: PhiGate = memoryGate
+let gate: PhiGate | null = null
 let confirmer: PhiConfirmer | null = null
 let machineApproved: () => boolean = () => false
 let blockTranslator: NativeTranslator = englishNativeTranslator
 let activeProjectId = 'default'
 const warnings = new Map<string, string[]>()
 
-export function installPhiGate(next: PhiGate): void {
+export function installPhiGate(next: PhiGate | null): void {
   gate = next
+}
+
+export const MODEL_RELEASE_TIMEOUT_MS = 60_000
+export const MODEL_RELEASE_RETRY_MESSAGE =
+  'The privacy check could not finish. Nothing was sent. Please try again.'
+export const UNSCANNABLE_MODEL_CONTENT_MESSAGE =
+  'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
+export const UNGUARDED_AGENT_MESSAGE =
+  'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.'
+
+export function modelReleaseError(key = MODEL_RELEASE_RETRY_MESSAGE): PhiGateError {
+  const translate = blockTranslator
+  const message =
+    key === UNSCANNABLE_MODEL_CONTENT_MESSAGE
+      ? translate(
+          'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
+        )
+      : key === UNGUARDED_AGENT_MESSAGE
+        ? translate(
+            'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.'
+          )
+        : translate('The privacy check could not finish. Nothing was sent. Please try again.')
+  return new PhiGateError(message)
+}
+
+function activeGate(): PhiGate {
+  if (!gate) throw modelReleaseError()
+  return gate
+}
+
+function releaseThroughInstalledGate(text: string, projectId: string): PhiResult {
+  try {
+    const result = activeGate().release(text, projectId)
+    if (
+      !result ||
+      typeof result.text !== 'string' ||
+      !Array.isArray(result.replacements) ||
+      !Array.isArray(result.warnings)
+    ) {
+      throw modelReleaseError()
+    }
+    return result
+  } catch {
+    // Vault/scanner errors can contain local paths. Use one localized retry surface.
+    throw modelReleaseError()
+  }
+}
+
+async function assertModelBoundRelease<T>(operation: () => Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    activeGate()
+    return await Promise.race([
+      operation(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(modelReleaseError()), MODEL_RELEASE_TIMEOUT_MS)
+      })
+    ])
+  } catch (error) {
+    if (error instanceof PhiGateError) throw error
+    throw modelReleaseError()
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+/** Shared release entry. Approval, redaction, and per-message confirmation stay in the gate. */
+export function assertModelBoundTextReleased(text: string, projectId: string): Promise<string> {
+  return assertModelBoundRelease(() => releaseTextImpl(text, projectId))
 }
 
 // Production installs a window confirmer. Unit tests leave this unset and therefore do not prompt.
@@ -143,9 +190,7 @@ export function createClosedGate(message: string): PhiGate {
 
 function failClosed(error: unknown): never {
   if (error instanceof PhiGateError) throw error
-  throw new PhiGateError(
-    error instanceof Error ? error.message : 'PHI gate failed closed. The request was not sent.'
-  )
+  throw modelReleaseError()
 }
 
 function contained(inner: PhiSpan, outer: PhiSpan): boolean {
@@ -174,7 +219,7 @@ function assertMachineMaySend(texts: readonly string[]): void {
   try {
     approved = machineApproved()
   } catch {
-    approved = false
+    throw modelReleaseError()
   }
   if (approved) return
   const grouped = texts.map((text) => patientSpans(text))
@@ -200,12 +245,15 @@ function collectStrings(value: unknown, out: string[]): void {
     return
   }
   if (value && typeof value === 'object') {
-    for (const child of Object.values(value)) collectStrings(child, out)
+    for (const [key, child] of Object.entries(value)) {
+      out.push(key)
+      collectStrings(child, out)
+    }
   }
 }
 
 function releasedPreview(text: string, projectId: string): PhiPreview {
-  const result = gate.release(text, projectId)
+  const result = releaseThroughInstalledGate(text, projectId)
   if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
   if (result.replacements.length === 0) return { text: result.text, highlights: [] }
   return previewFromResult(text, result.replacements)
@@ -215,7 +263,7 @@ async function review(preview: PhiPreview, projectId: string): Promise<string> {
   if (!confirmer) return preview.text
   let decision: PhiConfirmDecision
   try {
-    decision = await confirmer(preview)
+    decision = await confirmWithDeadline(preview)
   } catch (error) {
     failClosed(error)
   }
@@ -226,17 +274,17 @@ async function review(preview: PhiPreview, projectId: string): Promise<string> {
   if (extras.length === 0) return preview.text
   try {
     return applyManualSpans(preview.text, extras, (original) => {
-      if (!gate.manual) {
+      if (!activeGate().manual) {
         throw new Error('PHI review cannot store a manual redaction. The request was not sent.')
       }
-      return gate.manual(original, projectId)
+      return activeGate().manual!(original, projectId)
     })
   } catch (error) {
     failClosed(error)
   }
 }
 
-export async function releaseModelText(text: string, projectId: string): Promise<string> {
+async function releaseTextImpl(text: string, projectId: string): Promise<string> {
   try {
     notePhiProject(projectId)
     assertMachineMaySend([text])
@@ -246,9 +294,11 @@ export async function releaseModelText(text: string, projectId: string): Promise
   }
 }
 
+export const releaseModelText = assertModelBoundTextReleased
+
 export function restoreModelText(text: string, projectId = activeProjectId): string {
   try {
-    return gate.restore(text, projectId)
+    return activeGate().restore(text, projectId)
   } catch (error) {
     throw new PhiGateError(
       error instanceof Error
@@ -295,7 +345,11 @@ interface PreparedBlock {
   highlights: PhiHighlight[]
 }
 
-export async function releasePromptContent<T>(content: T, projectId: string): Promise<T> {
+export function releasePromptContent<T>(content: T, projectId: string): Promise<T> {
+  return assertModelBoundRelease(() => releasePromptContentImpl(content, projectId))
+}
+
+async function releasePromptContentImpl<T>(content: T, projectId: string): Promise<T> {
   try {
     notePhiProject(projectId)
     if (typeof content === 'string') return (await releaseModelText(content, projectId)) as T
@@ -305,15 +359,17 @@ export async function releasePromptContent<T>(content: T, projectId: string): Pr
     assertMachineMaySend(
       content.map((block) => blockText(block)).filter((text): text is string => text != null)
     )
+    if (content.length === 0) releaseThroughInstalledGate('', projectId)
     const prepared: PreparedBlock[] = []
     const segments: string[] = []
     let cursor = 0
     for (const block of content) {
       const text = blockText(block)
       if (text == null) {
-        prepared.push({ block, text: null, previewStart: 0, highlights: [] })
-        continue
+        throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
       }
+      if ((block as PromptBlock).type !== 'text')
+        throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
       const preview = releasedPreview(text, projectId)
       if (segments.length > 0) cursor += 1
       prepared.push({
@@ -375,19 +431,32 @@ export async function releasePromptContent<T>(content: T, projectId: string): Pr
 async function decisionFor(preview: PhiPreview): Promise<PhiConfirmDecision> {
   if (!confirmer) return { confirmed: true }
   try {
-    const decision = await confirmer(preview)
+    const decision = await confirmWithDeadline(preview)
     return decision?.confirmed === true ? decision : { confirmed: false }
   } catch (error) {
     failClosed(error)
   }
 }
 
+async function confirmWithDeadline(preview: PhiPreview): Promise<PhiConfirmDecision> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(modelReleaseError()), MODEL_RELEASE_TIMEOUT_MS)
+  try {
+    if (!confirmer) throw modelReleaseError()
+    const decision = await confirmer(preview, controller.signal)
+    controller.signal.throwIfAborted()
+    return decision
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 function redact(text: string, spans: readonly PhiSpanMark[], projectId: string): string {
   return applyManualSpans(text, spans, (original) => {
-    if (!gate.manual) {
+    if (!activeGate().manual) {
       throw new Error('PHI review cannot store a manual redaction. The request was not sent.')
     }
-    return gate.manual(original, projectId)
+    return activeGate().manual!(original, projectId)
   })
 }
 
@@ -397,14 +466,24 @@ function blockText(block: unknown): string | null {
   return typeof record.text === 'string' ? record.text : null
 }
 
-export async function guardProviderBody(
-  body: BodyInit | null | undefined
+export function guardProviderBody(
+  body: BodyInit | null | undefined,
+  projectId = currentPhiProject()
 ): Promise<BodyInit | null | undefined> {
-  if (body == null) return body
+  return assertModelBoundRelease(() => guardProviderBodyImpl(body, projectId))
+}
+
+async function guardProviderBodyImpl(
+  body: BodyInit | null | undefined,
+  projectId: string
+): Promise<BodyInit | null | undefined> {
+  if (body == null) {
+    await assertModelBoundTextReleased('', projectId)
+    return body
+  }
   if (typeof body !== 'string') {
     throw new PhiGateError('PHI gate cannot scan this request body. The request was not sent.')
   }
-  const projectId = currentPhiProject()
   notePhiProject(projectId)
   let parsed: unknown
   try {
@@ -413,9 +492,11 @@ export async function guardProviderBody(
     return releaseModelText(body, projectId)
   }
   try {
+    assertScannableModelValue(parsed)
     const texts: string[] = []
     collectStrings(parsed, texts)
     assertMachineMaySend(texts)
+    if (texts.length === 0) releaseThroughInstalledGate('', projectId)
     const tokens: PhiReplacement[] = []
     const walked = walkRelease(parsed, projectId, tokens)
     const text = JSON.stringify(walked)
@@ -425,6 +506,52 @@ export async function guardProviderBody(
   } catch (error) {
     failClosed(error)
   }
+}
+
+/** Structured context/tool results are scanned including keys; the original is never returned. */
+export async function releaseModelBoundValue<T>(value: T, projectId: string): Promise<T> {
+  const serialized = JSON.stringify(value)
+  if (serialized === undefined) throw modelReleaseError()
+  const released = await guardProviderBody(serialized, projectId)
+  if (typeof released !== 'string') throw modelReleaseError()
+  return JSON.parse(released) as T
+}
+
+export async function checkConnectorQueryArgs(args: Record<string, unknown>): Promise<void> {
+  refuseConnectorQueryArgs(args)
+  // A model-release preview must never approve a masked query while the connector sends its
+  // original. Refuse changed queries rather than searching for a pseudonym or sending raw PHI.
+  for (const [key, value] of Object.entries(args)) {
+    if (CONNECTOR_QUERY_KEYS.has(key) && typeof value === 'string') {
+      const spans = patientSpans(value)
+      if (
+        isOrdinaryLabel(value) &&
+        spans.length > 0 &&
+        spans.every((span) => isWholeQueryNameGuess(value, span))
+      ) {
+        // A reviewed ordinary label is a narrower subset of main's whole-query guess.
+        // Check gate health/deadline; all other queries still take strict release.
+        await assertModelBoundTextReleased('', currentPhiProject())
+        continue
+      }
+      const released = await assertModelBoundTextReleased(value, currentPhiProject())
+      if (released !== value) {
+        const translate = blockTranslator
+        throw new PhiGateError(
+          translate(
+            'The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.'
+          )
+        )
+      }
+    }
+  }
+  await assertModelBoundTextReleased('', currentPhiProject())
+}
+
+export async function checkConnectorQueryUrl(url: string): Promise<void> {
+  refuseConnectorQueryUrl(url)
+  const args = Object.fromEntries(new URL(url).searchParams)
+  await checkConnectorQueryArgs(args)
 }
 
 export const CONNECTOR_PATIENT_QUERY_MESSAGE =
@@ -502,9 +629,46 @@ export function refuseConnectorQueryUrl(url: string): void {
   }
 }
 
+const OPAQUE_CONTENT_TYPES = new Set([
+  'image',
+  'image_url',
+  'input_image',
+  'input_file',
+  'file',
+  'document',
+  'audio',
+  'input_audio',
+  'video'
+])
+
+/** Opaque bytes, remote media and file references cannot be checked as text. */
+export function assertScannableModelValue(value: unknown): void {
+  if (typeof value === 'string' && /^data:/iu.test(value))
+    throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
+  if (Array.isArray(value)) {
+    for (const child of value) assertScannableModelValue(child)
+  } else if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    if (typeof record.type === 'string' && OPAQUE_CONTENT_TYPES.has(record.type))
+      throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
+    for (const [key, child] of Object.entries(record)) {
+      if (
+        ['image_url', 'file_data', 'file_id', 'input_audio'].includes(key) &&
+        (typeof child === 'string' ||
+          (child &&
+            typeof child === 'object' &&
+            (typeof (child as Record<string, unknown>).url === 'string' ||
+              typeof (child as Record<string, unknown>).data === 'string')))
+      )
+        throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
+      assertScannableModelValue(child)
+    }
+  }
+}
+
 function walkRelease(value: unknown, projectId: string, tokens: PhiReplacement[]): unknown {
   if (typeof value === 'string') {
-    const result = gate.release(value, projectId)
+    const result = releaseThroughInstalledGate(value, projectId)
     if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
     tokens.push(...result.replacements)
     return result.text
@@ -513,7 +677,14 @@ function walkRelease(value: unknown, projectId: string, tokens: PhiReplacement[]
   if (value && typeof value === 'object') {
     const next: Record<string, unknown> = {}
     for (const [key, child] of Object.entries(value)) {
-      next[key] = walkRelease(child, projectId, tokens)
+      const releasedKey = walkRelease(key, projectId, tokens) as string
+      if (Object.hasOwn(next, releasedKey)) throw modelReleaseError()
+      Object.defineProperty(next, releasedKey, {
+        value: walkRelease(child, projectId, tokens),
+        enumerable: true,
+        configurable: true,
+        writable: true
+      })
     }
     return next
   }

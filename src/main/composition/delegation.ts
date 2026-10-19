@@ -1,5 +1,5 @@
 import { getAccountOwner } from '../account/runtime'
-import { parseArtifactVersionLocator } from '../../shared/artifact-provenance'
+
 import { runtimeMetadata } from '../runtime-metadata'
 import { parseArtifactVersionLocator } from '../../shared/artifact-version-locator'
 import { parseUploadVersionReference } from '../../shared/uploads'

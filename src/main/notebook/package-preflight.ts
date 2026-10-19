@@ -1,5 +1,5 @@
 import type { NotebookLanguage } from '../../shared/notebook'
-import type { PackageInspectionResult } from './environment-state-tracker'
+import type { PackageInspectionResult } from '@aipoch/environment'
 
 type NotebookPackagePreflight = {
   scope: 'package-metadata'

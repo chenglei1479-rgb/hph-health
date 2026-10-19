@@ -470,8 +470,7 @@ describe('schema-only notebook', () => {
     expect(gated.stdout).toContain('mean=12.5')
     expect(gated.stdout).toContain('n=<10')
     expect(gated.stdout).toMatch(/\[患者\d+\]/)
-    expect(gated.table).toContain('男性')
-    expect(gated.table).toContain('20')
+    expect(gated.table).toBe('sex,n\n男性,20\n女性,30')
 
     installMachineApproval(null)
     const refused = await gateNotebookOutputs(

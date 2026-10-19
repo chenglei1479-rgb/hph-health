@@ -163,7 +163,11 @@
     "The agent stopped early — the answer hit the model's length limit.": "Агент остановился досрочно — ответ достиг ограничения модели по длине.",
     "Your unsaved changes will be lost.": "Несохранённые изменения будут потеряны.",
     "Connect to Baselio": "Подключиться к Baselio",
-    "Approved. Opening Baselio…": "Одобрено. Открывается Baselio…"
+    "Approved. Opening Baselio…": "Одобрено. Открывается Baselio…",
+    "The privacy check could not finish. Nothing was sent. Please try again.": "Не удалось завершить проверку конфиденциальности. Ничего не отправлено. Повторите попытку.",
+    "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "Невозможно проверить это вложение на наличие данных пациентов. Ничего не отправлено. Используйте текст, который можно проверить.",
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "Это подключение агента не позволяет проверять каждый запрос к модели на наличие данных пациентов и недоступно в бета-версии. Выберите поставщика API с проверяемым подключением.",
+    "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "Условия поиска изменились при проверке конфиденциальности. Поисковый запрос не отправлен. Удалите данные пациентов и повторите попытку."
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "В новых диалогах агент может без предварительного разрешения выполнять команды, изменять файлы, запускать код Notebook и обращаться к сети. Существующие диалоги не изменятся.",

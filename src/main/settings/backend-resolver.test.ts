@@ -1,12 +1,6 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { describe, expect, it, vi } from 'vitest'
-
-import { SideChatRuntimeOwner } from '../side-chat/runtime-owner'
-import { SideChatRelayOwner } from '../acp/side-chat-relay-owner'
-import type { ResolvedAgentBackend } from '../agent-framework'
 
 import { SETTINGS_FILE_VERSION } from '../../shared/settings'
 import type { AgentConfigFile, AgentFrameworkId } from '../agent-framework'
@@ -487,158 +481,27 @@ describe('AgentBackendResolver configured and explicit targets', () => {
   })
 
   it.each(['start', 'resume'] as const)(
-    '%s Side chat with the same Codex subscription that resolves for Main',
-    async (mode) => {
-      const root = await mkdtemp(join(tmpdir(), 'side-chat-subscription-'))
+    'blocks %s Side chat with an unchecked Codex subscription before runtime startup',
+    async () => {
       const provider: StoredProvider = {
         id: 'builtin-codex-subscription',
         type: 'codex-isolated',
-        codexAuthMode: 'isolated',
         name: 'Codex subscription',
         model: 'gpt-5.4'
       }
       const harness = makeHarness({
-        storageRoot: root,
         settings: makeSettings({
           providers: [provider],
           activeProviderId: provider.id,
-          activeModel: provider.model,
           agentFrameworkId: 'codex'
-        }),
-        targetOverride: () => ({
-          apiEndpoints: ['responses'],
-          provider: { apiEndpoints: ['responses'] }
         })
       })
-      let prepared: ResolvedAgentBackend | undefined
-      const owner = new SideChatRuntimeOwner({
-        appVersion: '0.26.0',
-        configRoot: root,
-        captureTarget: () => harness.resolver.captureExplicitTarget(),
-        resolveTarget: (target, context) => harness.resolver.resolveExplicitTarget(target, context),
-        relay: new SideChatRelayOwner({
-          targetState: () => 'idle',
-          appendRelay: async () => undefined
-        }),
-        persistence: {
-          save: async (input) => input.sideChat,
-          clear: async () => true
-        },
-        onEvent: vi.fn(),
-        createRuntime: (options) => ({
-          createSession: async () => {
-            prepared = await options.resolveBackend!({
-              forcedSkillIds: [],
-              systemPromptAppends: []
-            })
-            return { sessionId: 'side-provider-session', frameworkId: 'codex' as const }
-          },
-          sendPrompt: async (request) => {
-            options.callbacks?.onProviderPromptAccepted?.(request.sessionId)
-            return { stopReason: 'end_turn' as const }
-          },
-          cancelPrompt: async () => {
-            throw new Error('Unexpected cancellation during startup')
-          },
-          deleteSession: async () => {
-            throw new Error('Unexpected deletion during startup')
-          },
-          resumeSession: async () => {
-            prepared = await options.resolveBackend!({
-              forcedSkillIds: [],
-              systemPromptAppends: []
-            })
-            return { sessionId: 'side-provider-session', frameworkId: 'codex' as const }
-          },
-          respondToPermission: async () => {
-            throw new Error('Unexpected permission during startup')
-          },
-          applyModelChange: async () => false,
-          applyReasoningEffortChange: async () => false,
-          requestProviderReconnect: async () => {
-            prepared = await options.resolveBackend!({
-              forcedSkillIds: [],
-              systemPromptAppends: []
-            })
-          },
-          shutdownForQuit: async () => ({ reaped: true })
-        })
-      })
-      try {
-        const home = join(root, 'codex-subscription')
-        await mkdir(home, { recursive: true })
-        await writeFile(
-          join(home, 'auth.json'),
-          JSON.stringify({
-            tokens: { access_token: 'test-only-token' }
-          })
-        )
-        const target = await harness.resolver.captureExplicitTarget()
-        await expect(harness.resolver.resolveExplicitTarget(target)).resolves.toMatchObject({
-          providerId: provider.id
-        })
-        if (mode === 'start') {
-          await expect(
-            owner.start({
-              parentSessionId: 'main-session',
-              projectId: 'project',
-              text: 'Explain this separately.'
-            })
-          ).resolves.toMatchObject({ frameworkId: 'codex' })
-        } else {
-          owner.hydrate([
-            {
-              parentSessionId: 'main-session',
-              projectId: 'project',
-              sideChat: {
-                version: 1,
-                id: 'side-chat-restored',
-                lifecycle: 'open',
-                frameworkId: 'codex',
-                providerId: provider.id,
-                backendId: `codex:${provider.id}`,
-                providerSessionId: 'side-provider-session',
-                historyPreamble: 'Main conversation snapshot.',
-                entries: [],
-                createdAt: 1,
-                updatedAt: 2
-              }
-            }
-          ])
-          await expect(
-            owner.send({ sideSessionId: 'side-chat-restored', text: 'Continue.' })
-          ).resolves.toBeUndefined()
-        }
-        const sideHome = prepared!.env.CODEX_HOME!
-        expect(sideHome).not.toBe(home)
-        await expect(readFile(join(sideHome, 'auth.json'), 'utf8')).resolves.toContain(
-          'test-only-token'
-        )
-        expect(JSON.parse(prepared!.env.CODEX_CONFIG!)).toMatchObject({
-          features: {
-            shell_tool: false,
-            multi_agent: false,
-            code_mode: false,
-            apply_patch_freeform: false
-          },
-          tools: { web_search: false }
-        })
-        await writeFile(
-          join(home, 'auth.json'),
-          JSON.stringify({ tokens: { access_token: 'refreshed-test-token' } })
-        )
-        await owner.requestProviderReconnect()
-        expect(prepared!.env.CODEX_HOME).toBe(sideHome)
-        await expect(readFile(join(sideHome, 'auth.json'), 'utf8')).resolves.toContain(
-          'refreshed-test-token'
-        )
-        expect(prepared?.providerId).toBe(provider.id)
-        expect(harness.createNativeResponsesProxy).not.toHaveBeenCalled()
-        expect(harness.createResponsesBridge).not.toHaveBeenCalled()
-      } finally {
-        await owner.shutdown()
-        await rm(root, { recursive: true, force: true })
-      }
+      const target = await harness.resolver.captureExplicitTarget()
+      await expect(harness.resolver.resolveExplicitTarget(target)).rejects.toThrow(
+        /unavailable in beta/
+      )
+      expect(harness.ensureCodexSubscriptionHome).not.toHaveBeenCalled()
+      expectRuntimeNotStarted(harness.runtime)
     }
   )
 
@@ -673,59 +536,13 @@ describe('AgentBackendResolver configured and explicit targets', () => {
         },
         { forceCodexNativeResponsesCompatibility: true }
       )
-    ).rejects.toThrow('unavailable with Codex subscription authentication')
+    ).rejects.toThrow(/unavailable in beta/)
     expect(harness.createNativeResponsesProxy).not.toHaveBeenCalled()
     expectRuntimeNotStarted(harness.runtime)
   })
 
-  it('keeps projecting learned HTTPS while the Codex subscription preference remains Auto', async () => {
-    const provider: StoredProvider = {
-      id: 'builtin-codex-subscription',
-      type: 'codex-isolated',
-      codexAuthMode: 'isolated',
-      codexTransport: 'auto',
-      codexAutoUseHttps: true,
-      name: 'Codex subscription',
-      model: 'gpt-5.4'
-    }
-    const harness = makeHarness({
-      settings: makeSettings({
-        providers: [provider],
-        activeProviderId: provider.id,
-        activeModel: provider.model,
-        agentFrameworkId: 'codex'
-      }),
-      targetOverride: () => ({
-        apiEndpoints: ['responses'],
-        provider: {
-          type: 'codex-isolated',
-          codexAuthMode: 'isolated',
-          codexTransport: 'auto',
-          codexAutoUseHttps: true,
-          apiEndpoints: ['responses']
-        }
-      })
-    })
-
-    const backend = await harness.resolver.resolveExplicitTarget({
-      frameworkId: 'codex',
-      providerId: provider.id,
-      model: { kind: 'required', id: 'gpt-5.4' },
-      reasoningEffort: 'high'
-    })
-
-    expect(harness.ensureCodexSubscriptionHome).toHaveBeenCalledWith('https')
-    expect(backend.codexSubscriptionTransport).toBe('https')
-    expect(backend.sessionOptions).toMatchObject({
-      [OPEN_SCIENCE_SKILL_RUNTIME_SESSION_OPTION]: {
-        root: join('/storage', 'codex-subscription'),
-        skillsDirectory: join('/storage', 'codex-subscription', 'skills')
-      }
-    })
-  })
-
-  it.each(['https', 'websocket'] as const)(
-    'ignores automatic transport memory for the manual %s preference',
+  it.each(['auto', 'https', 'websocket'] as const)(
+    'blocks the unchecked Codex %s transport before preparing a home',
     async (codexTransport) => {
       const provider: StoredProvider = {
         id: 'builtin-codex-subscription',
@@ -740,30 +557,19 @@ describe('AgentBackendResolver configured and explicit targets', () => {
         settings: makeSettings({
           providers: [provider],
           activeProviderId: provider.id,
-          activeModel: provider.model,
           agentFrameworkId: 'codex'
-        }),
-        targetOverride: () => ({
-          apiEndpoints: ['responses'],
-          provider: {
-            type: 'codex-isolated',
-            codexAuthMode: 'isolated',
-            codexTransport,
-            codexAutoUseHttps: true,
-            apiEndpoints: ['responses']
-          }
         })
       })
-
-      const backend = await harness.resolver.resolveExplicitTarget({
-        frameworkId: 'codex',
-        providerId: provider.id,
-        model: { kind: 'required', id: 'gpt-5.4' },
-        reasoningEffort: 'high'
-      })
-
-      expect(harness.ensureCodexSubscriptionHome).toHaveBeenCalledWith(codexTransport)
-      expect(backend.codexSubscriptionTransport).toBe(codexTransport)
+      await expect(
+        harness.resolver.resolveExplicitTarget({
+          frameworkId: 'codex',
+          providerId: provider.id,
+          model: { kind: 'required', id: 'gpt-5.4' },
+          reasoningEffort: 'high'
+        })
+      ).rejects.toThrow(/unavailable in beta/)
+      expect(harness.ensureCodexSubscriptionHome).not.toHaveBeenCalled()
+      expectRuntimeNotStarted(harness.runtime)
     }
   )
 
@@ -894,19 +700,8 @@ describe('AgentBackendResolver configured and explicit targets', () => {
         settings: makeSettings({ providers: [provider], activeProviderId: provider.id })
       })
 
-      const config = await harness.resolver[method]()
-
-      expect(config.sessionOptions).toMatchObject({
-        settingSources: [],
-        strictMcpConfig: true,
-        permissionMode: 'default',
-        settings: {
-          disableBundledSkills: true,
-          permissions: { deny: ['Read(//storage/claude-private/**)'] }
-        }
-      })
-      const env = 'envOverrides' in config ? config.envOverrides : config.env
-      expect(env).toHaveProperty('CLAUDE_CONFIG_DIR', '/user/.claude')
+      await expect(harness.resolver[method]()).rejects.toThrow(/unavailable in beta/)
+      expectRuntimeNotStarted(harness.runtime)
     }
   )
 
@@ -941,6 +736,11 @@ describe('AgentBackendResolver configured and explicit targets', () => {
         })
       })
 
+      if (providerType !== 'custom') {
+        await expect(harness.resolver.resolveActiveBackend()).rejects.toThrow(/unavailable in beta/)
+        expectRuntimeNotStarted(harness.runtime)
+        return
+      }
       const backend = await harness.resolver.resolveActiveBackend()
       const projectionRoot = '/storage/runtime-support/agent-skills/claude/v1/revision-1'
 
@@ -979,9 +779,7 @@ describe('AgentBackendResolver configured and explicit targets', () => {
     expect(backend.systemPromptAppends?.join('\n')).toContain(
       join('/storage', 'skills', 'personal')
     )
-    expect(backend.systemPromptAppends?.join('\n')).not.toContain(
-      'Stable DRA app guidance.'
-    )
+    expect(backend.systemPromptAppends?.join('\n')).not.toContain('Stable DRA app guidance.')
     await backend.anthropicBridgeLease?.release()
   })
 
@@ -1045,7 +843,7 @@ describe('AgentBackendResolver configured and explicit targets', () => {
       expect(instructions).toBe(restrictedPrompt)
     }
     expect(instructions).not.toContain('<open_science_user_skill_directories>')
-    expect(instructions).not.toContain('# DRA data connector conventions')
+    expect(instructions).not.toContain('# Open-Science data connector conventions')
     expect(harness.runtime.materializeAgentSkills).not.toHaveBeenCalled()
     if (testCase.frameworkId === 'claude-code') {
       expect(harness.runtime.provisionClaudeRuntimeConfig).toHaveBeenCalledWith(
@@ -1980,7 +1778,7 @@ describe('AgentBackendResolver bridge predicates', () => {
       expect(developerInstructions).toBeDefined()
       const userSkillIndex = developerInstructions?.indexOf('<open_science_user_skill_directories>')
       const connectorIndex = developerInstructions?.indexOf(
-        '# DRA data connector conventions'
+        '# Open-Science data connector conventions'
       )
       expect(developerInstructions?.indexOf(applicationGuidance)).toBeGreaterThanOrEqual(0)
       expect(userSkillIndex).toBeGreaterThan(

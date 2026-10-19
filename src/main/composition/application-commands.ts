@@ -1,4 +1,3 @@
-import type { ApplicationModuleBuilder } from '../application-runtime'
 import { assertAccountChannelAccess } from '../account/runtime'
 import {
   createApplicationCommandComposition,

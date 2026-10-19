@@ -4,6 +4,7 @@ import {
   createOfficePreviewProcessMemoryReader
 } from './office-preview/office-preview-electron'
 import { printConversationPdf } from './session-persistence/conversation-pdf-electron'
+import { reviewPhiPreviewInElectron } from './phi/confirm-window'
 import { join } from 'node:path'
 import { installSessionPackageQuitGuard } from './session-package/quit-guard'
 import { configureDesktopUpdateStrategy } from './update/runtime-strategy'
@@ -40,6 +41,7 @@ export function installElectronInteraction(): void {
     hasFocusedWindow: () => BrowserWindow.getAllWindows().some((window) => window.isFocused()),
     hasWindow: () => BrowserWindow.getAllWindows().length > 0,
     printConversationPdf,
+    reviewPhi: (preview, labels, signal) => reviewPhiPreviewInElectron(preview, labels, { signal }),
     chooseFiles: dialog.showOpenDialog.bind(dialog),
     chooseSavePath: dialog.showSaveDialog.bind(dialog),
     chooseSavePathForCaller: async (callerId, options) => {

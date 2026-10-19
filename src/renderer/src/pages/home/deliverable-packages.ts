@@ -85,16 +85,9 @@ export const mentorPackContext = (agentContext: string | null | undefined): bool
   isMentorDiscussionPack(agentContext)
 
 /**
- * Single hook for text a deliverable package would send to a model.
- *
- * TODO(phi-gate): PR #7 (https://github.com/chenglei1479-rgb/hph-health/pull/7)
- * adds `releaseModelText` / `restoreModelText` in `src/main/phi/gate.ts`. Once
- * that PR is merged, every outbound model call that carries a deliverable
- * prompt or package contents must pass the text through `releaseModelText`
- * before it leaves the machine, and model output must be restored with
- * `restoreModelText`. Do not import `src/main/phi/` until that change lands.
- * Today this returns the draft unchanged: the composer keeps it local, and the
- * conversation send path is the call that has to use the gate with `projectId`.
+ * Builds local draft text; it does not authorize sending. Every package type goes
+ * through releasePromptContent in the main-process provider prompt executor and
+ * guardProviderBody at the final checked HTTP boundary. Keep the vault in main.
  */
 export const guardDeliverableOutboundText = (text: string, projectId?: string): string => {
   void projectId

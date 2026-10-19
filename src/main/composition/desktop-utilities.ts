@@ -63,6 +63,11 @@ export async function composeDesktopUtilities({
       cli: cliCommandOwner
     })
   )
-  return { cliCommandOwner, githubCommandOwner, logsCommandOwner, machineApprovalCommandOwner }
-  return { fileSaveCommands, cliCommandOwner, githubCommandOwner, logsCommandOwner }
+  return {
+    fileSaveCommands,
+    cliCommandOwner,
+    githubCommandOwner,
+    logsCommandOwner,
+    machineApprovalCommandOwner
+  }
 }

@@ -8,10 +8,16 @@ import type {
 import { readFile, rm } from 'node:fs/promises'
 import { ApplicationCommandError } from '../shared/application-command-contract'
 import type { dialog, shell, WebContents, BrowserWindow, Notification } from 'electron'
+import type { PhiPreview, PhiConfirmLabels, PhiConfirmDecision } from './phi/confirm'
 
 // Only user interactions requiring a local desktop are represented here. Business operations,
 // authorization, persistence and file reads stay in their existing owners.
 export type DesktopInteraction = Readonly<{
+  reviewPhi?: (
+    preview: PhiPreview,
+    labels: PhiConfirmLabels,
+    signal?: AbortSignal
+  ) => Promise<PhiConfirmDecision>
   cliLauncherEnvironment: () => import('./cli-install/launcher').CliLauncherEnv
   installPackageQuitGuard: (active: () => boolean, blocked: () => void) => () => void
   notificationCtor: typeof Notification
@@ -64,6 +70,12 @@ export const hasDesktopInteraction = (): boolean => interaction !== undefined
 // File dialogs and printing are the native operations used by runtime-owned export workflows.
 // They carry data and document identities, never Electron window objects.
 export type DesktopFileInteraction = Readonly<{
+  reviewPhi?: (
+    preview: PhiPreview,
+    labels: PhiConfirmLabels,
+    callerId?: string,
+    signal?: AbortSignal
+  ) => Promise<PhiConfirmDecision>
   chooseFiles(
     options: z.infer<typeof desktopOpenOptionsSchema>,
     callerId?: string
@@ -87,6 +99,16 @@ export function desktopFileInteraction(): DesktopFileInteraction {
   if (fileInteraction) return fileInteraction
   const host = desktopInteraction('Native file dialogs and printing')
   return {
+    ...(host.reviewPhi
+      ? {
+          reviewPhi: (
+            preview: PhiPreview,
+            labels: PhiConfirmLabels,
+            _callerId?: string,
+            signal?: AbortSignal
+          ) => host.reviewPhi!(preview, labels, signal)
+        }
+      : {}),
     chooseFiles: async (options, callerId) => {
       if (callerId === undefined) return host.chooseFiles(options)
       const sender = host.sender(Number(callerId))
@@ -101,9 +123,24 @@ export function desktopFileInteraction(): DesktopFileInteraction {
   }
 }
 export function createRemoteDesktopFileInteraction(
-  request: (operation: DesktopNativeOperation, callerId?: string) => Promise<unknown>
+  request: (
+    operation: DesktopNativeOperation,
+    callerId?: string,
+    signal?: AbortSignal
+  ) => Promise<unknown>
 ): DesktopFileInteraction {
   return {
+    reviewPhi: async (preview, labels, callerId, signal) => {
+      const value = await request({ operation: 'phi-review', preview, labels }, callerId, signal)
+      if (
+        !value ||
+        typeof value !== 'object' ||
+        typeof (value as PhiConfirmDecision).confirmed !== 'boolean'
+      ) {
+        throw new Error('Invalid privacy review response.')
+      }
+      return value as PhiConfirmDecision
+    },
     chooseFiles: async (options, callerId) =>
       (await request({ operation: 'open-dialog', options }, callerId)) as {
         canceled: boolean

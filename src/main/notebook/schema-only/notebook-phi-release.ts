@@ -1,5 +1,6 @@
 import { detectPhi, type PhiSpan } from '../../phi/detect'
-import { guardProviderBody, notePhiProject, PhiGateError } from '../../phi/gate'
+import { assertModelBoundTextReleased, PhiGateError } from '../../phi/gate'
+import { isOrdinaryLabelAggregate } from '../../phi/ordinary-label'
 
 // detectPhi treats an entire short Japanese string as a personal name. Aggregate labels such as
 // 男性 / 内科 are that shape. The connector query gate ignores only that whole-string guess;
@@ -28,14 +29,25 @@ export const releaseTextThroughPhiGate = async (
   projectId: string,
   onRefuse: string
 ): Promise<string> => {
-  if (!hasReleasablePatientPhi(text)) return text
-  notePhiProject(projectId)
   try {
-    const guarded = await guardProviderBody(text)
-    if (typeof guarded !== 'string' || guarded === text) return onRefuse
-    return guarded
+    const spans = detectPhi(text)
+    if (
+      isOrdinaryLabelAggregate(text) &&
+      spans.length > 0 &&
+      spans.every((span) => isWholeStringNameGuess(text, span))
+    ) {
+      // Preserve only the reviewed subset of main's label exception; exercise the installed
+      // scanner, approval reader and review deadline. Faults must never return the label.
+      await assertModelBoundTextReleased('', projectId)
+      return text
+    }
+    const released = await assertModelBoundTextReleased(text, projectId)
+    if (hasReleasablePatientPhi(text) && released === text) return onRefuse
+    return released
   } catch (error) {
-    if (error instanceof PhiGateError) return onRefuse
+    // A detected-patient refusal can return a fixed message. Infrastructure/review failures
+    // (including timeouts) stop the enclosing send instead of being converted into output.
+    if (error instanceof PhiGateError && error.spans.length > 0) return onRefuse
     throw error
   }
 }

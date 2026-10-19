@@ -3,6 +3,7 @@ import { PHI_OUTPUT_BLOCK_MESSAGE, releaseTextThroughPhiGate } from './notebook-
 import { notebookOutputContainsPatientRows, PATIENT_ROW_BLOCK_MESSAGE } from './patient-row-output'
 import { redactPatientPhi } from './patient-phi'
 import { suppressSmallAggregateText } from './small-cell'
+import { assertModelBoundTextReleased } from '../../phi/gate'
 
 export type NotebookModelTextReleaser = (
   text: string,
@@ -35,7 +36,9 @@ export const releaseNotebookModelText = async (
   text: string,
   projectId: string
 ): Promise<string> => {
-  if (notebookOutputContainsPatientRows(text)) return PATIENT_ROW_BLOCK_MESSAGE
+  if (notebookOutputContainsPatientRows(text)) {
+    return assertModelBoundTextReleased(PATIENT_ROW_BLOCK_MESSAGE, projectId)
+  }
   const released = await releaser(text, projectId)
   if (typeof released !== 'string') {
     throw new Error('Notebook output was not released to the model.')

@@ -5,8 +5,8 @@ import { CONNECTOR_RETRYABLE_STATUS, connectorRetryDelay } from './request-polic
 // Host-owned policy. The package stays free of application PHI, egress, and cache modules;
 // the desktop process installs those checks when it constructs the engine.
 export type ConnectorFetchPolicy = {
-  guardQueryArgs?: (args: Record<string, unknown>) => void
-  guardQueryUrl?: (url: string) => void
+  guardQueryArgs?: (args: Record<string, unknown>) => void | Promise<void>
+  guardQueryUrl?: (url: string) => void | Promise<void>
   assertOutboundHost?: (host: string) => void
   isPoliteHost?: (hostname: string) => boolean
   readPoliteCache?: (url: string) => { body: string; contentType: string } | null
@@ -125,7 +125,9 @@ export class ParserEngine {
     for (const key of descriptor.required ?? []) {
       if (args[key] == null) throw new Error(`missing required arg: ${key}`)
     }
-    this.policy.guardQueryArgs?.(args)
+    const argsCheck = this.policy.guardQueryArgs?.(args)
+    if (argsCheck) await argsCheck
+    signal?.throwIfAborted()
     const totalTimeoutMs = descriptor.totalTimeoutMs ?? this.totalTimeoutMs
     const deadline = Date.now() + totalTimeoutMs
     const controller = new AbortController()
@@ -199,7 +201,9 @@ export class ParserEngine {
         politeHostname = ''
       }
       if (politeHostname) this.policy.assertOutboundHost?.(politeHostname)
-      this.policy.guardQueryUrl?.(url)
+      const urlCheck = this.policy.guardQueryUrl?.(url)
+      if (urlCheck) await urlCheck
+      signal?.throwIfAborted()
       const polite = this.policy.isPoliteHost?.(politeHostname) ?? false
       const method = String(init?.method ?? 'GET').toUpperCase()
       // Vitest injects fetch and runs many catalogue calls back to back. Production waits and caches.
@@ -242,7 +246,9 @@ export class ParserEngine {
             ...init,
             headers: {
               accept,
-              'user-agent': polite ? (this.policy.politeUserAgent ?? this.userAgent) : this.userAgent,
+              'user-agent': polite
+                ? (this.policy.politeUserAgent ?? this.userAgent)
+                : this.userAgent,
               ...init?.headers,
               ...(polite ? { 'user-agent': this.policy.politeUserAgent ?? this.userAgent } : {})
             },

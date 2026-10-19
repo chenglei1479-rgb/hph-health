@@ -300,6 +300,59 @@ export const JAPAN_RESOURCE_ACCESS = [
 
 // Search only the explicitly supplied public registry export. No file reads, network requests,
 // synthetic clinical facts, or implicit patient-data ingestion.
+// Model results contain only reviewed, non-personal registry fields. Unknown headers are
+// excluded as well: a denylist cannot enumerate every spelling of a contact/person column.
+const MODEL_REGISTRY_COLUMNS = new Set([
+  'id',
+  'trialid',
+  'registryid',
+  'jrctid',
+  'uminid',
+  'jrct番号',
+  'umin試験id',
+  '試験id',
+  '試験番号',
+  '臨床研究実施計画番号',
+  'title',
+  'scientifictitle',
+  'publictitle',
+  '研究名称',
+  '研究の名称',
+  '試験名',
+  '試験名称',
+  'status',
+  'recruitmentstatus',
+  '募集状況',
+  '実施状況',
+  '試験進捗状況',
+  'condition',
+  'disease',
+  '対象疾患',
+  '対象疾患名',
+  'intervention',
+  '介入',
+  '介入の内容',
+  'date',
+  'registrationdate',
+  'startdate',
+  'enddate',
+  '登録日',
+  '研究開始日',
+  '研究終了日',
+  '試験開始日',
+  '試験終了日',
+  '公開日',
+  '最終更新日'
+])
+
+const isModelRegistryColumn = (header: string): boolean =>
+  MODEL_REGISTRY_COLUMNS.has(
+    header
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(/[\s_-]/gu, '')
+  )
+
 export function searchRegistryExport(a: Record<string, unknown>): {
   source: unknown
   mode: string
@@ -359,8 +412,9 @@ export function searchRegistryExport(a: Record<string, unknown>): {
   const pattern = a.source === 'jrct' ? /\bjRCT\w+\b/i : /\bUMIN\d{9}\b/i
   if (data.some((r) => !r.some((c) => pattern.test(c))))
     throw new Error('Each row must have a matching public registry id')
+  const columns = headers.flatMap((header, index) => (isModelRegistryColumn(header) ? [index] : []))
   const hits = data.filter((r) =>
-    r.some((c) => c.normalize('NFKC').toLocaleLowerCase('ja').includes(needle))
+    columns.some((index) => r[index].normalize('NFKC').toLocaleLowerCase('ja').includes(needle))
   )
   const limit = bounded(a, 'count', 20, 100)
   return {
@@ -370,7 +424,9 @@ export function searchRegistryExport(a: Record<string, unknown>): {
     total: hits.length,
     returned: Math.min(limit, hits.length),
     truncated: hits.length > limit,
-    records: hits.slice(0, limit).map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
+    records: hits
+      .slice(0, limit)
+      .map((r) => Object.fromEntries(columns.map((i) => [headers[i], r[i]]))),
     limitations:
       'Matches this supplied snapshot only; no live registry access or completeness claim. No patient-level data.'
   }
