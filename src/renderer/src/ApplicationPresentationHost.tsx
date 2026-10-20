@@ -135,14 +135,6 @@ const ApplicationPresentationContent = ({
   })
   const { sessions } = startup
   const { presentation } = events
-  console.log(
-    '[startup] view',
-    startup.settings.startupView,
-    'loaded',
-    startup.settings.isLoaded,
-    'error',
-    startup.settings.loadError
-  )
   const undoPortal = useSettingsUndoPortal(
     <PermissionUndoSnackbar allowsArchiveShortcut={events.allowsArchiveUndoShortcut} />
   )
