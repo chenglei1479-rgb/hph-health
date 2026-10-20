@@ -24,9 +24,9 @@ const PACKAGE_PREFIX = '@anthropic-ai/claude-code'
 // URL-encoded scoped name (`/` -> `%2f`) for registry metadata endpoints.
 const ENCODED_WRAPPER = '@anthropic-ai%2fclaude-code'
 
-// Official registry first, China-friendly mirror second. Tried in order; a failure at any step
-// (resolve/download/verify) falls through to the next registry.
-const DEFAULT_REGISTRIES = ['https://registry.npmjs.org', 'https://registry.npmmirror.com']
+// Official registry only. Beta builds deliberately have no public-mirror fallback: a managed runtime
+// download must come from the same allowlisted host that CI audits.
+const DEFAULT_REGISTRIES = ['https://registry.npmjs.org']
 
 // Native binary packages by `${platform}-${arch}[-musl]` key, mirroring the wrapper's own install.cjs.
 // Windows binaries carry the `.exe` extension; every other platform is a bare `claude`.

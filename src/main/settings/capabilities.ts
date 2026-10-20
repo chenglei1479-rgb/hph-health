@@ -1,4 +1,5 @@
 import type { PackageMirror } from '../../shared/mirror'
+import type { BetaTermsAcceptance } from '../../shared/beta-terms'
 import type { ReasoningEffort } from '../../shared/model-preference-contract'
 import type { NotebookLanguage } from '../../shared/notebook-language-contract'
 import type { RuntimeEnablement } from '../../shared/notebook-runtime'
@@ -14,6 +15,7 @@ import type { CloseActionPreference } from '../../shared/window-controls'
 // Settings document; callers receive scalar values whose defaults have already been resolved.
 export type SettingsPreferencesSnapshot = {
   onboardingCompletedAt?: number
+  betaTermsAcceptance?: BetaTermsAcceptance
   pathsNormalizedAt?: number
   legacyDataMovePromptDismissedAt?: number
   dataRoot?: string
@@ -37,6 +39,8 @@ export type SetDataRootOptions = Readonly<{
 export interface SettingsPreferences {
   getSnapshot(): Promise<SettingsPreferencesSnapshot>
   markOnboardingComplete(): Promise<SettingsPreferencesSnapshot>
+  acceptBetaTerms(): Promise<SettingsPreferencesSnapshot>
+  reopenOnboarding(): Promise<SettingsPreferencesSnapshot>
   markPathsNormalized(): Promise<SettingsPreferencesSnapshot>
   setDataRoot(path: string, options?: SetDataRootOptions): Promise<SettingsPreferencesSnapshot>
   dismissLegacyDataMovePrompt(): Promise<SettingsPreferencesSnapshot>

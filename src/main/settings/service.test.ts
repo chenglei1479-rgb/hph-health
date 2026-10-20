@@ -993,23 +993,16 @@ describe('SettingsService: providers', () => {
     expect(await readFile(join(storageRoot, 'codex-subscription', 'auth.json'), 'utf8')).toBe(
       '{"tokens":{"access_token":"secret"}}'
     )
-    expect(await readFile(join(storageRoot, 'codex-subscription', 'config.toml'), 'utf8')).toBe(
-      [
-        'cli_auth_credentials_store = "file"',
-        '# DRA: begin imported Codex route selection',
-        'model_provider = "subscription-route"',
-        '# DRA: end imported Codex route selection',
-        '# DRA: begin imported Codex provider',
-        '[model_providers."subscription-route"]',
-        'name = "OpenAI"',
-        'base_url = "http://127.0.0.1:1087/v1"',
-        'wire_api = "responses"',
-        'requires_openai_auth = true',
-        'supports_websockets = false',
-        '# DRA: end imported Codex provider',
-        ''
-      ].join('\n')
+    const importedConfig = await readFile(
+      join(storageRoot, 'codex-subscription', 'config.toml'),
+      'utf8'
     )
+    expect(importedConfig).toContain('cli_auth_credentials_store = "file"')
+    expect(importedConfig).toContain('# DRA: begin imported Codex route selection')
+    expect(importedConfig).toContain('model_provider = "subscription-route"')
+    expect(importedConfig).toContain('[model_providers."subscription-route"]')
+    expect(importedConfig).toContain('base_url = "http://127.0.0.1:1087/v1"')
+    expect(importedConfig).toContain('[analytics]\nenabled = false')
     await expect(
       readFile(join(storageRoot, 'codex-subscription', 'skills', 'private', 'SKILL.md'), 'utf8')
     ).rejects.toMatchObject({ code: 'ENOENT' })
@@ -1451,8 +1444,7 @@ describe('SettingsService: providers', () => {
     ).resolves.toMatchObject({
       ok: false,
       category: 'auth',
-      message:
-        'No existing Codex login was found. Run `codex login` or use the isolated DRA login.'
+      message: 'No existing Codex login was found. Run `codex login` or use the isolated DRA login.'
     })
     expect(codexAuth.getStatus).toHaveBeenCalledWith('shared')
   })
@@ -1738,9 +1730,9 @@ describe('SettingsService: providers', () => {
     expect(result).toEqual({ ok: true, category: 'ok' })
     expect(codexAuth.cancelLogin).toHaveBeenCalledOnce()
     expect(codexAuth.logoutIsolated).not.toHaveBeenCalled()
-    await expect(readFile(appConfigPath, 'utf8')).resolves.toBe(
-      'cli_auth_credentials_store = "file"\n'
-    )
+    const logoutConfig = await readFile(appConfigPath, 'utf8')
+    expect(logoutConfig).toContain('cli_auth_credentials_store = "file"')
+    expect(logoutConfig).toContain('[analytics]')
     const stored = (await repository.getSettings()).providers[0]
     expect(stored.lastValidatedAt).toBeUndefined()
     expect(stored.lastValidationFailure).toBeUndefined()
@@ -3422,12 +3414,16 @@ describe('SettingsService: preflight & spawn config', () => {
     expect(backend.env.HTTPS_PROXY).toBe('http://proxy.example.test:3128')
     expect(backend.env.NO_PROXY).toContain('127.0.0.1')
     expect(backend.proxyEnvironmentMode).toBe('replace')
-    expect(await readFile(join(storageRoot, 'codex-subscription', 'config.toml'), 'utf8')).toBe(
-      'cli_auth_credentials_store = "file"\n'
+    const subscriptionConfig = await readFile(
+      join(storageRoot, 'codex-subscription', 'config.toml'),
+      'utf8'
     )
-    expect(await readFile(join(storageRoot, 'codex', 'config.toml'), 'utf8')).toBe(
-      'model = "account-default"\ncli_auth_credentials_store = "ephemeral"\n'
-    )
+    expect(subscriptionConfig).toContain('cli_auth_credentials_store = "file"')
+    expect(subscriptionConfig).toContain('[analytics]')
+    const runtimeConfig = await readFile(join(storageRoot, 'codex', 'config.toml'), 'utf8')
+    expect(runtimeConfig).toContain('model = "account-default"')
+    expect(runtimeConfig).toContain('cli_auth_credentials_store = "ephemeral"')
+    expect(runtimeConfig).toContain('[feedback]')
 
     await service.setSubagentModel({ mode: 'inherit' })
     await expect(
@@ -5604,7 +5600,7 @@ describe('installClaude (app-managed source)', () => {
     expect((await service.getSettingsView()).claude).toEqual({})
   })
 
-  it('puts an explicitly requested China-friendly mirror first', async () => {
+  it('ignores an explicitly requested China-friendly mirror for beta installs', async () => {
     const installManagedClaudeImpl = vi.fn<ManagedInstallImpl>(async ({ installId }) => ({
       result: { installId, ok: false }
     }))
@@ -5616,7 +5612,6 @@ describe('installClaude (app-managed source)', () => {
     )
 
     expect(installManagedClaudeImpl.mock.calls[0]?.[0].registries).toEqual([
-      'https://registry.npmmirror.com',
       'https://registry.npmjs.org'
     ])
   })

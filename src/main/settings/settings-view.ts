@@ -66,6 +66,7 @@ export const buildSettingsSnapshot = (
       )
     ),
     onboardingCompletedAt: preferences.onboardingCompletedAt,
+    betaTermsAcceptance: preferences.betaTermsAcceptance,
     packageMirror: settings.packageMirror,
     networkProxy: resolveNetworkProxySettings(settings.networkProxy),
     notebookNetwork: settings.notebookNetwork

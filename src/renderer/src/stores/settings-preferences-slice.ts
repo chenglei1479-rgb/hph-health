@@ -1,3 +1,4 @@
+import type { BetaTermsAcceptance } from '../../../shared/beta-terms'
 import type { PackageMirror } from '../../../shared/mirror'
 import type { ReasoningEffort } from '../../../shared/model-preference-contract'
 import type { NetworkProxySettings } from '../../../shared/network-proxy'
@@ -23,6 +24,7 @@ import type {
 
 type SettingsPreferencesState = {
   onboardingCompletedAt?: number
+  betaTermsAcceptance?: BetaTermsAcceptance
   networkProxy?: NetworkProxySettings
   packageMirror?: PackageMirror
   notebookNetwork: NotebookNetworkSettings
@@ -70,6 +72,8 @@ export type SettingsPreferencesActions = {
   setDefaultPermissionProfile: (profile: PermissionProfileId) => Promise<void>
 
   completeOnboarding: () => Promise<void>
+  acceptBetaTerms: () => Promise<void>
+  reopenOnboarding: () => Promise<void>
   setPackageMirror: (mirror: PackageMirror) => Promise<void>
   setNetworkProxy: (settings: NetworkProxySettings) => Promise<void>
   setNotebookNetwork: (
@@ -90,6 +94,8 @@ type SettingsPreferencesCommands = Pick<
   | 'setProjectFilesFilter'
   | 'setDefaultPermissionProfile'
   | 'markOnboardingComplete'
+  | 'acceptBetaTerms'
+  | 'reopenOnboarding'
   | 'setPackageMirror'
 > &
   Partial<
@@ -374,6 +380,14 @@ export const createSettingsPreferencesSlice = ({
 
     completeOnboarding: async () => {
       reconcileSnapshot(await getCommands().markOnboardingComplete())
+    },
+
+    acceptBetaTerms: async () => {
+      reconcileSnapshot(await getCommands().acceptBetaTerms())
+    },
+
+    reopenOnboarding: async () => {
+      reconcileSnapshot(await getCommands().reopenOnboarding())
     },
 
     setPackageMirror: async (mirror) => {

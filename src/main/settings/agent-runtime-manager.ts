@@ -724,10 +724,10 @@ export class AgentRuntimeManager {
 
     return this.runExclusiveInstall(installId, async (signal, onCleanupFailure) => {
       if (request.source === 'managed') {
-        const registries =
-          request.managedRegistry === 'npmmirror'
-            ? [DEFAULT_REGISTRIES[1], DEFAULT_REGISTRIES[0]]
-            : DEFAULT_REGISTRIES
+        // The beta install path is pinned to the official registry. A mirror preference from an older
+        // environment probe is ignored rather than reintroducing a second download host.
+        void request.managedRegistry
+        const registries = DEFAULT_REGISTRIES
         const outcome = await this.installManagedClaudeImpl({
           installId,
           onEvent,

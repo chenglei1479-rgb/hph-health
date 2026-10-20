@@ -54,6 +54,11 @@ const OnboardingWizard = lazy(() =>
     default: OnboardingWizard
   }))
 )
+const BetaTermsGate = lazy(() =>
+  import('@/pages/onboarding/BetaTermsGate').then(({ BetaTermsGate }) => ({
+    default: BetaTermsGate
+  }))
+)
 const SettingsPage = lazy(() =>
   import('@/pages/settings/SettingsPage').then(({ SettingsPage }) => ({ default: SettingsPage }))
 )
@@ -192,6 +197,20 @@ const ApplicationPresentationContent = ({
           <span className="text-sm text-muted-foreground">{t('Loading settings…')}</span>
         </div>
       </main>
+    )
+  }
+
+  if (startup.settings.startupView === 'beta-terms') {
+    return (
+      <Suspense
+        fallback={
+          <main className="flex h-svh items-center justify-center bg-background text-foreground">
+            <OpenScienceLogoLoader />
+          </main>
+        }
+      >
+        <BetaTermsGate onAccepted={() => undefined} />
+      </Suspense>
     )
   }
 

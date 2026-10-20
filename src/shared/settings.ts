@@ -1,4 +1,5 @@
 import { ApplicationCommandError } from './application-command-contract'
+import type { BetaTermsAcceptance } from './beta-terms'
 import type {
   AgentHomeSkillRef,
   GitHubRepositorySearchView,
@@ -600,6 +601,8 @@ export type SettingsSnapshot = {
   codexManaged: boolean
   // Timestamp of first-run onboarding completion; undefined until it finishes at least once.
   onboardingCompletedAt?: number
+  // Local-only acknowledgement of the current beta terms. Absent or stale closes the startup gate.
+  betaTermsAcceptance?: BetaTermsAcceptance
   // Non-secret package-mirror overrides (conda/pypi/cran). Absent means public hosts.
   packageMirror?: PackageMirror
   // Application-wide proxy preference. Older documents without this field resolve to System.

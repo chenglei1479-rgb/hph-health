@@ -121,6 +121,8 @@ type CoreSettingsCommandStore = Pick<
   | 'getSkillMarketplaceBatch'
   | 'stopSkillMarketplaceBatch'
   | 'markOnboardingComplete'
+  | 'acceptBetaTerms'
+  | 'reopenOnboarding'
   | 'createWslSupportHandoff'
   | 'openWslTerminal'
   | 'previewAgentHomeSkill'
@@ -362,6 +364,16 @@ const settingsCoreApplicationCommands = Object.freeze({
     readonly [],
     StoreResult<'markOnboardingComplete'>
   >('settings:mark-onboarding-complete'),
+  acceptBetaTerms: defineApplicationCommand<
+    'settings:accept-beta-terms',
+    readonly [],
+    StoreResult<'acceptBetaTerms'>
+  >('settings:accept-beta-terms'),
+  reopenOnboarding: defineApplicationCommand<
+    'settings:reopen-onboarding',
+    readonly [],
+    StoreResult<'reopenOnboarding'>
+  >('settings:reopen-onboarding'),
   previewAgentHomeSkill: defineApplicationCommand<
     'settings:preview-agent-home-skill',
     readonly [request: PreviewAgentHomeSkillRequest],
@@ -569,6 +581,8 @@ const settingsCoreApplicationCommandGroup = defineApplicationCommandGroup('setti
   settingsCoreApplicationCommands.stopSkillMarketplaceBatch,
   settingsCoreApplicationCommands.getSkillMarketplaceDetail,
   settingsCoreApplicationCommands.markOnboardingComplete,
+  settingsCoreApplicationCommands.acceptBetaTerms,
+  settingsCoreApplicationCommands.reopenOnboarding,
   settingsCoreApplicationCommands.previewAgentHomeSkill,
   settingsCoreApplicationCommands.previewGitHubSkill,
   settingsCoreApplicationCommands.previewSkillZip,
@@ -746,6 +760,10 @@ const registerCoreSettingsApplicationCommands = (
         dependencies.snapshotCommits.currentSnapshotAfter(
           dependencies.service.markOnboardingComplete()
         ),
+      'settings:accept-beta-terms': () =>
+        dependencies.snapshotCommits.currentSnapshotAfter(dependencies.service.acceptBetaTerms()),
+      'settings:reopen-onboarding': () =>
+        dependencies.snapshotCommits.currentSnapshotAfter(dependencies.service.reopenOnboarding()),
       'settings:preview-agent-home-skill': ({ args }) =>
         dependencies.service.previewAgentHomeSkill(args[0]),
       'settings:preview-github-skill': ({ args }) =>

@@ -1,6 +1,7 @@
 import { isAbsolute } from 'node:path'
 import { classificationSettingsSchema } from './classification-config'
 
+import { normalizeBetaTermsAcceptance } from '../../shared/beta-terms'
 import type { GrantedLocalRoot } from '../../shared/local-fs'
 import { isLanguagePreference } from '../../shared/locale'
 import { normalizeNetworkProxySettings } from '../../shared/network-proxy'
@@ -290,6 +291,9 @@ const sanitizeSettings = (value: unknown): StoredSettings => {
 
   const onboardingCompletedAt = asNumber(value.onboardingCompletedAt)
   if (onboardingCompletedAt !== undefined) settings.onboardingCompletedAt = onboardingCompletedAt
+
+  const betaTermsAcceptance = normalizeBetaTermsAcceptance(value.betaTermsAcceptance)
+  if (betaTermsAcceptance) settings.betaTermsAcceptance = betaTermsAcceptance
 
   const disabledSkillIds = Array.isArray(value.disabledSkillIds)
     ? [

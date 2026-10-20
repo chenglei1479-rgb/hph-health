@@ -1529,6 +1529,19 @@ class SettingsService {
     return this.getSettingsView()
   }
 
+  // Records the local acknowledgement of the current beta terms. No network or telemetry write.
+  async acceptBetaTerms(): Promise<SettingsSnapshot> {
+    await this.preferences.acceptBetaTerms()
+    return this.getSettingsView()
+  }
+
+  // Reopens the onboarding flow from Settings. Providers and data stay untouched; only the
+  // completion marker is cleared, so quitting mid-flow resumes the wizard next launch.
+  async reopenOnboarding(): Promise<SettingsSnapshot> {
+    await this.preferences.reopenOnboarding()
+    return this.getSettingsView()
+  }
+
   // Records that the one-time legacy-absolute-path normalization pass has succeeded, so later
   // launches skip it. The caller is responsible for only invoking this after the pass actually
   // completed without throwing (see normalizeLegacyDataPaths).

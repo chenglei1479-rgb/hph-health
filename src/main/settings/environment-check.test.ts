@@ -15,9 +15,7 @@ const baseDeps = (): EnvironmentCheckDeps => ({
   verifyStorage: vi.fn().mockResolvedValue(undefined),
   resolveManagedPlatform: vi.fn().mockReturnValue({ key: 'darwin-arm64' }),
   findPython: vi.fn().mockResolvedValue({ command: 'python3', baseArgs: [] }),
-  probeRegistry: vi.fn(async (registry: 'npmjs' | 'npmmirror') =>
-    registry === 'npmmirror' ? 42 : 380
-  ),
+  probeRegistry: vi.fn(async () => 380),
   now: () => 1234
 })
 
@@ -54,14 +52,13 @@ describe('runEnvironmentCheck', () => {
       deps: { ...baseDeps(), probeRegistry }
     })
 
-    expect(probeRegistry).toHaveBeenCalledTimes(2)
+    expect(probeRegistry).toHaveBeenCalledTimes(1)
     expect(probeRegistry.mock.calls.map((call) => call[1])).toEqual([
-      '/@agentclientprotocol%2fcodex-acp/latest',
       '/@agentclientprotocol%2fcodex-acp/latest'
     ])
   })
 
-  it('selects the fastest reachable trusted registry for a missing runtime', async () => {
+  it('selects the official npm registry for a missing runtime', async () => {
     const result = await runEnvironmentCheck({
       storageRoot: '/data',
       agentFrameworkId: 'claude-code' as const,
@@ -70,21 +67,21 @@ describe('runEnvironmentCheck', () => {
       deps: baseDeps()
     })
 
-    expect(result.recommendedRegistry).toBe('npmmirror')
+    expect(result.recommendedRegistry).toBe('npmjs')
     expect(result.canAutoInstall).toBe(true)
     expect(result.ready).toBe(false)
     expect(result.checks.find((check) => check.id === 'install-network')).toMatchObject({
       status: 'passed',
-      summary: expect.stringContaining('npmmirror'),
+      summary: expect.stringContaining('official npm registry'),
       presentation: {
         kind: 'install-network-registry-available',
-        registry: 'npmmirror',
-        latencyMs: 42
+        registry: 'npmjs',
+        latencyMs: 380
       }
     })
   })
 
-  it('blocks automatic installation when both trusted registries are unreachable', async () => {
+  it('blocks automatic installation when the official registry is unreachable', async () => {
     const result = await runEnvironmentCheck({
       storageRoot: '/data',
       agentFrameworkId: 'claude-code' as const,
@@ -97,7 +94,7 @@ describe('runEnvironmentCheck', () => {
     expect(result.canAutoInstall).toBe(false)
     expect(result.checks.find((check) => check.id === 'install-network')).toMatchObject({
       status: 'failed',
-      summary: expect.stringContaining('Neither the official registry'),
+      summary: 'The official npm registry is not reachable.',
       presentation: { kind: 'install-network-unreachable' }
     })
   })

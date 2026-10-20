@@ -93,7 +93,7 @@ describe('LocationStep', () => {
   it('keeps navigation available while resolving the optional Windows default', async () => {
     await renderStep(true)
 
-    expect(findButton(/^continue$/i)?.disabled).toBe(false)
+    expect(findButton(/^continue with this location$/i)?.disabled).toBe(false)
     expect(findButton(/back/i)?.disabled).toBe(false)
     expect(findButton(/browse/i)?.disabled).toBe(false)
   })

@@ -6,6 +6,7 @@ import { vi } from 'vitest'
 
 import type { EnvironmentCheckResult } from '../../../../shared/settings'
 import type { StorageInfo } from '../../../../shared/storage'
+import { BETA_TERMS_VERSION } from '../../../../shared/beta-terms'
 import { createInitialNotebookEnvState, useNotebookEnvStore } from '@/stores/notebook-env-store'
 import { createInitialSettingsState, useSettingsStore } from '@/stores/settings-store'
 
@@ -152,6 +153,8 @@ const resetOnboardingStores = (): {
 } => {
   useSettingsStore.setState({
     ...createInitialSettingsState(),
+    // Most step suites exercise post-terms setup; the dedicated terms tests clear this record.
+    betaTermsAcceptance: { version: BETA_TERMS_VERSION, acceptedAt: 1 },
     checkEnvironment: vi.fn().mockResolvedValue(undefined),
     detectClaude: vi.fn().mockResolvedValue({ found: false }),
     detectCodeBuddy: vi.fn().mockResolvedValue(undefined),
@@ -161,6 +164,12 @@ const resetOnboardingStores = (): {
     installCodex: vi.fn().mockResolvedValue({ installId: 'i', ok: true }),
     installOpencode: vi.fn().mockResolvedValue({ installId: 'i', ok: true }),
     setAgentFramework: vi.fn().mockResolvedValue(undefined),
+    acceptBetaTerms: vi.fn(async () => {
+      useSettingsStore.setState({
+        betaTermsAcceptance: { version: BETA_TERMS_VERSION, acceptedAt: 1 }
+      })
+    }),
+    reopenOnboarding: vi.fn().mockResolvedValue(undefined),
     completeOnboarding: vi.fn().mockResolvedValue(undefined),
     cancelCodexLogin: vi.fn().mockResolvedValue(undefined),
     cancelIsolatedClaudeLogin: vi.fn().mockResolvedValue(undefined),
@@ -194,6 +203,7 @@ const stubWindowApi = (): void => {
     },
     storage: {
       getInfo: vi.fn().mockResolvedValue(storageInfo()),
+      getLocationRisk: vi.fn().mockResolvedValue({ kind: 'local' }),
       pickDirectory: vi.fn().mockResolvedValue(null),
       inspectDataRoot: vi
         .fn()
