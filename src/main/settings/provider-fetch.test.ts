@@ -17,9 +17,9 @@ afterEach(() => {
   installMachineApproval(null)
 })
 
-it.each([false, true])(
-  'preserves Request transport options with init overrides=%s',
-  async (override) => {
+it.each(['inherit', 'override', 'undefined'])(
+  'preserves Request transport options with init mode=%s',
+  async (mode) => {
     const controller = new AbortController()
     const original = new Request('https://provider.invalid/v1/messages', {
       method: 'POST',
@@ -35,18 +35,32 @@ it.each([false, true])(
       redirect: 'follow',
       signal: controller.signal
     })
-    const overrides: RequestInit = override
-      ? {
-          credentials: 'omit',
-          cache: 'reload',
-          mode: 'cors',
-          referrer: 'https://provider.invalid/override',
-          referrerPolicy: 'origin',
-          integrity: 'sha256-b3ZlcnJpZGU=',
-          keepalive: false,
-          redirect: 'error'
-        }
-      : {}
+    const overrides: RequestInit =
+      mode === 'override'
+        ? {
+            credentials: 'omit',
+            cache: 'reload',
+            mode: 'cors',
+            referrer: 'https://provider.invalid/override',
+            referrerPolicy: 'origin',
+            integrity: 'sha256-b3ZlcnJpZGU=',
+            keepalive: false,
+            redirect: 'error'
+          }
+        : mode === 'undefined'
+          ? {
+              credentials: undefined,
+              cache: undefined,
+              mode: undefined,
+              referrer: undefined,
+              referrerPolicy: undefined,
+              integrity: undefined,
+              keepalive: undefined,
+              method: undefined,
+              headers: undefined,
+              signal: undefined
+            }
+          : {}
     const confirm = vi.fn(async () => ({ confirmed: true }))
     installPhiConfirmer(confirm)
     const send = vi.fn<typeof fetch>(async () => new Response('{}'))

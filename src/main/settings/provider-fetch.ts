@@ -11,6 +11,10 @@ export const fetchProviderRequest = async (
   const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url)
   if (!isSecureProviderUrl(url)) throw new Error(PROVIDER_TRANSPORT_ERROR)
   // Provider requests carry credentials; never follow redirects to another selected or unselected URL.
+  // Fetch treats undefined dictionary members as absent, including inherited Request options.
+  const overrides = Object.fromEntries(
+    Object.entries(init ?? {}).filter(([, value]) => value !== undefined)
+  ) as RequestInit
   const guarded: RequestInit = {
     ...(input instanceof Request
       ? {
@@ -26,7 +30,7 @@ export const fetchProviderRequest = async (
           keepalive: input.keepalive
         }
       : {}),
-    ...init,
+    ...overrides,
     redirect: 'manual'
   }
   if (guarded.headers instanceof Headers) guarded.headers = new Headers(guarded.headers)
