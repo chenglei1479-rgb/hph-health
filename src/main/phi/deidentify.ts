@@ -1,7 +1,7 @@
 import type { PhiCategory, PhiSpan } from './detect'
 import { detectPhi } from './detect'
 import { formatShiftedDate } from './dates'
-import type { PhiStore } from './store'
+import { isPhiPlaceholder, PHI_PLACEHOLDER_LABELS as LABELS, type PhiStore } from './store'
 
 export interface PhiReplacement {
   start: number
@@ -23,20 +23,6 @@ export interface DeidentifyOptions {
 }
 
 const HIGH_RISK = new Set<PhiCategory>(['MY_NUMBER', 'INSURER_NO', 'INSURED_ID', 'KARTE_NO'])
-
-const LABELS: Record<PhiCategory, string> = {
-  PERSON_NAME: '患者',
-  PHYSICIAN_NAME: '職員',
-  DATE: '日付',
-  ADDRESS: '住所',
-  PHONE: '電話',
-  EMAIL: 'メール',
-  FACILITY: '施設',
-  KARTE_NO: '番号',
-  INSURER_NO: '番号',
-  INSURED_ID: '番号',
-  MY_NUMBER: '番号'
-}
 
 export const MY_NUMBER_WARNING = '研究データから削除してください'
 
@@ -63,7 +49,15 @@ export function deidentify(
   store: PhiStore,
   options: DeidentifyOptions = {}
 ): PhiResult {
-  const detected = detectPhi(text)
+  // Scan the whole string on every request. Known vault substitutions are already masked;
+  // do not turn e.g. 患者：[患者1] into a fresh placeholder on every tool hop.
+  // A detection extending beyond a substitution still requires a new replacement.
+  const protectedSpans = store
+    .highlights(text)
+    .filter((mark) => isPhiPlaceholder(text.slice(mark.start, mark.end)))
+  const detected = detectPhi(text).filter(
+    (span) => !protectedSpans.some((mark) => span.start >= mark.start && span.end <= mark.end)
+  )
   const spans = detected.filter((span) => !detected.some((other) => contained(span, other)))
   const allow = new Set(options.allowOriginal ?? [])
   const replacements: PhiReplacement[] = []
@@ -86,8 +80,8 @@ export function deidentify(
     }
     if (span.category === 'DATE' && span.kind === 'document') continue
     if (span.category === 'DATE' && (span.ageGe90 || span.kind === 'age')) {
-      const value = span.ageGe90 ? '90歳以上' : store.placeholder('DATE', span.text, '年齢')
-      if (span.ageGe90) store.placeholder('DATE', span.text, '年齢')
+      const value = span.ageGe90 ? '90歳以上' : store.placeholder('DATE', span.text, LABELS.AGE)
+      if (span.ageGe90) store.placeholder('DATE', span.text, LABELS.AGE)
       replacements.push({
         start: span.start,
         end: span.end,

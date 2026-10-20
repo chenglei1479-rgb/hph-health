@@ -6,7 +6,13 @@ import { describe, expect, it } from 'vitest'
 
 import { deidentify, MY_NUMBER_WARNING } from './deidentify'
 import { detectPhi } from './detect'
-import { createEncryptedPhiVault, createMemoryPhiVault, createTestPhiCipher } from './store'
+import {
+  PHI_PLACEHOLDER_LABELS,
+  isPhiPlaceholder,
+  createEncryptedPhiVault,
+  createMemoryPhiVault,
+  createTestPhiCipher
+} from './store'
 
 describe('Japanese PHI de-identification', () => {
   it('keeps field labels and replaces only the value', () => {
@@ -113,4 +119,39 @@ describe('Japanese PHI de-identification', () => {
     expect(JSON.stringify(log)).not.toContain('山田 太郎')
     expect(cipher.decryptString(bytes)).toContain('山田 太郎')
   })
+})
+
+it('keeps known vault replacements stable while scanning adjacent new PHI', () => {
+  const store = createMemoryPhiVault().store('fiction')
+  const first = deidentify('患者：架空 太郎', store)
+  expect(deidentify(first.text, store).text).toBe(first.text)
+  const manual = store.manual('Fictional identifier')
+  expect(deidentify(manual, store).text).toBe(manual)
+  const combined = deidentify(first.text + '\nカルテ番号：0098765', store)
+  expect(combined.text).not.toContain('0098765')
+  expect(combined.text).not.toBe(first.text + '\nカルテ番号：0098765')
+  expect(store.restore(combined.text)).toContain('架空 太郎')
+})
+
+it.each(Object.entries(PHI_PLACEHOLDER_LABELS))(
+  'preserves the vault placeholder vocabulary for %s',
+  (category, label) => {
+    const store = createMemoryPhiVault().store('fiction')
+    const token =
+      category === 'MANUAL'
+        ? store.manual('Fictional manual identifier')
+        : store.placeholder(
+            category === 'AGE' ? 'DATE' : (category as import('./detect').PhiCategory),
+            'Fictional identifier',
+            label
+          )
+    expect(isPhiPlaceholder(token)).toBe(true)
+    expect(deidentify(token, store).text).toBe(token)
+  }
+)
+
+it('does not classify shifted dates or unassigned strings as opaque vault placeholders', () => {
+  expect(isPhiPlaceholder('2001年2月3日')).toBe(false)
+  const store = createMemoryPhiVault().store('fiction')
+  expect(deidentify('患者：[患者1]', store).replacements).not.toHaveLength(0)
 })

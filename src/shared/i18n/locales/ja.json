@@ -52,6 +52,7 @@
     "Approval needed": "承認が必要です"
   },
   "native": {
+    "Sending cancelled. Nothing was sent.": "送信をキャンセルしました。何も送信していません。",
     "The agent finished without a clean completion status.": "エージェントは正常な完了ステータスなしで終了しました。",
     "Unknown error.": "不明なエラーです。",
     "Quit anyway": "それでも終了する",

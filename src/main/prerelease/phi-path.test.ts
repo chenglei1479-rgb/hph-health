@@ -8,9 +8,11 @@ it('keeps provider requests on the PHI gate when that gate is present', () => {
   const source = readFileSync('src/main/settings/provider-fetch.ts', 'utf8')
   expect(source).toContain('export const fetchProviderRequest')
   expect(source).toContain('return fetchImpl')
-  const gatePresent = existsSync('src/main/phi/gate.ts') || source.includes('guardProviderBody')
+  const gatePresent = existsSync('src/main/phi/gate.ts') || source.includes('sendPhiChecked')
   if (gatePresent) {
-    expect(source).toContain('guardProviderBody')
-    expect(source.indexOf('guardProviderBody')).toBeLessThan(source.lastIndexOf('return fetchImpl'))
+    expect(source).toContain('sendPhiChecked')
+    expect(source.indexOf('sendPhiChecked')).toBeLessThan(source.lastIndexOf('return fetchImpl'))
+    const gate = readFileSync('src/main/phi/gate.ts', 'utf8')
+    expect(gate).toContain('await guardProviderBodyImpl(body, projectId, tokens)')
   }
 })
