@@ -30,8 +30,19 @@ export const WINDOWS_SMOKE_USER_DATA = 'D:\\DRA Test\\user data'
 export const WINDOWS_SMOKE_LOG_FILE = 'D:\\DRA Test\\startup.log'
 export const WINDOWS_SMOKE_DATA_ROOT = 'D:\\DRA Test\\MedResearchAgent'
 
+// Keep in sync with BETA_TERMS_VERSION; the test suite asserts the two values match. The seeded
+// settings represent a completed user who has already accepted the current beta terms, so the smoke
+// reaches Home instead of the standalone consent gate.
+export const SMOKE_BETA_TERMS_VERSION = '2026-10-β1'
+
 export const smokeSettingsJson = (dataRoot) =>
-  `${JSON.stringify({ version: 2, providers: [], onboardingCompletedAt: 1, dataRoot })}\n`
+  `${JSON.stringify({
+    version: 2,
+    providers: [],
+    onboardingCompletedAt: 1,
+    betaTermsAcceptance: { version: SMOKE_BETA_TERMS_VERSION, acceptedAt: 1 },
+    dataRoot
+  })}\n`
 
 // The first launch asks for a hospital approval number and waits until that window closes.
 // A decline is the same record the app writes when the window is dismissed, and it leaves the

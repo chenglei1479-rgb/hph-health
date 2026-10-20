@@ -9,6 +9,7 @@ import {
   MAC_DMG_ATTACH_TIMEOUT_MS,
   MAC_DMG_DETACH_TIMEOUT_MS,
   SIGNED_OUT_READY_LINES,
+  SMOKE_BETA_TERMS_VERSION,
   WINDOWS_SMOKE_INSTALL_DIR,
   beta10ResearchHistoryJson,
   declinedMachineApprovalLine,
@@ -23,6 +24,11 @@ import {
   windowsSilentInstallCommand
 } from './packaged-startup-smoke.mjs'
 import { DRA_HOME_READY_LINE, DRA_LOGIN_READY_LINE } from './wait-for-packaged-startup.mjs'
+import { BETA_TERMS_VERSION } from '../../src/shared/beta-terms'
+
+it('keeps the smoke-seeded beta terms version aligned with the app', () => {
+  expect(SMOKE_BETA_TERMS_VERSION).toBe(BETA_TERMS_VERSION)
+})
 
 it('installs the Windows beta on a non-C: path that contains a space', () => {
   const setup = 'C:\\runner\\work\\DRA setup.exe'
@@ -67,6 +73,7 @@ it('seeds completed onboarding and launches the packaged app in prerelease mode'
     version: 2,
     providers: [],
     onboardingCompletedAt: 1,
+    betaTermsAcceptance: { version: BETA_TERMS_VERSION, acceptedAt: 1 },
     dataRoot: '/Users/doctor/DRA Test/MedResearchAgent'
   })
   const env = packagedSmokeEnv(
