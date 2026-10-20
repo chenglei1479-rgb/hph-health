@@ -104,6 +104,7 @@ export const packagedSmokeEnv = (base, paths) => {
     if (value !== undefined && key !== 'ELECTRON_RUN_AS_NODE') env[key] = value
   }
   env.DRA_PRERELEASE = '1'
+  env.ELECTRON_ENABLE_LOGGING = '1'
   env.OPEN_SCIENCE_CONFIG_ROOT = paths.configRoot
   env.OPEN_SCIENCE_USER_DATA = paths.userData
   env.DRA_STARTUP_LOG_FILE = paths.logFile

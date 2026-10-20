@@ -22,6 +22,7 @@ import { WindowsTitleBar } from '@/components/WindowsTitleBar'
 import { APP } from '../../shared/app-config'
 
 document.title = APP.name
+console.log('[startup] renderer booted')
 
 const rendererBootMark = 'open-science:renderer-boot-start'
 performance.mark(rendererBootMark)
