@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 export const DRA_HOME_READY_LINE = 'DRA home window ready'
 export const DRA_LOGIN_READY_LINE = 'DRA login window ready'
+export const DRA_TERMS_READY_LINE = 'DRA beta terms window ready'
 export const DRA_STARTUP_FAILURE_PREFIX = 'DRA could not finish starting.'
 
 const readText = (file) => {

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AppBrand } from '@/components/AppBrand'
@@ -16,6 +17,15 @@ type BetaTermsGateProps = {
 // users or a version bump). It intentionally does not mount the onboarding wizard or its checks.
 const BetaTermsGate = ({ onAccepted }: BetaTermsGateProps): React.JSX.Element => {
   const { t } = useTranslation()
+
+  // The packaged launch smoke accepts this mandatory first-run surface as "started". It is not a
+  // bypass: the gate clears only after the consent action writes the local acceptance record.
+  useEffect(() => {
+    document.documentElement.dataset.draTermsReady = '1'
+    return () => {
+      delete document.documentElement.dataset.draTermsReady
+    }
+  }, [])
 
   return (
     <main className="h-svh overflow-y-auto bg-bg-10 text-text-000">

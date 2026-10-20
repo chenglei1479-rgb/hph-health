@@ -23,7 +23,11 @@ import {
   windowsSilentInstallArgs,
   windowsSilentInstallCommand
 } from './packaged-startup-smoke.mjs'
-import { DRA_HOME_READY_LINE, DRA_LOGIN_READY_LINE } from './wait-for-packaged-startup.mjs'
+import {
+  DRA_HOME_READY_LINE,
+  DRA_LOGIN_READY_LINE,
+  DRA_TERMS_READY_LINE
+} from './wait-for-packaged-startup.mjs'
 import { BETA_TERMS_VERSION } from '../../src/shared/beta-terms'
 
 it('keeps the smoke-seeded beta terms version aligned with the app', () => {
@@ -115,7 +119,11 @@ it('launches signed-out over beta.10 user data without the prerelease bypass', (
   expect(env.OPEN_SCIENCE_CONFIG_ROOT).toBe(paths.configRoot)
   expect(env.OPEN_SCIENCE_USER_DATA).toBe(paths.userData)
   expect(JSON.parse(beta10ResearchHistoryJson())).toEqual({ session: 'retained' })
-  expect(SIGNED_OUT_READY_LINES).toEqual([DRA_HOME_READY_LINE, DRA_LOGIN_READY_LINE])
+  expect(SIGNED_OUT_READY_LINES).toEqual([
+    DRA_HOME_READY_LINE,
+    DRA_LOGIN_READY_LINE,
+    DRA_TERMS_READY_LINE
+  ])
   const source = readFileSync(new URL('./packaged-startup-smoke.mjs', import.meta.url), 'utf8')
   expect(source).toContain('signedOutSmokeEnv(')
   expect(source).toContain('seedBeta10UserData(')

@@ -3,6 +3,7 @@ import { dirname, isAbsolute } from 'node:path'
 
 export const DRA_HOME_READY_LINE = 'DRA home window ready'
 export const DRA_LOGIN_READY_LINE = 'DRA login window ready'
+export const DRA_TERMS_READY_LINE = 'DRA beta terms window ready'
 export const DRA_STARTUP_FAILURE_PREFIX = 'DRA could not finish starting.'
 
 const LOG_ENV = 'DRA_STARTUP_LOG_FILE'
@@ -32,7 +33,8 @@ export const recordPackagedStartupLine = (line: string, env: StartupEnv = proces
   if (!file) return
   if (
     (line === DRA_HOME_READY_LINE && alreadyContains(file, DRA_HOME_READY_LINE)) ||
-    (line === DRA_LOGIN_READY_LINE && alreadyContains(file, DRA_LOGIN_READY_LINE))
+    (line === DRA_LOGIN_READY_LINE && alreadyContains(file, DRA_LOGIN_READY_LINE)) ||
+    (line === DRA_TERMS_READY_LINE && alreadyContains(file, DRA_TERMS_READY_LINE))
   )
     return
   mkdirSync(dirname(file), { recursive: true })
@@ -101,14 +103,18 @@ export const watchPackagedHomeReady = (
     void Promise.resolve()
       .then(() =>
         contents.executeJavaScript?.(
-          "document.documentElement?.dataset?.draHomeReady === '1' ? 'home' : document.documentElement?.dataset?.draLoginReady === '1' ? 'login' : ''"
+          "document.documentElement?.dataset?.draHomeReady === '1' ? 'home' : document.documentElement?.dataset?.draLoginReady === '1' ? 'login' : document.documentElement?.dataset?.draTermsReady === '1' ? 'terms' : ''"
         )
       )
       .then((ready) => {
-        if (ready !== true && ready !== 'home' && ready !== 'login') return
+        if (ready !== true && ready !== 'home' && ready !== 'login' && ready !== 'terms') return
         clearInterval(timer)
         recordPackagedStartupLine(
-          ready === 'login' ? DRA_LOGIN_READY_LINE : DRA_HOME_READY_LINE,
+          ready === 'login'
+            ? DRA_LOGIN_READY_LINE
+            : ready === 'terms'
+              ? DRA_TERMS_READY_LINE
+              : DRA_HOME_READY_LINE,
           env
         )
       })

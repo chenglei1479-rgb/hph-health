@@ -1,0 +1,6 @@
+launch-failed
+Error: cmd.exe /d /s /c ""C:\Users\cheng\Documents\deepseek-harness\default-workspace\packaged-win\out\Baselio-0.1.33-unified.1-win-x64-setup.exe" /S /D=D:\DRA Test\medresearch-agent" exited 2.
+    at run (file:///C:/Users/cheng/Documents/deepseek-harness/default-workspace/repo/scripts/ci/packaged-startup-smoke.mjs:177:11)
+    at runWindows (file:///C:/Users/cheng/Documents/deepseek-harness/default-workspace/repo/scripts/ci/packaged-startup-smoke.mjs:545:3)
+    at runPackagedStartupSmoke (file:///C:/Users/cheng/Documents/deepseek-harness/default-workspace/repo/scripts/ci/packaged-startup-smoke.mjs:563:44)
+    at file:///C:/Users/cheng/Documents/deepseek-harness/default-workspace/repo/scripts/ci/packaged-startup-smoke.mjs:574:24
