@@ -18,11 +18,13 @@ import {
   MODEL_RELEASE_TIMEOUT_MS,
   PHI_CONSENT_EXPIRY_MS,
   releaseModelText,
+  releasePromptContent,
   withPhiTurn
 } from './gate'
 import { createMemoryPhiVault } from './store'
 import { englishNativeTranslator, translateNativeMessage } from '../locale/main-process-messages'
 import type { PhiPreview } from './confirm'
+import type { PhiReplacement, PhiResult } from './deidentify'
 
 beforeEach(() => {
   installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
@@ -583,3 +585,90 @@ it('matches previously prepared vault placeholders to later raw occurrences of t
     }
   )
 })
+
+it('reviews again after an asynchronous send rejects in the same turn', async () => {
+  const confirm = vi.fn(async () => ({ confirmed: true }))
+  installPhiConfirmer(confirm)
+  const send = vi
+    .fn<typeof fetch>()
+    .mockRejectedValueOnce(new Error('Fictional transport failure'))
+    .mockResolvedValue(new Response('{}'))
+  await withPhiTurn(
+    'fiction',
+    () => true,
+    async () => {
+      await expect(request(send)).rejects.toThrow('Fictional transport failure')
+      expect(confirm).toHaveBeenCalledOnce()
+      await request(send)
+      expect(confirm).toHaveBeenCalledTimes(2)
+      await request(send)
+      expect(confirm).toHaveBeenCalledTimes(2)
+    }
+  )
+  expect(send).toHaveBeenCalledTimes(3)
+})
+
+it.each(['prompt', 'provider'])(
+  'preserves synchronous numbering and token order for delayed %s scanning',
+  async (path) => {
+    vi.useFakeTimers()
+    const snapshots: Array<{ output: unknown; events: string[] }> = []
+    const names = ['fiction_first', 'fiction_second', 'fiction_third']
+    const delays = [40, 1, 10]
+    for (const delayed of [false, true]) {
+      const store = createMemoryPhiVault().store('fiction')
+      const events: string[] = []
+      const allocate = (text: string): PhiResult => {
+        if (!names.includes(text)) return { text, replacements: [], warnings: [] }
+        const replacement = store.placeholder('PERSON_NAME', text, '患者')
+        events.push(`release:${text}`)
+        const token: PhiReplacement = {
+          start: 0,
+          end: text.length,
+          category: 'PERSON_NAME',
+          original: text,
+          replacement,
+          shifted: false
+        }
+        const replacements = [token]
+        // Observe the order in which walkRelease appends each scanner's replacements.
+        replacements[Symbol.iterator] = function* (): Generator<PhiReplacement> {
+          events.push(`tokens:${text}`)
+          yield token
+        }
+        return { text: replacement, replacements, warnings: [] }
+      }
+      installPhiGate({
+        release: (text) =>
+          delayed && names.includes(text)
+            ? new Promise<PhiResult>((resolve) =>
+                setTimeout(() => resolve(allocate(text)), delays[names.indexOf(text)])
+              )
+            : allocate(text),
+        restore: (text) => store.restore(text)
+      })
+      installPhiConfirmer(async () => ({ confirmed: true }))
+      const send = vi.fn<typeof fetch>(async () => new Response('{}'))
+      const pending =
+        path === 'prompt'
+          ? releasePromptContent(
+              names.map((text) => ({ type: 'text', text })),
+              'fiction'
+            )
+          : request(send, JSON.stringify({ messages: names.map((content) => ({ content })) }))
+      await vi.advanceTimersByTimeAsync(100)
+      const result = await pending
+      const output = path === 'prompt' ? result : JSON.parse(String(send.mock.calls[0][1]?.body))
+      snapshots.push({ output, events })
+      expect(events).toEqual(
+        names.flatMap((name) =>
+          path === 'prompt' ? [`release:${name}`] : [`release:${name}`, `tokens:${name}`]
+        )
+      )
+      expect(JSON.stringify(output)).toContain('[患者1]')
+      expect(JSON.stringify(output)).toContain('[患者2]')
+      expect(JSON.stringify(output)).toContain('[患者3]')
+    }
+    expect(snapshots[1]).toEqual(snapshots[0])
+  }
+)

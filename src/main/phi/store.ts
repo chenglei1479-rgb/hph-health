@@ -6,6 +6,32 @@ import { join } from 'node:path'
 import type { PhiCategory } from './detect'
 import { patientDateOffset } from './dates'
 
+// One vocabulary for vault assignment and recognition of opaque substitutions.
+export const PHI_PLACEHOLDER_LABELS = {
+  PERSON_NAME: '患者',
+  PHYSICIAN_NAME: '職員',
+  DATE: '日付',
+  ADDRESS: '住所',
+  PHONE: '電話',
+  EMAIL: 'メール',
+  FACILITY: '施設',
+  KARTE_NO: '番号',
+  INSURER_NO: '番号',
+  INSURED_ID: '番号',
+  MY_NUMBER: '番号',
+  AGE: '年齢',
+  MANUAL: '追記'
+} as const satisfies Record<PhiCategory | 'AGE' | 'MANUAL', string>
+
+const OPAQUE_PLACEHOLDER = new RegExp(
+  `^\\[(?:${[...new Set(Object.values(PHI_PLACEHOLDER_LABELS))]
+    .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|')})\\d+\\]$`,
+  'u'
+)
+
+export const isPhiPlaceholder = (text: string): boolean => OPAQUE_PLACEHOLDER.test(text)
+
 export interface PhiCipher {
   encryptString(value: string): Buffer
   decryptString(value: Buffer): string
@@ -89,10 +115,11 @@ class ProjectStore implements PhiStore {
       .digest('hex')
     const existing = this.record.entries.find((entry) => entry.hmac === hmac)
     if (existing) return existing.placeholder
-    const next = (this.record.counters['追記'] ?? 0) + 1
-    this.record.counters['追記'] = next
-    const placeholder = placeholderFor('追記', next)
-    this.record.entries.push({ hmac, category: 'MANUAL', label: '追記', placeholder, original })
+    const label = PHI_PLACEHOLDER_LABELS.MANUAL
+    const next = (this.record.counters[label] ?? 0) + 1
+    this.record.counters[label] = next
+    const placeholder = placeholderFor(label, next)
+    this.record.entries.push({ hmac, category: 'MANUAL', label, placeholder, original })
     this.persist('manual', { MANUAL: 1 })
     return placeholder
   }

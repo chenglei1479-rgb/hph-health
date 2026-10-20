@@ -361,16 +361,16 @@ export function releasePromptContent<T>(content: T, projectId: string): Promise<
       content.map((block) => blockText(block)).filter((text): text is string => text != null)
     )
     if (content.length === 0) await releaseThroughInstalledGate('', projectId)
-    return (await Promise.all(
-      content.map(async (block) => {
-        const text = blockText(block)
-        if (text == null || (block as PromptBlock).type !== 'text')
-          throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
-        const result = await releaseThroughInstalledGate(text, projectId)
-        if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
-        return result.text === text ? block : { ...block, text: result.text }
-      })
-    )) as T
+    const released: unknown[] = []
+    for (const block of content) {
+      const text = blockText(block)
+      if (text == null || (block as PromptBlock).type !== 'text')
+        throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
+      const result = await releaseThroughInstalledGate(text, projectId)
+      if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
+      released.push(result.text === text ? block : { ...block, text: result.text })
+    }
+    return released as T
   })
 }
 
@@ -540,7 +540,7 @@ export function sendPhiChecked<T>(
         ]
       })
     ]
-    return () => {
+    return async () => {
       assertCurrentTurn()
       let stillApproved: boolean
       try {
@@ -557,9 +557,9 @@ export function sendPhiChecked<T>(
         stillApproved !== approved
       )
         throw modelReleaseError()
-      const result = send(typeof released === 'string' ? reviewed : released)
+      const result = await send(typeof released === 'string' ? reviewed : released)
       if (turn && reviewer) {
-        // Commit only after the dispatch callback accepts (including its abort check).
+        // Rejected sends must not grant consent to a later retry in this turn.
         for (const key of reviewedIdentities) confirmed.add(key)
         turn.reviews.set(destination, { revision, approved, tokens: confirmed })
       }
@@ -735,8 +735,11 @@ async function walkRelease(
     tokens.push(...result.replacements)
     return result.text
   }
-  if (Array.isArray(value))
-    return Promise.all(value.map((item) => walkRelease(item, projectId, tokens)))
+  if (Array.isArray(value)) {
+    const released: unknown[] = []
+    for (const item of value) released.push(await walkRelease(item, projectId, tokens))
+    return released
+  }
   if (value && typeof value === 'object') {
     const next: Record<string, unknown> = {}
     for (const [key, child] of Object.entries(value)) {
