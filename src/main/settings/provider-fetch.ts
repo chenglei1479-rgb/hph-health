@@ -13,7 +13,18 @@ export const fetchProviderRequest = async (
   // Provider requests carry credentials; never follow redirects to another selected or unselected URL.
   const guarded: RequestInit = {
     ...(input instanceof Request
-      ? { method: input.method, headers: input.headers, signal: input.signal }
+      ? {
+          method: input.method,
+          headers: input.headers,
+          signal: input.signal,
+          credentials: input.credentials,
+          cache: input.cache,
+          mode: input.mode,
+          referrer: input.referrer,
+          referrerPolicy: input.referrerPolicy,
+          integrity: input.integrity,
+          keepalive: input.keepalive
+        }
       : {}),
     ...init,
     redirect: 'manual'

@@ -463,6 +463,11 @@ export function sendPhiChecked<T>(
   return assertModelBoundRelease(async () => {
     if (!destination) throw modelReleaseError()
     const turn = turns.getStore()
+    const assertCurrentTurn = (): void => {
+      if (turn && (!turn.active || !turn.isCurrent() || turns.getStore() !== turn))
+        throw modelReleaseError()
+    }
+    assertCurrentTurn()
     const installed = activeGate()
     const reviewer = confirmer
     const approvalReader = machineApproved
@@ -478,12 +483,14 @@ export function sendPhiChecked<T>(
     const highlights = installed.highlights?.(text, projectId) ?? []
     // Custom scanners also contribute their replacements without needing a vault.
     const preview = { text, highlights: [...highlights, ...highlightTokens(text, tokens)] }
+    assertCurrentTurn()
     const started = Date.now()
     const decision = await decisionFor(preview)
     if (!decision.confirmed) throw modelReleaseError()
     const reviewed = redact(text, decision.extraSpans ?? [], projectId)
     if (typeof released === 'string') JSON.parse(reviewed)
     return () => {
+      assertCurrentTurn()
       let stillApproved: boolean
       try {
         stillApproved = approvalReader()
@@ -495,8 +502,7 @@ export function sendPhiChecked<T>(
         gate !== installed ||
         confirmer !== reviewer ||
         machineApproved !== approvalReader ||
-        stillApproved !== approved ||
-        (turn && (!turn.active || !turn.isCurrent() || turns.getStore() !== turn))
+        stillApproved !== approved
       )
         throw modelReleaseError()
       return send(typeof released === 'string' ? reviewed : released)
