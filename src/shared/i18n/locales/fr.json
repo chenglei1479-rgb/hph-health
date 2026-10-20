@@ -52,6 +52,7 @@
     "Approval needed": "Approbation nécessaire"
   },
   "native": {
+    "Sending cancelled. Nothing was sent.": "Envoi annulé. Aucune donnée n’a été envoyée.",
     "The agent finished without a clean completion status.": "L’agent a terminé sans état de fin valide.",
     "Unknown error.": "Erreur inconnue.",
     "Quit anyway": "Quitter quand même",

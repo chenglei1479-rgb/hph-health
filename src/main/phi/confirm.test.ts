@@ -110,14 +110,14 @@ describe('PHI pre-send confirmation', () => {
       routeNotification: () => undefined
     } as unknown as ProviderPromptExecutionInput
     try {
-      await expect(executor.execute(input)).rejects.toThrow(/privacy check/)
+      await expect(executor.execute(input)).rejects.toThrow(/Sending cancelled/)
       expect(fetchImpl).not.toHaveBeenCalled()
       await expect(
         fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/messages', {
           method: 'POST',
           body: JSON.stringify({ messages: [{ content: '患者：山田 太郎' }] })
         })
-      ).rejects.toThrow(/privacy check/)
+      ).rejects.toThrow(/Sending cancelled/)
       expect(fetchImpl).not.toHaveBeenCalled()
     } finally {
       installPhiConfirmer(null)

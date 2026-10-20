@@ -31,7 +31,7 @@ export const releaseTextThroughPhiGate = async (
 ): Promise<string> => {
   try {
     const spans = detectPhi(text)
-    if (hasOnlyOrdinaryLabelPhi(text, spans)) {
+    if (spans.length > 0 && hasOnlyOrdinaryLabelPhi(text, spans)) {
       // Preserve only the reviewed subset of main's label exception; exercise the installed
       // scanner, approval reader and review deadline. Faults must never return the label.
       await assertModelBoundTextReleased('', projectId)

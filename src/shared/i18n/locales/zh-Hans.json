@@ -52,6 +52,7 @@
     "Approval needed": "需要批准"
   },
   "native": {
+    "Sending cancelled. Nothing was sent.": "已取消发送，未发送任何内容。",
     "The agent finished without a clean completion status.": "智能体在没有正常完成状态的情况下结束。",
     "Unknown error.": "未知错误。",
     "Quit anyway": "仍然退出",

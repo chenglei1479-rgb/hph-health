@@ -114,3 +114,15 @@ describe('Japanese PHI de-identification', () => {
     expect(cipher.decryptString(bytes)).toContain('山田 太郎')
   })
 })
+
+it('keeps known vault replacements stable while scanning adjacent new PHI', () => {
+  const store = createMemoryPhiVault().store('fiction')
+  const first = deidentify('患者：架空 太郎', store)
+  expect(deidentify(first.text, store).text).toBe(first.text)
+  const manual = store.manual('Fictional identifier')
+  expect(deidentify(manual, store).text).toBe(manual)
+  const combined = deidentify(first.text + '\nカルテ番号：0098765', store)
+  expect(combined.text).not.toContain('0098765')
+  expect(combined.text).not.toBe(first.text + '\nカルテ番号：0098765')
+  expect(store.restore(combined.text)).toContain('架空 太郎')
+})

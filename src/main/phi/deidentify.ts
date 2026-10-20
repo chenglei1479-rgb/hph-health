@@ -63,7 +63,19 @@ export function deidentify(
   store: PhiStore,
   options: DeidentifyOptions = {}
 ): PhiResult {
-  const detected = detectPhi(text)
+  // Scan the whole string on every request. Known vault substitutions are already masked;
+  // do not turn e.g. 患者：[患者1] into a fresh placeholder on every tool hop.
+  // A detection extending beyond a substitution still requires a new replacement.
+  const protectedSpans = store
+    .highlights(text)
+    .filter((mark) =>
+      /^\[(?:患者|職員|日付|住所|電話|メール|施設|番号|年齢|追記)\d+\]$/u.test(
+        text.slice(mark.start, mark.end)
+      )
+    )
+  const detected = detectPhi(text).filter(
+    (span) => !protectedSpans.some((mark) => span.start >= mark.start && span.end <= mark.end)
+  )
   const spans = detected.filter((span) => !detected.some((other) => contained(span, other)))
   const allow = new Set(options.allowOriginal ?? [])
   const replacements: PhiReplacement[] = []

@@ -65,7 +65,7 @@ export const ORDINARY_LABEL_VOCABULARY = {
 const ORDINARY_LABELS = new Set<string>(Object.values(ORDINARY_LABEL_VOCABULARY).flat())
 // Only bounded directions, ward numbers, or floor numbers; arbitrary names never qualify.
 const MAX_WARD_LABEL_LENGTH = 8
-const WARD = /^(?:東|西|南|北|北東|北西|南東|南西|[0-9０-９〇一二三四五六七八九十百]+階?)病棟$/u
+const WARD = /^(?:東|西|南|北|北東|北西|南東|南西|[0-9０-９〇一二三四五六七八九十百]{1,3}階?)病棟$/u
 
 export const isOrdinaryLabel = (text: string): boolean => {
   const value = text.trim()

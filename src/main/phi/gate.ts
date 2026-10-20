@@ -46,7 +46,7 @@ const PATIENT_PHI = new Set<PhiCategory>([
 ])
 
 interface PhiGate {
-  release(text: string, projectId: string): PhiResult
+  release(text: string, projectId: string): PhiResult | Promise<PhiResult>
   highlights?(text: string, projectId: string): PhiHighlight[]
   restore(text: string, projectId: string): string
   manual?(original: string, projectId: string): string
@@ -57,36 +57,42 @@ let confirmer: PhiConfirmer | null = null
 let machineApproved: () => boolean = () => false
 let blockTranslator: NativeTranslator = englishNativeTranslator
 let activeProjectId = 'default'
+// Changes invalidate both pending sends and in-memory turn consent, even if restored later.
+let policyRevision = 0
 // Each executor invocation owns a fresh scope, including concurrent turns of one session.
 const turns = new AsyncLocalStorage<{
   projectId: string
   active: boolean
   isCurrent: () => boolean
+  reviews: Map<string, { revision: number; approved: boolean; tokens: Set<string> }>
 }>()
 export async function withPhiTurn<T>(
   projectId: string,
   isCurrent: () => boolean,
   run: () => Promise<T>
 ): Promise<T> {
-  const turn = { projectId, active: true, isCurrent }
+  const turn = { projectId, active: true, isCurrent, reviews: new Map() }
   return turns.run(turn, async () => {
     try {
       return await run()
     } finally {
       turn.active = false
+      turn.reviews.clear()
     }
   })
 }
-// A decision is single-use and never cached, even for identical retries.
+// Each interactive review has a deadline; confirmed replacements live only in the active turn.
 export const PHI_CONSENT_EXPIRY_MS = 30_000
 
 const warnings = new Map<string, string[]>()
 
 export function installPhiGate(next: PhiGate | null): void {
+  policyRevision++
   gate = next
 }
 
 export const MODEL_RELEASE_TIMEOUT_MS = 60_000
+export const PHI_SEND_CANCELLED_MESSAGE = 'Sending cancelled. Nothing was sent.'
 export const MODEL_RELEASE_RETRY_MESSAGE =
   'The privacy check could not finish. Nothing was sent. Please try again.'
 export const UNSCANNABLE_MODEL_CONTENT_MESSAGE =
@@ -97,15 +103,17 @@ export const UNGUARDED_AGENT_MESSAGE =
 export function modelReleaseError(key = MODEL_RELEASE_RETRY_MESSAGE): PhiGateError {
   const translate = blockTranslator
   const message =
-    key === UNSCANNABLE_MODEL_CONTENT_MESSAGE
-      ? translate(
-          'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
-        )
-      : key === UNGUARDED_AGENT_MESSAGE
+    key === PHI_SEND_CANCELLED_MESSAGE
+      ? translate('Sending cancelled. Nothing was sent.')
+      : key === UNSCANNABLE_MODEL_CONTENT_MESSAGE
         ? translate(
-            'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.'
+            'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
           )
-        : translate('The privacy check could not finish. Nothing was sent. Please try again.')
+        : key === UNGUARDED_AGENT_MESSAGE
+          ? translate(
+              'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.'
+            )
+          : translate('The privacy check could not finish. Nothing was sent. Please try again.')
   return new PhiGateError(message)
 }
 
@@ -114,9 +122,9 @@ function activeGate(): PhiGate {
   return gate
 }
 
-function releaseThroughInstalledGate(text: string, projectId: string): PhiResult {
+async function releaseThroughInstalledGate(text: string, projectId: string): Promise<PhiResult> {
   try {
-    const result = activeGate().release(text, projectId)
+    const result = await activeGate().release(text, projectId)
     if (
       !result ||
       typeof result.text !== 'string' ||
@@ -164,11 +172,13 @@ export function assertModelBoundTextReleased(text: string, projectId: string): P
 // Production installs a window confirmer. Unit tests leave this unset and therefore do not prompt.
 // Once installed, a dismissed or failed review blocks the send.
 export function installPhiConfirmer(next: PhiConfirmer | null): void {
+  policyRevision++
   confirmer = next
 }
 
 // Production reads the append-only machine declaration. No declaration means not approved.
 export function installMachineApproval(next: (() => boolean) | null): void {
+  policyRevision++
   machineApproved = next ?? (() => false)
 }
 
@@ -287,7 +297,7 @@ async function releaseTextImpl(text: string, projectId: string): Promise<string>
   try {
     notePhiProject(projectId)
     assertMachineMaySend([text])
-    const result = releaseThroughInstalledGate(text, projectId)
+    const result = await releaseThroughInstalledGate(text, projectId)
     if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
     return result.text
   } catch (error) {
@@ -350,15 +360,17 @@ export function releasePromptContent<T>(content: T, projectId: string): Promise<
     assertMachineMaySend(
       content.map((block) => blockText(block)).filter((text): text is string => text != null)
     )
-    if (content.length === 0) releaseThroughInstalledGate('', projectId)
-    return content.map((block) => {
-      const text = blockText(block)
-      if (text == null || (block as PromptBlock).type !== 'text')
-        throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
-      const result = releaseThroughInstalledGate(text, projectId)
-      if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
-      return result.text === text ? block : { ...block, text: result.text }
-    }) as T
+    if (content.length === 0) await releaseThroughInstalledGate('', projectId)
+    return (await Promise.all(
+      content.map(async (block) => {
+        const text = blockText(block)
+        if (text == null || (block as PromptBlock).type !== 'text')
+          throw modelReleaseError(UNSCANNABLE_MODEL_CONTENT_MESSAGE)
+        const result = await releaseThroughInstalledGate(text, projectId)
+        if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
+        return result.text === text ? block : { ...block, text: result.text }
+      })
+    )) as T
   })
 }
 
@@ -440,8 +452,8 @@ async function guardProviderBodyImpl(
     const texts: string[] = []
     collectStrings(parsed, texts)
     assertMachineMaySend(texts)
-    if (texts.length === 0) releaseThroughInstalledGate('', projectId)
-    const walked = walkRelease(parsed, projectId, tokens)
+    if (texts.length === 0) await releaseThroughInstalledGate('', projectId)
+    const walked = await walkRelease(parsed, projectId, tokens)
     const text = JSON.stringify(walked)
     return text
   } catch (error) {
@@ -451,7 +463,7 @@ async function guardProviderBodyImpl(
 
 /** Automatic preparation never grants consent. Only this actual outbound operation reviews.
  * The immutable released bytes, destination, project and turn remain local to this call.
- * No reusable authorization escapes; edits/retries/new PHI always start a new operation.
+ * Only confirmed replacement identities are retained, in this active turn and destination.
  */
 export function sendPhiChecked<T>(
   body: BodyInit | null | undefined,
@@ -468,6 +480,7 @@ export function sendPhiChecked<T>(
         throw modelReleaseError()
     }
     assertCurrentTurn()
+    const revision = policyRevision
     const installed = activeGate()
     const reviewer = confirmer
     const approvalReader = machineApproved
@@ -480,15 +493,47 @@ export function sendPhiChecked<T>(
     const restoredTexts: string[] = []
     if (typeof released === 'string') collectStrings(JSON.parse(text), restoredTexts)
     assertMachineMaySend(restoredTexts.map((value) => installed.restore(value, projectId)))
+    const prior = turn?.reviews.get(destination)
+    const confirmed =
+      prior?.revision === revision && prior.approved === approved ? prior.tokens : new Set<string>()
+    const identity = (value: string, mark: PhiHighlight): string =>
+      JSON.stringify([mark.category, value.slice(mark.start, mark.end)])
+    // Generalized replacements (e.g. 90歳以上) can share display text across different
+    // originals. A fresh replacement must also match its reviewed source identity.
+    const replacementIdentities = new Map<string, string[]>()
+    for (const token of tokens) {
+      const key = JSON.stringify([token.category, token.replacement])
+      const sources = replacementIdentities.get(key) ?? []
+      sources.push(JSON.stringify([token.category, token.replacement, token.original]))
+      replacementIdentities.set(key, sources)
+    }
     const highlights = installed.highlights?.(text, projectId) ?? []
     // Custom scanners also contribute their replacements without needing a vault.
-    const preview = { text, highlights: [...highlights, ...highlightTokens(text, tokens)] }
+    const unique = new Map<string, PhiHighlight>()
+    for (const mark of [...highlights, ...highlightTokens(text, tokens)]) {
+      unique.set(JSON.stringify([mark.start, mark.end, mark.category]), mark)
+    }
+    const preview = {
+      text,
+      highlights: [...unique.values()].filter((mark) => {
+        const key = identity(text, mark)
+        const sources = replacementIdentities.get(key)
+        return sources ? sources.some((source) => !confirmed.has(source)) : !confirmed.has(key)
+      })
+    }
     assertCurrentTurn()
     const started = Date.now()
     const decision = await decisionFor(preview)
-    if (!decision.confirmed) throw modelReleaseError()
+    if (!decision.confirmed) throw modelReleaseError(PHI_SEND_CANCELLED_MESSAGE)
     const reviewed = redact(text, decision.extraSpans ?? [], projectId)
     if (typeof released === 'string') JSON.parse(reviewed)
+    const reviewedIdentities = [
+      ...preview.highlights.flatMap((mark) => {
+        const key = identity(text, mark)
+        return [key, ...(replacementIdentities.get(key) ?? [])]
+      }),
+      ...(installed.highlights?.(reviewed, projectId) ?? []).map((mark) => identity(reviewed, mark))
+    ]
     return () => {
       assertCurrentTurn()
       let stillApproved: boolean
@@ -499,13 +544,20 @@ export function sendPhiChecked<T>(
       }
       if (
         Date.now() - started >= PHI_CONSENT_EXPIRY_MS ||
+        policyRevision !== revision ||
         gate !== installed ||
         confirmer !== reviewer ||
         machineApproved !== approvalReader ||
         stillApproved !== approved
       )
         throw modelReleaseError()
-      return send(typeof released === 'string' ? reviewed : released)
+      const result = send(typeof released === 'string' ? reviewed : released)
+      if (turn && reviewer) {
+        // Commit only after the dispatch callback accepts (including its abort check).
+        for (const key of reviewedIdentities) confirmed.add(key)
+        turn.reviews.set(destination, { revision, approved, tokens: confirmed })
+      }
+      return result
     }
   }).then((dispatch) => dispatch())
 }
@@ -526,7 +578,7 @@ export async function checkConnectorQueryArgs(args: Record<string, unknown>): Pr
   for (const [key, value] of Object.entries(args)) {
     if (CONNECTOR_QUERY_KEYS.has(key) && typeof value === 'string') {
       const spans = patientSpans(value)
-      if (isOrdinaryLabel(value) && hasOnlyOrdinaryLabelPhi(value, spans)) {
+      if (spans.length > 0 && isOrdinaryLabel(value) && hasOnlyOrdinaryLabelPhi(value, spans)) {
         // A reviewed ordinary label is a narrower subset of main's whole-query guess.
         // Check gate health/deadline; all other queries still take strict release.
         await assertModelBoundTextReleased('', currentPhiProject())
@@ -666,21 +718,26 @@ export function assertScannableModelValue(value: unknown): void {
   }
 }
 
-function walkRelease(value: unknown, projectId: string, tokens: PhiReplacement[]): unknown {
+async function walkRelease(
+  value: unknown,
+  projectId: string,
+  tokens: PhiReplacement[]
+): Promise<unknown> {
   if (typeof value === 'string') {
-    const result = releaseThroughInstalledGate(value, projectId)
+    const result = await releaseThroughInstalledGate(value, projectId)
     if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
     tokens.push(...result.replacements)
     return result.text
   }
-  if (Array.isArray(value)) return value.map((item) => walkRelease(item, projectId, tokens))
+  if (Array.isArray(value))
+    return Promise.all(value.map((item) => walkRelease(item, projectId, tokens)))
   if (value && typeof value === 'object') {
     const next: Record<string, unknown> = {}
     for (const [key, child] of Object.entries(value)) {
-      const releasedKey = walkRelease(key, projectId, tokens) as string
+      const releasedKey = (await walkRelease(key, projectId, tokens)) as string
       if (Object.hasOwn(next, releasedKey)) throw modelReleaseError()
       Object.defineProperty(next, releasedKey, {
-        value: walkRelease(child, projectId, tokens),
+        value: await walkRelease(child, projectId, tokens),
         enumerable: true,
         configurable: true,
         writable: true

@@ -52,6 +52,7 @@
     "Approval needed": "Требуется разрешение"
   },
   "native": {
+    "Sending cancelled. Nothing was sent.": "Отправка отменена. Ничего не отправлено.",
     "The agent finished without a clean completion status.": "Агент завершил работу без корректного статуса завершения.",
     "Unknown error.": "Неизвестная ошибка.",
     "Quit anyway": "Всё равно выйти",
