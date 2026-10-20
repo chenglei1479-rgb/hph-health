@@ -156,6 +156,15 @@ const OnboardingWizard = ({
   const didResumeStorage = useRef(false)
   const didRequestCheck = useRef(false)
 
+  // The packaged launch smoke treats the first-run wizard as a started surface; the gate still
+  // requires explicit consent before Home.
+  useEffect(() => {
+    document.documentElement.dataset.draOnboardingReady = '1'
+    return () => {
+      delete document.documentElement.dataset.draOnboardingReady
+    }
+  }, [])
+
   const hostReady =
     !isCheckingEnvironment &&
     environmentCheck !== undefined &&

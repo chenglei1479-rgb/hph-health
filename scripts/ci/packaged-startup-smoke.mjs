@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url'
 import {
   DRA_HOME_READY_LINE,
   DRA_LOGIN_READY_LINE,
+  DRA_ONBOARDING_READY_LINE,
   DRA_TERMS_READY_LINE,
   waitForPackagedStartup
 } from './wait-for-packaged-startup.mjs'
@@ -137,7 +138,8 @@ export const beta10ResearchHistoryJson = () => '{"session":"retained"}\n'
 export const SIGNED_OUT_READY_LINES = [
   DRA_HOME_READY_LINE,
   DRA_LOGIN_READY_LINE,
-  DRA_TERMS_READY_LINE
+  DRA_TERMS_READY_LINE,
+  DRA_ONBOARDING_READY_LINE
 ]
 
 const argumentValue = (argv, name) => {
@@ -367,7 +369,7 @@ const launchPrereleaseThenSignedOut = async ({
     workspaceLogs,
     label: `${label} prerelease`,
     userData: paths.userData,
-    readyLines: [DRA_HOME_READY_LINE, DRA_TERMS_READY_LINE]
+    readyLines: [DRA_HOME_READY_LINE, DRA_TERMS_READY_LINE, DRA_ONBOARDING_READY_LINE]
   })
   if (homeCode !== 0) return homeCode
   const signedOut = signedOutPaths(paths)
@@ -402,10 +404,11 @@ const launchPackagedApp = (binary, env) => {
 const publishSummary = (label, result) => {
   const reachedLogin = result.detail?.includes(DRA_LOGIN_READY_LINE)
   const reachedTerms = result.detail?.includes(DRA_TERMS_READY_LINE)
+  const reachedOnboarding = result.detail?.includes(DRA_ONBOARDING_READY_LINE)
   const line =
     result.reason === 'ready'
-      ? `${label} reached ${reachedLogin ? 'the login screen' : reachedTerms ? 'the beta terms gate' : 'the home window'}.`
-      : `${label} did not reach home, the beta terms gate, or the login screen (${result.reason}).`
+      ? `${label} reached ${reachedLogin ? 'the login screen' : reachedTerms ? 'the beta terms gate' : reachedOnboarding ? 'the first-run wizard' : 'the home window'}.`
+      : `${label} did not reach home, the beta terms gate, the first-run wizard, or the login screen (${result.reason}).`
   process.stdout.write(`${line}\n`)
   if (process.env.GITHUB_STEP_SUMMARY) {
     writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n`, { flag: 'a' })

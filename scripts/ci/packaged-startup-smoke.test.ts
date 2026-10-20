@@ -26,6 +26,7 @@ import {
 import {
   DRA_HOME_READY_LINE,
   DRA_LOGIN_READY_LINE,
+  DRA_ONBOARDING_READY_LINE,
   DRA_TERMS_READY_LINE
 } from './wait-for-packaged-startup.mjs'
 import { BETA_TERMS_VERSION } from '../../src/shared/beta-terms'
@@ -122,7 +123,8 @@ it('launches signed-out over beta.10 user data without the prerelease bypass', (
   expect(SIGNED_OUT_READY_LINES).toEqual([
     DRA_HOME_READY_LINE,
     DRA_LOGIN_READY_LINE,
-    DRA_TERMS_READY_LINE
+    DRA_TERMS_READY_LINE,
+    DRA_ONBOARDING_READY_LINE
   ])
   const source = readFileSync(new URL('./packaged-startup-smoke.mjs', import.meta.url), 'utf8')
   expect(source).toContain('signedOutSmokeEnv(')
