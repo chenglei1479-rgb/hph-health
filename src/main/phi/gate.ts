@@ -532,7 +532,13 @@ export function sendPhiChecked<T>(
         const key = identity(text, mark)
         return [key, ...(replacementIdentities.get(key) ?? [])]
       }),
-      ...(installed.highlights?.(reviewed, projectId) ?? []).map((mark) => identity(reviewed, mark))
+      ...(installed.highlights?.(reviewed, projectId) ?? []).flatMap((mark) => {
+        const replacement = reviewed.slice(mark.start, mark.end)
+        return [
+          identity(reviewed, mark),
+          JSON.stringify([mark.category, replacement, installed.restore(replacement, projectId)])
+        ]
+      })
     ]
     return () => {
       assertCurrentTurn()

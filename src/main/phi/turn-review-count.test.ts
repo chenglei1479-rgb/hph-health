@@ -567,3 +567,19 @@ it('reviews a new source even when generalized replacement text is already confi
     }
   )
 })
+
+it('matches previously prepared vault placeholders to later raw occurrences of the same PHI', async () => {
+  const confirm = vi.fn(async () => ({ confirmed: true }))
+  installPhiConfirmer(confirm)
+  const send = vi.fn<typeof fetch>(async () => new Response('{}'))
+  await withPhiTurn(
+    'fiction',
+    () => true,
+    async () => {
+      const prepared = await releaseModelText('患者：架空 太郎', 'fiction')
+      await request(send, body(prepared))
+      await request(send, body('患者：架空 太郎'))
+      expect(confirm).toHaveBeenCalledOnce()
+    }
+  )
+})
