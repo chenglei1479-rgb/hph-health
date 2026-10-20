@@ -290,3 +290,44 @@ it('sends nothing when a synchronous scanner returns after the release deadline'
   expect(confirm).not.toHaveBeenCalled()
   expect(send).not.toHaveBeenCalled()
 })
+
+it.each(['completed', 'superseded', 'superseded-during-scan'])(
+  'rejects a %s turn before opening a PHI reviewer',
+  async (state) => {
+    const confirm = vi.fn(async () => ({ confirmed: true }))
+    installPhiConfirmer(confirm)
+    const send = vi.fn<typeof fetch>()
+    let current = state !== 'superseded'
+    let pending!: Promise<Response>
+    if (state === 'completed') {
+      let resume!: () => void
+      const delayed = new Promise<void>((resolve) => {
+        resume = resolve
+      })
+      await withPhiTurn(
+        'stale',
+        () => current,
+        async () => {
+          // Promise continuations retain their originating async context after the turn ends.
+          pending = delayed.then(() => request(send))
+        }
+      )
+      const blocked = expect(pending).rejects.toThrow()
+      resume()
+      await blocked
+    } else {
+      pending = withPhiTurn(
+        'stale',
+        () => current,
+        async () => {
+          const response = request(send)
+          if (state === 'superseded-during-scan') current = false
+          return response
+        }
+      )
+      await expect(pending).rejects.toThrow()
+    }
+    expect(confirm).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
+  }
+)
