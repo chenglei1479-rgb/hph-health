@@ -7484,7 +7484,6 @@
     "Select all selects only deletable Skills. Skills used by the Main Agent or another Specialist will be kept.": "全選僅會選取可刪除的技能。由主智能體或其他專家使用的技能會被保留。",
     "Permanently removes the Specialist. Conversations still bound to it become unavailable and are not switched to Main Agent automatically.": "永久移除該專家。仍綁定到它的對話將變為無法使用，且不會自動切換到主智能體。",
     "Enter a new password.": "請輸入新密碼。",
-    "Notebook runtime": "Notebook 執行環境",
     "Download artifacts…": "下載產物…",
     "Search journal candidates": "搜尋候選期刊",
     "Continue in a new run": "在新一輪中繼續",
@@ -7617,6 +7616,13 @@
     "Set up again": "重新設定",
     "Run the setup steps again. Your providers, API keys, and data are kept.": "再次執行設定步驟。您的提供者、API 金鑰和資料會保留。",
     "Opening setup…": "正在開啟設定…",
-    "Could not reopen setup.": "無法重新開啟設定。"
+    "Could not reopen setup.": "無法重新開啟設定。",
+    "Verify the agent runtime": "驗證智能體執行環境",
+    "Your existing runtime is kept. Check its status before continuing.": "將保留現有執行環境。繼續前請檢查其狀態。",
+    "The existing runtime is ready.": "現有執行環境已就緒。",
+    "Checking the existing runtime…": "正在檢查現有執行環境…",
+    "The agent runtime is not ready.": "智能體執行環境尚未就緒。",
+    "The existing runtime is kept for this setup.": "本次設定將保留現有執行環境。",
+    "Notebook runtime": "Notebook 執行環境"
   }
 }

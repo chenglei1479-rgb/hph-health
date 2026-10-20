@@ -590,6 +590,9 @@ export type SettingsSnapshot = {
   providers: ProviderView[]
   // The selected agent backend, and the frameworks available to choose from.
   agentFrameworkId: AgentFrameworkId
+  // True only when agentFrameworkId was persisted. Absent means the value is still the document
+  // fallback, which lets first-run setup pin Codex without rewriting an existing user's choice.
+  agentFrameworkSelected?: boolean
   agentFrameworks: AgentFrameworkView[]
   // Whether each framework's detected runtime is the app-managed install (binary in the app's data
   // dir), which is the only case an in-app uninstall is offered — a PATH/npm binary we didn't install

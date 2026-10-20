@@ -119,6 +119,8 @@ type SettingsStoreData = RuntimeSetupState &
     providers: ProviderView[]
     // Selected agent backend and the frameworks available to choose from.
     agentFrameworkId: AgentFrameworkId
+    // True only when the backend choice was persisted; false means the document fallback is in use.
+    agentFrameworkSelected: boolean
     agentFrameworks: AgentFrameworkView[]
     // Detected opencode executable, for the framework-aware detection card.
     opencode: OpencodeInfo
@@ -198,6 +200,7 @@ export const createInitialSettingsState = (): SettingsStoreData => ({
   activeModel: undefined,
   providers: [],
   agentFrameworkId: 'claude-code',
+  agentFrameworkSelected: false,
   agentFrameworks: [],
   opencode: {},
   codex: {},
@@ -260,6 +263,7 @@ const applySnapshot = (snapshot: SettingsSnapshot): Partial<SettingsStoreData> =
   defaultPermissionProfile: getDefaultPermissionProfile(snapshot),
 
   agentFrameworkId: snapshot.agentFrameworkId,
+  agentFrameworkSelected: snapshot.agentFrameworkSelected ?? false,
   agentFrameworks: snapshot.agentFrameworks,
   opencode: snapshot.opencode,
   codex: snapshot.codex ?? {},

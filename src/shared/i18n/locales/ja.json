@@ -7484,7 +7484,6 @@
     "Select all selects only deletable Skills. Skills used by the Main Agent or another Specialist will be kept.": "すべて選択では削除可能なスキルのみが選択されます。メインエージェントまたは別のスペシャリストが使用しているスキルは保持されます。",
     "Permanently removes the Specialist. Conversations still bound to it become unavailable and are not switched to Main Agent automatically.": "スペシャリストを永久に削除します。まだバインドされている会話は使用できなくなり、メインエージェントに自動的に切り替わりません。",
     "Enter a new password.": "新しいパスワードを入力してください。",
-    "Notebook runtime": "Notebook ランタイム",
     "Download artifacts…": "アーティファクトをダウンロード…",
     "Search journal candidates": "候補のジャーナルを検索する",
     "Continue in a new run": "新しい実行で続行",
@@ -7617,6 +7616,13 @@
     "Set up again": "設定をやり直す",
     "Run the setup steps again. Your providers, API keys, and data are kept.": "セットアップ手順をもう一度実行します。プロバイダー、API キー、データは保持されます。",
     "Opening setup…": "セットアップを開いています…",
-    "Could not reopen setup.": "セットアップを開き直せませんでした。"
+    "Could not reopen setup.": "セットアップを開き直せませんでした。",
+    "Verify the agent runtime": "エージェントランタイムを確認",
+    "Your existing runtime is kept. Check its status before continuing.": "既存のランタイムはそのまま使用します。続ける前に状態を確認してください。",
+    "The existing runtime is ready.": "既存のランタイムは準備できています。",
+    "Checking the existing runtime…": "既存のランタイムを確認しています…",
+    "The agent runtime is not ready.": "エージェントランタイムの準備ができていません。",
+    "The existing runtime is kept for this setup.": "このセットアップでは既存のランタイムを保持します。",
+    "Notebook runtime": "Notebook ランタイム"
   }
 }

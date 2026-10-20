@@ -7812,7 +7812,6 @@
     "Select all selects only deletable Skills. Skills used by the Main Agent or another Specialist will be kept.": "« Tout sélectionner » ne sélectionne que les compétences pouvant être supprimées. Les compétences utilisées par l'agent principal ou un autre spécialiste seront conservées.",
     "Permanently removes the Specialist. Conversations still bound to it become unavailable and are not switched to Main Agent automatically.": "Supprime définitivement le spécialiste. Les conversations qui y sont encore liées deviennent indisponibles et ne sont pas automatiquement basculées vers l'agent principal.",
     "Enter a new password.": "Entrez un nouveau mot de passe.",
-    "Notebook runtime": "Environnement d'exécution Notebook",
     "Download artifacts…": "Télécharger les artefacts…",
     "Search journal candidates": "Rechercher parmi les revues candidates",
     "Continue in a new run": "Continuer dans une nouvelle exécution",
@@ -7945,6 +7944,13 @@
     "Set up again": "Set up again",
     "Run the setup steps again. Your providers, API keys, and data are kept.": "Run the setup steps again. Your providers, API keys, and data are kept.",
     "Opening setup…": "Opening setup…",
-    "Could not reopen setup.": "Could not reopen setup."
+    "Could not reopen setup.": "Could not reopen setup.",
+    "Verify the agent runtime": "Vérifier l'environnement de l'agent",
+    "Your existing runtime is kept. Check its status before continuing.": "L'environnement existant est conservé. Vérifiez son état avant de continuer.",
+    "The existing runtime is ready.": "L'environnement existant est prêt.",
+    "Checking the existing runtime…": "Vérification de l'environnement existant…",
+    "The agent runtime is not ready.": "L'environnement de l'agent n'est pas prêt.",
+    "The existing runtime is kept for this setup.": "L'environnement existant est conservé pour cette configuration.",
+    "Notebook runtime": "Environnement d'exécution Notebook"
   }
 }

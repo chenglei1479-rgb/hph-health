@@ -7482,7 +7482,6 @@
     "Select all selects only deletable Skills. Skills used by the Main Agent or another Specialist will be kept.": "모두 선택은 삭제 가능한 스킬만 선택합니다. 메인 에이전트 또는 다른 스페셜리스트가 사용하는 스킬은 유지됩니다.",
     "Permanently removes the Specialist. Conversations still bound to it become unavailable and are not switched to Main Agent automatically.": "스페셜리스트를 영구 삭제합니다. 이 스페셜리스트에 연결된 대화는 사용할 수 없게 되며 메인 에이전트로 자동 전환되지 않습니다.",
     "Enter a new password.": "새 비밀번호를 입력하세요.",
-    "Notebook runtime": "Notebook 런타임",
     "Download artifacts…": "아티팩트 다운로드…",
     "Search journal candidates": "학술지 후보 검색",
     "Continue in a new run": "새 실행에서 계속",
@@ -7615,6 +7614,13 @@
     "Set up again": "설정 다시 하기",
     "Run the setup steps again. Your providers, API keys, and data are kept.": "설정 단계를 다시 실행합니다. 모델 제공업체, API 키, 데이터는 유지됩니다.",
     "Opening setup…": "설정을 여는 중…",
-    "Could not reopen setup.": "설정을 다시 열지 못했습니다."
+    "Could not reopen setup.": "설정을 다시 열지 못했습니다.",
+    "Verify the agent runtime": "에이전트 런타임 확인",
+    "Your existing runtime is kept. Check its status before continuing.": "기존 런타임을 유지합니다. 계속하기 전에 상태를 확인하세요.",
+    "The existing runtime is ready.": "기존 런타임이 준비되었습니다.",
+    "Checking the existing runtime…": "기존 런타임을 확인하는 중…",
+    "The agent runtime is not ready.": "에이전트 런타임이 준비되지 않았습니다.",
+    "The existing runtime is kept for this setup.": "이 설정에서는 기존 런타임을 유지합니다.",
+    "Notebook runtime": "Notebook 런타임"
   }
 }

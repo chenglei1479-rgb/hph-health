@@ -7949,7 +7949,6 @@
     "Select all selects only deletable Skills. Skills used by the Main Agent or another Specialist will be kept.": "Команда «Выбрать все» выбирает только навыки, которые можно удалить. Навыки, используемые главным агентом или другим специалистом, будут сохранены.",
     "Permanently removes the Specialist. Conversations still bound to it become unavailable and are not switched to Main Agent automatically.": "Полностью удаляет специалиста. Диалоги, связанные с ним, становятся недоступными и автоматически не переключаются на главного агента.",
     "Enter a new password.": "Введите новый пароль.",
-    "Notebook runtime": "Среда выполнения Notebook",
     "Download artifacts…": "Скачать артефакты…",
     "Search journal candidates": "Поиск подходящих журналов",
     "Continue in a new run": "Продолжить в новом запуске",
@@ -8084,6 +8083,13 @@
     "Set up again": "Set up again",
     "Run the setup steps again. Your providers, API keys, and data are kept.": "Снова выполните шаги настройки. Ваши поставщики, ключи API и данные сохранятся.",
     "Opening setup…": "Opening setup…",
-    "Could not reopen setup.": "Could not reopen setup."
+    "Could not reopen setup.": "Could not reopen setup.",
+    "Verify the agent runtime": "Проверка среды выполнения агента",
+    "Your existing runtime is kept. Check its status before continuing.": "Существующая среда выполнения сохраняется. Проверьте её состояние перед продолжением.",
+    "The existing runtime is ready.": "Существующая среда выполнения готова.",
+    "Checking the existing runtime…": "Проверка существующей среды выполнения…",
+    "The agent runtime is not ready.": "Среда выполнения агента не готова.",
+    "The existing runtime is kept for this setup.": "В этой настройке существующая среда выполнения сохраняется.",
+    "Notebook runtime": "Среда выполнения Notebook"
   }
 }

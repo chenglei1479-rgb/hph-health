@@ -7644,7 +7644,6 @@
     "Select all selects only deletable Skills. Skills used by the Main Agent or another Specialist will be kept.": "„Alle auswählen“ wählt nur löschbare Fähigkeiten aus. Vom Hauptagenten oder einem anderen Spezialisten genutzte Fähigkeiten bleiben erhalten.",
     "Permanently removes the Specialist. Conversations still bound to it become unavailable and are not switched to Main Agent automatically.": "Entfernt den Spezialisten dauerhaft. Konversationen, die noch daran gebunden sind, sind nicht mehr verfügbar und werden nicht automatisch auf den Hauptagenten umgeschaltet.",
     "Enter a new password.": "Geben Sie ein neues Passwort ein.",
-    "Notebook runtime": "Notebook-Laufzeit",
     "Download artifacts…": "Artefakte herunterladen…",
     "Search journal candidates": "Zeitschriftenkandidaten durchsuchen",
     "Continue in a new run": "In einem neuen Durchlauf fortfahren",
@@ -7777,6 +7776,13 @@
     "Set up again": "Set up again",
     "Run the setup steps again. Your providers, API keys, and data are kept.": "Führen Sie die Einrichtungsschritte erneut aus. Ihre Anbieter, API-Schlüssel und Daten bleiben erhalten.",
     "Opening setup…": "Opening setup…",
-    "Could not reopen setup.": "Could not reopen setup."
+    "Could not reopen setup.": "Could not reopen setup.",
+    "Verify the agent runtime": "Agent-Runtime prüfen",
+    "Your existing runtime is kept. Check its status before continuing.": "Die vorhandene Runtime bleibt erhalten. Prüfen Sie ihren Status, bevor Sie fortfahren.",
+    "The existing runtime is ready.": "Die vorhandene Runtime ist bereit.",
+    "Checking the existing runtime…": "Vorhandene Runtime wird geprüft…",
+    "The agent runtime is not ready.": "Die Agent-Runtime ist nicht bereit.",
+    "The existing runtime is kept for this setup.": "Die vorhandene Runtime bleibt für diese Einrichtung erhalten.",
+    "Notebook runtime": "Notebook-Laufzeit"
   }
 }

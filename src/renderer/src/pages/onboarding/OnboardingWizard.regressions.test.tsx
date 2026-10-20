@@ -15,6 +15,7 @@ import {
   codexReadyState,
   fillRequiredProviderFields,
   findButton,
+  readyClaudeState,
   resetOnboardingStores,
   selectOption,
   stubWindowApi
@@ -83,6 +84,25 @@ describe('Beta runtime is pinned to Codex', () => {
     await clickButton(/^continue with this location$/i)
 
     expect(useSettingsStore.getState().installCodex).toHaveBeenCalled()
+  })
+
+  it('keeps a stored Claude Code runtime when setup is reopened', async () => {
+    readyClaudeState()
+    useSettingsStore.setState({ agentFrameworkId: 'claude-code', agentFrameworkSelected: true })
+    await renderWizard()
+    expect(section('Choose data location')).not.toBeNull()
+    await clickButton(/^continue with this location$/i)
+
+    expect(useSettingsStore.getState().setAgentFramework).not.toHaveBeenCalled()
+    expect(useSettingsStore.getState().installCodex).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Verify the agent runtime')
+    await clickButton(/^continue$/i)
+    expect(section('Configure model')).not.toBeNull()
+    await clickButton(/set up later/i)
+
+    expect(useSettingsStore.getState().completeOnboarding).toHaveBeenCalledOnce()
+    expect(useSettingsStore.getState().agentFrameworkId).toBe('claude-code')
+    expect(useSettingsStore.getState().installCodex).not.toHaveBeenCalled()
   })
 
   it('does not show a runtime chooser', async () => {

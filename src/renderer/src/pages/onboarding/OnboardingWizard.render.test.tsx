@@ -70,7 +70,7 @@ describe('OnboardingWizard flow', () => {
     expect(layout?.className).toContain('md:grid-cols-[240px_minmax(0,1fr)]')
   })
 
-  it('starts on the beta terms with six visible steps and no pre-checked consent', async () => {
+  it('starts on the beta terms with five visible steps and no pre-checked consent', async () => {
     useSettingsStore.setState({ betaTermsAcceptance: undefined })
     await renderWizard()
 
@@ -79,8 +79,7 @@ describe('OnboardingWizard flow', () => {
       '2Environment',
       '3Data location',
       '4Agent runtime',
-      '5Model provider',
-      '6Notebook runtime'
+      '5Model provider'
     ])
     const checkbox = container.querySelector<HTMLInputElement>('input[type="checkbox"]')
     expect(checkbox?.checked).toBe(false)

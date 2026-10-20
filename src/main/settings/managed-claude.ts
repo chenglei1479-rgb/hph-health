@@ -9,7 +9,11 @@ import { pipeline } from 'node:stream/promises'
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web'
 import { createGunzip } from 'node:zlib'
 
-import type { ClaudeInstallEvent, ClaudeInstallResult } from '../../shared/settings'
+import type {
+  ClaudeInstallEvent,
+  ClaudeInstallResult,
+  ManagedClaudeRegistry
+} from '../../shared/settings'
 import { netFetchWithManualRedirect } from '../network-fetch'
 
 // App-managed Claude installer. The `@anthropic-ai/claude-code` npm package is a thin wrapper whose
@@ -26,7 +30,20 @@ const ENCODED_WRAPPER = '@anthropic-ai%2fclaude-code'
 
 // Official registry only. Beta builds deliberately have no public-mirror fallback: a managed runtime
 // download must come from the same allowlisted host that CI audits.
-const DEFAULT_REGISTRIES = ['https://registry.npmjs.org']
+const OFFICIAL_REGISTRY = 'https://registry.npmjs.org'
+const DEFAULT_REGISTRIES = [OFFICIAL_REGISTRY]
+
+// Legacy callers may still send `npmmirror` (an old environment-check recommendation or a stored
+// request). Beta has no mirror fallback, so both aliases resolve to the official registry. Keeping
+// the mapping here means the retired branch cannot reappear in the installer.
+const MANAGED_REGISTRY_HOSTS: Record<ManagedClaudeRegistry, string> = {
+  npmjs: OFFICIAL_REGISTRY,
+  npmmirror: OFFICIAL_REGISTRY
+}
+
+export const managedClaudeRegistries = (requested?: ManagedClaudeRegistry): string[] => [
+  MANAGED_REGISTRY_HOSTS[requested ?? 'npmjs']
+]
 
 // Native binary packages by `${platform}-${arch}[-musl]` key, mirroring the wrapper's own install.cjs.
 // Windows binaries carry the `.exe` extension; every other platform is a bare `claude`.

@@ -68,6 +68,7 @@ import {
   installManagedClaude,
   isManagedClaudePath,
   managedClaudeDir,
+  managedClaudeRegistries,
   resolveNativePackage,
   uninstallManagedClaude
 } from './managed-claude'
@@ -917,5 +918,13 @@ describe('isManagedClaudePath / uninstallManagedClaude', () => {
 
   it('is a no-op (never rejects) when nothing is installed', async () => {
     await expect(uninstallManagedClaude(root)).resolves.toBeUndefined()
+  })
+})
+
+describe('managed Claude registry aliases', () => {
+  it('maps a legacy npmmirror preference to the official registry', () => {
+    expect(managedClaudeRegistries('npmmirror')).toEqual(['https://registry.npmjs.org'])
+    expect(managedClaudeRegistries('npmjs')).toEqual(['https://registry.npmjs.org'])
+    expect(managedClaudeRegistries()).toEqual(['https://registry.npmjs.org'])
   })
 })

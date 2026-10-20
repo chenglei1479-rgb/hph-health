@@ -22,22 +22,17 @@ import { LocationStep, type LocationDraft } from './LocationStep'
 import { onboardingErrorMessage } from './onboarding-error'
 import { ProviderStep } from './ProviderStep'
 
-type WizardStep = 'terms' | 'environment' | 'location' | 'agent' | 'provider' | 'notebook'
+type WizardStep = 'terms' | 'environment' | 'location' | 'agent' | 'provider'
 type OnboardingWizardProps = {
   loadStorageInfo?: () => Promise<StorageInfo>
 }
 
-// The beta flow keeps six named stages visible. Environment is skipped when its preflight passes,
-// the Codex runtime stage installs in the background, and Notebook is optional/bundled — so a healthy
-// fresh install only asks for the terms, the data location, and the provider (which can be deferred).
-const STEP_ORDER: WizardStep[] = [
-  'terms',
-  'environment',
-  'location',
-  'agent',
-  'provider',
-  'notebook'
-]
+// The beta flow keeps five named stages visible. Environment is skipped when its preflight passes,
+// the Codex runtime stage installs in the background (or verifies an existing runtime), and Notebook
+// is bundled and no longer a setup stage — so a healthy fresh install only asks for the terms, the
+// data location, and the provider (which can be deferred). The catalog still keeps the
+// 'Notebook runtime' key for the Notebook surface and the runtime-glossary guard.
+const STEP_ORDER: WizardStep[] = ['terms', 'environment', 'location', 'agent', 'provider']
 
 // The step id is a runtime value, so it can't be interpolated into a natural-language key.
 const STEP_LABELS = {
@@ -45,13 +40,12 @@ const STEP_LABELS = {
   environment: 'Environment',
   location: 'Data location',
   agent: 'Agent runtime',
-  provider: 'Model provider',
-  notebook: 'Notebook runtime'
+  provider: 'Model provider'
 }
 
 const loadStorageInfoFromBridge = (): Promise<StorageInfo> => window.api.storage.getInfo()
 
-// Keeps the six-step sequence visible without turning the lightweight setup flow into navigation.
+// Keeps the five-step sequence visible without turning the lightweight setup flow into navigation.
 const OnboardingProgress = ({ step }: { step: WizardStep }): React.JSX.Element => {
   const { t } = useTranslation()
   const currentIndex = STEP_ORDER.indexOf(step)
