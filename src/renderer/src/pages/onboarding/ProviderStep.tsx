@@ -67,6 +67,8 @@ type ProviderStepProps = {
   onProviderSaved?: (id: string | undefined) => void
   onBack: () => void
   onAdvance: () => void
+  // "Set up later" deliberately saves nothing and finishes the wizard in demo mode.
+  onSkip: () => void
 }
 
 // Model provider step: configure and validate the provider new research sessions will use. Reuses
@@ -77,7 +79,8 @@ const ProviderStep = ({
   providerId: savedProviderId,
   onProviderSaved,
   onBack,
-  onAdvance
+  onAdvance,
+  onSkip
 }: ProviderStepProps): React.JSX.Element => {
   const { t } = useTranslation()
   // Validation copy is shared with the settings page and lives in the `settings` namespace, so this
@@ -429,6 +432,11 @@ const ProviderStep = ({
             'Choose your provider. Use Custom Gateway for a compatible endpoint or a local model server.'
           )}
         </CardDescription>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          {t(
+            'A paid ChatGPT subscription and API usage are separate contracts and are billed separately.'
+          )}
+        </p>
       </CardHeader>
       <Separator className="bg-border-200" />
 
@@ -520,6 +528,16 @@ const ProviderStep = ({
             {t('Back', { context: 'step' })}
           </Button>
         )}
+        {!isSaving ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onSkip}
+            data-testid="provider-set-up-later"
+          >
+            {t('Set up later (view the demo first)')}
+          </Button>
+        ) : null}
         <Button
           type="button"
           onClick={() => void handleSaveProvider()}

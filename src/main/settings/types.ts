@@ -1,4 +1,5 @@
 import type { McpOAuthConfig, McpOAuthState } from '@aipoch/connector-mcp-client'
+import type { BetaTermsAcceptance } from '../../shared/beta-terms'
 import type { ClassificationAdapter, ClassificationBinding } from '../../shared/classification'
 import type { GrantedLocalRoot } from '../../shared/local-fs'
 import type { LanguagePreference } from '../../shared/locale'
@@ -274,6 +275,9 @@ export type StoredSettings = {
   // Set once the first-run onboarding wizard has been completed (or auto-completed for an
   // already-configured install). Absent means onboarding has never finished.
   onboardingCompletedAt?: number
+  // Local-only acknowledgement of the beta terms. Absent or a stale version keeps the startup gate
+  // closed; see shared/beta-terms.ts for the current version.
+  betaTermsAcceptance?: BetaTermsAcceptance
   // Ids of bundled skills the user turned OFF. Absent/empty means every bundled skill is enabled
   // (default-on), so new bundled skills are enabled automatically.
   disabledSkillIds?: string[]

@@ -41,6 +41,8 @@ type PreferencesCommands = Pick<
   | 'setProjectFilesFilter'
   | 'setDefaultPermissionProfile'
   | 'markOnboardingComplete'
+  | 'acceptBetaTerms'
+  | 'reopenOnboarding'
   | 'setPackageMirror'
   | 'setNetworkProxy'
   | 'setNotebookNetwork'
@@ -137,6 +139,11 @@ const createCommands = (persisted: Partial<SettingsSnapshot>): CommandMocks => {
     setDefaultPermissionProfile: vi.fn(({ profile }) => save('defaultPermissionProfile', profile)),
     markOnboardingComplete: vi.fn(() => {
       persisted.onboardingCompletedAt = 42
+      return Promise.resolve(snapshot(persisted))
+    }),
+    acceptBetaTerms: vi.fn(() => Promise.resolve(snapshot(persisted))),
+    reopenOnboarding: vi.fn(() => {
+      persisted.onboardingCompletedAt = undefined
       return Promise.resolve(snapshot(persisted))
     }),
     setPackageMirror: vi.fn((mirror) => {

@@ -10,6 +10,7 @@ import type {
   MigrationProgress,
   RevealAppStorageResult,
   StorageInfo,
+  StorageLocationRisk,
   StorageStatus
 } from '../storage'
 
@@ -51,6 +52,9 @@ export const contracts = {
   ]),
   'storage.getStatus': callable<() => Promise<StorageStatus>>()('storage', ['storage:get-status']),
   'storage.getInfo': callable<() => Promise<StorageInfo>>()('storage', ['storage:get-info']),
+  'storage.getLocationRisk': callable<(path: string) => Promise<StorageLocationRisk>>()('storage', [
+    'storage:get-location-risk'
+  ]),
   'storage.inspectDataRoot': callable<(parent: string) => Promise<DataRootInspection>>()(
     'storage',
     ['storage:inspect-data-root', LOCAL, STORAGE_PARENT]

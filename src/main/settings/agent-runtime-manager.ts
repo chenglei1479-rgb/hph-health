@@ -77,10 +77,10 @@ import type { ClaudeRuntimeModelConfig } from './claude-config-provision'
 import { provisionAppClaudePrivateProfile } from './claude-config-provision'
 import { provisionClaudeRuntime, type ClaudeRuntimeAssets } from './claude-runtime-provisioner'
 import {
-  DEFAULT_REGISTRIES,
   installManagedClaude,
   isManagedClaudePath,
   managedClaudeDir,
+  managedClaudeRegistries,
   uninstallManagedClaude,
   type InstallManagedClaudeOptions,
   type ManagedInstallOutcome
@@ -724,10 +724,8 @@ export class AgentRuntimeManager {
 
     return this.runExclusiveInstall(installId, async (signal, onCleanupFailure) => {
       if (request.source === 'managed') {
-        const registries =
-          request.managedRegistry === 'npmmirror'
-            ? [DEFAULT_REGISTRIES[1], DEFAULT_REGISTRIES[0]]
-            : DEFAULT_REGISTRIES
+        // Legacy npmmirror requests are coerced to the official registry by the codec.
+        const registries = managedClaudeRegistries(request.managedRegistry)
         const outcome = await this.installManagedClaudeImpl({
           installId,
           onEvent,

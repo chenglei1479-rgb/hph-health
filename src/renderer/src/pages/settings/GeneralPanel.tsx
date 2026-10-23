@@ -160,6 +160,21 @@ const GeneralPanel = (): React.JSX.Element => {
   const interfaceScale = useInterfaceScaleStore((state) => state.scale)
   const setInterfaceScale = useInterfaceScaleStore((state) => state.setScale)
   const showInterfaceScale = isDesktopRenderer()
+  const reopenOnboarding = useSettingsStore((state) => state.reopenOnboarding)
+  const openSettingsToPanel = useSettingsStore((state) => state.openSettingsToPanel)
+  const [isReopeningSetup, setIsReopeningSetup] = useState(false)
+  const [reopenError, setReopenError] = useState<string | undefined>(undefined)
+
+  const handleReopenSetup = async (): Promise<void> => {
+    setIsReopeningSetup(true)
+    setReopenError(undefined)
+    try {
+      await reopenOnboarding()
+    } catch (error) {
+      setReopenError(errorDetail(error) ?? t('Could not reopen setup.'))
+      setIsReopeningSetup(false)
+    }
+  }
 
   const checkCliStatus = async (): Promise<void> => {
     setIsUpdatingCli(true)
@@ -645,6 +660,51 @@ const GeneralPanel = (): React.JSX.Element => {
             components={{ code: <code className="font-mono" /> }}
           />
         </p>
+      </SettingsSection>
+
+      <SettingsSection
+        data-settings-anchor="general.setup"
+        title={t('Setup')}
+        description={t(
+          'Reopen the setup steps, register a model API key, or change the data location. These settings are always available, even after setup is complete.'
+        )}
+        aria-label={t('Setup')}
+      >
+        <SettingsRow
+          label={t('Model API key')}
+          description={t('Requests are sent to the AI provider whose API key you register.')}
+          className="pt-0"
+        >
+          <Button type="button" variant="outline" onClick={() => openSettingsToPanel('model')}>
+            {t('Open model settings')}
+          </Button>
+        </SettingsRow>
+        <SettingsRow
+          label={t('Data location')}
+          description={t('Move the data folder or switch to an existing one.')}
+        >
+          <Button type="button" variant="outline" onClick={() => openSettingsToPanel('storage')}>
+            {t('Open storage settings')}
+          </Button>
+        </SettingsRow>
+        <SettingsRow
+          label={t('Set up again')}
+          description={t('Run the setup steps again. Your providers, API keys, and data are kept.')}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void handleReopenSetup()}
+            disabled={isReopeningSetup}
+          >
+            {isReopeningSetup ? t('Opening setup…') : t('Set up again')}
+          </Button>
+        </SettingsRow>
+        {reopenError ? (
+          <p role="alert" className="mt-2 text-xs text-destructive">
+            {reopenError}
+          </p>
+        ) : null}
       </SettingsSection>
 
       <MachineApprovalSection />

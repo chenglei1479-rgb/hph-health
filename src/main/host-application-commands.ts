@@ -71,8 +71,10 @@ import type {
   MigrationOutcome,
   RevealAppStorageResult,
   StorageInfo,
+  StorageLocationRisk,
   StorageStatus
 } from '../shared/storage'
+import { detectStorageLocationRisk } from './storage/location-risk'
 import type {
   AppInfo,
   UpdateApplyOptions,
@@ -349,6 +351,11 @@ const storageCommands = Object.freeze({
   getInfo: defineApplicationCommand<'storage:get-info', readonly [], StorageInfo>(
     'storage:get-info'
   ),
+  getLocationRisk: defineApplicationCommand<
+    'storage:get-location-risk',
+    readonly [path: string],
+    StorageLocationRisk
+  >('storage:get-location-risk'),
   inspectDataRoot: defineApplicationCommand<
     'storage:inspect-data-root',
     readonly [request: StorageParentRequest],
@@ -831,6 +838,10 @@ const registerHostApplicationCommands = (
       'storage:dismiss-legacy-move-prompt': () => dependencies.storage.dismissLegacyMovePrompt(),
       'storage:get-status': () => dependencies.storage.getStatus(),
       'storage:get-info': () => dependencies.storage.getInfo(),
+      'storage:get-location-risk': ({ args }) =>
+        typeof args[0] === 'string'
+          ? detectStorageLocationRisk(args[0])
+          : Promise.resolve({ kind: 'unknown' as const }),
       'storage:inspect-data-root': ({ args, callerContext }) =>
         localCommand(callerContext, 'storage:inspect-data-root', () =>
           dependencies.storage.inspectDataRoot(args[0])
@@ -950,7 +961,6 @@ const registerHostApplicationCommands = (
         requireDesktopCaller(callerContext)
         return dependencies.completionHandoff.cancel(args[0])
       }
-
     })
     scope.registerGroup(hostApplicationCommandGroups[15], {
       'machine-approval:get-status': ({ callerContext }) =>

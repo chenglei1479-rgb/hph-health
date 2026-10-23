@@ -105,6 +105,12 @@ describe('saved Session model availability', () => {
     mount(false)
     expect(mocks.setAgentConfiguration).not.toHaveBeenCalled()
   })
+  it('keeps the composer unavailable when no provider is configured', () => {
+    mocks.providers = []
+    const hook = mount()
+    expect(hook.result().agentConfigurationUnavailable).toBe(true)
+    expect(hook.result().activeAgentConfiguration).toEqual(original)
+  })
   it('recovers a missing provider only after the user explicitly selects a replacement', () => {
     mocks.providers = [provider('fallback')]
     const hook = mount()

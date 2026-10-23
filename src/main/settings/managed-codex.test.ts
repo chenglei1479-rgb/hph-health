@@ -410,11 +410,13 @@ describe('installManagedCodex', () => {
     expect(report.CODEX_CONFIG).toBeNull()
     // The smoke child is pointed at the ephemeral scratch home instead.
     expect(report.CODEX_HOME).toBe(codexHome)
-    // (b) A config.toml forcing the in-memory credential store exists before the handshake.
+    // (b) A config.toml forcing the in-memory credential store and the beta egress policy exists
+    // before the handshake.
     expect(report.configToml).toContain('cli_auth_credentials_store = "ephemeral"')
-    await expect(readFile(join(codexHome, 'config.toml'), 'utf8')).resolves.toBe(
-      'cli_auth_credentials_store = "ephemeral"\n'
-    )
+    const smokeConfig = await readFile(join(codexHome, 'config.toml'), 'utf8')
+    expect(smokeConfig).toContain('check_for_update_on_startup = false')
+    expect(smokeConfig).toContain('[analytics]\nenabled = false')
+    expect(smokeConfig).toContain('[feedback]\nenabled = false')
   })
 
   it('rejects an adapter pair that does not complete ACP initialize', async () => {

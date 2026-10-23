@@ -12,7 +12,9 @@ const FRAMEWORKS: Record<AgentFrameworkId, AgentFramework> = {
   codebuddy: codeBuddyFramework
 }
 
-// Fallback for settings documents created before framework selection was persisted.
+// Fallback for settings documents created before framework selection was persisted. Beta onboarding
+// pins new installs to Codex explicitly (AgentBootstrapStep); keeping the document fallback unchanged
+// preserves the runtime choice of existing installs that never stored one.
 export const DEFAULT_AGENT_FRAMEWORK_ID: AgentFrameworkId = 'claude-code'
 
 // Resolves a framework by id for the runtime/settings; ids come from a fixed union so this is total.

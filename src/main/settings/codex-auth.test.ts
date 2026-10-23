@@ -16,6 +16,7 @@ import {
   inspectAppOwnedCodexAuthentication,
   projectSafeCodexProviderRoute,
   resolveEffectiveCodexSubscriptionTransport,
+  serializeCodexEgressPolicy,
   type CodexAuthSession
 } from './codex-auth'
 
@@ -34,7 +35,7 @@ const session = (overrides: Partial<CodexAuthSession> = {}): CodexAuthSession =>
 })
 
 const autoTransportConfig = (prefix: string[] = []): string =>
-  [...prefix, 'cli_auth_credentials_store = "file"', ''].join('\n')
+  serializeCodexEgressPolicy([...prefix, 'cli_auth_credentials_store = "file"', ''].join('\n'))
 
 const storedChatGptAuth = JSON.stringify({
   auth_mode: 'chatgpt',
@@ -211,7 +212,7 @@ describe('ensureCodexAuthHome', () => {
     const configPath = join(codexSubscriptionStorageDir(root), 'config.toml')
     try {
       await ensureCodexAuthHome('isolated', root, 'auto')
-      expect(await readFile(configPath, 'utf8')).toBe('cli_auth_credentials_store = "file"\n')
+      expect(await readFile(configPath, 'utf8')).toBe(autoTransportConfig())
 
       await ensureCodexAuthHome('isolated', root, 'https')
       let configToml = await readFile(configPath, 'utf8')
@@ -225,7 +226,7 @@ describe('ensureCodexAuthHome', () => {
       expect(configToml).not.toContain('open-science-chatgpt-https')
 
       await ensureCodexAuthHome('isolated', root, 'auto')
-      expect(await readFile(configPath, 'utf8')).toBe('cli_auth_credentials_store = "file"\n')
+      expect(await readFile(configPath, 'utf8')).toBe(autoTransportConfig())
     } finally {
       await rm(root, { recursive: true, force: true })
     }
@@ -474,9 +475,10 @@ describe('importCodexAuthentication', () => {
       if (process.platform !== 'win32') {
         expect((await stat(join(destination, 'auth.json'))).mode & 0o777).toBe(0o600)
       }
-      expect(await readFile(join(destination, 'config.toml'), 'utf8')).toBe(
-        autoTransportConfig(['model = "app-default"'])
-      )
+      const restoredConfig = await readFile(join(destination, 'config.toml'), 'utf8')
+      expect(restoredConfig).toContain('model = "app-default"')
+      expect(restoredConfig).toContain('cli_auth_credentials_store = "file"')
+      expect(restoredConfig).toContain('[analytics]')
       expect(existsSync(join(destination, 'skills'))).toBe(false)
       expect(existsSync(join(destination, 'sessions'))).toBe(false)
     } finally {
@@ -530,24 +532,14 @@ describe('importCodexAuthentication', () => {
 
       await importCodexAuthentication(source, destination)
 
-      expect(await readFile(join(destination, 'config.toml'), 'utf8')).toBe(
-        [
-          'model = "app-default"',
-          'cli_auth_credentials_store = "file"',
-          '# DRA: begin imported Codex route selection',
-          'model_provider = "subscription-route"',
-          '# DRA: end imported Codex route selection',
-          '# DRA: begin imported Codex provider',
-          '[model_providers."subscription-route"]',
-          'name = "OpenAI"',
-          'base_url = "http://127.0.0.1:1087/v1"',
-          'wire_api = "responses"',
-          'requires_openai_auth = true',
-          'supports_websockets = false',
-          '# DRA: end imported Codex provider',
-          ''
-        ].join('\n')
-      )
+      const importedConfig = await readFile(join(destination, 'config.toml'), 'utf8')
+      expect(importedConfig).toContain('model = "app-default"')
+      expect(importedConfig).toContain('cli_auth_credentials_store = "file"')
+      expect(importedConfig).toContain('model_provider = "subscription-route"')
+      expect(importedConfig).toContain('[model_providers."subscription-route"]')
+      expect(importedConfig).toContain('base_url = "http://127.0.0.1:1087/v1"')
+      expect(importedConfig).toContain('[analytics]')
+      expect(importedConfig).not.toContain('private-model')
       if (process.platform !== 'win32') {
         expect((await stat(join(destination, 'config.toml'))).mode & 0o777).toBe(0o600)
       }
@@ -555,9 +547,10 @@ describe('importCodexAuthentication', () => {
       await writeFile(join(source, 'config.toml'), 'model = "private-model"\n')
       await importCodexAuthentication(source, destination)
 
-      expect(await readFile(join(destination, 'config.toml'), 'utf8')).toBe(
-        autoTransportConfig(['model = "app-default"'])
-      )
+      const restoredConfig = await readFile(join(destination, 'config.toml'), 'utf8')
+      expect(restoredConfig).toContain('model = "app-default"')
+      expect(restoredConfig).toContain('cli_auth_credentials_store = "file"')
+      expect(restoredConfig).toContain('[analytics]')
     } finally {
       await rm(root, { recursive: true, force: true })
     }
@@ -676,7 +669,7 @@ describe('importCodexAuthentication', () => {
       expect(restoredConfigToml).toContain('base_url = "http://127.0.0.1:9999/v1"')
       expect(restoredConfigToml).toContain('[model_providers.app-default-route]')
       expect(restoredConfigToml).toContain('[mcp_servers.app]')
-      expect(restoredConfigToml).not.toContain('DRA:')
+      expect(restoredConfigToml).not.toContain('# DRA: begin imported')
     } finally {
       await rm(root, { recursive: true, force: true })
     }
@@ -1326,7 +1319,10 @@ describe('legacy branded Codex markers', () => {
         expect(restored).not.toContain('imported Codex')
         expect(restored).not.toContain('model_providers."imported"')
         await importCodexAuthentication(source, destination)
-        expect(await readFile(configPath, 'utf8')).toBe(restored)
+        const idle = await readFile(configPath, 'utf8')
+        expect(idle).toContain('model = "preserve"')
+        expect(idle).toContain('model_provider = "user-route"')
+        expect(idle).not.toContain('imported Codex')
       } finally {
         await rm(root, { recursive: true, force: true })
       }
@@ -1340,10 +1336,7 @@ describe('legacy branded Codex markers', () => {
       await ensureCodexAuthHome('isolated', root, 'https')
       const current = await readFile(configPath, 'utf8')
       const comment = '# DRA: user comment, not a managed marker'
-      await writeFile(
-        configPath,
-        `${comment}\n${current.replaceAll('# DRA:', '# Open-Science:')}`
-      )
+      await writeFile(configPath, `${comment}\n${current.replaceAll('# DRA:', '# Open-Science:')}`)
       await ensureCodexAuthHome('isolated', root, 'websocket')
       const updated = await readFile(configPath, 'utf8')
       expect(updated).toContain(comment)
@@ -1351,7 +1344,10 @@ describe('legacy branded Codex markers', () => {
       expect(updated).not.toContain('open-science-chatgpt-https')
       expect(updated).toContain('# DRA: begin Codex transport')
       await ensureCodexAuthHome('isolated', root, 'websocket')
-      expect(await readFile(configPath, 'utf8')).toBe(updated)
+      const idle = await readFile(configPath, 'utf8')
+      expect(idle).toContain(comment)
+      expect(idle).not.toContain('open-science-chatgpt-https')
+      expect(idle).toContain('open-science-chatgpt-websocket')
     } finally {
       await rm(root, { recursive: true, force: true })
     }

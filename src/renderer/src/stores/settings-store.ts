@@ -1,4 +1,5 @@
 import { ApplicationCommandError } from '../../../shared/application-command-contract'
+import type { BetaTermsAcceptance } from '../../../shared/beta-terms'
 import { projectRendererFailure } from '../renderer-diagnostics'
 import {
   getDesktopRuntimeEpoch,
@@ -118,6 +119,8 @@ type SettingsStoreData = RuntimeSetupState &
     providers: ProviderView[]
     // Selected agent backend and the frameworks available to choose from.
     agentFrameworkId: AgentFrameworkId
+    // True only when the backend choice was persisted; false means the document fallback is in use.
+    agentFrameworkSelected: boolean
     agentFrameworks: AgentFrameworkView[]
     // Detected opencode executable, for the framework-aware detection card.
     opencode: OpencodeInfo
@@ -130,6 +133,7 @@ type SettingsStoreData = RuntimeSetupState &
     codexManaged: boolean
     codebuddyManaged: boolean
     onboardingCompletedAt: number | undefined
+    betaTermsAcceptance: BetaTermsAcceptance | undefined
     credentialStore?: 'os' | 'file'
     encryptionAvailable: boolean
     // Configured package mirror (conda/pip); undefined means automatic mirror selection.
@@ -196,6 +200,7 @@ export const createInitialSettingsState = (): SettingsStoreData => ({
   activeModel: undefined,
   providers: [],
   agentFrameworkId: 'claude-code',
+  agentFrameworkSelected: false,
   agentFrameworks: [],
   opencode: {},
   codex: {},
@@ -205,6 +210,7 @@ export const createInitialSettingsState = (): SettingsStoreData => ({
   codexManaged: false,
   codebuddyManaged: false,
   onboardingCompletedAt: undefined,
+  betaTermsAcceptance: undefined,
   encryptionAvailable: false,
   packageMirror: undefined,
   networkProxy: DEFAULT_NETWORK_PROXY_SETTINGS,
@@ -236,6 +242,7 @@ const applySnapshot = (snapshot: SettingsSnapshot): Partial<SettingsStoreData> =
   activeModel: snapshot.activeModel,
   providers: snapshot.providers,
   onboardingCompletedAt: snapshot.onboardingCompletedAt,
+  betaTermsAcceptance: snapshot.betaTermsAcceptance,
   packageMirror: isMirrorConfigured(snapshot.packageMirror) ? snapshot.packageMirror : undefined,
   networkProxy: snapshot.networkProxy ?? DEFAULT_NETWORK_PROXY_SETTINGS,
   notebookNetwork: snapshot.notebookNetwork ?? DEFAULT_NOTEBOOK_NETWORK_SETTINGS,
@@ -256,6 +263,7 @@ const applySnapshot = (snapshot: SettingsSnapshot): Partial<SettingsStoreData> =
   defaultPermissionProfile: getDefaultPermissionProfile(snapshot),
 
   agentFrameworkId: snapshot.agentFrameworkId,
+  agentFrameworkSelected: snapshot.agentFrameworkSelected ?? false,
   agentFrameworks: snapshot.agentFrameworks,
   opencode: snapshot.opencode,
   codex: snapshot.codex ?? {},
@@ -310,6 +318,17 @@ export const selectActiveAgentFramework = (
 // the framework id until the framework list has loaded.
 export const selectFrameworkDisplayName = (state: SettingsStoreData): string =>
   selectActiveAgentFramework(state)?.displayName ?? state.agentFrameworkId
+
+// True when at least one configured provider/model can actually be used by the selected runtime.
+// Demo mode and the no-provider notice key off this rather than the raw provider count.
+export const selectHasUsableModel = (state: SettingsStoreData): boolean =>
+  buildConfiguredModelCatalog({
+    providers: state.providers,
+    activeProviderId: state.activeProviderId,
+    claudeSubscriptionProviderId: state.claudeSubscriptionProviderId,
+    frameworkId: state.agentFrameworkId,
+    frameworkEndpoints: selectFrameworkApiEndpoints(state)
+  }).some((entry) => entry.selectable)
 
 export const selectVisionRelayAvailable = (state: SettingsStoreData): boolean => {
   const configuration = state.visionModel

@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url'
 import {
   DRA_HOME_READY_LINE,
   DRA_LOGIN_READY_LINE,
+  DRA_ONBOARDING_READY_LINE,
+  DRA_TERMS_READY_LINE,
   waitForPackagedStartup
 } from './wait-for-packaged-startup.mjs'
 
@@ -30,8 +32,19 @@ export const WINDOWS_SMOKE_USER_DATA = 'D:\\DRA Test\\user data'
 export const WINDOWS_SMOKE_LOG_FILE = 'D:\\DRA Test\\startup.log'
 export const WINDOWS_SMOKE_DATA_ROOT = 'D:\\DRA Test\\MedResearchAgent'
 
+// Keep in sync with BETA_TERMS_VERSION; the test suite asserts the two values match. The seeded
+// settings represent a completed user who has already accepted the current beta terms, so the smoke
+// reaches Home instead of the standalone consent gate.
+export const SMOKE_BETA_TERMS_VERSION = '2026-10-β1'
+
 export const smokeSettingsJson = (dataRoot) =>
-  `${JSON.stringify({ version: 2, providers: [], onboardingCompletedAt: 1, dataRoot })}\n`
+  `${JSON.stringify({
+    version: 2,
+    providers: [],
+    onboardingCompletedAt: 1,
+    betaTermsAcceptance: { version: SMOKE_BETA_TERMS_VERSION, acceptedAt: 1 },
+    dataRoot
+  })}\n`
 
 // The first launch asks for a hospital approval number and waits until that window closes.
 // A decline is the same record the app writes when the window is dismissed, and it leaves the
@@ -122,7 +135,12 @@ export const signedOutSmokeEnv = (base, paths) => {
 // An upgraded beta.10 profile already has a workspace history file next to settings.
 export const beta10ResearchHistoryJson = () => '{"session":"retained"}\n'
 
-export const SIGNED_OUT_READY_LINES = [DRA_HOME_READY_LINE, DRA_LOGIN_READY_LINE]
+export const SIGNED_OUT_READY_LINES = [
+  DRA_HOME_READY_LINE,
+  DRA_LOGIN_READY_LINE,
+  DRA_TERMS_READY_LINE,
+  DRA_ONBOARDING_READY_LINE
+]
 
 const argumentValue = (argv, name) => {
   const index = argv.indexOf(name)
@@ -350,7 +368,8 @@ const launchPrereleaseThenSignedOut = async ({
     timeoutMs,
     workspaceLogs,
     label: `${label} prerelease`,
-    userData: paths.userData
+    userData: paths.userData,
+    readyLines: [DRA_HOME_READY_LINE, DRA_TERMS_READY_LINE, DRA_ONBOARDING_READY_LINE]
   })
   if (homeCode !== 0) return homeCode
   const signedOut = signedOutPaths(paths)
@@ -384,10 +403,12 @@ const launchPackagedApp = (binary, env) => {
 
 const publishSummary = (label, result) => {
   const reachedLogin = result.detail?.includes(DRA_LOGIN_READY_LINE)
+  const reachedTerms = result.detail?.includes(DRA_TERMS_READY_LINE)
+  const reachedOnboarding = result.detail?.includes(DRA_ONBOARDING_READY_LINE)
   const line =
     result.reason === 'ready'
-      ? `${label} reached ${reachedLogin ? 'the login screen' : 'the home window'}.`
-      : `${label} did not reach home or the login screen (${result.reason}).`
+      ? `${label} reached ${reachedLogin ? 'the login screen' : reachedTerms ? 'the beta terms gate' : reachedOnboarding ? 'the first-run wizard' : 'the home window'}.`
+      : `${label} did not reach home, the beta terms gate, the first-run wizard, or the login screen (${result.reason}).`
   process.stdout.write(`${line}\n`)
   if (process.env.GITHUB_STEP_SUMMARY) {
     writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n`, { flag: 'a' })

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { hasCurrentBetaTermsAcceptance } from '../../../shared/beta-terms'
 import type { StorageInfo, StorageStatus } from '../../../shared/storage'
 import { useDeepLinkNavigation } from '@/lib/deep-link'
 import {
@@ -66,6 +67,7 @@ const useApplicationStartup = (): ApplicationStartupProjection => {
   const settingsLoadFailure = useSettingsStore((state) => state.loadFailure)
   const settingsLoadError = useSettingsStore((state) => state.loadError)
   const onboardingCompletedAt = useSettingsStore((state) => state.onboardingCompletedAt)
+  const betaTermsAcceptance = useSettingsStore((state) => state.betaTermsAcceptance)
   const loadSettings = useSettingsStore((state) => state.load)
   const checkEnvironment = useSettingsStore((state) => state.checkEnvironment)
   const initUpdates = useUpdateStore((state) => state.init)
@@ -145,7 +147,10 @@ const useApplicationStartup = (): ApplicationStartupProjection => {
       loadAttempt: settingsLoadAttempt ?? 0,
       snapshotRevision: settingsSnapshotRevision ?? 0,
       startupView: isSettingsLoaded
-        ? resolveStartupView({ onboardingDone: onboardingCompletedAt !== undefined })
+        ? resolveStartupView({
+            onboardingDone: onboardingCompletedAt !== undefined,
+            betaTermsAccepted: hasCurrentBetaTermsAcceptance(betaTermsAcceptance)
+          })
         : undefined,
       retry: retrySettings
     },

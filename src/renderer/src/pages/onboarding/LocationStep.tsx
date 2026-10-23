@@ -1,8 +1,8 @@
 import { storageErrorMessage } from '@/lib/storage-error'
-import { X } from 'lucide-react'
+import { Copy, X } from 'lucide-react'
 import * as AlertDialog from '@/components/ui/alert-dialog'
 import { ErrorNotice } from '@/components/error-notice'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,11 @@ import {
   dialogTitleClassName
 } from '@/components/ui/dialog-chrome'
 import { Separator } from '@/components/ui/separator'
-import type { StorageInfo, DataRootSelection } from '../../../../shared/storage'
+import type {
+  StorageInfo,
+  StorageLocationRisk,
+  DataRootSelection
+} from '../../../../shared/storage'
 import { DataRootWarning } from '@/components/DataRootWarning'
 import { onboardingErrorMessage } from './onboarding-error'
 
@@ -67,8 +71,82 @@ const LocationStep = ({
   const isLoadingDefaultLocation = isResolvingDefaultLocation && dataRootInfo === null
   const [locationError, setLocationError] = useState<string | undefined>(undefined)
   const [confirmRestart, setConfirmRestart] = useState(false)
+  const [risk, setRisk] = useState<StorageLocationRisk | undefined>(undefined)
+  const [copied, setCopied] = useState(false)
   const requestInFlightRef = useRef(false)
   const [requestInFlight, setRequestInFlight] = useState(false)
+  const displayedPath = chosenDataRoot || dataRootInfo?.dataRoot || ''
+
+  // Physical/cloud classification is advisory. A failed probe resolves to 'unknown' and never blocks
+  // Continue; the warning is informational only.
+  useEffect(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setCopied(false)
+      if (!displayedPath) {
+        setRisk(undefined)
+        return
+      }
+      const readRisk = window.api.storage.getLocationRisk
+      if (typeof readRisk !== 'function') {
+        setRisk({ kind: 'unknown' })
+        return
+      }
+      void readRisk(displayedPath)
+        .then((result) => {
+          if (!cancelled) setRisk(result)
+        })
+        .catch(() => {
+          if (!cancelled) setRisk({ kind: 'unknown' })
+        })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [displayedPath])
+
+  const riskCopy = (
+    current: StorageLocationRisk
+  ): { title: string; description: string } | undefined => {
+    if (current.kind === 'cloud-sync') {
+      return {
+        title: t('This location is in a cloud-sync folder.'),
+        description: t(
+          'This location is inside a cloud-sync folder ({{provider}}). Data may be sent to an external server. Choose a folder on this computer.',
+          { provider: current.provider ?? 'OneDrive' }
+        )
+      }
+    }
+    if (current.kind === 'removable') {
+      return {
+        title: t('This location is on a removable drive.'),
+        description: t(
+          'If the drive is disconnected, your data will be unavailable. Choose a folder on this computer.'
+        )
+      }
+    }
+    if (current.kind === 'network') {
+      return {
+        title: t('This location is on a network drive.'),
+        description: t(
+          'If the network location is unavailable, your data will be unavailable. Choose a folder on this computer.'
+        )
+      }
+    }
+    return undefined
+  }
+  const warning = risk ? riskCopy(risk) : undefined
+
+  const handleCopyPath = async (): Promise<void> => {
+    if (!displayedPath || !navigator.clipboard?.writeText) return
+    try {
+      await navigator.clipboard.writeText(displayedPath)
+      setCopied(true)
+    } catch {
+      // Copy is a convenience; selection still works when the clipboard is unavailable.
+    }
+  }
 
   const runExclusive = async (request: () => Promise<void>): Promise<void> => {
     if (requestInFlightRef.current) return
@@ -219,19 +297,41 @@ const LocationStep = ({
             <div className="mt-1 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
               <p
                 aria-label={t('Data location path')}
-                className="min-w-0 flex-1 truncate rounded-lg border border-border-200 bg-bg-000 px-2.5 py-1.5 font-mono text-xs"
+                className="min-w-0 flex-1 select-all break-all rounded-lg border border-border-200 bg-bg-000 px-2.5 py-1.5 font-mono text-xs"
               >
-                {chosenDataRoot || dataRootInfo?.dataRoot || ''}
+                {displayedPath}
               </p>
-              <button
-                type="button"
-                onClick={() => void handleBrowseLocation()}
-                disabled={requestInFlight}
-                className="inline-flex shrink-0 items-center justify-center rounded-lg border border-border-200 px-3 py-1.5 text-sm font-medium text-text-000 transition-colors hover:bg-bg-10"
-              >
-                {t('Browse…')}
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleCopyPath()}
+                  disabled={!displayedPath}
+                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-border-200 px-3 py-1.5 text-sm font-medium text-text-000 transition-colors hover:bg-bg-10 disabled:opacity-50"
+                >
+                  <Copy className="size-3.5" aria-hidden="true" />
+                  {copied ? t('Copied') : t('Copy path')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleBrowseLocation()}
+                  disabled={requestInFlight}
+                  className="inline-flex shrink-0 items-center justify-center rounded-lg border border-border-200 px-3 py-1.5 text-sm font-medium text-text-000 transition-colors hover:bg-bg-10"
+                >
+                  {t('Browse…')}
+                </button>
+              </div>
             </div>
+
+            {warning ? (
+              <ErrorNotice
+                inline
+                role="status"
+                tone="amber"
+                className="mt-3"
+                title={warning.title}
+                description={warning.description}
+              />
+            ) : null}
 
             {chosenDataRoot ? (
               <p className="mt-2 text-xs text-text-100">
@@ -283,7 +383,7 @@ const LocationStep = ({
           disabled={requestInFlight || isLoadingDefaultLocation}
           className="px-4"
         >
-          {t('Continue')}
+          {t('Continue with this location')}
         </Button>
       </CardFooter>
 

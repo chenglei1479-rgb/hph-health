@@ -195,6 +195,24 @@ export function renderThirdPartyNotices(npm = collectNpmProductionNotices()) {
     lines.push(item.text || standardText(item.license) || `License: ${item.license}`)
     lines.push('')
   }
+  // The beta agent runtime is downloaded separately from npm. Apache-2.0 requires distributing the
+  // license and NOTICE with the binary, so both are reproduced here even though the package is not an
+  // npm dependency of this project.
+  lines.push('=== Bundled agent runtime (Codex CLI) ===', '')
+  lines.push('--- Codex CLI (Apache-2.0) ---')
+  lines.push(
+    'Source: https://github.com/openai/codex (downloaded by the managed runtime installer)'
+  )
+  lines.push(readFileSync(join(ROOT, 'LICENSE'), 'utf8').trim())
+  lines.push('')
+  lines.push('NOTICE')
+  lines.push('OpenAI Codex CLI')
+  lines.push('Copyright 2025 OpenAI')
+  lines.push('')
+  lines.push(
+    'This product includes software developed by OpenAI as part of the Codex CLI project, licensed under the Apache License, Version 2.0.'
+  )
+  lines.push('')
   return `${lines.join('\n').trim()}\n`
 }
 
@@ -215,7 +233,9 @@ if (isCli) {
     'matplotlib',
     'openpyxl',
     'lifelines',
-    'CPython'
+    'CPython',
+    'Codex CLI',
+    'OpenAI'
   ].filter((name) => !text.includes(name))
   if (missing.length) {
     console.error(`THIRD_PARTY_NOTICES.txt is missing ${missing.join(', ')}`)
