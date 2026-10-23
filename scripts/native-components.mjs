@@ -114,8 +114,7 @@ export async function verifyPackagedNativeComponents(resources, target, catalog)
   return paths
 }
 
-export const vendorRoot = (directory = root) =>
-  join(directory, 'build/native-components-vendor')
+export const vendorRoot = (directory = root) => join(directory, 'build/native-components-vendor')
 
 const vendorPath = (directory, target, file) =>
   join(vendorRoot(directory), target, file.sha256, file.name)
