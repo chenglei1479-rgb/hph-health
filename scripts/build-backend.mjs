@@ -7,6 +7,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { wsl2BuildDefines } from './wsl2-build-flags.mjs'
+import { runtimeCdnBuildDefine } from './runtime-cdn-config.mjs'
 
 export async function createBackendBuilder({
   root = resolve(import.meta.dirname, '..'),
@@ -38,6 +39,7 @@ export async function createBackendBuilder({
           // Electron bakes this for the shell only. The Node backend must get the same
           // value or a packaged beta requires DRA login and never leaves the splash.
           __DRA_PRERELEASE__: process.env.DRA_PRERELEASE === '1' ? 'true' : 'false',
+          __BASELIO_RUNTIME_CDN_BASE__: runtimeCdnBuildDefine(process.env, root),
           ...windowsSigningBuildDefines(process.env),
           ...wsl2BuildDefines(process.platform, development, process.env)
         },

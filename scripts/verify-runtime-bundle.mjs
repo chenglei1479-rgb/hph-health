@@ -6,6 +6,9 @@ import { setTimeout as sleep } from 'node:timers/promises'
 
 import { VERSIONS, packArchiveFile, packId, readDefaultEnvVersion } from './stage-default-envs.mjs'
 
+// TODO(task 04 / B2): once Leo hosts the runtime bundle, read BASELIO_RUNTIME_CDN_BASE here and
+// skip with an explanation when unset. The mac-pilot workflow still invokes this check and cannot
+// change in this PR, so the default stays as-is.
 export const DEFAULT_CDN_BASE = 'https://statics.aipoch.com/open-science'
 export const DEFAULT_MAX_ATTEMPTS = 3
 export const DEFAULT_RETRY_DELAY_MS = 1000

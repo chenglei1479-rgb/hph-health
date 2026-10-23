@@ -1,5 +1,6 @@
 import type { SkillMarketplaceView } from '../../lib/settings-navigation'
 import { SkillMarketplaceUpdateDialog } from './SkillMarketplaceUpdateDialog'
+import { skillMarketplaceDisabledText } from './downloads-disabled-copy'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { CircleCheck, ChevronDown, Download, LoaderCircle, Trash2 } from 'lucide-react'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -220,19 +221,25 @@ function MarketplaceInstallControls({
       })
       if (!active.current) return
       if (result.ok && result.value.updatePreview) setUpdatePreview(result.value.updatePreview)
-      else
-        setFailure(
-          result.ok
-            ? {
-                ok: false,
-                error: 'conflict',
-                reason:
-                  result.value.installation?.kind === 'conflict'
-                    ? result.value.installation.reason
-                    : 'installation-unverifiable'
-              }
-            : result
-        )
+      else {
+        let failure: Extract<SkillMarketplaceInstallResult, { ok: false }> | undefined
+        if (!result.ok) {
+          failure =
+            result.error === 'disabled'
+              ? { ok: false, error: 'installation-failed' }
+              : (result as Extract<SkillMarketplaceInstallResult, { ok: false }>)
+        } else {
+          failure = {
+            ok: false,
+            error: 'conflict',
+            reason:
+              result.value.installation?.kind === 'conflict'
+                ? result.value.installation.reason
+                : 'installation-unverifiable'
+          }
+        }
+        setFailure(failure)
+      }
     } catch {
       if (active.current) setFailure({ ok: false, error: 'installation-failed' })
     } finally {
@@ -1048,28 +1055,37 @@ export function SkillMarketplace({
                 role="alert"
                 tone={result.error === 'integrity' ? 'red' : 'amber'}
                 title={
-                  result.error === 'integrity'
-                    ? t('Marketplace verification failed')
-                    : result.error === 'snapshot-unavailable'
-                      ? t('Marketplace snapshot is no longer available')
-                      : t('Unable to load Marketplace')
+                  result.error === 'disabled'
+                    ? skillMarketplaceDisabledText(t)
+                    : result.error === 'integrity'
+                      ? t('Marketplace verification failed')
+                      : result.error === 'snapshot-unavailable'
+                        ? t('Marketplace snapshot is no longer available')
+                        : t('Unable to load Marketplace')
                 }
                 description={
                   result.error === 'integrity'
                     ? t('The catalog could not be verified. Unverified content is not displayed.')
                     : undefined
                 }
-                primaryButton={{
-                  label:
-                    result.error === 'snapshot-unavailable' ? t('Back to Marketplace') : t('Retry'),
-                  onClick: () => {
-                    if (result.error === 'snapshot-unavailable') {
-                      onNavigate({ kind: 'marketplace' })
-                      setRefresh((value) => value + 1)
-                    } else if (view.kind !== 'marketplace-detail') setRefresh((value) => value + 1)
-                    else setDetailRefresh((value) => value + 1)
-                  }
-                }}
+                primaryButton={
+                  result.error === 'disabled'
+                    ? undefined
+                    : {
+                        label:
+                          result.error === 'snapshot-unavailable'
+                            ? t('Back to Marketplace')
+                            : t('Retry'),
+                        onClick: () => {
+                          if (result.error === 'snapshot-unavailable') {
+                            onNavigate({ kind: 'marketplace' })
+                            setRefresh((value) => value + 1)
+                          } else if (view.kind !== 'marketplace-detail')
+                            setRefresh((value) => value + 1)
+                          else setDetailRefresh((value) => value + 1)
+                        }
+                      }
+                }
               />
             ) : view.kind === 'marketplace-detail' ? (
               selected ? (

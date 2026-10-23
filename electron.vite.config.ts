@@ -9,6 +9,7 @@ import { fileViewerRenderers } from '@file-viewer/vite-plugin'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { wsl2BuildDefines } from './scripts/wsl2-build-flags.mjs'
+import { runtimeCdnBuildDefine } from './scripts/runtime-cdn-config.mjs'
 
 // Supported packages are built on native runners because they carry platform-native dependencies,
 // so the build host is also the package target. Keep non-Windows bundles disabled independently of
@@ -17,11 +18,13 @@ export { resolveWsl2BashPreviewBuildEnabled } from './scripts/wsl2-build-flags.m
 
 export default defineConfig(({ command }) => {
   const draPrerelease = process.env.DRA_PRERELEASE === '1' ? 'true' : 'false'
+  const runtimeCdnBase = runtimeCdnBuildDefine(process.env, process.cwd())
   return {
   main: {
     plugins: [nativeLocaleAssets()],
     define: {
       __DRA_PRERELEASE__: draPrerelease,
+      __BASELIO_RUNTIME_CDN_BASE__: runtimeCdnBase,
       __OPEN_SCIENCE_NATIVE_LOCALE_DIRECTORY__: JSON.stringify('native-locales'),
       ...windowsSigningBuildDefines(process.env),
       ...wsl2BuildDefines(process.platform, command === 'serve', process.env)
@@ -54,7 +57,8 @@ export default defineConfig(({ command }) => {
   },
   renderer: {
     define: {
-      __DRA_PRERELEASE__: draPrerelease
+      __DRA_PRERELEASE__: draPrerelease,
+      __BASELIO_RUNTIME_CDN_BASE__: runtimeCdnBase
     },
     // Dev scanning must reach lazy Workers before their first use triggers a dependency reload.
     // This prepares dependencies without executing Workers or changing production build entries.

@@ -41,8 +41,18 @@ function validateRuntimeCatalog(catalog, environment) {
     throw new Error('Invalid runtime catalog')
   for (const release of catalog.releases) {
     const { component, architecture, archive } = release
-    const expected = runtimeArchiveUrl(component, architecture, archive.sha256, environment)
-    if (!Number.isSafeInteger(archive.size) || archive.size <= 0 || archive.url !== expected)
+    // Validate the deployment destination, then require the reviewed catalog to store only the
+    // relative object path (the application supplies the build-time base at runtime).
+    runtimeArchiveUrl(component, architecture, archive.sha256, environment)
+    const relative = `notebook-runtime/${component}/win32-${architecture}/${archive.sha256}/${component}.tar.zst`
+    if (
+      !Number.isSafeInteger(archive.size) ||
+      archive.size <= 0 ||
+      archive.url !== relative ||
+      archive.url.startsWith('/') ||
+      archive.url.includes('://') ||
+      archive.url.includes('..')
+    )
       throw new Error('Invalid immutable runtime URL')
   }
   return catalog
@@ -68,10 +78,15 @@ export async function verifyRuntimeArchives(directory, catalog) {
   }
 }
 
-export async function checkRuntimeCdn(catalog, fetchImpl = fetch, { verifyBytes = false } = {}) {
+export async function checkRuntimeCdn(
+  catalog,
+  fetchImpl = fetch,
+  { verifyBytes = false, environment = process.env } = {}
+) {
   await Promise.all(
-    catalog.releases.map(async ({ component, archive }) => {
-      const response = await fetchImpl(archive.url, {
+    catalog.releases.map(async ({ component, architecture, archive }) => {
+      const url = runtimeArchiveUrl(component, architecture, archive.sha256, environment)
+      const response = await fetchImpl(url, {
         method: verifyBytes ? 'GET' : 'HEAD',
         redirect: 'error',
         signal: AbortSignal.timeout(30_000)
@@ -124,8 +139,10 @@ export async function publishRuntimeArchives(
       )
     return JSON.parse(result.stdout)
   }
-  for (const { component, archive } of catalog.releases) {
-    const key = new URL(archive.url).pathname.slice(1)
+  for (const { component, architecture, archive } of catalog.releases) {
+    const key = new URL(
+      runtimeArchiveUrl(component, architecture, archive.sha256, environment)
+    ).pathname.slice(1)
     const checksum = Buffer.from(archive.sha256, 'hex').toString('base64')
     const head = invoke(
       'aws',

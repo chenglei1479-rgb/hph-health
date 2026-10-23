@@ -8091,6 +8091,17 @@
     "Checking the existing runtime…": "Проверка существующей среды выполнения…",
     "The agent runtime is not ready.": "Среда выполнения агента не готова.",
     "The existing runtime is kept for this setup.": "В этой настройке существующая среда выполнения сохраняется.",
-    "Notebook runtime": "Среда выполнения Notebook"
+    "Notebook runtime": "Среда выполнения Notebook",
+    "This version can't download the Python/R runtime. Watch for an update from the distributor.": "Эта версия не может загрузить среду выполнения Python/R. Дождитесь сообщения от распространителя.",
+    "This version can't download the Windows notebook runtime. Watch for an update from the distributor.": "Эта версия не может загрузить среду выполнения Notebook для Windows. Дождитесь сообщения от распространителя.",
+    "The skill marketplace isn't available right now. Skills you've already installed still work.": "Маркетплейс навыков сейчас недоступен. Установленные навыки продолжают работать.",
+    "The specialist marketplace isn't available right now. Specialists you've already added still work.": "Маркетплейс специалистов сейчас недоступен. Добавленные специалисты продолжают работать.",
+    "Network connections": "Сетевые подключения",
+    "Runtime and marketplace downloads can contact statics.aipoch.com (the distributor's static host). A build without a configured runtime CDN makes no such request and shows a notice instead.": "Загрузки сред выполнения и маркетплейсов могут обращаться к statics.aipoch.com (статический хост распространителя). Сборка без настроенного CDN сред выполнения не отправляет этот запрос, а показывает уведомление.",
+    "Package installs can contact conda.anaconda.org (conda-forge and bioconda), pypi.org, and cloud.r-project.org. Mainland mirrors (mirrors.tuna.tsinghua.edu.cn, mirrors.ustc.edu.cn, mirrors.aliyun.com) are probed only when the app language is Simplified Chinese.": "Установка пакетов может обращаться к conda.anaconda.org (conda-forge и bioconda), pypi.org и cloud.r-project.org. Зеркала материкового Китая (mirrors.tuna.tsinghua.edu.cn, mirrors.ustc.edu.cn, mirrors.aliyun.com) проверяются только при языке приложения «упрощённый китайский».",
+    "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "Установка управляемых CLI может обращаться к registry.npmjs.org, а registry.npmmirror.com используется как резервный.",
+    "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "Официальные маркетплейсы навыков и специалистов могут обращаться к github.com, api.github.com и raw.githubusercontent.com. В этой бете они включены по умолчанию и могут быть отключены.",
+    "No telemetry is sent. Auto-update is off.": "Телеметрия не отправляется. Автообновление отключено.",
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "Внешние адреса, к которым может обращаться это приложение. Телеметрия не отправляется, автообновление отключено."
   }
 }

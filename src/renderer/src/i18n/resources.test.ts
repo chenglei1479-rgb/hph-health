@@ -3579,7 +3579,7 @@ describe('Korean binding terminology', () => {
           const sourceText = englishOf(key)
             // Extract prose for glossary matching; this text is never rendered as HTML.
             .split(
-              /<code>.*?<\/code>|\{\{\w+\}\}|<\/?\w+>|https?:\/\/\S+|\b[A-Za-z]:\\[\w.\\-]*(?<!\.)/g
+              /<code>.*?<\/code>|\{\{\w+\}\}|<\/?\w+>|https?:\/\/\S+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b|\b[A-Za-z]:\\[\w.\\-]*(?<!\.)/g
             )
             .join(' ')
           return source.test(stripSource ? sourceText.replace(stripSource, '') : sourceText)

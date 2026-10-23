@@ -7,7 +7,7 @@
       "architecture": "x64",
       "source": "patched",
       "archive": {
-        "url": "https://statics.aipoch.com/open-science/notebook-runtime/node/win32-x64/0498d2dc1d60bae64676a889c602c5c1169c79e5f4f4af5004f59a1a63bd9641/node.tar.zst",
+        "url": "notebook-runtime/node/win32-x64/0498d2dc1d60bae64676a889c602c5c1169c79e5f4f4af5004f59a1a63bd9641/node.tar.zst",
         "sha256": "0498d2dc1d60bae64676a889c602c5c1169c79e5f4f4af5004f59a1a63bd9641",
         "size": 33300520
       },
@@ -2152,7 +2152,7 @@
       "architecture": "x64",
       "source": "patched",
       "archive": {
-        "url": "https://statics.aipoch.com/open-science/notebook-runtime/powershell/win32-x64/53e91843d39a4d9c956dc322ba4220db30d14133b3cae5488fd6df81e0756e63/powershell.tar.zst",
+        "url": "notebook-runtime/powershell/win32-x64/53e91843d39a4d9c956dc322ba4220db30d14133b3cae5488fd6df81e0756e63/powershell.tar.zst",
         "sha256": "53e91843d39a4d9c956dc322ba4220db30d14133b3cae5488fd6df81e0756e63",
         "size": 101036772
       },

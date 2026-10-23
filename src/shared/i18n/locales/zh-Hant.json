@@ -7624,6 +7624,17 @@
     "Checking the existing runtime…": "正在檢查現有執行環境…",
     "The agent runtime is not ready.": "智能體執行環境尚未就緒。",
     "The existing runtime is kept for this setup.": "本次設定將保留現有執行環境。",
-    "Notebook runtime": "Notebook 執行環境"
+    "Notebook runtime": "Notebook 執行環境",
+    "This version can't download the Python/R runtime. Watch for an update from the distributor.": "這個版本無法下載 Python / R 執行環境，請等待發佈方通知。",
+    "This version can't download the Windows notebook runtime. Watch for an update from the distributor.": "這個版本無法下載 Windows 版 Notebook 執行環境，請等待發佈方通知。",
+    "The skill marketplace isn't available right now. Skills you've already installed still work.": "技能市集目前無法使用。已安裝的技能仍可照常使用。",
+    "The specialist marketplace isn't available right now. Specialists you've already added still work.": "專家市集目前無法使用。已新增的專家仍可照常使用。",
+    "Network connections": "網路連線",
+    "Runtime and marketplace downloads can contact statics.aipoch.com (the distributor's static host). A build without a configured runtime CDN makes no such request and shows a notice instead.": "執行環境與市集下載可能連線至發佈方的靜態主機 statics.aipoch.com。未設定執行環境 CDN 的版本不會發出此請求，而會顯示提示。",
+    "Package installs can contact conda.anaconda.org (conda-forge and bioconda), pypi.org, and cloud.r-project.org. Mainland mirrors (mirrors.tuna.tsinghua.edu.cn, mirrors.ustc.edu.cn, mirrors.aliyun.com) are probed only when the app language is Simplified Chinese.": "安裝套件時可能連線至 conda.anaconda.org（conda-forge 與 bioconda）、pypi.org 與 cloud.r-project.org。僅當應用程式語言為簡體中文時，才會探測中國大陸鏡像（mirrors.tuna.tsinghua.edu.cn、mirrors.ustc.edu.cn、mirrors.aliyun.com）。",
+    "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "安裝受管理的 CLI 時可能連線至 registry.npmjs.org，並以 registry.npmmirror.com 作為後備。",
+    "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "官方技能與專家市集可能連線至 github.com、api.github.com 與 raw.githubusercontent.com。此測試版預設開啟，可以關閉。",
+    "No telemetry is sent. Auto-update is off.": "不傳送遙測資料。自動更新已關閉。",
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "此應用程式可能連線的外部位址。不傳送遙測資料，自動更新已關閉。"
   }
 }
