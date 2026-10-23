@@ -73,6 +73,7 @@ type WorkspaceSidebarProps = {
   }>
   onOpenProject?: (projectId: string) => void
   sessions: ChatSession[]
+  logoBusy?: boolean
   credentialPendingSessionIds?: ReadonlySet<string>
   activeSessionId: string | undefined
   canCreateConversation: boolean
@@ -706,6 +707,7 @@ const WorkspaceSidebarView = (props: WorkspaceSidebarViewProps): React.JSX.Eleme
     otherProjects = [],
     onOpenProject,
     sessions,
+    logoBusy = false,
     credentialPendingSessionIds = EMPTY_CREDENTIAL_SESSION_IDS,
     activeSessionId,
     canCreateConversation,
@@ -793,7 +795,7 @@ const WorkspaceSidebarView = (props: WorkspaceSidebarViewProps): React.JSX.Eleme
                 sidebarInteractiveTransitionClassName
               )}
             >
-              <AppLogo className="size-5 rounded object-contain" />
+              <AppLogo interactive busy={logoBusy} className="size-5 rounded object-contain" />
             </button>
             <DropdownMenu onOpenChange={onProjectMenuOpenChange}>
               <DropdownMenuTrigger asChild>
