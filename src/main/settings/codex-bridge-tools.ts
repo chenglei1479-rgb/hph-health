@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { z } from 'zod'
 
 import {
@@ -76,7 +77,7 @@ const LIBRARY_CORE_TOOLS: ResponsesBridgeNamespacedTool[] = [
   tool(
     LITERATURE_LIBRARY_MCP_SERVER_NAME,
     LITERATURE_LIBRARY_SEARCH_TOOL_NAME,
-    "Browse or search the user's DRA Literature Library. Scope defaults to the trusted current Project.",
+    `Browse or search the user's ${PRODUCT_DISPLAY_NAME} Literature Library. Scope defaults to the trusted current Project.`,
     z.object({
       query: z.string().trim().min(1).max(2_000).optional(),
       scope: libraryScope.optional(),
@@ -222,7 +223,7 @@ const ARTIFACT_TOOLS: ResponsesBridgeNamespacedTool[] = [
   tool(
     ARTIFACT_MCP_SERVER_NAME,
     'write_artifact_file',
-    'Attach a generated image, chart, report, data export, or archive to the current DRA response. The file must already exist before using a localPath source.',
+    `Attach a generated image, chart, report, data export, or archive to the current ${PRODUCT_DISPLAY_NAME} response. The file must already exist before using a localPath source.`,
     z.object(writeArtifactFileToolSchema)
   )
 ]
@@ -233,7 +234,7 @@ const notebookTools = (options: NotebookToolEnvironmentOptions): ResponsesBridge
     name: definition.name,
     description:
       definition.name === 'notebook_execute'
-        ? `${definition.description} For DRA data connectors, the Python code MUST call host.mcp(server, method, arguments). Never use requests, urllib, httpx, curl, or a raw upstream API for connector data; those bypass app permissions, credentials, and rate limits. Codex MCP resource-list tools are not connector discovery.`
+        ? `${definition.description} For ${PRODUCT_DISPLAY_NAME} data connectors, the Python code MUST call host.mcp(server, method, arguments). Never use requests, urllib, httpx, curl, or a raw upstream API for connector data; those bypass app permissions, credentials, and rate limits. Codex MCP resource-list tools are not connector discovery.`
         : definition.description,
     parameters: jsonSchema(z.object(definition.inputSchema))
   }))

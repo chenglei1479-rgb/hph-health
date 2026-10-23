@@ -1,9 +1,10 @@
 import type { DownloadProgress } from '@aipoch/resilient-download'
-import { APP } from '../../shared/app-config'
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { lstat, mkdir, mkdtemp, readdir, rename, rm } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
+
+import { resolveRuntimeCdnBase } from './environment-resources'
 
 export type WindowsRuntimeComponent = 'node' | 'powershell'
 
@@ -47,9 +48,17 @@ export type WindowsRuntimeComponentDependencies = Readonly<{
 // Only a failed compatibility check with confirmed cleanup permits trying another candidate.
 export class WindowsRuntimeIncompatibleError extends Error {}
 
+// The build has no runtime CDN (BASELIO_RUNTIME_CDN_BASE was empty). Callers surface the localized
+// "this version can't download the Windows notebook runtime" message and must not retry as a network
+// error.
+export class WindowsRuntimeDownloadDisabledError extends Error {
+  readonly code = 'WINDOWS_RUNTIME_DOWNLOAD_DISABLED'
+  constructor() {
+    super('WINDOWS_RUNTIME_DOWNLOAD_DISABLED: this build has no Windows notebook runtime CDN.')
+  }
+}
+
 const digestPattern = /^[a-f0-9]{64}$/
-// Executable downloads use application configuration, never the environment-bundle override.
-const componentCdnRoot = new URL(`${APP.cdnBaseUrl}/notebook-runtime/`)
 const executableName = (component: WindowsRuntimeComponent): string =>
   component === 'node' ? 'node.exe' : 'pwsh.exe'
 
@@ -59,22 +68,43 @@ const safeRelativePath = (path: string): boolean =>
   ![...path].some((character) => character.charCodeAt(0) < 32 || character === ':') &&
   path.split('/').every((part) => part !== '' && part !== '.' && part !== '..')
 
+// The catalog stores a relative path. The configured build-time base supplies the host; an empty
+// base means the download is disabled and must fail closed before any request.
+export const resolveWindowsRuntimeArchiveUrl = (
+  release: WindowsRuntimeComponentRelease,
+  cdnBase = resolveRuntimeCdnBase()
+): string => {
+  if (!cdnBase) throw new WindowsRuntimeDownloadDisabledError()
+  let base: URL
+  try {
+    base = new URL(`${cdnBase.replace(/\/+$/, '')}/`)
+  } catch {
+    throw new Error('Invalid Windows runtime CDN base.')
+  }
+  if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash) {
+    throw new Error('Invalid Windows runtime CDN base.')
+  }
+  return new URL(release.archive.url, base).href
+}
+
 export const assertWindowsRuntimeComponentRelease = (
   release: WindowsRuntimeComponentRelease
 ): void => {
-  const url = new URL(release.archive.url)
+  const prefix = `notebook-runtime/${release.component}/win32-${release.architecture}/${release.archive.sha256}/`
   if (
     !['node', 'powershell'].includes(release.component) ||
     !['official', 'patched'].includes(release.source) ||
     !['x64', 'arm64'].includes(release.architecture) ||
     !/^\d+\.\d+\.\d+$/.test(release.version) ||
-    url.protocol !== 'https:' ||
-    url.origin !== componentCdnRoot.origin ||
-    !url.pathname.startsWith(componentCdnRoot.pathname) ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
+    typeof release.archive.url !== 'string' ||
+    release.archive.url.startsWith('/') ||
+    release.archive.url.includes('://') ||
+    release.archive.url.includes('\\') ||
+    release.archive.url.includes('?') ||
+    release.archive.url.includes('#') ||
+    !safeRelativePath(release.archive.url) ||
+    !release.archive.url.startsWith(prefix) ||
+    release.archive.url !== `${prefix}${release.component}.tar.zst` ||
     !digestPattern.test(release.archive.sha256) ||
     !Number.isSafeInteger(release.archive.size) ||
     release.archive.size <= 0 ||
@@ -238,6 +268,7 @@ export class WindowsRuntimeComponentStore {
       onProgress?: (progress: WindowsRuntimeComponentProgress) => void
     }>
   ): Promise<WindowsRuntimeComponentSelection> {
+    if (!resolveRuntimeCdnBase()) throw new WindowsRuntimeDownloadDisabledError()
     const destination = this.destination(release)
     const parent = resolve(destination, '..')
     await mkdir(this.root, { recursive: true, mode: 0o700 })

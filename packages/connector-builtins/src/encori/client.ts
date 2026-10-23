@@ -6,7 +6,7 @@ import Papa from 'papaparse'
 import { unzipSync } from 'fflate'
 import type { EncoriContext } from './publication'
 
-// ENCORI is not registered. DRA does not contact hosts outside the egress allowlist.
+// ENCORI is not registered. the application does not contact hosts outside the egress allowlist.
 export const BASE = ''
 
 // A boolean return keeps the official client body type-checked without letting it run.
@@ -156,7 +156,7 @@ export async function query(
   endpoint: string,
   mapping: Record<string, string>
 ): Promise<Args> {
-  if (encoriDisabled()) throw new Error('ENCORI is disabled in DRA.')
+  if (encoriDisabled()) throw new Error('ENCORI is disabled in the application.')
   const params = Object.fromEntries(
     Object.entries(mapping).map(([key, upstream]) => [upstream, String(args[key]).trim()])
   )
@@ -257,7 +257,7 @@ export async function query(
 }
 
 export async function references(ctx: EncoriContext, args: Args): Promise<Args> {
-  if (encoriDisabled()) throw new Error('ENCORI is disabled in DRA.')
+  if (encoriDisabled()) throw new Error('ENCORI is disabled in the application.')
   try {
     const raw = await receive(REFERENCE, ctx, {}, readBytes)
     ctx.signal?.throwIfAborted()

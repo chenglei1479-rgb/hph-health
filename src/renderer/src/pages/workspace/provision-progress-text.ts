@@ -57,6 +57,10 @@ export const provisionProgressText = (
       return t('Downloaded {{file}}', { file: event.file })
     case 'runtime-pack-unavailable':
       return t('Managed runtime pack unavailable')
+    case 'runtime-cdn-disabled':
+      return t(
+        "This version can't download the Python/R runtime. Watch for an update from the distributor."
+      )
     default:
       return event satisfies never
   }

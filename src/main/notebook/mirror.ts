@@ -1,13 +1,17 @@
+import { resolveLocaleFromTags } from '../../shared/locale'
 import { CURATED_MIRRORS, type PackageMirror } from '../../shared/mirror'
 
 export { CURATED_MIRRORS, MIRROR_HELP_URL } from '../../shared/mirror'
 
-// Cheap synchronous locale fallback for call sites that cannot use the asynchronous speed probe: a
-// Chinese locale gets the CN mirror default; everyone else uses public hosts (empty overrides).
-const isCnLocale = (locale: string): boolean => /^zh\b/i.test(locale) || /-CN$/i.test(locale)
+// Mainland mirrors are a zh-Hans convenience only. ja/en (and every other locale, including
+// zh-Hant) use the public indexes and never contact the mainland mirror hosts.
+export const isSimplifiedChineseLocale = (locale: string): boolean =>
+  resolveLocaleFromTags([locale]) === 'zh-Hans'
 
+// Cheap synchronous locale fallback for call sites that cannot use the asynchronous speed probe: a
+// zh-Hans locale gets the CN mirror default; everyone else uses public hosts (empty overrides).
 export function resolveMirror(locale: string): PackageMirror {
-  return isCnLocale(locale) ? { ...CURATED_MIRRORS.cn } : {}
+  return isSimplifiedChineseLocale(locale) ? { ...CURATED_MIRRORS.cn } : {}
 }
 
 // The mirror actually used by the provisioner/package-manager: any user-configured field wins;

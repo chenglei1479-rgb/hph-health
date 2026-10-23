@@ -15,6 +15,12 @@ describe('resolveMirror', () => {
 
   it('returns public hosts (empty overrides) for a non-CN locale', () => {
     expect(resolveMirror('en-US')).toEqual({})
+    expect(resolveMirror('ja')).toEqual({})
+  })
+
+  it('keeps zh-Hant on the public indexes instead of mainland mirrors', () => {
+    expect(resolveMirror('zh-Hant')).toEqual({})
+    expect(resolveMirror('zh-TW')).toEqual({})
   })
 
   it('includes a CN cranMirror for a CN locale (Plan C R install fallback consumes it)', () => {

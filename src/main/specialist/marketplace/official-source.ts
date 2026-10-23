@@ -1,8 +1,9 @@
+import { PRODUCT_DISPLAY_NAME } from '../../../shared/product-identity'
 import type { OfficialMarketplaceSourceConfig } from './service'
 
 export const OFFICIAL_MARKETPLACE_SOURCE: OfficialMarketplaceSourceConfig = {
   id: 'openscience-official',
-  name: 'DRA Specialist Marketplace',
+  name: `${PRODUCT_DISPLAY_NAME} Specialist Marketplace`,
   repositoryUrl: 'https://github.com/aipoch/openscience-specialist-marketplace',
   ref: 'published',
   metadataBaseUrls: [

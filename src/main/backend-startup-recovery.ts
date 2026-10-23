@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../shared/product-identity'
 import { app, dialog, shell } from 'electron'
 import { resolveLocale } from '../shared/locale'
 import { DesktopBackendStartupError } from './backend-startup'
@@ -27,7 +28,7 @@ export async function recoverDesktopBackendStartup(
   while (true) {
     const { response } = await dialog.showMessageBox({
       type: 'error',
-      title: 'Open-Science',
+      title: PRODUCT_DISPLAY_NAME,
       message: translate('Baselio could not start the backend.'),
       detail: `${detail}\n\nSTARTUP_STAGE: ${error.stage}`,
       buttons: [
@@ -44,7 +45,7 @@ export async function recoverDesktopBackendStartup(
       if (failure)
         await dialog.showMessageBox({
           type: 'error',
-          title: 'Open-Science',
+          title: PRODUCT_DISPLAY_NAME,
           message: translate('Could not open the logs folder.'),
           detail: error.logs
         })

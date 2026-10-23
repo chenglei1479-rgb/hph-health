@@ -208,8 +208,8 @@ describe('pickFastestMirror', () => {
 })
 
 describe('effectiveMirrorAsync', () => {
-  it('describes automatic selection when an unconfigured install selects a third-party mirror', async () => {
-    const effective = await effectiveMirrorAsync(undefined, 'en-US', {
+  it('describes automatic selection when a zh-Hans install selects a third-party mirror', async () => {
+    const effective = await effectiveMirrorAsync(undefined, 'zh-Hans', {
       candidates,
       probe: probeFrom(reachableLatencies)
     })
@@ -226,12 +226,33 @@ describe('effectiveMirrorAsync', () => {
     expect(probe).not.toHaveBeenCalled()
   })
 
-  it('uses the fastest-probed mirror when there is no override', async () => {
-    const result = await effectiveMirrorAsync(undefined, 'en-US', {
+  it('uses the fastest-probed mirror when a zh-Hans install has no override', async () => {
+    const result = await effectiveMirrorAsync(undefined, 'zh-Hans', {
       candidates,
       probe: probeFrom(reachableLatencies)
     })
     expect(result.condaChannel).toBe('https://tuna/conda-forge/')
+  })
+
+  it.each(['ja', 'en', 'en-US', 'de', 'zh-Hant', 'zh-TW'])(
+    'never probes and pins the public indexes for %s',
+    async (locale) => {
+      const probe = vi.fn()
+      const result = await effectiveMirrorAsync(undefined, locale, { candidates, probe })
+      expect(result).toEqual({})
+      expect(probe).not.toHaveBeenCalled()
+    }
+  )
+
+  it('does not call the real network probe for ja or en', async () => {
+    vi.mocked(netFetchStandard).mockClear()
+    for (const locale of ['ja', 'en']) {
+      await effectiveMirrorAsync(undefined, locale)
+    }
+    expect(netFetchStandard).not.toHaveBeenCalled()
+    expect(vi.mocked(netFetchStandard).mock.calls.map(([url]) => String(url))).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/tuna|ustc|aliyun/i)])
+    )
   })
 
   it('falls back to public indexes instead of reviving a rejected locale mirror', async () => {
@@ -265,13 +286,23 @@ describe('effectiveMirrorAsync', () => {
     })
   })
 
-  it('preserves a caBundle-only config while still using the fastest-probed channel', async () => {
-    const result = await effectiveMirrorAsync({ caBundle: '/etc/corp-ca.pem' }, 'en-US', {
+  it('preserves a caBundle-only config while a zh-Hans install still uses the fastest-probed channel', async () => {
+    const result = await effectiveMirrorAsync({ caBundle: '/etc/corp-ca.pem' }, 'zh-Hans', {
       candidates,
       probe: probeFrom(reachableLatencies)
     })
     expect(result.condaChannel).toBe('https://tuna/conda-forge/')
     expect(result.caBundle).toBe('/etc/corp-ca.pem')
+  })
+
+  it('keeps a caBundle-only config public for ja/en without probing', async () => {
+    const probe = vi.fn()
+    const result = await effectiveMirrorAsync({ caBundle: '/etc/corp-ca.pem' }, 'ja', {
+      candidates,
+      probe
+    })
+    expect(result).toEqual({ caBundle: '/etc/corp-ca.pem' })
+    expect(probe).not.toHaveBeenCalled()
   })
 
   it('preserves a caBundle-only config on the locale fallback when the probe finds nothing', async () => {

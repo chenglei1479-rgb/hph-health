@@ -398,7 +398,8 @@ export class MarketplaceService {
           left.displayName.localeCompare(right.displayName) ||
           left.sourceName.localeCompare(right.sourceName)
       ),
-      failures
+      failures,
+      ...(this.options.officialSource ? {} : { disabled: true })
     }
   }
 

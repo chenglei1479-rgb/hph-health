@@ -1998,7 +1998,7 @@ export async function installPackages(
         prefix,
         error:
           `Cannot verify the installed r-base version and build in ${prefix}; repair this R runtime ` +
-          'before installing packages. DRA will not run an incompletely pinned R package transaction.'
+          'before installing packages. The application will not run an incompletely pinned R package transaction.'
       }
     }
 
@@ -2070,7 +2070,7 @@ export async function installPackages(
       prefix,
       error:
         `Cannot verify the installed r-base version and build in ${prefix}; repair this R runtime ` +
-        'before installing packages. DRA will not run an incompletely pinned R package transaction.'
+        'before installing packages. The application will not run an incompletely pinned R package transaction.'
     }
   }
   const installedRBaseVersion = installedRBaseIdentity.version

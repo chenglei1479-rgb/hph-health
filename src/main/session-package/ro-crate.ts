@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { setImmediate as yieldToEventLoop } from 'node:timers/promises'
@@ -300,8 +301,7 @@ export const buildSessionPackageRoCrateMetadata = async (
     name: manifest.source.title || manifest.source.projectName,
     datePublished: publishedAt.toISOString(),
     license: 'License information was not provided. This export grants no additional usage rights.',
-    description:
-      'DRA Session research package with captured provenance. Excluded or unavailable files retain references only. Captured evidence does not guarantee deterministic replay.',
+    description: `${PRODUCT_DISPLAY_NAME} Session research package with captured provenance. Excluded or unavailable files retain references only. Captured evidence does not guarantee deterministic replay.`,
     hasPart: [...entities.values()]
       .filter((entity) => entity['@type'] === 'File')
       .map((entity) => reference(entity['@id'])),

@@ -3,11 +3,12 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { APP } from '../../shared/app-config'
 import catalog from './windows-runtime-catalog.json'
 import {
   assertWindowsRuntimeComponentRelease,
+  resolveWindowsRuntimeArchiveUrl,
   WindowsRuntimeComponentStore,
+  WindowsRuntimeDownloadDisabledError,
   WindowsRuntimeIncompatibleError,
   verifyWindowsRuntimeComponent,
   type WindowsRuntimeComponentRelease,
@@ -27,7 +28,7 @@ const release = (source: 'official' | 'patched' = 'patched'): WindowsRuntimeComp
   architecture: 'x64',
   source,
   archive: {
-    url: `${APP.cdnBaseUrl}/notebook-runtime/fixture/component.tar.zst`,
+    url: `notebook-runtime/node/win32-x64/${hash(archive)}/node.tar.zst`,
     sha256: hash(archive),
     size: Buffer.byteLength(archive)
   },
@@ -63,44 +64,53 @@ describe('Windows runtime component preparation', () => {
     }
   })
 
-  it('uses the shared CDN configuration while retaining the executable download boundary', async () => {
-    vi.resetModules()
-    vi.doMock('../../shared/app-config', () => ({
-      APP: { cdnBaseUrl: 'https://cdn.fixture.test/fixture-app' }
-    }))
+  it('binds a relative catalog path to the configured CDN base and rejects unsafe bases', async () => {
     vi.stubEnv('OPEN_SCIENCE_ENV_CDN_BASE', 'https://override.fixture.test/fixture-app')
     try {
-      const { assertWindowsRuntimeComponentRelease: validate } =
-        await import('./windows-runtime-components')
       const { resolveRuntimeCdnBase } = await import('./environment-resources')
-      const trusted = 'https://cdn.fixture.test/fixture-app/notebook-runtime/component.tar.zst'
       const candidate = release()
       expect(resolveRuntimeCdnBase()).toBe('https://override.fixture.test/fixture-app')
-      expect(() =>
-        validate({ ...candidate, archive: { ...candidate.archive, url: trusted } })
-      ).not.toThrow()
+      expect(resolveWindowsRuntimeArchiveUrl(candidate)).toBe(
+        `https://override.fixture.test/fixture-app/notebook-runtime/node/win32-x64/${candidate.archive.sha256}/node.tar.zst`
+      )
       for (const url of [
-        candidate.archive.url,
-        trusted.replace('https:', 'http:'),
-        trusted.replace('cdn.fixture.test', 'override.fixture.test'),
-        trusted.replace('cdn.fixture.test', 'cdn.fixture.test.other.test'),
-        trusted.replace('/fixture-app/', '/other-app/'),
-        trusted.replace('/notebook-runtime/', '/notebook-runtime-extra/'),
-        trusted.replace('/notebook-runtime/', '/notebook-runtime/../'),
-        trusted.replace('https://', 'https://user:password@'),
-        `${trusted}?redirect=other`,
-        `${trusted}#fragment`
+        candidate.archive.url.replace('notebook-runtime', 'other-runtime'),
+        candidate.archive.url.replace('/node/', '/powershell/'),
+        `/${candidate.archive.url}`,
+        `https://evil.fixture.test/${candidate.archive.url}`,
+        candidate.archive.url.replace('/node.tar.zst', '/other.tar.zst'),
+        `${candidate.archive.url}?redirect=other`,
+        `${candidate.archive.url}#fragment`,
+        candidate.archive.url.replace('/node/', '/../node/')
       ]) {
-        expect(() => validate({ ...candidate, archive: { ...candidate.archive, url } })).toThrow(
+        expect(() => assertWindowsRuntimeComponentRelease({ ...candidate, archive: { ...candidate.archive, url } })).toThrow(
           'Invalid Windows runtime component catalog entry'
         )
       }
-      vi.stubEnv('OPEN_SCIENCE_ENV_CDN_BASE', undefined)
-      expect(resolveRuntimeCdnBase()).toBe('https://cdn.fixture.test/fixture-app')
+      for (const base of [
+        'http://override.fixture.test/fixture-app',
+        'https://user:password@override.fixture.test/fixture-app',
+        'https://override.fixture.test/fixture-app?query=1',
+        'https://override.fixture.test/fixture-app#fragment'
+      ]) {
+        expect(() => resolveWindowsRuntimeArchiveUrl(candidate, base)).toThrow('Invalid Windows runtime CDN base')
+      }
     } finally {
       vi.unstubAllEnvs()
-      vi.doUnmock('../../shared/app-config')
-      vi.resetModules()
+    }
+  })
+
+  it('fails closed without any request when the build has no runtime CDN', async () => {
+    const f = await fixture()
+    vi.stubEnv('OPEN_SCIENCE_ENV_CDN_BASE', '')
+    try {
+      await expect(f.store.select([release()], f.request)).rejects.toBeInstanceOf(
+        WindowsRuntimeDownloadDisabledError
+      )
+      expect(f.download).not.toHaveBeenCalled()
+      expect(f.probe).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllEnvs()
     }
   })
 

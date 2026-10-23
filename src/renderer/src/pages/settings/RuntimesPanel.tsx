@@ -39,6 +39,7 @@ import { useRetainedDialogValue } from '@/components/ui/use-retained-dialog-valu
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat'
 import { cn } from '@/lib/utils'
 import { useNotebookEnvStore } from '@/stores/notebook-env-store'
+import { windowsRuntimeDownloadDisabledText } from './downloads-disabled-copy'
 import { useRuntimeSettingsStore } from '@/stores/runtime-settings-store'
 import { type DiscoveredInterpreter, type EnvPackage } from '@aipoch/environment/contracts'
 import type { ImportArtifactEnvironmentLockResult } from '../../../../shared/artifact-reproducibility'
@@ -1166,7 +1167,9 @@ const RuntimesPanel = ({
                             >
                               {langError.includes('RUNTIME_RECOVERY_BLOCKED')
                                 ? blockedLabel(id)
-                                : langError}
+                                : langError.includes('WINDOWS_RUNTIME_DOWNLOAD_DISABLED')
+                                  ? windowsRuntimeDownloadDisabledText(t)
+                                  : langError}
                             </InlineNotice>
                           ) : null}
                         </div>

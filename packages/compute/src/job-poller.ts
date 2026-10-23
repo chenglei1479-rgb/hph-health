@@ -428,7 +428,7 @@ export class JobPoller {
           await this.lifecycle.recordPollError(
             job.job_id,
             job.status,
-            'slurm_submission_unconfirmed: DRA found no scheduler candidate with matching workdir ownership evidence; inspect squeue/sacct before resubmitting',
+            'slurm_submission_unconfirmed: the application found no scheduler candidate with matching workdir ownership evidence; inspect squeue/sacct before resubmitting',
             false
           )
           continue

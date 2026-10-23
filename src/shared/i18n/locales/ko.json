@@ -7622,6 +7622,17 @@
     "Checking the existing runtime…": "기존 런타임을 확인하는 중…",
     "The agent runtime is not ready.": "에이전트 런타임이 준비되지 않았습니다.",
     "The existing runtime is kept for this setup.": "이 설정에서는 기존 런타임을 유지합니다.",
-    "Notebook runtime": "Notebook 런타임"
+    "Notebook runtime": "Notebook 런타임",
+    "This version can't download the Python/R runtime. Watch for an update from the distributor.": "이 버전에서는 Python/R 런타임을 다운로드할 수 없습니다. 배포처의 안내를 기다려 주세요.",
+    "This version can't download the Windows notebook runtime. Watch for an update from the distributor.": "이 버전에서는 Windows용 Notebook 런타임을 다운로드할 수 없습니다. 배포처의 안내를 기다려 주세요.",
+    "The skill marketplace isn't available right now. Skills you've already installed still work.": "스킬 마켓플레이스를 현재 사용할 수 없습니다. 이미 설치한 스킬은 계속 사용할 수 있습니다.",
+    "The specialist marketplace isn't available right now. Specialists you've already added still work.": "스페셜리스트 마켓플레이스를 현재 사용할 수 없습니다. 이미 추가한 스페셜리스트는 계속 사용할 수 있습니다.",
+    "Network connections": "네트워크 연결",
+    "Runtime and marketplace downloads can contact statics.aipoch.com (the distributor's static host). A build without a configured runtime CDN makes no such request and shows a notice instead.": "런타임 및 마켓플레이스 다운로드는 배포처의 정적 호스트인 statics.aipoch.com에 연결할 수 있습니다. 런타임 CDN이 구성되지 않은 빌드는 해당 요청을 보내지 않고 안내를 표시합니다.",
+    "Package installs can contact conda.anaconda.org (conda-forge and bioconda), pypi.org, and cloud.r-project.org. Mainland mirrors (mirrors.tuna.tsinghua.edu.cn, mirrors.ustc.edu.cn, mirrors.aliyun.com) are probed only when the app language is Simplified Chinese.": "패키지 설치 시 conda.anaconda.org(conda-forge 및 bioconda), pypi.org, cloud.r-project.org에 연결할 수 있습니다. 중국 본토 미러(mirrors.tuna.tsinghua.edu.cn, mirrors.ustc.edu.cn, mirrors.aliyun.com)는 앱 언어가 중국어 간체일 때만 시도합니다.",
+    "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "관리형 CLI 설치 시 registry.npmjs.org에 연결할 수 있으며 registry.npmmirror.com을 대체로 사용합니다.",
+    "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "공식 스킬 및 스페셜리스트 마켓플레이스는 github.com, api.github.com, raw.githubusercontent.com에 연결할 수 있습니다. 이 베타에서는 기본적으로 켜져 있으며 끌 수 있습니다.",
+    "No telemetry is sent. Auto-update is off.": "텔레메트리는 전송하지 않습니다. 자동 업데이트는 꺼져 있습니다.",
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "이 앱이 연결할 수 있는 외부 대상입니다. 텔레메트리는 전송하지 않으며 자동 업데이트는 꺼져 있습니다."
   }
 }

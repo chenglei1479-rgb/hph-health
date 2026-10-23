@@ -15,6 +15,8 @@ const walk = (dir: string): string[] => {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name)
     if (entry.isDirectory()) {
+      // Translation catalogs carry the approved user-facing disclosure text; they are not code.
+      if (path.replaceAll('\\', '/').endsWith('/i18n/locales')) continue
       hits.push(...walk(path))
       continue
     }
@@ -26,8 +28,9 @@ const walk = (dir: string): string[] => {
   return hits
 }
 
-// Files that mention the host only to refuse it.
+// Files that mention the host only to refuse it (or to record the documented lockdown gap).
 const REJECTION_FILES = [
+  'src/main/prerelease/lockdown-gap.test.ts',
   'src/main/prerelease/lockdown.test.ts',
   'src/main/update/upstream-test-build.test.ts',
   'src/shared/dra-update-deployment.test.ts',
@@ -36,13 +39,18 @@ const REJECTION_FILES = [
   'src/shared/prerelease.ts'
 ]
 
-// Notebook runtime and marketplace downloads. These are not an application update feed.
+// Skill/Specialist marketplace downloads (default-on during beta, Leo 2026-10-17). The runtime
+// catalog no longer names a host: it stores a relative path and the build supplies the base.
 const RUNTIME_CDN_FILES = [
-  'src/main/notebook/windows-runtime-catalog.json',
-  'src/main/skills/marketplace-source.ts',
+  'src/main/skill-marketplace/source.ts',
   'src/main/specialist/marketplace/official-source.test.ts',
-  'src/main/specialist/marketplace/official-source.ts',
-  'src/shared/app-config.ts'
+  'src/main/specialist/marketplace/official-source.ts'
+]
+
+// Approved user-facing disclosure (home Details and the generated external-endpoints document).
+const DISCLOSURE_FILES = [
+  'src/renderer/src/pages/home/external-destinations.ts',
+  'src/shared/outbound-endpoints.ts'
 ]
 
 it('rejects an upstream update feed and does not treat enabled: false as a missing file', () => {
@@ -83,7 +91,7 @@ it('does not ship a default update feed', () => {
 
 it('keeps the upstream host out of src except rejection checks and the reported runtime CDN', () => {
   const hits = walk(join(repoRoot, 'src')).sort()
-  expect(hits).toEqual([...REJECTION_FILES, ...RUNTIME_CDN_FILES].sort())
+  expect(hits).toEqual([...REJECTION_FILES, ...RUNTIME_CDN_FILES, ...DISCLOSURE_FILES].sort())
   for (const file of REJECTION_FILES) {
     const source = readFileSync(join(repoRoot, file), 'utf8')
     expect(source).toContain(host)

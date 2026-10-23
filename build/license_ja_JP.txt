@@ -202,5 +202,5 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   DRA distribution note: DRA is based on AIPOCH Open-Science. The upstream
+   Baselio distribution note: Baselio is based on AIPOCH Open-Science. The upstream
    copyright notice above is retained. See NOTICE.

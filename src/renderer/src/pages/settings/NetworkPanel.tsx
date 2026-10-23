@@ -23,6 +23,7 @@ import {
   type NetworkEditorLeaveState
 } from './NotebookNetworkDomainsForm'
 import { SettingsSection } from './SettingsLayout'
+import { homeExternalDestinationLines } from '../home/external-destinations'
 
 const fieldLabelClassName = 'text-xs font-medium text-muted-foreground'
 
@@ -372,6 +373,25 @@ const NetworkPanel = ({
               </Button>
             </div>
           </div>
+        </SettingsSection>
+      ) : null}
+
+      {!isConfiguring ? (
+        <SettingsSection
+          title={t('Network connections')}
+          description={t(
+            'External destinations this app can contact. No telemetry is sent and auto-update is off.'
+          )}
+          aria-label={t('Network connections')}
+          data-settings-anchor="network.connections"
+        >
+          <ul className="rounded-xl border border-border p-4 text-xs leading-relaxed text-muted-foreground">
+            {homeExternalDestinationLines(t).map((line) => (
+              <li key={line} className="py-0.5">
+                {line}
+              </li>
+            ))}
+          </ul>
         </SettingsSection>
       ) : null}
 
