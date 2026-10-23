@@ -5,7 +5,7 @@ import { AppLogo } from '@/components/AppLogo'
 import { OpenScienceLogoLoader } from '@/components/OpenScienceLogoLoader'
 
 // Isolated production components: no runtime, network, or demo assets.
-function Fixture(): React.JSX.Element {
+export function Fixture(): React.JSX.Element {
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   return (
