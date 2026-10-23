@@ -83,6 +83,13 @@ export const settingsMarkOnboardingCompleteContracts = {
   'settings.markOnboardingComplete': callable<() => Promise<SettingsSnapshot>>()('settings', [
     'settings:mark-onboarding-complete'
   ]),
+  'settings.acceptBetaTerms': callable<() => Promise<SettingsSnapshot>>()('settings', [
+    'settings:accept-beta-terms'
+  ]),
+  'settings.reopenOnboarding': callable<() => Promise<SettingsSnapshot>>()('settings', [
+    'settings:reopen-onboarding',
+    LOCAL
+  ]),
   'settings.onChanged': callable<(listener: (snapshot: SettingsSnapshot) => void) => () => void>()(
     'settings',
     ['settings:changed', EVENT]

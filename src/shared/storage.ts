@@ -57,6 +57,14 @@ export type StorageInfo = StorageStatus & {
   availableBytes: number
 }
 
+// Advisory classification of a data location. 'unknown' means a probe failed; callers must not treat
+// it as an error or block the user.
+export type StorageLocationRiskKind = 'local' | 'removable' | 'network' | 'cloud-sync' | 'unknown'
+export type StorageLocationRisk = {
+  kind: StorageLocationRiskKind
+  provider?: string
+}
+
 export type RevealAppStorageResult = {
   revealed: boolean
   error?: string

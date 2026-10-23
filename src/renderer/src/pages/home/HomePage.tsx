@@ -47,7 +47,7 @@ import type { ChatSession } from '@/stores/session-store'
 import { useSessionStore } from '@/stores/session-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useArchiveUndoStore } from '@/stores/archive-undo-store'
-import { useSettingsStore } from '@/stores/settings-store'
+import { selectHasUsableModel, useSettingsStore } from '@/stores/settings-store'
 import { useProjectFormDialog } from '@/hooks/useProjectFormDialog'
 import { startWslSetupConversation } from '@/lib/wsl-support-handoff'
 import { LanguageSelect } from '@/components/LanguageControls'
@@ -230,6 +230,7 @@ const HomePage = ({
   const environmentCheck = useSettingsStore((state) => state.environmentCheck)
   const openSettingsToPanel = useSettingsStore((state) => state.openSettingsToPanel)
   const pendingCredentialRequests = useSettingsStore((state) => state.pendingCredentialRequests)
+  const hasUsableModel = useSettingsStore(selectHasUsableModel)
   const requiredEnvironmentFailures = getRequiredEnvironmentFailures(environmentCheck)
   const environmentRepairPanel = getEnvironmentRepairPanel(requiredEnvironmentFailures)
   const [ethicsReminderOpen, setEthicsReminderOpen] = useState(false)
@@ -920,6 +921,27 @@ const HomePage = ({
             </div>
           </header>
           <PackageOperationIndicator />
+
+          {!hasUsableModel ? (
+            <section
+              data-testid="demo-mode-notice"
+              aria-label={t('Demo mode')}
+              className="mt-5 flex flex-col gap-3 rounded-xl border border-status-warning-foreground/40 bg-status-warning-surface p-4 text-sm sm:flex-row sm:items-center"
+            >
+              <span className="inline-flex shrink-0 items-center gap-2 font-semibold text-text-000">
+                <CircleAlert className="size-4" strokeWidth={2} aria-hidden="true" />
+                {t('Demo mode')}
+              </span>
+              <p className="min-w-0 flex-1 text-text-100">
+                {t(
+                  'Literature search and fictional samples are available. An API key is required to analyze real data.'
+                )}
+              </p>
+              <Button type="button" variant="outline" onClick={() => openSettingsToPanel('model')}>
+                {t('Register an API key')}
+              </Button>
+            </section>
+          ) : null}
 
           <MedicalResearchLaunchpad onSelectWorkflow={selectMedicalWorkflow} />
           <EthicsWritingNotice open={ethicsReminderOpen} />

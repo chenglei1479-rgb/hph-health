@@ -302,39 +302,39 @@ const runEnvironmentCheck = async ({
       presentation: { kind: 'install-network-runtime-present', runtime: selectedLabel }
     }
   } else {
-    const registryResults = await Promise.all([
-      inspectRegistry('npmjs', probeRegistry, REGISTRY_PROBE_PATHS[agentFrameworkId]),
-      inspectRegistry('npmmirror', probeRegistry, REGISTRY_PROBE_PATHS[agentFrameworkId])
-    ])
-    const reachable = registryResults
-      .filter(
-        (result): result is { registry: ManagedClaudeRegistry; latencyMs: number } =>
-          result.latencyMs !== undefined
-      )
-      .sort((left, right) => left.latencyMs - right.latencyMs)
-
-    recommendedRegistry = reachable[0]?.registry
-    networkCheck = recommendedRegistry
-      ? {
-          id: 'install-network',
-          label: 'Installation network',
-          status: 'passed',
-          summary: `${REGISTRY_LABELS[recommendedRegistry]} is the fastest reachable source.`,
-          detail: `Measured ${reachable[0].latencyMs} ms. The other trusted source remains available as an automatic fallback.`,
-          presentation: {
-            kind: 'install-network-registry-available',
-            registry: recommendedRegistry,
-            latencyMs: reachable[0].latencyMs
-          }
+    // Beta installs have no public-mirror fallback: the only automatic source is the official npm
+    // registry, so reachability and the recommendation must describe that single host.
+    const npmjs = await inspectRegistry(
+      'npmjs',
+      probeRegistry,
+      REGISTRY_PROBE_PATHS[agentFrameworkId]
+    )
+    const npmjsLatency = npmjs.latencyMs
+    if (npmjsLatency === undefined) {
+      recommendedRegistry = undefined
+      networkCheck = {
+        id: 'install-network',
+        label: 'Installation network',
+        status: 'failed',
+        summary: 'The official npm registry is not reachable.',
+        detail: 'Check the network, proxy, VPN, or firewall, then run the check again.',
+        presentation: { kind: 'install-network-unreachable' }
+      }
+    } else {
+      recommendedRegistry = 'npmjs'
+      networkCheck = {
+        id: 'install-network',
+        label: 'Installation network',
+        status: 'passed',
+        summary: `${REGISTRY_LABELS.npmjs} is reachable.`,
+        detail: `Measured ${npmjsLatency} ms. Automatic setup downloads only from the official npm registry.`,
+        presentation: {
+          kind: 'install-network-registry-available',
+          registry: 'npmjs',
+          latencyMs: npmjsLatency
         }
-      : {
-          id: 'install-network',
-          label: 'Installation network',
-          status: 'failed',
-          summary: 'Neither the official registry nor the China-friendly mirror is reachable.',
-          detail: 'Check the network, proxy, VPN, or firewall, then run the check again.',
-          presentation: { kind: 'install-network-unreachable' }
-        }
+      }
+    }
   }
 
   const secureStorageCheck: EnvironmentCheckItem =

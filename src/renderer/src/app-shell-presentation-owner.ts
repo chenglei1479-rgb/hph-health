@@ -17,7 +17,7 @@ export type AppShellPresentationState = Readonly<{
 }>
 
 export type AppShellPresentationInput = Readonly<{
-  startupView: 'app' | 'onboarding' | undefined
+  startupView: 'app' | 'onboarding' | 'beta-terms' | undefined
   isSessionPersistenceHydrated: boolean
   isSessionPersistenceLoading: boolean
   view: NavigationView

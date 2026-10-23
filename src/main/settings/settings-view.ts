@@ -66,6 +66,7 @@ export const buildSettingsSnapshot = (
       )
     ),
     onboardingCompletedAt: preferences.onboardingCompletedAt,
+    betaTermsAcceptance: preferences.betaTermsAcceptance,
     packageMirror: settings.packageMirror,
     networkProxy: resolveNetworkProxySettings(settings.networkProxy),
     notebookNetwork: settings.notebookNetwork
@@ -86,6 +87,7 @@ export const buildSettingsSnapshot = (
     defaultPermissionProfile: preferences.defaultPermissionProfile,
 
     agentFrameworkId: settings.agentFrameworkId ?? DEFAULT_AGENT_FRAMEWORK_ID,
+    agentFrameworkSelected: settings.agentFrameworkId !== undefined,
     agentFrameworks: listAgentFrameworks().map((framework) => ({
       id: framework.id,
       displayName: framework.displayName,

@@ -344,6 +344,12 @@ const registerSettingsIpcHandlers = ({
   ipcMainHandle('settings:mark-onboarding-complete', () =>
     snapshotCommits.currentSnapshotAfter(service.markOnboardingComplete())
   )
+  ipcMainHandle('settings:accept-beta-terms', () =>
+    snapshotCommits.currentSnapshotAfter(service.acceptBetaTerms())
+  )
+  ipcMainHandle('settings:reopen-onboarding', () =>
+    snapshotCommits.currentSnapshotAfter(service.reopenOnboarding())
+  )
 
   ipcMainHandle('settings:get-package-mirror', () => service.getPackageMirror())
   ipcMainHandle(

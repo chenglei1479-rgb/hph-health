@@ -5,6 +5,7 @@ import {
 import { requestComposerFocus } from './composer-focus-events'
 import type { LiteratureReference } from '../../../../shared/session-persistence'
 import { SessionDiagnosticsDialog } from './SessionDiagnosticsDialog'
+import { NoProviderNotice } from '@/components/NoProviderNotice'
 import { sessionDiagnosticsAvailable } from '@/lib/session-diagnostics'
 import type { SessionDiagnosticIdentity } from '../../../../shared/session-diagnostics'
 import { sideChatBlock, sideChatBlockMessage } from './side-chat-availability'
@@ -1759,6 +1760,7 @@ const WorkspacePage = ({
             }) => (
               <div className="flex min-h-0 flex-1 flex-col">
                 <ScientificStatusPanel projectId={scopedProjectId} />
+                <NoProviderNotice className="mx-4 mb-2 mt-3" />
                 <ConversationPanel
                   key={JSON.stringify([scopedProjectId, panelIdentity.generation])}
                   submissions={conversationSubmissions}

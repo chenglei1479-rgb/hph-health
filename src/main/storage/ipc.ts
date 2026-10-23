@@ -1,4 +1,5 @@
 import { ipcMainHandle } from '../ipc-handler-registry'
+import { detectStorageLocationRisk } from './location-risk'
 import {
   createStorageCommandOwner,
   type StorageCommandOwner,
@@ -14,6 +15,11 @@ const registerStorageIpcHandlers = (
   ipcMainHandle('storage:accept-missing-data-root', () => owner.acceptMissingDataRoot())
   ipcMainHandle('storage:get-status', () => owner.getStatus())
   ipcMainHandle('storage:get-info', () => owner.getInfo())
+  ipcMainHandle('storage:get-location-risk', (_event, request) =>
+    typeof request === 'string'
+      ? detectStorageLocationRisk(request)
+      : Promise.resolve({ kind: 'unknown' as const })
+  )
   ipcMainHandle('storage:reveal-app-storage', () => owner.revealAppStorage())
   ipcMainHandle('storage:dismiss-legacy-move-prompt', () => owner.dismissLegacyMovePrompt())
   ipcMainHandle('storage:detect-active', () => owner.detectActive())

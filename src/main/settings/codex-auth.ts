@@ -279,6 +279,8 @@ const IMPORTED_ROUTE_PROVIDER_BEGIN = '# DRA: begin imported Codex provider'
 const IMPORTED_ROUTE_PROVIDER_END = '# DRA: end imported Codex provider'
 const IMPORTED_ROUTE_PRESERVED_LINE = '# DRA: preserved Codex config '
 const CODEX_FILE_CREDENTIAL_STORE = 'cli_auth_credentials_store = "file"'
+const EGRESS_POLICY_BEGIN = '# DRA: begin beta egress policy'
+const EGRESS_POLICY_END = '# DRA: end beta egress policy'
 const TRANSPORT_ROUTE_SELECTION_BEGIN = '# DRA: begin Codex transport route selection'
 const TRANSPORT_ROUTE_SELECTION_END = '# DRA: end Codex transport route selection'
 const TRANSPORT_ROUTE_PROVIDER_BEGIN = '# DRA: begin Codex transport provider'
@@ -345,10 +347,58 @@ const serializeCodexCredentialStore = (
 const serializeCodexFileCredentialStore = (existingConfigToml: string): string =>
   serializeCodexCredentialStore(existingConfigToml, 'file')
 
+const isCodexEgressAssignment = (line: string): boolean =>
+  /^\s*(?:check_for_update_on_startup|"check_for_update_on_startup"|'check_for_update_on_startup')\s*=/.test(
+    line
+  )
+
+const egressTableId = (line: string): string | undefined => {
+  const match = line.match(/^\s*\[\s*("(?:\\.|[^"\\])*"|'[^']*'|[A-Za-z0-9_-]+)/)
+  if (!match) return undefined
+  const key = match[1]
+  return /^[A-Za-z0-9_-]+$/.test(key) ? key : parseTomlString(key)
+}
+
+// Beta builds must not let Codex CLI's own telemetry, update checks, or feedback flow reach the
+// network. The app writes this policy into every app-owned CODEX_HOME config and does not expose a
+// user override. Existing user-authored values in these sections are replaced, not merged.
+export const serializeCodexEgressPolicy = (existingConfigToml: string): string => {
+  const result: string[] = []
+  let inBlockedTable = false
+  let sawTable = false
+
+  for (const line of existingConfigToml.split(/\r?\n/)) {
+    if (/^\s*\[/.test(line)) {
+      const table = egressTableId(line)
+      inBlockedTable = table === 'analytics' || table === 'feedback'
+      sawTable = true
+    }
+    // App-owned structural markers are never table content: a transport block appended after the
+    // policy tables must still survive the policy rewrite.
+    if (/^# (?:DRA|Open-Science):/.test(line)) inBlockedTable = false
+    if (inBlockedTable) continue
+    if (line === EGRESS_POLICY_BEGIN || line === EGRESS_POLICY_END) continue
+    if (!sawTable && isCodexEgressAssignment(line)) continue
+    result.push(line)
+  }
+
+  while (result[0] === '') result.shift()
+  while (result.at(-1) === '') result.pop()
+  const firstTableIndex = result.findIndex((line) => /^\s*\[/.test(line))
+  result.splice(
+    firstTableIndex < 0 ? result.length : firstTableIndex,
+    0,
+    'check_for_update_on_startup = false'
+  )
+  while (result.at(-1) === '') result.pop()
+  if (result.length > 0) result.push('')
+  result.push('[analytics]', 'enabled = false', '', '[feedback]', 'enabled = false', '')
+  return result.join('\n')
+}
+
 // Persisted pre-brand markers remain technical compatibility identities. Match only complete
 // known marker lines; ordinary comments and user TOML values keep their original spelling.
-const legacyMarker = (marker: string): string =>
-  marker.replace('# DRA:', '# Open-Science:')
+const legacyMarker = (marker: string): string => marker.replace('# DRA:', '# Open-Science:')
 const matchesMarker = (line: string, marker: string): boolean =>
   line === marker || line === legacyMarker(marker)
 
@@ -609,8 +659,10 @@ const ensureCodexAuthConfigHome = async (
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
   }
 
-  const nextConfigToml = serializeCodexFileCredentialStore(
-    serializeCodexSubscriptionTransport(existingConfigToml, transport)
+  const nextConfigToml = serializeCodexEgressPolicy(
+    serializeCodexFileCredentialStore(
+      serializeCodexSubscriptionTransport(existingConfigToml, transport)
+    )
   )
   if (nextConfigToml !== existingConfigToml) {
     await writePrivateFileAtomically(configPath, nextConfigToml)
@@ -785,6 +837,7 @@ const writeCodexAuthenticationSnapshot = async (
   if (credentialStore) {
     nextConfigToml = serializeCodexCredentialStore(nextConfigToml, credentialStore)
   }
+  nextConfigToml = serializeCodexEgressPolicy(nextConfigToml)
 
   if (snapshot) await writePrivateFileAtomically(destinationPath, snapshot.content)
   else await rm(destinationPath, { force: true })

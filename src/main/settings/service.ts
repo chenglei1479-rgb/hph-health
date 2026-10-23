@@ -412,9 +412,8 @@ class SettingsService {
     if (!downloaded.ok) {
       // A disabled marketplace is an operator/build choice, not a retryable conflict. The list
       // surface already explains it; map it to the existing installation failure here.
-      return downloaded.error === 'disabled'
-        ? { ok: false, error: 'installation-failed' }
-        : downloaded
+      if (downloaded.error === 'disabled') return { ok: false, error: 'installation-failed' }
+      return { ok: false, error: downloaded.error }
     }
     try {
       signal?.throwIfAborted()
@@ -1532,6 +1531,19 @@ class SettingsService {
   // Records that first-run onboarding finished so later launches skip the wizard.
   async markOnboardingComplete(): Promise<SettingsSnapshot> {
     await this.preferences.markOnboardingComplete()
+    return this.getSettingsView()
+  }
+
+  // Records the local acknowledgement of the current beta terms. No network or telemetry write.
+  async acceptBetaTerms(): Promise<SettingsSnapshot> {
+    await this.preferences.acceptBetaTerms()
+    return this.getSettingsView()
+  }
+
+  // Reopens the onboarding flow from Settings. Providers and data stay untouched; only the
+  // completion marker is cleared, so quitting mid-flow resumes the wizard next launch.
+  async reopenOnboarding(): Promise<SettingsSnapshot> {
+    await this.preferences.reopenOnboarding()
     return this.getSettingsView()
   }
 

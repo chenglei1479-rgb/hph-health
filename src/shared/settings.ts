@@ -1,4 +1,5 @@
 import { ApplicationCommandError } from './application-command-contract'
+import type { BetaTermsAcceptance } from './beta-terms'
 import type {
   AgentHomeSkillRef,
   GitHubRepositorySearchView,
@@ -589,6 +590,9 @@ export type SettingsSnapshot = {
   providers: ProviderView[]
   // The selected agent backend, and the frameworks available to choose from.
   agentFrameworkId: AgentFrameworkId
+  // True only when agentFrameworkId was persisted. Absent means the value is still the document
+  // fallback, which lets first-run setup pin Codex without rewriting an existing user's choice.
+  agentFrameworkSelected?: boolean
   agentFrameworks: AgentFrameworkView[]
   // Whether each framework's detected runtime is the app-managed install (binary in the app's data
   // dir), which is the only case an in-app uninstall is offered — a PATH/npm binary we didn't install
@@ -600,6 +604,8 @@ export type SettingsSnapshot = {
   codexManaged: boolean
   // Timestamp of first-run onboarding completion; undefined until it finishes at least once.
   onboardingCompletedAt?: number
+  // Local-only acknowledgement of the current beta terms. Absent or stale closes the startup gate.
+  betaTermsAcceptance?: BetaTermsAcceptance
   // Non-secret package-mirror overrides (conda/pypi/cran). Absent means public hosts.
   packageMirror?: PackageMirror
   // Application-wide proxy preference. Older documents without this field resolve to System.

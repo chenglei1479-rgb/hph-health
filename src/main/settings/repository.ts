@@ -900,6 +900,31 @@ class SettingsRepository {
     })
   }
 
+  // Records the beta terms acknowledgement. Same-version writes are idempotent so a double click or
+  // a retried IPC call cannot move the accepted time; a new version replaces the record.
+  async recordBetaTermsAcceptance(version: string, timestamp: number): Promise<StoredSettings> {
+    if (version.trim() === '') throw new Error('Beta terms version is required.')
+    if (!Number.isFinite(timestamp) || timestamp < 0) {
+      throw new Error('Beta terms acceptance timestamp is invalid.')
+    }
+    return this.mutate((settings) =>
+      settings.betaTermsAcceptance?.version === version
+        ? settings
+        : { ...settings, betaTermsAcceptance: { version, acceptedAt: timestamp } }
+    )
+  }
+
+  // Reopens onboarding from Settings without touching providers, credentials, or the data root.
+  // Beta acceptance stays recorded so the lighter gate does not ask again.
+  async clearOnboardingCompletion(): Promise<StoredSettings> {
+    return this.mutate((settings) => {
+      if (settings.onboardingCompletedAt === undefined) return settings
+      const { onboardingCompletedAt, ...rest } = settings
+      void onboardingCompletedAt
+      return rest
+    })
+  }
+
   // Commit the confirmed running root and completion in one settings transaction. Never replace
   // a concurrently saved selection or mark onboarding complete with an unavailable root.
   async markOnboardingComplete(timestamp: number, dataRoot: string): Promise<StoredSettings> {

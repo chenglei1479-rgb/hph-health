@@ -329,6 +329,14 @@ export const ModelPanel = ({
         </Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content value="agent" tabIndex={-1}>
+        <div className="border-b border-border bg-muted/30 px-3 py-3 text-xs leading-5 text-muted-foreground sm:px-5">
+          <p>{t('Requests are sent to the AI provider whose API key you register.')}</p>
+          <p>
+            {t(
+              'A paid ChatGPT subscription and API usage are separate contracts and are billed separately.'
+            )}
+          </p>
+        </div>
         {children}
       </Tabs.Content>
       <Tabs.Content value="classification" tabIndex={-1}>

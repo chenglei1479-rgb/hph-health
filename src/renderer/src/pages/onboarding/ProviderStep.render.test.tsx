@@ -62,7 +62,13 @@ const Harness = ({
     () => initialValue ?? createEmptyProviderFormValue()
   )
   return (
-    <ProviderStep formValue={value} setFormValue={setValue} onBack={onBack} onAdvance={onAdvance} />
+    <ProviderStep
+      formValue={value}
+      setFormValue={setValue}
+      onBack={onBack}
+      onAdvance={onAdvance}
+      onSkip={vi.fn()}
+    />
   )
 }
 

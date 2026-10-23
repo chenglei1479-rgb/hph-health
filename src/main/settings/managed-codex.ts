@@ -1322,7 +1322,20 @@ export const verifyManagedCodexPair: PairVerifier = async (
   await mkdir(codexHome, { recursive: true })
   // Force the in-memory credential store so a stray host key can never be persisted into this home
   // during the handshake (defense-in-depth alongside the credential-stripped env below).
-  await writeFile(join(codexHome, 'config.toml'), 'cli_auth_credentials_store = "ephemeral"\n')
+  await writeFile(
+    join(codexHome, 'config.toml'),
+    [
+      'cli_auth_credentials_store = "ephemeral"',
+      'check_for_update_on_startup = false',
+      '',
+      '[analytics]',
+      'enabled = false',
+      '',
+      '[feedback]',
+      'enabled = false',
+      ''
+    ].join('\n')
+  )
   const initialize = JSON.stringify({
     jsonrpc: '2.0',
     id: 1,

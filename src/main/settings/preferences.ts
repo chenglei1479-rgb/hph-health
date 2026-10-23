@@ -1,4 +1,5 @@
 import { mkdir } from 'node:fs/promises'
+import { BETA_TERMS_VERSION } from '../../shared/beta-terms'
 import type { ReasoningEffort } from '../../shared/model-preference-contract'
 import {
   getDefaultPermissionProfile,
@@ -30,6 +31,9 @@ const toSettingsPreferencesSnapshot = (settings: StoredSettings): SettingsPrefer
   ...(settings.onboardingCompletedAt === undefined
     ? {}
     : { onboardingCompletedAt: settings.onboardingCompletedAt }),
+  ...(settings.betaTermsAcceptance === undefined
+    ? {}
+    : { betaTermsAcceptance: settings.betaTermsAcceptance }),
   ...(settings.pathsNormalizedAt === undefined
     ? {}
     : { pathsNormalizedAt: settings.pathsNormalizedAt }),
@@ -75,10 +79,21 @@ class SettingsPreferencesModule implements SettingsPreferences {
     )
   }
 
+  // Records the current terms version exactly once. A later acknowledgement of the same version is
+  // idempotent; a newer version replaces the record with its own timestamp.
+  async acceptBetaTerms(): Promise<SettingsPreferencesSnapshot> {
+    return toSettingsPreferencesSnapshot(
+      await this.repository.recordBetaTermsAcceptance(BETA_TERMS_VERSION, this.now())
+    )
+  }
+
   async markPathsNormalized(): Promise<SettingsPreferencesSnapshot> {
     return toSettingsPreferencesSnapshot(await this.repository.markPathsNormalized(this.now()))
   }
 
+  async reopenOnboarding(): Promise<SettingsPreferencesSnapshot> {
+    return toSettingsPreferencesSnapshot(await this.repository.clearOnboardingCompletion())
+  }
   async setDataRoot(
     path: string,
     options: SetDataRootOptions = {}

@@ -1,16 +1,18 @@
 // @vitest-environment jsdom
+// Navigation and identity regressions for the beta wizard: the runtime is pinned to Codex, and the
+// provider draft survives Back/re-render without attaching a stale saved identity to a new draft.
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { fireEvent } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { runEnvironmentCheck } from '../../../../main/settings/environment-check'
-import type { AgentFrameworkId, EnvironmentCheckResult } from '../../../../shared/settings'
+import type { EnvironmentCheckResult } from '../../../../shared/settings'
 import { i18next } from '@/i18n'
 import { useSettingsStore } from '@/stores/settings-store'
 import { OnboardingWizard } from './OnboardingWizard'
 import {
   clickButton,
+  codexReadyState,
   fillRequiredProviderFields,
   findButton,
   readyClaudeState,
@@ -47,268 +49,130 @@ const renderWizard = async (): Promise<void> => {
 const section = (label: string): Element | null =>
   container.querySelector(`section[aria-label="${label}"]`)
 
-const goToProvider = async (): Promise<void> => {
-  readyClaudeState()
+const goToLocation = async (): Promise<void> => {
+  useSettingsStore.setState(codexReadyState())
   await renderWizard()
-  await clickButton(/^continue$/i)
-  await clickButton(/^continue$/i)
-  await clickButton(/^continue$/i)
+  expect(section('Choose data location')).not.toBeNull()
+}
+
+const goToProvider = async (): Promise<void> => {
+  await goToLocation()
+  await clickButton(/^continue with this location$/i)
   expect(section('Configure model')).not.toBeNull()
   await fillRequiredProviderFields(container)
 }
 
-const configureUnavailableRegistries = async (
-  failure?: 'storage' | 'system' | 'no-runtime',
-  alternative: AgentFrameworkId = 'opencode',
-  selected: AgentFrameworkId = 'claude-code'
-): Promise<void> => {
-  const frameworks = [
-    { id: selected, label: selected, runtime: { found: false } },
-    {
-      id: alternative,
-      label: alternative,
-      runtime: {
-        found: failure !== 'no-runtime',
-        version: alternative === 'claude-code' ? '2.1.118' : undefined
-      }
-    }
-  ]
-  const probeRegistry = vi.fn().mockRejectedValue(new Error('Installation source unreachable'))
-  const inspect = (agentFrameworkId: AgentFrameworkId): Promise<EnvironmentCheckResult> =>
-    runEnvironmentCheck({
-      storageRoot: '/fixture/data',
-      agentFrameworkId,
-      frameworks,
-      encryptionAvailable: true,
-      deps: {
-        platform: 'darwin',
-        architecture: 'arm64',
-        verifyStorage: async () => {
-          if (failure === 'storage') throw new Error('Permission denied')
-        },
-        resolveManagedPlatform: () => {
-          if (failure === 'system') throw new Error('Unsupported system')
-          return { key: 'darwin-arm64' }
-        },
-        findPython: async () => undefined,
-        detectAvx2: () => true,
-        probeRegistry,
-        now: () => 1
-      }
-    })
-  const environmentCheck = await inspect(selected)
-  expect(probeRegistry).toHaveBeenCalledTimes(2)
-  expect(environmentCheck).toMatchObject({ ready: false, canAutoInstall: false })
-  expect(environmentCheck.checks.find((check) => check.id === 'install-network')?.status).toBe(
-    'failed'
-  )
-  if (failure !== 'no-runtime') {
-    expect(
-      environmentCheck.checks.find((check) => check.label === `${alternative} runtime`)?.status
-    ).toBe('passed')
-  }
+const checkEnvironment = (result: EnvironmentCheckResult): void => {
   useSettingsStore.setState({
-    agentFrameworkId: selected,
-    codex: { version: '1.6.2', nativeVersion: '0.157.1' },
-    environmentCheck,
-    agentFrameworks: frameworks.map(({ id, label }) => ({
-      id,
-      displayName: label,
-      supportsSkills: true
-    })),
-    preflight: {
-      claudeReady: alternative === 'claude-code' && failure !== 'no-runtime',
-      opencodeReady: alternative === 'opencode' && failure !== 'no-runtime',
-      codexReady: alternative === 'codex' && failure !== 'no-runtime',
-      codebuddyReady: alternative === 'codebuddy' && failure !== 'no-runtime',
-      agentFrameworkId: selected,
-      agentReady: false,
-      activeProviderReady: false
-    },
-    setAgentFramework: vi.fn(async (agentFrameworkId: AgentFrameworkId) => {
-      useSettingsStore.setState({ agentFrameworkId })
-    }),
-    checkEnvironment: vi.fn(async () => {
-      const result = await inspect(useSettingsStore.getState().agentFrameworkId)
-      useSettingsStore.setState({ environmentCheck: result })
-      return result
-    })
+    agentFrameworkId: 'codex',
+    environmentCheck: result
   })
 }
 
-describe('Onboarding navigation regressions', () => {
-  it.each(['claude-code', 'codex', 'codebuddy'] as const)(
-    'checks the installed %s alternative before continuing',
-    async (alternative) => {
-      await configureUnavailableRegistries(
-        undefined,
-        alternative,
-        alternative === 'claude-code' ? 'opencode' : 'claude-code'
-      )
-      await renderWizard()
-      expect(useSettingsStore.getState().setAgentFramework).toHaveBeenCalledWith(alternative)
-      expect(useSettingsStore.getState().environmentCheck).toMatchObject({
-        ready: true,
-        agentFrameworkId: alternative
-      })
-      expect(findButton(/^continue$/i)?.disabled).toBe(false)
-    }
-  )
-
-  it.each([
-    ['adapter', { version: '0.0.1', nativeVersion: '0.157.1' }],
-    ['native CLI', { version: '1.6.2', nativeVersion: '0.157.0' }],
-    ['unknown native CLI', { version: '1.6.2' }],
-    ['prerelease native CLI', { version: '1.6.2', nativeVersion: '0.157.1-alpha.1' }]
-  ])(
-    'does not select an unsupported Codex %s despite stale preflight readiness',
-    async (_, codex) => {
-      await configureUnavailableRegistries(undefined, 'codex')
-      useSettingsStore.setState({ codex })
-      await renderWizard()
-      expect(useSettingsStore.getState().setAgentFramework).not.toHaveBeenCalled()
-      expect(findButton(/^continue$/i)?.disabled).toBe(true)
-    }
-  )
-
-  it('rechecks the installed alternative when only its native CLI version changes', async () => {
-    await configureUnavailableRegistries(undefined, 'codex')
-    useSettingsStore.setState({ codex: { version: '1.6.2', nativeVersion: '0.157.0' } })
-    await renderWizard()
-    expect(useSettingsStore.getState().setAgentFramework).not.toHaveBeenCalled()
-
-    await act(async () => {
-      useSettingsStore.setState({ codex: { version: '1.6.2', nativeVersion: '0.157.1' } })
-    })
-    expect(useSettingsStore.getState().setAgentFramework).toHaveBeenCalledWith('codex')
-    expect(useSettingsStore.getState().environmentCheck).toMatchObject({
-      ready: true,
-      agentFrameworkId: 'codex'
-    })
-    expect(findButton(/^continue$/i)?.disabled).toBe(false)
-  })
-
-  it('waits for the selected alternative check and preserves the selection on Back', async () => {
-    await configureUnavailableRegistries()
-    const inspect = useSettingsStore.getState().checkEnvironment
-    const pending = Promise.withResolvers<void>()
+describe('Beta runtime is pinned to Codex', () => {
+  it('installs Codex instead of choosing an installed alternative', async () => {
     useSettingsStore.setState({
-      checkEnvironment: vi.fn(async () => {
-        await pending.promise
-        return inspect()
-      })
+      agentFrameworkId: 'codex',
+      environmentCheck: {
+        ...codexReadyState().environmentCheck!,
+        ready: false,
+        canAutoInstall: true,
+        runtime: { found: false }
+      }
     })
     await renderWizard()
-    expect(useSettingsStore.getState().agentFrameworkId).toBe('opencode')
-    expect(findButton(/^continue$/i)?.disabled).toBe(true)
-    await act(async () => pending.resolve())
-    expect(findButton(/^continue$/i)?.disabled).toBe(false)
-    await clickButton(/^continue$/i)
-    await clickButton(/^back$/i)
-    expect(useSettingsStore.getState().setAgentFramework).toHaveBeenCalledOnce()
+    await clickButton(/^continue with this location$/i)
+
+    expect(useSettingsStore.getState().installCodex).toHaveBeenCalled()
   })
 
-  it('allows setup with an installed alternative when installation sources are unreachable', async () => {
-    await configureUnavailableRegistries()
+  it('keeps a stored Claude Code runtime when setup is reopened', async () => {
+    readyClaudeState()
+    useSettingsStore.setState({ agentFrameworkId: 'claude-code', agentFrameworkSelected: true })
+    await renderWizard()
+    expect(section('Choose data location')).not.toBeNull()
+    await clickButton(/^continue with this location$/i)
+
+    expect(useSettingsStore.getState().setAgentFramework).not.toHaveBeenCalled()
+    expect(useSettingsStore.getState().installCodex).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Verify the agent runtime')
+    await clickButton(/^continue$/i)
+    expect(section('Configure model')).not.toBeNull()
+    await clickButton(/set up later/i)
+
+    expect(useSettingsStore.getState().completeOnboarding).toHaveBeenCalledOnce()
+    expect(useSettingsStore.getState().agentFrameworkId).toBe('claude-code')
+    expect(useSettingsStore.getState().installCodex).not.toHaveBeenCalled()
+  })
+
+  it('does not show a runtime chooser', async () => {
+    useSettingsStore.setState(codexReadyState())
+    await renderWizard()
+    await clickButton(/^continue with this location$/i)
+
+    expect(section('Set up the agent runtime')).toBeNull()
+    expect(section('Configure model')).not.toBeNull()
+  })
+
+  it('shows a repair surface when Codex installation fails', async () => {
+    useSettingsStore.setState({
+      agentFrameworkId: 'codex',
+      environmentCheck: {
+        ...codexReadyState().environmentCheck!,
+        ready: false,
+        canAutoInstall: true,
+        runtime: { found: false }
+      },
+      installStates: {
+        ...useSettingsStore.getState().installStates,
+        codex: {
+          isInstalling: false,
+          installLogs: [],
+          installProgress: null,
+          installError: 'Download failed.'
+        }
+      }
+    })
+    await renderWizard()
+    await clickButton(/^continue with this location$/i)
+
+    expect(container.textContent).toContain('Download failed.')
+    expect(findButton(/continue anyway/i)).not.toBeNull()
+  })
+
+  it('keeps setup blocked when a required host check fails', async () => {
+    checkEnvironment({
+      ...codexReadyState().environmentCheck!,
+      ready: false,
+      checks: [
+        {
+          id: 'storage',
+          label: 'App storage permission',
+          status: 'failed',
+          summary: 'The data folder is not writable.'
+        }
+      ]
+    })
     await renderWizard()
 
     expect(section('Prepare environment')).not.toBeNull()
-    expect(findButton(/^continue$/i)?.disabled).toBe(false)
-    await clickButton(/^continue$/i)
-    expect(section('Choose data location')).not.toBeNull()
-    await clickButton(/^continue$/i)
-    expect(useSettingsStore.getState().setAgentFramework).toHaveBeenCalledWith('opencode')
-    expect(useSettingsStore.getState().installOpencode).not.toHaveBeenCalled()
-    expect(useSettingsStore.getState().installClaude).not.toHaveBeenCalled()
+    expect(findButton(/^continue$/i)?.disabled).toBe(true)
   })
+})
 
-  it.each(['storage', 'system', 'no-runtime'] as const)(
-    'keeps setup blocked when the remaining requirement is %s',
-    async (failure) => {
-      await configureUnavailableRegistries(failure)
-      await renderWizard()
-      expect(findButton(/^continue$/i)?.disabled).toBe(true)
-      await clickButton(/^continue$/i)
-      expect(section('Prepare environment')).not.toBeNull()
-    }
-  )
-
-  it('preserves the current location step when a provider test succeeds after Back', async () => {
-    const pending =
-      Promise.withResolvers<
-        Awaited<ReturnType<ReturnType<typeof useSettingsStore.getState>['saveAndActivateProvider']>>
-      >()
-    const save = vi.fn().mockReturnValue(pending.promise)
-    useSettingsStore.setState({ saveAndActivateProvider: save })
-    await goToProvider()
-    await clickButton(/test & continue/i)
-    expect(save).toHaveBeenCalledOnce()
-    await clickButton(/^back$/i)
-    await clickButton(/^back$/i)
-    expect(section('Choose data location')).not.toBeNull()
-
-    await act(async () => {
-      pending.resolve({ providerId: 'saved-1', validation: { ok: true, category: 'ok' } })
-    })
-
-    expect.soft(section('Choose data location')).not.toBeNull()
-    expect.soft(section('Notebook runtime (optional)')).toBeNull()
-    expect(useSettingsStore.getState().completeOnboarding).not.toHaveBeenCalled()
-  })
-
-  it('updates the saved provider identity after returning from Notebook', async () => {
-    const save = vi.fn().mockResolvedValue({
-      providerId: 'saved-1',
-      validation: { ok: true, category: 'ok' }
-    })
-    useSettingsStore.setState({ saveAndActivateProvider: save })
-    await goToProvider()
-    await clickButton(/test & continue/i)
-    expect(section('Notebook runtime (optional)')).not.toBeNull()
-    expect(save.mock.calls[0][0].id).toBeUndefined()
-    await clickButton(/^back$/i)
-    await clickButton(/test & continue/i)
-
-    expect(save).toHaveBeenCalledTimes(2)
-    expect(save.mock.calls[1][0]).toMatchObject({ ...save.mock.calls[0][0], id: 'saved-1' })
-    expect(section('Notebook runtime (optional)')).not.toBeNull()
-  })
-
-  it('keeps a remounted provider page open when its previous test completes', async () => {
-    const pending = Promise.withResolvers<{
-      providerId: string
-      validation: { ok: true; category: 'ok' }
-    }>()
-    const save = vi
-      .fn()
-      .mockReturnValueOnce(pending.promise)
-      .mockResolvedValue({
-        providerId: 'saved-1',
-        validation: { ok: true, category: 'ok' }
-      })
-    useSettingsStore.setState({ saveAndActivateProvider: save })
-    await goToProvider()
-    await clickButton(/test & continue/i)
-    await clickButton(/^back$/i)
-    await clickButton(/^continue$/i)
-    await act(async () => {
-      pending.resolve({ providerId: 'saved-1', validation: { ok: true, category: 'ok' } })
-    })
-    expect(section('Configure model')).not.toBeNull()
-    await clickButton(/test & continue/i)
-    expect(save.mock.calls[1][0]).toMatchObject({ id: 'saved-1', requireExisting: true })
-    expect(section('Notebook runtime (optional)')).not.toBeNull()
-  })
-
-  it('reuses the committed identity after failed validation and edited connection fields', async () => {
+describe('Provider identity across Back and re-renders', () => {
+  it('reuses a committed identity after a failed validation', async () => {
     const save = vi.fn().mockResolvedValue({
       providerId: 'saved-1',
       validation: { ok: false, category: 'network' }
     })
     useSettingsStore.setState({ saveAndActivateProvider: save })
     await goToProvider()
+    await selectOption('Provider type', 'Custom Gateway')
+    await fillRequiredProviderFields(container)
     await clickButton(/test & continue/i)
     expect(section('Configure model')).not.toBeNull()
+
     await act(async () => {
       fireEvent.change(container.querySelector('#provider-base-url')!, {
         target: { value: 'https://replacement.example' }
@@ -322,23 +186,20 @@ describe('Onboarding navigation regressions', () => {
     })
   })
 
-  it('starts a new identity after changing provider kind and returning to custom', async () => {
+  it('starts a new identity after changing provider kind', async () => {
     await goToProvider()
     await clickButton(/test & continue/i)
-    await clickButton(/^back$/i)
+
+    // Change the provider kind on the still-mounted step; the next save must create a new record.
     await selectOption('Provider type', 'Anthropic')
-    expect(container.querySelector('[aria-label="Provider type"]')?.textContent).toContain(
-      'Anthropic'
-    )
     await selectOption('Provider type', 'Custom Gateway')
     await fillRequiredProviderFields(container)
     await clickButton(/test & continue/i)
     const save = vi.mocked(useSettingsStore.getState().saveAndActivateProvider)
-    expect(save).toHaveBeenCalledTimes(2)
-    expect(save.mock.calls[1][0].id).toBeUndefined()
+    expect(save.mock.calls.at(-1)?.[0].id).toBeUndefined()
   })
 
-  it('does not attach a late saved identity to a new provider draft', async () => {
+  it('does not attach a late saved identity to a new draft', async () => {
     const pending = Promise.withResolvers<{
       providerId: string
       validation: { ok: true; category: 'ok' }
@@ -354,11 +215,8 @@ describe('Onboarding navigation regressions', () => {
     await goToProvider()
     await clickButton(/test & continue/i)
     await clickButton(/^back$/i)
-    await clickButton(/^continue$/i)
+    await clickButton(/^continue with this location$/i)
     await selectOption('Provider type', 'Anthropic')
-    expect(container.querySelector('[aria-label="Provider type"]')?.textContent).toContain(
-      'Anthropic'
-    )
     await selectOption('Provider type', 'Custom Gateway')
     await fillRequiredProviderFields(container)
     await act(async () => {
@@ -369,31 +227,27 @@ describe('Onboarding navigation regressions', () => {
     expect(save.mock.calls[1][0].id).toBeUndefined()
   })
 
-  it('requires the saved entity to exist and starts a new one only on an explicit retry', async () => {
+  it('starts a new identity only on an explicit retry after the saved provider is gone', async () => {
     const save = vi
       .fn()
-      .mockResolvedValueOnce({ providerId: 'saved-1', validation: { ok: true, category: 'ok' } })
       .mockRejectedValueOnce(new Error('Provider no longer exists.'))
       .mockResolvedValueOnce({ providerId: 'saved-2', validation: { ok: true, category: 'ok' } })
     useSettingsStore.setState({ saveAndActivateProvider: save })
     await goToProvider()
     await clickButton(/test & continue/i)
-    await clickButton(/^back$/i)
-    await clickButton(/test & continue/i)
-    expect(save.mock.calls[1][0]).toMatchObject({ id: 'saved-1', requireExisting: true })
-    expect(section('Configure model')).not.toBeNull()
     expect(container.querySelector('[role="alert"]')?.textContent).toContain(
       'Provider no longer exists.'
     )
     await clickButton(/test & continue/i)
-    expect(save.mock.calls[2][0].id).toBeUndefined()
+    expect(save.mock.calls[1][0].id).toBeUndefined()
   })
 
-  it('localizes an incompatible provider draft after switching to Codex', async () => {
+  it('localizes an incompatible provider draft', async () => {
     await goToProvider()
-    await clickButton(/^back$/i)
+    await selectOption('Provider type', 'Custom Gateway')
+    await fillRequiredProviderFields(container)
+    await act(async () => i18next.changeLanguage('zh-Hans'))
     await act(async () => {
-      const state = useSettingsStore.getState()
       useSettingsStore.setState({
         agentFrameworkId: 'codex',
         agentFrameworks: [
@@ -403,34 +257,40 @@ describe('Onboarding navigation regressions', () => {
             supportedApiTypes: ['responses'],
             supportsSkills: true
           }
-        ],
-        preflight: {
-          ...state.preflight,
-          agentFrameworkId: 'codex',
-          agentReady: true,
-          codexReady: true
-        },
-        environmentCheck: { ...state.environmentCheck!, agentFrameworkId: 'codex' }
+        ]
       })
     })
-    await clickButton(/^continue$/i)
-    expect(section('Configure model')).not.toBeNull()
-    await act(async () => i18next.changeLanguage('zh-Hans'))
     await clickButton(/测试并继续/)
 
     expect(useSettingsStore.getState().saveAndActivateProvider).not.toHaveBeenCalled()
     const alert = container.querySelector('[role="alert"]')
     expect(alert?.textContent).toContain('Codex')
     expect(alert?.textContent).toMatch(/不兼容/)
-    expect(alert?.textContent).not.toContain("This provider isn't compatible")
   })
 
-  it('advances on a current successful test and finishes only on explicit Finish', async () => {
+  it('finishes setup after a successful provider test without a Notebook or Finish step', async () => {
     await goToProvider()
     await clickButton(/test & continue/i)
-    expect(section('Notebook runtime (optional)')).not.toBeNull()
-    expect(useSettingsStore.getState().completeOnboarding).not.toHaveBeenCalled()
-    await clickButton(/^finish$/i)
+
+    expect(section('Notebook runtime (optional)')).toBeNull()
+    expect(findButton(/^finish$/i)).toBeNull()
     expect(useSettingsStore.getState().completeOnboarding).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the provider draft when Back returns to Location', async () => {
+    await goToProvider()
+    await selectOption('Provider type', 'Custom Gateway')
+    await fillRequiredProviderFields(container)
+    await act(async () => {
+      fireEvent.change(container.querySelector('#provider-base-url')!, {
+        target: { value: 'https://draft.example' }
+      })
+    })
+    await clickButton(/^back$/i)
+    expect(section('Choose data location')).not.toBeNull()
+    await clickButton(/^continue with this location$/i)
+    expect(container.querySelector<HTMLInputElement>('#provider-base-url')?.value).toBe(
+      'https://draft.example'
+    )
   })
 })
