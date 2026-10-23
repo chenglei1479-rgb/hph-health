@@ -114,10 +114,17 @@ export async function verifyPackagedNativeComponents(resources, target, catalog)
   return paths
 }
 
+export const vendorRoot = (directory = root) =>
+  join(directory, 'build/native-components-vendor')
+
+const vendorPath = (directory, target, file) =>
+  join(vendorRoot(directory), target, file.sha256, file.name)
+
 export async function stageNativeComponents({
   directory = root,
   target = `${process.platform}-${process.arch}`,
   catalog,
+  refreshVendor = false,
   fetchImpl = fetch
 } = {}) {
   nativeFiles(target)
@@ -128,8 +135,11 @@ export async function stageNativeComponents({
   const cache = join(directory, 'node_modules/.cache/native-components')
   await mkdir(cache, { recursive: true })
   const dispatcher = new EnvHttpProxyAgent()
-  const prepared = []
   try {
+    if (refreshVendor) {
+      await refreshNativeComponentVendor({ directory, target, catalog, fetchImpl, dispatcher })
+    }
+    const prepared = []
     for (const file of release.files) {
       const destination = join(directory, 'packages', file.package, 'build/Release', file.name)
       const cached = join(cache, file.sha256)
@@ -138,31 +148,65 @@ export async function stageNativeComponents({
         bytes = await verifiedBytes(cached, file)
       } catch (error) {
         if (error.code !== 'ENOENT') throw error
-        const response = await fetchImpl(file.url, {
-          redirect: 'error',
-          signal: AbortSignal.timeout(120_000),
-          dispatcher
-        })
-        if (!response.ok || !response.body)
-          throw new Error(`Native download failed (${response.status}): ${file.name}`)
-        const chunks = []
-        let size = 0
-        for await (const chunk of response.body) {
-          size += chunk.length
-          if (size > file.size) throw new Error(`Native download exceeds pinned size: ${file.name}`)
-          chunks.push(chunk)
+        // Default builds never reach the network: the reviewed bytes ship in the repository.
+        try {
+          bytes = await verifiedBytes(vendorPath(directory, target, file), file)
+        } catch (vendorError) {
+          if (vendorError.code !== 'ENOENT') throw vendorError
+          throw new Error(
+            `Vendored native component is missing: ${target}/${file.sha256}/${file.name}. ` +
+              'Restore it with `node scripts/native-components.mjs --refresh-vendor` in a trusted environment.'
+          )
         }
-        bytes = Buffer.concat(chunks)
-        if (bytes.length !== file.size || digest(bytes) !== file.sha256)
-          throw new Error(`Native download checksum mismatch: ${file.name}`)
         await atomicWrite(cached, bytes, 0o600)
       }
       prepared.push({ destination, bytes })
     }
     // Verify every input before replacing any package output. Never invoke a compiler on a miss.
     for (const { destination, bytes } of prepared) await atomicWrite(destination, bytes, 0o755)
+    return release
   } finally {
     await dispatcher.close()
+  }
+}
+
+export async function refreshNativeComponentVendor({
+  directory = root,
+  target = `${process.platform}-${process.arch}`,
+  catalog,
+  fetchImpl = fetch,
+  dispatcher = new EnvHttpProxyAgent()
+}) {
+  catalog ??= JSON.parse(
+    await readFile(join(directory, 'build/native-components-lock.json'), 'utf8')
+  )
+  const release = validateNativeRelease(catalog[target], target, await sourceFingerprint(directory))
+  for (const file of release.files) {
+    const destination = vendorPath(directory, target, file)
+    try {
+      await verifiedBytes(destination, file)
+      continue
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+    }
+    const response = await fetchImpl(file.url, {
+      redirect: 'error',
+      signal: AbortSignal.timeout(120_000),
+      dispatcher
+    })
+    if (!response.ok || !response.body)
+      throw new Error(`Native download failed (${response.status}): ${file.name}`)
+    const chunks = []
+    let size = 0
+    for await (const chunk of response.body) {
+      size += chunk.length
+      if (size > file.size) throw new Error(`Native download exceeds pinned size: ${file.name}`)
+      chunks.push(chunk)
+    }
+    const bytes = Buffer.concat(chunks)
+    if (bytes.length !== file.size || digest(bytes) !== file.sha256)
+      throw new Error(`Native download checksum mismatch: ${file.name}`)
+    await atomicWrite(destination, bytes, 0o644)
   }
   return release
 }
@@ -179,6 +223,11 @@ async function atomicWrite(path, bytes, mode) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await stageNativeComponents()
-  console.log('Verified and staged pinned native components.')
+  const refreshVendor = process.argv.includes('--refresh-vendor')
+  await stageNativeComponents({ refreshVendor })
+  console.log(
+    refreshVendor
+      ? 'Refreshed vendored native components, verified and staged them.'
+      : 'Verified and staged pinned native components from the repository vendor directory.'
+  )
 }

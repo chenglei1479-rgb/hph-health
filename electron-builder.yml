@@ -276,8 +276,8 @@ deb:
     - libsecret-1-0
     - bubblewrap
 npmRebuild: false
-# Beta builds do not publish or install an updater feed. Upstream v1.0.0 pointed this
-# block at https://statics.aipoch.com/open-science/app/stable; DRA keeps that host blocked.
+# Beta builds do not publish or install an updater feed. Upstream v1.0.0 published one on the
+# upstream static host; Baselio keeps that host blocked and ships no feed (publish: null).
 publish: null
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
