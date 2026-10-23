@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "cdnBaseUrl": "https://statics.aipoch.com/open-science",
+  "note": "Temporary upstream default while the Baselio-hosted CDN is not available. A build may override it with BASELIO_RUNTIME_CDN_BASE; an empty value disables the R1/R2 downloads. Remove this file's host once a hosted base is configured."
+}

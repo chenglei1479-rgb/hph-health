@@ -34,7 +34,10 @@ it('maps the pinned Windows release into the proxy-aware downloader without chan
   const destination = join(root, 'component.tar.zst')
   await captured.dependencies!.download(release, destination, controller.signal, progress)
   const [url, path, options] = vi.mocked(resilientDownload).mock.calls[0]
-  expect([url, path]).toEqual([release.archive.url, destination])
+  expect([url, path]).toEqual([
+    `https://cdn.fixture.test/fixture-app/${release.archive.url}`,
+    destination
+  ])
   expect(options).toMatchObject({
     expectedSize: release.archive.size,
     expectedSha256: release.archive.sha256,

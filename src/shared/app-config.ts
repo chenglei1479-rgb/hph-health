@@ -11,7 +11,6 @@ const GITHUB_OWNER = 'chenglei1479-rgb'
 const GITHUB_REPO = 'hph-health'
 const GITHUB_REPO_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
 const PRODUCT_RELEASES_URL = `${GITHUB_REPO_URL}/releases`
-const CDN_BASE_URL = 'https://statics.aipoch.com/open-science'
 
 export const APP = {
   name: PRODUCT_DISPLAY_NAME,
@@ -22,7 +21,6 @@ export const APP = {
   tagline: 'AI Research Infrastructure for Medicine',
   githubOwner: GITHUB_OWNER,
   githubRepo: GITHUB_REPO,
-  cdnBaseUrl: CDN_BASE_URL,
   links: {
     website: GITHUB_REPO_URL,
     docs: `${GITHUB_REPO_URL}#readme`,

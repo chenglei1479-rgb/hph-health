@@ -308,6 +308,7 @@ export type ProvisionProgressEvent =
   | { code: 'downloading-r-runtime' }
   | { code: 'runtime-downloaded'; file: string }
   | { code: 'runtime-pack-unavailable' }
+  | { code: 'runtime-cdn-disabled' }
 
 type ProvisionProgressBase = {
   progress: number

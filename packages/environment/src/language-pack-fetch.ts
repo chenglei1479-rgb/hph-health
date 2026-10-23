@@ -148,7 +148,16 @@ export const createFetchBundleAdapter = (
   // the token is stable, so a manual retry (no restart) still resumes via Range.
   const sessionCacheKey = randomUUID()
   return async (spec, version, onProgress, signal) => {
-    if (!cdnBase) return undefined
+    if (!cdnBase) {
+      // A build with no runtime CDN must fail closed without creating a staging directory or
+      // touching the network. The renderer localizes this event instead of showing an HTTP error.
+      onProgress({
+        phase: `fetch-${spec.language}`,
+        event: { code: 'runtime-cdn-disabled' },
+        progress: 0.05
+      })
+      return undefined
+    }
     // Stage under <root>/packs (the SAME volume as the final pack dir), NOT the system tmpdir: the
     // final commit is an atomic rename() into runtimePackDir(root,...), and a relocated data root on a
     // separate filesystem would make a tmpdir->root rename fail EXDEV even though the download, verify,
