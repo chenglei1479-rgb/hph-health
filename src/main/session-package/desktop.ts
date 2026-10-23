@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { desktopShellInteraction, desktopFileInteraction } from '../desktop-interaction'
 import { PACKAGE_REQUIRES_UPDATE } from './archive'
 import {
@@ -574,7 +575,9 @@ export class SessionPackageDesktop {
                     const options = {
                       title: this.options.translate('Export Session package'),
                       defaultPath: `${sanitizeExportFilename(title || 'Session', 220)}-${date}.science`,
-                      filters: [{ name: 'DRA Session', extensions: ['science'] }]
+                      filters: [
+                        { name: `${PRODUCT_DISPLAY_NAME} Session`, extensions: ['science'] }
+                      ]
                     }
                     const selected = await this.nativeDialog(
                       desktopFileInteraction().chooseSavePath(options, callerId),
@@ -662,7 +665,7 @@ export class SessionPackageDesktop {
               const options = {
                 title: this.options.translate('Import Session package'),
                 properties: ['openFile'] as ['openFile'],
-                filters: [{ name: 'DRA Session', extensions: ['science'] }]
+                filters: [{ name: `${PRODUCT_DISPLAY_NAME} Session`, extensions: ['science'] }]
               }
               const selected = sourcePath
                 ? { canceled: false, filePaths: [sourcePath] }

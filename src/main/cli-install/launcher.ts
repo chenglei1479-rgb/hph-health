@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { constants, type Stats } from 'node:fs'
@@ -104,7 +105,7 @@ const posixShim = (env: CliLauncherEnv): string => {
       '# Edits are overwritten on reinstall. Mounts the AppImage for this CLI process.',
       `app_image=${quote(env.appImagePath!)}`,
       'mount_output=$(mktemp "${TMPDIR:-/tmp}/medresearch-agent-cli.XXXXXX") || {',
-      "  echo 'DRA could not create a temporary file for the AppImage mount.' >&2",
+      `  echo '${PRODUCT_DISPLAY_NAME} could not create a temporary file for the AppImage mount.' >&2`,
       '  exit 1',
       '}',
       'mount_pid=',
@@ -126,7 +127,7 @@ const posixShim = (env: CliLauncherEnv): string => {
       '    wait "$mount_pid"',
       '    mount_status=$?',
       '    if [ "$mount_status" -eq 0 ]; then mount_status=1; fi',
-      "    echo 'DRA AppImage exited before reporting its mount point.' >&2",
+      `    echo '${PRODUCT_DISPLAY_NAME} AppImage exited before reporting its mount point.' >&2`,
       '    exit "$mount_status"',
       '  fi',
       '  sleep 0.05',
@@ -135,7 +136,7 @@ const posixShim = (env: CliLauncherEnv): string => {
       `app_exec="$mount_dir"/${quote(executable)}`,
       `cli_entry="$mount_dir"/${quote(cliEntry)}`,
       'if [ ! -x "$app_exec" ] || [ ! -f "$cli_entry" ]; then',
-      "  echo 'DRA AppImage is missing its executable or CLI entry.' >&2",
+      `  echo '${PRODUCT_DISPLAY_NAME} AppImage is missing its executable or CLI entry.' >&2`,
       '  exit 1',
       'fi',
       '"$app_exec" "$(dirname "$cli_entry")/appimage-launcher.mjs" "$app_image" "$@"',
@@ -273,7 +274,7 @@ export const buildWindowsPathCommand = (binDir: string): { command: string; args
     '}',
     'function Read-PathJournal($path) {',
     '  try { $journal = [IO.File]::ReadAllText($path) | ConvertFrom-Json }',
-    "  catch { throw 'The PATH ownership journal is not managed by DRA.' }",
+    `  catch { throw 'The PATH ownership journal is not managed by ${PRODUCT_DISPLAY_NAME}.' }`,
     '  $beforeIsValid = $null -eq $journal.beforePath -or $journal.beforePath -is [string]',
     "  $expectedAfter = (@(Get-PathParts $journal.beforePath) + $binDir) -join ';'",
     "  if ($journal.version -ne 1 -or ($journal.owner -cne $receiptOwner -and $journal.owner -cne 'Open-Science Windows PATH entry. Managed by the app.') -or",
@@ -281,7 +282,7 @@ export const buildWindowsPathCommand = (binDir: string): { command: string; args
     '      -not $beforeIsValid -or (Get-MatchCount $journal.beforePath) -ne 0 -or',
     '      $journal.afterPath -isnot [string] -or',
     '      $journal.afterPath -cne $expectedAfter) {',
-    "    throw 'The PATH ownership journal is not managed by DRA.'",
+    `    throw 'The PATH ownership journal is not managed by ${PRODUCT_DISPLAY_NAME}.'`,
     '  }',
     '  return $journal',
     '}',
@@ -356,7 +357,7 @@ const buildWindowsPathRemovalCommand = (
     `$receiptOwner = ${powershellLiteral(WINDOWS_PATH_RECEIPT_OWNER)}`,
     `$state = ${powershellLiteral(state)}`,
     'try { $journal = [IO.File]::ReadAllText($journalPath) | ConvertFrom-Json }',
-    "catch { throw 'The PATH ownership journal is not managed by DRA.' }",
+    `catch { throw 'The PATH ownership journal is not managed by ${PRODUCT_DISPLAY_NAME}.' }`,
     '  $beforeIsValid = $null -eq $journal.beforePath -or $journal.beforePath -is [string]',
     "$beforeParts = @($journal.beforePath -split ';' | Where-Object { $_ -ne '' })",
     "$normalizedBinDir = $binDir.TrimEnd([char[]]'\\/')",
@@ -369,7 +370,7 @@ const buildWindowsPathRemovalCommand = (
     '    -not $beforeIsValid -or $beforeMatchCount -ne 0 -or',
     '    $journal.afterPath -isnot [string] -or',
     '    $journal.afterPath -cne $expectedAfter) {',
-    "  throw 'The PATH ownership journal is not managed by DRA.'",
+    `  throw 'The PATH ownership journal is not managed by ${PRODUCT_DISPLAY_NAME}.'`,
     '}',
     '$beforePath = $journal.beforePath',
     '$afterPath = $journal.afterPath',
@@ -397,7 +398,7 @@ class UnmanagedCliLauncherError extends Error {}
 
 const refuseUnmanagedCliLauncher = (target: string): never => {
   throw new UnmanagedCliLauncherError(
-    `Refusing to modify ${target} because it is not managed by DRA. ` +
+    `Refusing to modify ${target} because it is not managed by ${PRODUCT_DISPLAY_NAME}. ` +
       'Move or rename the existing file, then try again.'
   )
 }
@@ -505,10 +506,7 @@ const openManagedWindowsPathJournal = async (
 const isManagedCliLauncher = (content: string): boolean => {
   const lines = content.split(/\r?\n/)
   // New shims use the new brand, while both historical ownership generations remain repairable.
-  const header = lines[1]?.replace(
-    'DRA command-line launcher.',
-    'DRA command-line launcher.'
-  )
+  const header = lines[1]?.replace('DRA command-line launcher.', 'DRA command-line launcher.')
   if (lines[0] === '#!/bin/sh') {
     return (
       header === `# ${MANAGED_LAUNCHER_HEADER_V1}` ||

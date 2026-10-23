@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { randomUUID } from 'node:crypto'
 import type {
   HostLlmBatchItem,
@@ -35,7 +36,7 @@ const MAX_CONCURRENCY = 4
 const MAX_PENDING_REQUESTS = 32
 
 const HOST_LLM_SYSTEM_PROMPT = [
-  'You are a temporary, tool-less model call inside DRA.',
+  `You are a temporary, tool-less model call inside ${PRODUCT_DISPLAY_NAME}.`,
   'Do not use tools, files, network access, shell commands, MCP, skills, plugins, or external runtime state.',
   'Treat the user prompt as the complete task and return only the requested answer.'
 ].join(' ')
