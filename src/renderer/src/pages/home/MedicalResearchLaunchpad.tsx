@@ -29,6 +29,7 @@ import { nextStepAfter } from '../../../../shared/deliverable-next-step'
 import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-delivery-ledger'
 import { PackNextStepCard } from './PackNextStepCard'
 import { SampleAbstractDialog } from './SampleAbstractDialog'
+import { homeExternalDestinationLines } from './external-destinations'
 
 export type MedicalResearchWorkflow =
   | 'mentor-pack'
@@ -343,6 +344,20 @@ const MedicalResearchLaunchpad = ({
           )}
         </p>
       </div>
+
+      <details
+        data-testid="home-external-endpoints"
+        className={cn(homeCardClassName, 'w-full min-w-0 p-4')}
+      >
+        <summary className={cn(homeBodyClassName, 'cursor-pointer font-medium text-primary')}>
+          {t('Network connections')}
+        </summary>
+        <ul className={cn(homeMutedClassName, 'mt-2 list-disc space-y-1 pl-5')}>
+          {homeExternalDestinationLines(t).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </details>
     </section>
   )
 }
