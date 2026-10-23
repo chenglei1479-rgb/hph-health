@@ -409,7 +409,13 @@ class SettingsService {
     if (!parsed.success) return { ok: false, error: 'conflict' }
     const { expectedVersion, updateToken, ...identity } = parsed.data
     const downloaded = await this.skillMarketplace.download(identity, signal)
-    if (!downloaded.ok) return downloaded
+    if (!downloaded.ok) {
+      // A disabled marketplace is an operator/build choice, not a retryable conflict. The list
+      // surface already explains it; map it to the existing installation failure here.
+      return downloaded.error === 'disabled'
+        ? { ok: false, error: 'installation-failed' }
+        : downloaded
+    }
     try {
       signal?.throwIfAborted()
       const result: {

@@ -17,7 +17,7 @@ import { SettingsService } from '../settings/service'
 import { netFetchWithManualRedirect } from '../network-fetch'
 import { UserSkillSpecialistPackageAdapter } from '@aipoch/skills'
 import { BuiltinSpecialistRegistry } from '@aipoch/specialists/node'
-import { OFFICIAL_MARKETPLACE_SOURCE } from '../specialist/marketplace/official-source'
+import { officialSpecialistMarketplaceSource } from '../marketplace/official-sources'
 import { MarketplaceOperationCoordinator } from '../specialist/marketplace/operation-coordinator'
 import { MarketplaceRepository } from '../specialist/marketplace/repository'
 import { MarketplaceService } from '../specialist/marketplace/service'
@@ -210,7 +210,7 @@ export async function composeSpecialistPackages({
     operationCoordinator: marketplaceOperationCoordinator,
     packages: specialistPackageService,
     fetch: netFetchWithManualRedirect,
-    officialSource: OFFICIAL_MARKETPLACE_SOURCE,
+    officialSource: officialSpecialistMarketplaceSource(),
     getInstalledSpecialists: async () =>
       (await specialistService.list()).map((profile) => ({
         id: profile.id,

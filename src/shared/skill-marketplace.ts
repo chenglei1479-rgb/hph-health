@@ -122,5 +122,7 @@ export type SkillMarketplaceDetail = {
 }
 
 // Transport-safe failures; these are transient browsing results, not installed Skill states.
+// `disabled` means the build/operator turned the official marketplace off: no request was made.
 export type SkillMarketplaceResult<T> =
-  { ok: true; value: T } | { ok: false; error: 'network' | 'integrity' | 'snapshot-unavailable' }
+  | { ok: true; value: T }
+  | { ok: false; error: 'network' | 'integrity' | 'snapshot-unavailable' | 'disabled' }

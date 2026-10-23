@@ -21,7 +21,7 @@ import {
   type MarketplaceRoot
 } from './protocol'
 import { sha256 } from './protocol'
-import { OFFICIAL_SKILL_MARKETPLACE_SOURCE as source } from './source'
+import { officialSkillMarketplaceSource } from '../marketplace/official-sources'
 
 const CATALOG_TTL_MS = 5 * 60 * 1000
 const DETAIL_CACHE_LIMIT = 128
@@ -55,7 +55,12 @@ export class SkillMarketplaceService {
     Promise<SkillMarketplaceResult<SkillMarketplaceDetail>>
   >()
 
-  constructor(private readonly fetch: typeof globalThis.fetch = globalThis.fetch) {}
+  constructor(
+    private readonly fetch: typeof globalThis.fetch = globalThis.fetch,
+    private readonly source: NonNullable<
+      ReturnType<typeof officialSkillMarketplaceSource>
+    > | null = officialSkillMarketplaceSource() ?? null
+  ) {}
 
   retainSnapshot(request: SkillMarketplaceBatchRequest): (() => void) | undefined {
     const root = this.snapshots.get(request.snapshotId)
@@ -156,7 +161,7 @@ export class SkillMarketplaceService {
 
   private assetUrl(revision: string, path: string): string {
     const extension = path.endsWith('.zip') ? '.zip' : '.json'
-    return `https://github.com/${source.repository}/releases/download/catalog-${revision}/${sha256(Buffer.from(path))}${extension}`
+    return `https://github.com/${this.source!.repository}/releases/download/catalog-${revision}/${sha256(Buffer.from(path))}${extension}`
   }
 
   private async readObject<T>(
@@ -167,7 +172,7 @@ export class SkillMarketplaceService {
     signal = AbortSignal.timeout(25000)
   ): Promise<T> {
     let failure: unknown
-    const urls = [new URL(path, source.cdnBaseUrl).href, this.assetUrl(root.revision, path)]
+    const urls = [new URL(path, this.source!.cdnBaseUrl).href, this.assetUrl(root.revision, path)]
     for (const [index, url] of urls.entries()) {
       try {
         // GitHub metadata assets redirect too; CDN requests never follow redirects.
@@ -203,6 +208,7 @@ export class SkillMarketplaceService {
   list(
     request?: SkillMarketplaceCatalogRequest
   ): Promise<SkillMarketplaceResult<SkillMarketplaceCatalog>> {
+    if (!this.source) return Promise.resolve({ ok: false, error: 'disabled' })
     const parsed = catalogRequest.safeParse(request ?? {})
     if (!parsed.success) return Promise.resolve({ ok: false, error: 'integrity' })
     if (parsed.data.snapshotId) {
@@ -244,13 +250,13 @@ export class SkillMarketplaceService {
       const signal = AbortSignal.timeout(25000)
       let cdnFailure: unknown
       try {
-        return this.remember(await this.readRoot(source.cdnBaseUrl, signal))
+        return this.remember(await this.readRoot(this.source!.cdnBaseUrl, signal))
       } catch (error) {
         cdnFailure = error
       }
       try {
         const refBytes = await this.read(
-          `https://api.github.com/repos/${source.repository}/git/ref/heads/${source.ref}`,
+          `https://api.github.com/repos/${this.source!.repository}/git/ref/heads/${this.source!.ref}`,
           16384,
           signal
         )
@@ -262,7 +268,7 @@ export class SkillMarketplaceService {
         const commit = ref.object.sha
         return this.remember(
           await this.readRoot(
-            `https://raw.githubusercontent.com/${source.repository}/${commit}/`,
+            `https://raw.githubusercontent.com/${this.source!.repository}/${commit}/`,
             signal
           )
         )
@@ -302,6 +308,7 @@ export class SkillMarketplaceService {
   async detail(
     request: SkillMarketplaceDetailRequest
   ): Promise<SkillMarketplaceResult<SkillMarketplaceDetail>> {
+    if (!this.source) return { ok: false, error: 'disabled' }
     const parsed = detailRequest.safeParse(request)
     if (!parsed.success) return { ok: false, error: 'snapshot-unavailable' }
     const { snapshotId, id } = parsed.data
@@ -346,6 +353,7 @@ export class SkillMarketplaceService {
     request: SkillMarketplaceDetailRequest,
     cancellation?: AbortSignal
   ): Promise<SkillMarketplaceResult<MarketplacePackage>> {
+    if (!this.source) return { ok: false, error: 'disabled' }
     const parsed = detailRequest.safeParse(request)
     if (!parsed.success) return { ok: false, error: 'snapshot-unavailable' }
     const { snapshotId, id } = parsed.data
