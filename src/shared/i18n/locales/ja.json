@@ -7624,6 +7624,17 @@
     "Checking the existing runtime…": "既存のランタイムを確認しています…",
     "The agent runtime is not ready.": "エージェントランタイムの準備ができていません。",
     "The existing runtime is kept for this setup.": "このセットアップでは既存のランタイムを保持します。",
-    "Notebook runtime": "Notebook ランタイム"
+    "Notebook runtime": "Notebook ランタイム",
+    "This version can't download the Python/R runtime. Watch for an update from the distributor.": "この版では Python / R の実行環境をダウンロードできません。配布元からのお知らせをお待ちください。",
+    "This version can't download the Windows notebook runtime. Watch for an update from the distributor.": "この版では Windows 用の Notebook 実行環境をダウンロードできません。配布元からのお知らせをお待ちください。",
+    "The skill marketplace isn't available right now. Skills you've already installed still work.": "スキルマーケットプレイスは現在ご利用いただけません。インストール済みのスキルはそのまま使えます。",
+    "The specialist marketplace isn't available right now. Specialists you've already added still work.": "スペシャリストマーケットプレイスは現在ご利用いただけません。追加済みのスペシャリストはそのまま使えます。",
+    "Network connections": "ネットワーク接続",
+    "Runtime and marketplace downloads can contact statics.aipoch.com (the distributor's static host). A build without a configured runtime CDN makes no such request and shows a notice instead.": "実行環境とマーケットプレイスのダウンロードでは、配布元の静的ホスト statics.aipoch.com に接続することがあります。ランタイム CDN が設定されていないビルドでは接続せず、案内を表示します。",
+    "Package installs can contact conda.anaconda.org (conda-forge and bioconda), pypi.org, and cloud.r-project.org. Mainland mirrors (mirrors.tuna.tsinghua.edu.cn, mirrors.ustc.edu.cn, mirrors.aliyun.com) are probed only when the app language is Simplified Chinese.": "パッケージのインストールでは、conda.anaconda.org（conda-forge と bioconda）、pypi.org、cloud.r-project.org に接続することがあります。中国本土のミラー（mirrors.tuna.tsinghua.edu.cn、mirrors.ustc.edu.cn、mirrors.aliyun.com）は、アプリの言語が簡体字中国語のときだけ試行します。",
+    "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "管理対象 CLI のインストールでは、registry.npmjs.org に接続し、失敗時は registry.npmmirror.com を予備として使うことがあります。",
+    "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "公式のスキル／スペシャリストマーケットプレイスでは、github.com、api.github.com、raw.githubusercontent.com に接続することがあります。このベータ版では既定で有効で、オフにできます。",
+    "No telemetry is sent. Auto-update is off.": "テレメトリーは送信しません。自動更新は無効です。",
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "このアプリが接続する可能性のある外部の接続先です。テレメトリーは送信せず、自動更新は無効です。"
   }
 }

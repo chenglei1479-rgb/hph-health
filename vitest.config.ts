@@ -165,6 +165,13 @@ function coverageThresholdsFor(env: NodeJS.ProcessEnv): CoverageThresholds | und
 // Mirrors the renderer alias from electron.vite.config.ts so tests that mount real component
 // trees (instead of mocking every aliased import) can resolve '@/...' without a build step.
 export default defineConfig({
+  define: {
+    // Tests use a fixture host for the build-time runtime CDN. Production reads the value baked by
+    // electron.vite.config.ts / scripts/build-backend.mjs; an explicitly empty env disables it.
+    __BASELIO_RUNTIME_CDN_BASE__: JSON.stringify(
+      process.env.BASELIO_RUNTIME_CDN_BASE ?? 'https://cdn.fixture.test/fixture-app'
+    )
+  },
   server: {
     // Vitest may still canonicalize worker URLs through the shared install even when module
     // resolution preserves symlinks. Limit the additional allowance to this repository root.

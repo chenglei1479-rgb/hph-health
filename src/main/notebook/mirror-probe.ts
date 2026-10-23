@@ -4,6 +4,7 @@ import {
   type PackageMirror
 } from '../../shared/mirror'
 import { netFetchStandard } from '../network-fetch'
+import { isSimplifiedChineseLocale } from './mirror'
 
 // A candidate mirror bundle + cheap URLs to measure both required conda channels. Public endpoints
 // only (no secrets). The repodata URLs are HEAD-ed so no body is downloaded.
@@ -93,17 +94,21 @@ const resolveAutoMirror = (deps?: ProbeDeps): Promise<PackageMirror | undefined>
 }
 
 // Effective mirror WITH the speed probe: a user-configured override always wins (no probe); otherwise
-// use the fastest-probed mirror; if the probe finds nothing reachable, use the public indexes rather
-// than reviving a locale mirror that the probe just rejected.
+// only a zh-Hans UI may probe the mainland candidates. Every other locale goes straight to the public
+// indexes without any network probe, so ja/en installs never touch tuna/ustc/aliyun.
 export const effectiveMirrorAsync = async (
   configured: PackageMirror | undefined,
-  _locale: string,
+  locale: string,
   deps?: ProbeDeps
 ): Promise<PackageMirror> => {
   const hasAny =
     configured && (configured.condaChannel || configured.pypiIndex || configured.cranMirror)
   // Configured channel override already carries any caBundle it was given.
   if (hasAny) return configured!
+  // Preserve a configured caBundle (e.g. an enterprise TLS proxy) even when no channel is chosen.
+  if (!isSimplifiedChineseLocale(locale)) {
+    return configured?.caBundle ? { caBundle: configured.caBundle } : {}
+  }
   // Otherwise use the probed/public mirror, but always preserve a configured caBundle (e.g. a
   // caBundle-only config behind an enterprise TLS proxy still gets the fastest-probed channel).
   const probed = await resolveAutoMirror(deps)

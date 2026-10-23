@@ -7,6 +7,7 @@ import { netFetchStandard } from '../network-fetch'
 import {
   WindowsRuntimeComponentStore,
   assertWindowsRuntimeComponentRelease,
+  resolveWindowsRuntimeArchiveUrl,
   verifyWindowsRuntimeComponent,
   type WindowsRuntimeComponentDependencies,
   type WindowsRuntimeComponentProgress,
@@ -59,7 +60,7 @@ export class WindowsNotebookRuntimeManager {
       probe,
       extract: extractPackArchive,
       download: async (release, path, signal, progress) => {
-        await resilientDownload(release.archive.url, path, {
+        await resilientDownload(resolveWindowsRuntimeArchiveUrl(release), path, {
           expectedSha256: release.archive.sha256,
           expectedSize: release.archive.size,
           signal,

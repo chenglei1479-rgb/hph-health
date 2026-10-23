@@ -2,7 +2,7 @@ import { resolveMicromamba, type MicromambaDeps } from '@aipoch/environment'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { runtimeMetadataIfConfigured } from '../runtime-metadata'
-import { APP } from '../../shared/app-config'
+import { builtRuntimeCdnBase, normalizeRuntimeCdnBase } from '../../shared/runtime-cdn'
 import { PROD_SESSION_DIR_NAME } from '../../shared/config-root'
 
 type BundleDirDeps = { resourcesPath?: string; override?: string }
@@ -26,11 +26,12 @@ export const resolveBundleDir = (deps: BundleDirDeps = {}): string | undefined =
   return candidates.find((candidate) => existsSync(candidate))
 }
 
-export const DEFAULT_RUNTIME_CDN_BASE = APP.cdnBaseUrl
+export const DEFAULT_RUNTIME_CDN_BASE = builtRuntimeCdnBase()
+// An explicit environment value (including the empty string) wins over the baked base. Empty means
+// the runtime CDN is disabled; callers must fail closed without issuing a request.
 export const resolveRuntimeCdnBase = (override?: string): string =>
-  (override ?? process.env.OPEN_SCIENCE_ENV_CDN_BASE ?? DEFAULT_RUNTIME_CDN_BASE).replace(
-    /\/+$/,
-    ''
+  normalizeRuntimeCdnBase(
+    override ?? process.env.OPEN_SCIENCE_ENV_CDN_BASE ?? DEFAULT_RUNTIME_CDN_BASE
   )
 
 // Product overrides and installation layout are resolved here, never inside the package.

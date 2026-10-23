@@ -3,6 +3,7 @@ import { useRetainedDialogValue } from '@/components/ui/use-retained-dialog-valu
 import { inlineNoticeClassName } from '@/components/ui/notice-chrome'
 import { InlineNotice } from '@/components/ui/inline-notice'
 import { ErrorNotice } from '@/components/error-notice'
+import { specialistMarketplaceDisabledText } from './downloads-disabled-copy'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -1316,6 +1317,11 @@ const SpecialistMarketplace = ({ view, onNavigate }: Props): React.JSX.Element =
                 </InlineNotice>
               ))
           : null}
+        {!loading && snapshot?.disabled ? (
+          <InlineNotice role="status" className="mb-3">
+            {specialistMarketplaceDisabledText(t)}
+          </InlineNotice>
+        ) : null}
         {allSourcesUnavailable ? (
           <MarketplaceError
             message={t(
@@ -1333,7 +1339,11 @@ const SpecialistMarketplace = ({ view, onNavigate }: Props): React.JSX.Element =
               </div>
             ))
           : null}
-        {!loading && snapshot && !allSourcesUnavailable && visibleListings.length === 0 ? (
+        {!loading &&
+        snapshot &&
+        !snapshot.disabled &&
+        !allSourcesUnavailable &&
+        visibleListings.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <p className="text-sm text-foreground">
               {query

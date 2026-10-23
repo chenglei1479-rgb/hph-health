@@ -7784,6 +7784,17 @@
     "Checking the existing runtime…": "Vorhandene Runtime wird geprüft…",
     "The agent runtime is not ready.": "Die Agent-Runtime ist nicht bereit.",
     "The existing runtime is kept for this setup.": "Die vorhandene Runtime bleibt für diese Einrichtung erhalten.",
-    "Notebook runtime": "Notebook-Laufzeit"
+    "Notebook runtime": "Notebook-Laufzeit",
+    "This version can't download the Python/R runtime. Watch for an update from the distributor.": "Diese Version kann die Python-/R-Laufzeit nicht herunterladen. Warten Sie auf eine Mitteilung des Herausgebers.",
+    "This version can't download the Windows notebook runtime. Watch for an update from the distributor.": "Diese Version kann die Windows-Notebook-Laufzeit nicht herunterladen. Warten Sie auf eine Mitteilung des Herausgebers.",
+    "The skill marketplace isn't available right now. Skills you've already installed still work.": "Der Marktplatz für Fähigkeiten ist derzeit nicht verfügbar. Bereits installierte Fähigkeiten funktionieren weiterhin.",
+    "The specialist marketplace isn't available right now. Specialists you've already added still work.": "Der Spezialisten-Marktplatz ist derzeit nicht verfügbar. Bereits hinzugefügte Spezialisten funktionieren weiterhin.",
+    "Network connections": "Netzwerkverbindungen",
+    "Runtime and marketplace downloads can contact statics.aipoch.com (the distributor's static host). A build without a configured runtime CDN makes no such request and shows a notice instead.": "Downloads von Laufzeit und Marktplätzen können statics.aipoch.com (den statischen Host des Herausgebers) kontaktieren. Ein Build ohne konfiguriertes Laufzeit-CDN stellt diese Anfrage nicht und zeigt stattdessen einen Hinweis.",
+    "Package installs can contact conda.anaconda.org (conda-forge and bioconda), pypi.org, and cloud.r-project.org. Mainland mirrors (mirrors.tuna.tsinghua.edu.cn, mirrors.ustc.edu.cn, mirrors.aliyun.com) are probed only when the app language is Simplified Chinese.": "Paketinstallationen können conda.anaconda.org (conda-forge und bioconda), pypi.org und cloud.r-project.org kontaktieren. Festlandchina-Spiegel (mirrors.tuna.tsinghua.edu.cn, mirrors.ustc.edu.cn, mirrors.aliyun.com) werden nur bei vereinfachtem Chinesisch als App-Sprache geprüft.",
+    "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "Installationen verwalteter CLIs können registry.npmjs.org kontaktieren, mit registry.npmmirror.com als Ausweichlösung.",
+    "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "Offizielle Marktplätze für Fähigkeiten und Spezialisten können github.com, api.github.com und raw.githubusercontent.com kontaktieren. Sie sind in dieser Beta standardmäßig aktiv und lassen sich deaktivieren.",
+    "No telemetry is sent. Auto-update is off.": "Es werden keine Telemetriedaten gesendet. Automatische Updates sind deaktiviert.",
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "Externe Ziele, die diese App kontaktieren kann. Es werden keine Telemetriedaten gesendet, und automatische Updates sind deaktiviert."
   }
 }

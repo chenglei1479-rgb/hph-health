@@ -64,6 +64,9 @@ export type MarketplaceSnapshot = {
   sources: readonly MarketplaceSourceView[]
   specialists: readonly MarketplaceSpecialistListing[]
   failures: readonly MarketplaceSourceFailure[]
+  // The official marketplace was disabled by build/operator configuration. Installed Specialists
+  // remain usable; no request was made for the official source.
+  disabled?: boolean
 }
 
 // Optional renderer intent: a user-initiated refresh bypasses the cached-root TTL so the button
