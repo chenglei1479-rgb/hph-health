@@ -53,14 +53,14 @@ const terminalStates = new Set([
 ])
 
 const APP_OWNED_DIRECTIVE_GUIDANCE: Record<string, string> = {
-  output: 'Remove it; DRA captures scheduler stdout in the Job result.',
-  error: 'Remove it; DRA captures scheduler stderr in the Job result.',
-  chdir: 'Remove it; DRA submits from the managed Job working directory.',
-  'job-name': 'Remove it; DRA assigns the Job name used for tracking and recovery.',
-  array: 'Submit independent DRA Jobs instead.',
+  output: 'Remove it; the application captures scheduler stdout in the Job result.',
+  error: 'Remove it; the application captures scheduler stderr in the Job result.',
+  chdir: 'Remove it; the application submits from the managed Job working directory.',
+  'job-name': 'Remove it; the application assigns the Job name used for tracking and recovery.',
+  array: 'Submit independent Jobs instead.',
   wrap: 'Put the workload command directly after the #SBATCH header instead.',
   clusters: 'Choose a Compute Host for the intended Slurm cluster instead.',
-  'het-group': 'Submit each workload as a separate DRA Job instead.'
+  'het-group': 'Submit each workload as a separate Job instead.'
 }
 
 const appOwnedDirective = (line: string): { option: string; guidance: string } | undefined => {
@@ -98,7 +98,7 @@ const commandDirectives = (
     if (owned) {
       throw new SlurmDriverError(
         'invalid_resources',
-        `Slurm directive ${owned.option} is managed by DRA. ${owned.guidance}`
+        `Slurm directive ${owned.option} is managed by the application. ${owned.guidance}`
       )
     }
     if (
@@ -272,7 +272,7 @@ export const dispatchSlurmJob = async (
     if (recovered) return recovered
     throw new SlurmDriverError(
       'host_unreachable',
-      'Slurm submission may have succeeded, but its job id was not confirmed. DRA will look up candidates and recover only a job whose recorded workdir proves ownership; it will not submit a duplicate.'
+      'Slurm submission may have succeeded, but its job id was not confirmed. The application will look up candidates and recover only a job whose recorded workdir proves ownership; it will not submit a duplicate.'
     )
   }
   return handleFor(workdir, id)

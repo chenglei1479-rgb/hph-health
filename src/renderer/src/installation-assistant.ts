@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import './assets/installation-assistant.css'
 
 import darkAppIconUrl from './assets/logo-dark.png'
@@ -37,9 +38,7 @@ const start = (): void => {
   }
 
   title.textContent =
-    reason === 'update'
-      ? t('Install DRA before updating')
-      : t('Finish installing DRA')
+    reason === 'update' ? t('Install DRA before updating') : t('Finish installing DRA')
   description.textContent = t(
     'Drag DRA to Applications. You can continue using this copy without installing.'
   )
@@ -89,7 +88,7 @@ const start = (): void => {
     else void install()
   })
   sourceIcon.addEventListener('dragstart', (event) => {
-    event.dataTransfer?.setData('text/plain', 'DRA')
+    event.dataTransfer?.setData('text/plain', PRODUCT_DISPLAY_NAME)
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy'
   })
   targetItem.addEventListener('dragover', (event) => {

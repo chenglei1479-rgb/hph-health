@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { withDataRootWrite } from '../storage/migration-state'
 import { McpServer as ModelContextProtocolServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -89,8 +90,7 @@ const createLiteratureMcpServer = (handler: LiteratureMcpHandler): ModelContextP
     LITERATURE_READ_DOCUMENT_TOOL_NAME,
     {
       title: 'Read linked literature',
-      description:
-        'Read prose passages from one to three multi-page PDFs explicitly linked to the current DRA message. Omit query and provide documentId to read one document in bounded sequential batches, following nextCursor until null. Provide query to retrieve relevant passages across documentIds, or all linked documents when documentIds is omitted. Search requests must not include documentId or cursor; sequential requests must not include documentIds. Use this instead of Notebook, shell, filesystem, or Python for linked-PDF reading. For specific figures, tables, algorithms, exact table values or visual relationships, use list_pdf_elements and then read_pdf_element. Combine prose and element evidence when both are needed; do not infer visual evidence from prose or list elements for every summary. Library itemId is not a linked-PDF documentId.',
+      description: `Read prose passages from one to three multi-page PDFs explicitly linked to the current ${PRODUCT_DISPLAY_NAME} message. Omit query and provide documentId to read one document in bounded sequential batches, following nextCursor until null. Provide query to retrieve relevant passages across documentIds, or all linked documents when documentIds is omitted. Search requests must not include documentId or cursor; sequential requests must not include documentIds. Use this instead of Notebook, shell, filesystem, or Python for linked-PDF reading. For specific figures, tables, algorithms, exact table values or visual relationships, use list_pdf_elements and then read_pdf_element. Combine prose and element evidence when both are needed; do not infer visual evidence from prose or list elements for every summary. Library itemId is not a linked-PDF documentId.`,
       inputSchema: z
         .object({
           documentId: z.string().trim().min(1).max(512).optional(),

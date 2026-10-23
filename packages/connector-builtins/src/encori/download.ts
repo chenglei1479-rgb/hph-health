@@ -43,7 +43,7 @@ async function exists(path: string): Promise<boolean> {
 }
 
 export async function head(ctx: EncoriContext, item: Dataset): Promise<Args> {
-  if (encoriDisabled()) throw new Error('ENCORI is disabled in DRA.')
+  if (encoriDisabled()) throw new Error('ENCORI is disabled in the application.')
   return receive(item.download_url, ctx, { method: 'HEAD' }, async (response) => {
     const length = response.headers.get('content-length')
     const size =
@@ -62,7 +62,7 @@ export async function head(ctx: EncoriContext, item: Dataset): Promise<Args> {
 }
 
 export async function listDatasets(ctx: EncoriContext, args: Args): Promise<Args> {
-  if (encoriDisabled()) throw new Error('ENCORI is disabled in DRA.')
+  if (encoriDisabled()) throw new Error('ENCORI is disabled in the application.')
   const selected = DATASETS.filter(
     (item) =>
       (!args.assembly || args.assembly === item.assembly) &&
@@ -135,7 +135,7 @@ export async function listDatasets(ctx: EncoriContext, args: Args): Promise<Args
 const activeDownloads = new Set<string>()
 
 export async function download(ctx: EncoriContext, args: Args): Promise<Args> {
-  if (encoriDisabled()) throw new Error('ENCORI is disabled in DRA.')
+  if (encoriDisabled()) throw new Error('ENCORI is disabled in the application.')
   const item = DATASETS.find((value) => value.filename === args.filename)
   if (!item) throw new EncoriError('invalid_arguments', 'filename must be from list_bulk_datasets.')
   const directory = await realpath(await outputDirectory(args.destination_dir, ctx.signal))

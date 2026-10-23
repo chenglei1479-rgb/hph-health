@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { createLogger } from '@aipoch/diagnostics/node'
 import type { EffectiveSpecialistSkills } from '@aipoch/specialists'
 import { join } from 'node:path'
@@ -274,7 +275,7 @@ class AcpTurnSkillOwner {
       input.frameworkId === 'codebuddy'
         ? [
             '<open_science_codebuddy_skill_route>',
-            'This turn replaces every earlier CodeBuddy Skill route. The exact Skill documents listed below are already loaded by DRA for this turn.',
+            `This turn replaces every earlier CodeBuddy Skill route. The exact Skill documents listed below are already loaded by ${PRODUCT_DISPLAY_NAME} for this turn.`,
             ...(codeBuddySkillNames.length > 0
               ? [
                   'Follow these documents before any Notebook or Connector call. Do not call `mcp__skills__load_skill`; the documents are already loaded.',

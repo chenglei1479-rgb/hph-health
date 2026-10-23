@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { desktopNativeRequestSchema, type DesktopNativeHandler } from '../desktop-native-contract'
 import type { Notification } from 'electron'
 
@@ -149,7 +150,7 @@ export const showTestTaskNotification = (
         body:
           copy?.body ??
           deps.translate?.('System notifications from DRA are working.') ??
-          'System notifications from DRA are working.',
+          `System notifications from ${PRODUCT_DISPLAY_NAME} are working.`,
         onClick: () => undefined
       },
       finish

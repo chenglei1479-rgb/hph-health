@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { isSensitiveDiagnosticKey } from '@aipoch/diagnostics'
 import {
   createLogger,
@@ -162,8 +163,7 @@ const importJournalSchema = sessionPackageRequestSchema
   .strict()
 type ImportJournal = z.infer<typeof importJournalSchema>
 
-const PACKAGE_README =
-  '# DRA Session package\n\nDRA can inspect and import this archive as read-only research history. Import does not execute code or restore account credentials. Checksums verify bytes, not scientific claims or the identity of the sender.\n'
+const PACKAGE_README = `# ${PRODUCT_DISPLAY_NAME} Session package\n\nDRA can inspect and import this archive as read-only research history. Import does not execute code or restore account credentials. Checksums verify bytes, not scientific claims or the identity of the sender.\n`
 
 type PackageOptions = {
   storageRoot: string

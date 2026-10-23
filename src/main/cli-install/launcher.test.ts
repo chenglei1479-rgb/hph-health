@@ -257,7 +257,7 @@ describe('initial CLI installation failure recovery', () => {
 
       await expect(installCliLauncher(env)).rejects.toBe(error)
       await expect(readFile(plan.target, 'utf8')).resolves.toBe(userContent)
-      await expect(installCliLauncher(env)).rejects.toThrow(/not managed by DRA/)
+      await expect(installCliLauncher(env)).rejects.toThrow(/not managed by Baselio/)
     }
   )
 })
@@ -304,10 +304,7 @@ pdescribe('installCliLauncher / status / uninstall (POSIX)', () => {
     )
 
     await expect(
-      installCliLauncher(
-        posixEnv({ appExecPath: '/opt/DRA/medresearch-agent-next' }),
-        () => true
-      )
+      installCliLauncher(posixEnv({ appExecPath: '/opt/DRA/medresearch-agent-next' }), () => true)
     ).rejects.toMatchObject({ code: 'ENOSPC' })
 
     await expect(readFile(originalPlan.target, 'utf8')).resolves.toBe(originalPlan.shim)
@@ -487,7 +484,7 @@ describe.each([
     await writeFile(plan.target, userContent)
 
     await expect(installCliLauncher(env, () => true)).rejects.toThrow(
-      'because it is not managed by DRA'
+      'because it is not managed by Baselio'
     )
     await expect(readFile(plan.target, 'utf8')).resolves.toBe(userContent)
   })
@@ -499,9 +496,7 @@ describe.each([
     await mkdir(plan.binDir, { recursive: true })
     await writeFile(plan.target, userContent)
 
-    await expect(uninstallCliLauncher(env)).rejects.toThrow(
-      'because it is not managed by DRA'
-    )
+    await expect(uninstallCliLauncher(env)).rejects.toThrow('because it is not managed by Baselio')
     await expect(readFile(plan.target, 'utf8')).resolves.toBe(userContent)
   })
 
@@ -529,7 +524,7 @@ describe.each([
     await writeFile(plan.target, userContent)
 
     await expect(installCliLauncher(env, () => true)).rejects.toThrow(
-      'because it is not managed by DRA'
+      'because it is not managed by Baselio'
     )
     await expect(readFile(plan.target, 'utf8')).resolves.toBe(userContent)
   })
@@ -588,7 +583,7 @@ symlinkDescribe('symlinked launcher safety', () => {
   it('refuses to follow a symlink during install', async () => {
     const { env, target, userFile, userContent } = await arrangeManagedTargetSymlink()
 
-    await expect(installCliLauncher(env)).rejects.toThrow('not managed by DRA')
+    await expect(installCliLauncher(env)).rejects.toThrow('not managed by Baselio')
     await expect(readFile(userFile, 'utf8')).resolves.toBe(userContent)
     expect((await lstat(target)).isSymbolicLink()).toBe(true)
   })
@@ -596,7 +591,7 @@ symlinkDescribe('symlinked launcher safety', () => {
   it('refuses to remove a symlink during uninstall', async () => {
     const { env, target, userFile, userContent } = await arrangeManagedTargetSymlink()
 
-    await expect(uninstallCliLauncher(env)).rejects.toThrow('not managed by DRA')
+    await expect(uninstallCliLauncher(env)).rejects.toThrow('not managed by Baselio')
     await expect(readFile(userFile, 'utf8')).resolves.toBe(userContent)
     expect((await lstat(target)).isSymbolicLink()).toBe(true)
   })
@@ -628,14 +623,14 @@ describe('hard-linked launcher safety', () => {
   it('refuses to follow a hard link during install', async () => {
     const { env, userFile, userContent } = await arrangeManagedTargetHardLink()
 
-    await expect(installCliLauncher(env)).rejects.toThrow('not managed by DRA')
+    await expect(installCliLauncher(env)).rejects.toThrow('not managed by Baselio')
     await expect(readFile(userFile, 'utf8')).resolves.toBe(userContent)
   })
 
   it('refuses to remove a hard link during uninstall', async () => {
     const { env, target, userFile, userContent } = await arrangeManagedTargetHardLink()
 
-    await expect(uninstallCliLauncher(env)).rejects.toThrow('not managed by DRA')
+    await expect(uninstallCliLauncher(env)).rejects.toThrow('not managed by Baselio')
     await expect(readFile(userFile, 'utf8')).resolves.toBe(userContent)
     await expect(lstat(target)).resolves.toMatchObject({ nlink: 2 })
   })
@@ -726,7 +721,7 @@ describe('installCliLauncher on Windows PATH edit', () => {
   })
 
   it.each([
-    ['unmanaged', 'because it is not managed by DRA'],
+    ['unmanaged', 'because it is not managed by Baselio'],
     ['ambiguous', 'The Windows PATH ownership journal is ambiguous.']
   ] as const)('rejects an %s PATH journal before creating the shim', async (scenario, message) => {
     const env = winEnv()
@@ -767,7 +762,7 @@ describe('uninstallCliLauncher on Windows PATH edit', () => {
     const runCommand = vi.fn(() => true)
 
     await expect(uninstallCliLauncher(env, runCommand)).rejects.toThrow(
-      'because it is not managed by DRA'
+      'because it is not managed by Baselio'
     )
 
     expect(runCommand).not.toHaveBeenCalled()
@@ -1034,10 +1029,7 @@ pdescribe('AppImage launcher reconciliation (POSIX)', () => {
 describe('AppImage reconciliation platform boundary', () => {
   it.each([
     ['win32', () => winEnv({ appImagePath: 'C:\\Users\\me\\DRA.AppImage' })],
-    [
-      'darwin',
-      () => posixEnv({ platform: 'darwin', appImagePath: '/Applications/DRA.AppImage' })
-    ]
+    ['darwin', () => posixEnv({ platform: 'darwin', appImagePath: '/Applications/DRA.AppImage' })]
   ])('does not rewrite a packaged %s launcher', async (_platform, createEnv) => {
     const env = createEnv()
     const plan = planCliLauncher(env)
