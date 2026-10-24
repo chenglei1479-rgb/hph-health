@@ -102,7 +102,7 @@ export const executeLocalAnalysis = async (input: {
     if ('message' in command) {
       return { stdout: '', stderr: command.message, exitCode: 127 }
     }
-    const result = await run(command.command, scriptPath, directory, {
+    const result = await run(command, scriptPath, directory, {
       ...process.env,
       DRA_SCHEMA_TABLE: tablePath
     })
