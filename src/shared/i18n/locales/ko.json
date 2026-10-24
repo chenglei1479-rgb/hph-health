@@ -6488,7 +6488,6 @@
     "Could not save conversation Skill import preference. Try again.": "대화 스킬 가져오기 설정을 저장할 수 없습니다. 다시 시도하세요.",
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "이 컴퓨터에 암호화되어 저장됩니다. 비밀 값은 인터페이스로 반환되지 않습니다.",
     "Beaker": "비커",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "윤리 심사 전 연구 주제 논의를 위한 자료입니다. 연구 질문, 설계, 다음에 지도교수에게 확인할 점까지입니다. 승인 번호는 필수가 아닙니다. 윤리 승인 후 표를 가지고 상담할 때는 「데이터 점검 및 통계 상담 자료」를 사용하세요.",
     "Retrieve disease models associated with an Alliance gene.": "Alliance 유전자와 관련된 질병 모델을 가져옵니다.",
     "Saved credential unavailable": "저장된 자격 증명을 사용할 수 없음",
     "No references in this group.": "이 그룹에 문헌이 없습니다.",
@@ -7500,7 +7499,7 @@
     "Prepare a conference abstract or paper": "학회 초록 또는 논문 준비하기",
     "Delete patient data on this device": "이 기기의 환자 데이터 삭제",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}}에 저장된 데이터를 삭제합니다. 기기를 폐기하거나 양도할 때는 소속 기관의 절차를 따르십시오.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "가져온 원본 파일(Excel 등)은 {{productName}}에서 삭제하지 않습니다.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "가져온 원본 파일(Excel 등)은 {{productName}}에서 삭제하지 않습니다. 연구 계획서의 방법에 따라 직접 삭제하세요.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "삭제하기 전에 연구계획서에 정해진 보관 기간과 보관 장소를 확인하세요.",
     "Before deleting, export code and result tables that contain no patient data.": "삭제하기 전에 환자 데이터가 없는 코드와 결과표를 내보내십시오.",
     "Confirm the patient data that will be deleted": "삭제할 환자 데이터를 확인",
@@ -7631,6 +7630,11 @@
     "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "관리형 CLI 설치 시 registry.npmjs.org에 연결할 수 있으며 registry.npmmirror.com을 대체로 사용합니다.",
     "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "공식 스킬 및 스페셜리스트 마켓플레이스는 github.com, api.github.com, raw.githubusercontent.com에 연결할 수 있습니다. 이 베타에서는 기본적으로 켜져 있으며 끌 수 있습니다.",
     "No telemetry is sent. Auto-update is off.": "텔레메트리는 전송하지 않습니다. 자동 업데이트는 꺼져 있습니다.",
-    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "이 앱이 연결할 수 있는 외부 대상입니다. 텔레메트리는 전송하지 않으며 자동 업데이트는 꺼져 있습니다."
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "이 앱이 연결할 수 있는 외부 대상입니다. 텔레메트리는 전송하지 않으며 자동 업데이트는 꺼져 있습니다.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "윤리 심사 전 연구 주제 논의를 위한 자료입니다. 연구 질문, 설계, 다음에 지도교수에게 확인할 점까지입니다. 승인 번호는 필수가 아닙니다. 데이터 분석은 「자신의 데이터 분석하기」에서 시작하세요.",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "선택한 열의 범주 값은 많은 순으로 최대 {{limit}}개만 보냅니다. 나머지는 {{omission}}으로 표시합니다.",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "분석 결과는 보내기 전에 마스킹 검사를 하며, 개별 행이 포함된 출력은 보내지 않습니다.",
+    "Details_privacy": "자세히",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "환자 데이터는 사용 중인 컴퓨터에서 분석합니다. AI 서비스에는 기본적으로 열 이름, 데이터 유형, 행 수, 합성 표본, 선택한 열의 범주 값, 그리고 분석의 집계 결과를 보냅니다. 이름이나 의무기록번호 같은 직접 식별자는 보내지 않습니다."
   }
 }

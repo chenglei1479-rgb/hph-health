@@ -128,7 +128,7 @@ const DeleteDevicePatientData = ({
               </p>
               <p className="text-sm leading-6 text-text-000">
                 {t(
-                  'Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.',
+                  'Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.',
                   { productName }
                 )}
               </p>

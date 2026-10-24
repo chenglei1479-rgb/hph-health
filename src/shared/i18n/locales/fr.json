@@ -6782,7 +6782,6 @@
     "Stored encrypted on this computer. Secret values are never returned to the interface.": "Stockées chiffrées sur cet ordinateur. Les valeurs secrètes ne sont jamais renvoyées à l’interface.",
     "References: {{count}} / {{limit}}; package: {{size}} / {{total}}_one": "Références : {{count}}/{{limit}} ; paquet : {{size}} / {{total}}",
     "Beaker": "Bécher",
-    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. After ethics approval, use the data audit and statistical consultation pack when the discussion needs a table.": "Pour l’échange avant l’examen éthique : question de recherche, plan et points à confirmer avec le directeur de recherche. Un numéro d’approbation n’est pas exigé. Après l’approbation éthique, utilisez le dossier d’audit des données et de consultation statistique si la discussion a besoin d’un tableau.",
     "Retrieve disease models associated with an Alliance gene.": "Obtenir les modèles de maladies associés à un gène Alliance.",
     "Saved credential unavailable": "Identifiant enregistré indisponible",
     "No references in this group.": "Aucune référence dans ce groupe.",
@@ -7830,7 +7829,7 @@
     "Prepare a conference abstract or paper": "Préparer un résumé de congrès ou un article",
     "Delete patient data on this device": "Supprimer les données patients sur cet appareil",
     "{{productName}} will delete data it stores. When disposing of or transferring this device, follow your institution's procedure.": "{{productName}} supprime les données qu’il conserve. Pour mettre au rebut ou céder cet appareil, suivez la procédure de votre établissement.",
-    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}.": "Les fichiers sources d’origine importés, tels que les classeurs Excel, ne sont pas supprimés par {{productName}}.",
+    "Original source files that were imported, such as Excel workbooks, are not deleted by {{productName}}. Delete them yourself according to the method in the research protocol.": "Les fichiers sources d’origine importés, tels que les classeurs Excel, ne sont pas supprimés par {{productName}}. Supprimez-les vous-même selon la méthode du protocole de recherche.",
     "Check the retention period and storage location specified in the research protocol before you delete.": "Vérifiez la durée et le lieu de conservation prévus dans le protocole de recherche avant de supprimer.",
     "Before deleting, export code and result tables that contain no patient data.": "Avant de supprimer, exportez le code et les tableaux de résultats qui ne contiennent pas de données patients.",
     "Confirm the patient data that will be deleted": "Confirmer les données patients qui seront supprimées",
@@ -7961,6 +7960,11 @@
     "Managed CLI installs can contact registry.npmjs.org, with registry.npmmirror.com as a fallback.": "Les installations d’outils CLI gérés peuvent contacter registry.npmjs.org, avec registry.npmmirror.com comme solution de repli.",
     "Official Skill and Specialist marketplaces can contact github.com, api.github.com, and raw.githubusercontent.com. They stay on by default in this beta and can be turned off.": "Les places de marché officielles de compétences et de spécialistes peuvent contacter github.com, api.github.com et raw.githubusercontent.com. Elles restent activées par défaut dans cette bêta et peuvent être désactivées.",
     "No telemetry is sent. Auto-update is off.": "Aucune télémétrie n’est envoyée. La mise à jour automatique est désactivée.",
-    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "Destinations externes que cette application peut contacter. Aucune télémétrie n’est envoyée et la mise à jour automatique est désactivée."
+    "External destinations this app can contact. No telemetry is sent and auto-update is off.": "Destinations externes que cette application peut contacter. Aucune télémétrie n’est envoyée et la mise à jour automatique est désactivée.",
+    "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "Pour l’échange avant l’examen éthique : question de recherche, plan et points à confirmer avec le directeur de recherche. Un numéro d’approbation n’est pas exigé. Pour l’analyse des données, commencez par « Analyser ses propres données ».",
+    "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "Pour une colonne que vous sélectionnez, au plus {{limit}} valeurs de catégorie sont envoyées, les plus fréquentes d’abord. Les autres sont indiquées par {{omission}}.",
+    "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "Les résultats d’analyse sont vérifiés par masquage avant l’envoi, et les sorties qui contiennent des lignes individuelles ne sont pas envoyées.",
+    "Details_privacy": "Détails",
+    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Les données patients sont analysées sur votre ordinateur. Par défaut, le service d’IA reçoit les noms de colonnes, les types de données, le nombre de lignes, des échantillons synthétiques, les valeurs de catégorie des colonnes que vous sélectionnez et les résultats agrégés de l’analyse. Les identifiants directs, tels que les noms ou les numéros de dossier médical, ne sont pas envoyés."
   }
 }
