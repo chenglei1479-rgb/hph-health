@@ -27,6 +27,7 @@ import {
 } from './home-layout'
 import { homePrimaryEntries, type HomePrimaryEntryId } from './home-primary-entries'
 import { nextStepAfter } from '../../../../shared/deliverable-next-step'
+import { S34_2_RESEARCH_DESIGN_CHECKLIST } from '../../../../shared/s34-disclaimers'
 import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-delivery-ledger'
 import { PackNextStepCard } from './PackNextStepCard'
 import { SampleAbstractDialog } from './SampleAbstractDialog'
@@ -201,44 +202,53 @@ const MedicalResearchLaunchpad = ({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3" data-testid="home-primary-entries">
           {entries.map(
             ({ id, workflow, title, description, hardRule, inputNotice, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                data-testid={`home-entry-${id}`}
-                data-home-entry={id}
-                disabled={!themeReady}
-                onClick={() => onSelectWorkflow(workflow, researchTheme.trim())}
-                className={cn(homeCardInteractiveClassName, 'min-h-44')}
-              >
-                <span className="flex w-full items-start justify-between gap-4">
-                  <span className={homeIconTileClassName}>
-                    <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
-                  </span>
-                  <ArrowUpRight
-                    className="mt-1 size-4 text-primary/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                  />
-                </span>
-                <span className={cn(homeBodyClassName, 'mt-4')}>{title}</span>
-                <span
-                  data-testid={`home-entry-description-${id}`}
-                  className={cn(homeMutedClassName, 'mt-1')}
+              <div key={id} className="flex w-full min-w-0 flex-col gap-2">
+                <button
+                  type="button"
+                  data-testid={`home-entry-${id}`}
+                  data-home-entry={id}
+                  disabled={!themeReady}
+                  onClick={() => onSelectWorkflow(workflow, researchTheme.trim())}
+                  className={cn(homeCardInteractiveClassName, 'min-h-44')}
                 >
-                  {description}
-                </span>
-                {hardRule ? (
-                  <span
-                    data-testid="mentor-pack-hard-rule"
-                    className={cn(homeWarningClassName, 'mt-2')}
-                  >
-                    {hardRule}
+                  <span className="flex w-full items-start justify-between gap-4">
+                    <span className={homeIconTileClassName}>
+                      <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                    </span>
+                    <ArrowUpRight
+                      className="mt-1 size-4 text-primary/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
                   </span>
+                  <span className={cn(homeBodyClassName, 'mt-4')}>{title}</span>
+                  <span
+                    data-testid={`home-entry-description-${id}`}
+                    className={cn(homeMutedClassName, 'mt-1')}
+                  >
+                    {description}
+                  </span>
+                  {hardRule ? (
+                    <span
+                      data-testid="mentor-pack-hard-rule"
+                      className={cn(homeWarningClassName, 'mt-2')}
+                    >
+                      {hardRule}
+                    </span>
+                  ) : null}
+                  {inputNotice ? (
+                    <span className={cn(homeWarningClassName, 'mt-1')}>{inputNotice}</span>
+                  ) : null}
+                </button>
+                {id === 'mentor-prep' ? (
+                  <p
+                    data-testid="s34-disclaimer-research-design"
+                    className="rounded-xl border border-[#e4ded2] bg-[#faf8f2] px-3.5 py-3 text-xs leading-5 text-[#635f56]"
+                  >
+                    {S34_2_RESEARCH_DESIGN_CHECKLIST}
+                  </p>
                 ) : null}
-                {inputNotice ? (
-                  <span className={cn(homeWarningClassName, 'mt-1')}>{inputNotice}</span>
-                ) : null}
-              </button>
+              </div>
             )
           )}
         </div>

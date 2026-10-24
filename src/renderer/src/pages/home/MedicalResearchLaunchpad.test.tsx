@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, expect, it, vi } from 'vitest'
 import { initI18n } from '../../i18n'
 import { CATEGORICAL_RELEASE_LIMIT } from '../../../../main/notebook/schema-only/categorical-release'
+import { LOCALES } from '../../../../shared/locale'
+import { S34_2_RESEARCH_DESIGN_CHECKLIST } from '../../../../shared/s34-disclaimers'
 import {
   HOME_CATEGORICAL_OMISSION,
   HOME_CATEGORICAL_VALUE_LIMIT,
@@ -377,5 +379,27 @@ it('keeps the masking sentence translated but hidden, and explains the real cate
     expect(panel?.className).not.toContain('border')
   } finally {
     await act(async () => root.unmount())
+  }
+})
+
+it('shows the §34.2 ① research-design checklist verbatim on the mentor-prep card in every locale', async () => {
+  for (const locale of LOCALES) {
+    initI18n(locale)
+    const { host, root } = await renderLaunchpad()
+    try {
+      const disclaimers = host.querySelectorAll('[data-testid="s34-disclaimer-research-design"]')
+      expect(disclaimers, locale).toHaveLength(1)
+      expect(disclaimers[0]?.textContent, locale).toBe(S34_2_RESEARCH_DESIGN_CHECKLIST)
+      const mentorCard = host.querySelector('[data-testid="home-entry-mentor-prep"]')
+      expect(mentorCard?.parentElement?.contains(disclaimers[0]!), locale).toBe(true)
+      for (const otherEntryId of ['analyze-data', 'write-abstract'] as const) {
+        expect(
+          host.querySelector(`[data-testid="home-entry-${otherEntryId}"]`)?.textContent,
+          locale
+        ).not.toContain(S34_2_RESEARCH_DESIGN_CHECKLIST)
+      }
+    } finally {
+      await act(async () => root.unmount())
+    }
   }
 })
