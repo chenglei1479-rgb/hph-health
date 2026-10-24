@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { isModelBridgeSupported } from './provider-registry'
 import {
+  parseSettingsSnapshot,
   canonicalSessionProviderId,
   canUseClaudeProviderTransport,
   CODEX_ISOLATED_PROVIDER_ID,
@@ -252,5 +253,25 @@ describe('getOpencodeInstallSources', () => {
     const ids = getOpencodeInstallSources('win32').map((source) => source.id)
 
     expect(ids).toEqual(['managed', 'npm'])
+  })
+})
+
+describe('legacy settings snapshot seed default', () => {
+  it('supplies no active key when an older backend omits seedInvite', () => {
+    const legacy = {
+      providers: [],
+      agentFrameworks: [],
+      claude: {},
+      opencode: {},
+      agentFrameworkId: 'claude-code'
+    }
+    expect(parseSettingsSnapshot(legacy).seedInvite).toEqual({
+      mode: 'none',
+      redeemed: false,
+      packagesUsed: 0,
+      packagesRemaining: 2,
+      exhausted: false
+    })
+    expect(legacy).not.toHaveProperty('seedInvite')
   })
 })

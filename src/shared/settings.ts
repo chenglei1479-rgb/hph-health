@@ -25,7 +25,7 @@ import type { PackageMirror } from './mirror'
 import type { NetworkProxySettings } from './network-proxy'
 import type { NotebookNetworkSettings } from './notebook-network-settings'
 import type { PermissionProfileId } from './permission-profiles'
-import type { SeedInviteStatus } from './seed-invite'
+import { createDefaultSeedInviteStatus, type SeedInviteStatus } from './seed-invite'
 import { customProviderRequiresKey } from './provider-base-url'
 import type { OfficialVendorId } from './provider-registry'
 import type {
@@ -1808,5 +1808,8 @@ export const parseSettingsSnapshot = (snapshot: unknown): SettingsSnapshot => {
         snapshot.revision < 0))
   )
     throw new ApplicationCommandError('invalid-command-result', 'Invalid settings snapshot.')
-  return snapshot as SettingsSnapshot
+  return {
+    ...snapshot,
+    seedInvite: snapshot.seedInvite ?? createDefaultSeedInviteStatus()
+  } as SettingsSnapshot
 }
