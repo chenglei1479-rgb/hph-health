@@ -1,6 +1,4 @@
-.baselio-splash-mark {
-  animation: baselio-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
+@import './baselio-logo-motion.css';
 
 .baselio-splash-mark svg {
   display: block;
@@ -8,10 +6,34 @@
   height: auto;
 }
 
-@keyframes baselio-in {
+.baselio-splash-mark #mark {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation:
+    baselio-mark-in 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both,
+    baselio-breathe 2.4s ease-in-out 740ms infinite;
+}
+
+.baselio-splash-mark #wordmark {
+  /* 869.5 viewBox units / 224 CSS pixels: 93.16 units is 24 screen pixels. */
+  animation: baselio-wordmark-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) 260ms both;
+}
+
+@keyframes baselio-mark-in {
   from {
     opacity: 0;
-    transform: translateX(-2%) scale(0.98);
+    transform: scale(0.9) rotate(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes baselio-wordmark-in {
+  from {
+    opacity: 0;
+    transform: translateX(-93.16px);
   }
   to {
     opacity: 1;
@@ -20,7 +42,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .baselio-splash-mark {
+  .baselio-splash-mark #mark,
+  .baselio-splash-mark #wordmark {
     animation: none;
   }
 }

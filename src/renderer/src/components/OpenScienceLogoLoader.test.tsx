@@ -17,19 +17,19 @@ describe('Baselio splash', () => {
     const expected = document.createElement('div')
     expected.innerHTML = supplied
     expect(mark.innerHTML).toBe(expected.innerHTML)
+    expect(mark.querySelector('#mark')).not.toBeNull()
+    expect(mark.querySelector('#wordmark')).not.toBeNull()
     expect(mark.querySelector('canvas')).toBeNull()
     expect(mark.getAttribute('aria-hidden')).toBe('true')
     unmount()
   })
 
-  it('enters once within 600ms and displays statically with reduced motion', () => {
-    const duration = Number(css.match(/animation: baselio-in (\d+)ms/)?.[1])
-    expect(duration).toBeGreaterThan(0)
-    expect(duration).toBeLessThanOrEqual(600)
-    expect(css).not.toContain('infinite')
+  it('enters each part once, then breathes only the mark; reduced motion is static', () => {
+    expect(css).toContain('baselio-mark-in 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both')
+    expect(css).toContain('baselio-wordmark-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) 260ms both')
+    expect(css).toContain('baselio-breathe 2.4s ease-in-out 740ms infinite')
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.baselio-splash-mark\s*\{\s*animation: none;/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*#mark,[\s\S]*#wordmark\s*\{\s*animation: none;/
     )
-    expect(css).toMatch(/to\s*\{\s*opacity: 1;\s*transform: none;/)
   })
 })

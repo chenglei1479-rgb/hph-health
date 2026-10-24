@@ -15,7 +15,7 @@ import { WorkspaceSidebar } from './WorkspaceSidebar'
 
 type WorkspaceSidebarContainerProps = Omit<
   React.ComponentProps<typeof WorkspaceSidebar>,
-  'sessions' | 'onPreviewSession' | 'otherProjects' | 'onOpenProject'
+  'sessions' | 'logoBusy' | 'onPreviewSession' | 'otherProjects' | 'onOpenProject'
 > & {
   projectId: string
   isProjectArchived: boolean
@@ -35,6 +35,10 @@ const WorkspaceSidebarContainer = ({
     useShallow((state) =>
       isProjectArchived ? NO_VISIBLE_SESSIONS : visibleProjectSessions(state.sessions, projectId)
     )
+  )
+  // Subscribe to a boolean so streaming chunks do not redraw the sidebar for other projects.
+  const logoBusy = useSessionStore((state) =>
+    state.sessions.some((session) => session.status === 'running')
   )
   const pendingCredentialRequests = useSettingsStore((state) => state.pendingCredentialRequests)
   const credentialPendingSessionIds = useMemo(
@@ -92,6 +96,7 @@ const WorkspaceSidebarContainer = ({
       importProjectId={projectId}
       onMobileClose={onMobileClose}
       sessions={sessions}
+      logoBusy={logoBusy}
       credentialPendingSessionIds={credentialPendingSessionIds}
       otherProjects={otherProjects}
       onOpenProject={handleOpenProject}

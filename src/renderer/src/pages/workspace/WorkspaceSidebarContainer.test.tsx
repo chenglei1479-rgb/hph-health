@@ -19,15 +19,17 @@ vi.mock('@/lib/session-persistence/session-persistence', () => persistenceMocks)
 
 vi.mock('./WorkspaceSidebar', () => ({
   WorkspaceSidebar: ({
+    logoBusy,
     onPreviewSession,
     otherProjects = [],
     onOpenProject
   }: {
+    logoBusy?: boolean
     onPreviewSession?: (sessionId: string) => Promise<void> | void
     otherProjects?: Array<Pick<Project, 'id' | 'name' | 'description'>>
     onOpenProject?: (projectId: string) => void
   }) => (
-    <div>
+    <div data-logo-busy={String(logoBusy)}>
       <button type="button" onClick={() => void onPreviewSession?.('lazy-session')}>
         Preview Session
       </button>
@@ -272,4 +274,37 @@ describe('WorkspaceSidebarContainer Project switching', () => {
       act(() => root.unmount())
     }
   })
+})
+
+it('passes global running state to the sidebar and clears it on idle', async () => {
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(async () =>
+      root.render(
+        <WorkspaceSidebarContainer
+          {...({ projectId: 'project-1', isProjectArchived: false } as ComponentProps<
+            typeof WorkspaceSidebarContainer
+          >)}
+        />
+      )
+    )
+    expect(container.querySelector('[data-logo-busy]')?.getAttribute('data-logo-busy')).toBe(
+      'false'
+    )
+    await act(async () =>
+      useSessionStore.setState({
+        sessions: [{ ...lazySession, projectId: 'another-project', status: 'running' }]
+      })
+    )
+    expect(container.querySelector('[data-logo-busy]')?.getAttribute('data-logo-busy')).toBe('true')
+    await act(async () =>
+      useSessionStore.setState({ sessions: [{ ...lazySession, status: 'idle' }] })
+    )
+    expect(container.querySelector('[data-logo-busy]')?.getAttribute('data-logo-busy')).toBe(
+      'false'
+    )
+  } finally {
+    act(() => root.unmount())
+  }
 })
