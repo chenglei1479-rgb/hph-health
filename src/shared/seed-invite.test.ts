@@ -15,6 +15,7 @@ describe('seed invite policy', () => {
   it('switches the external destination with key mode', () => {
     expect(seedDestinationCopy('company')).toBe('運営が契約した AI（β は OpenAI）')
     expect(seedDestinationCopy('byok')).toBe('先生が登録した事業者')
+    expect(seedDestinationCopy('none')).toBe('AI 事業者は未設定')
   })
   it('keeps demo and literature outside the two-package allowance', () => {
     expect(seedUsageIsFree('demo')).toBe(true)

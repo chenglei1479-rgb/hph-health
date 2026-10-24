@@ -26,7 +26,11 @@ export type SeedInviteStatus = {
 }
 
 export const seedDestinationCopy = (mode: SeedKeyMode): string =>
-  mode === 'company' ? '運営が契約した AI（β は OpenAI）' : '先生が登録した事業者'
+  mode === 'company'
+    ? '運営が契約した AI（β は OpenAI）'
+    : mode === 'byok'
+      ? '先生が登録した事業者'
+      : 'AI 事業者は未設定'
 
 export const seedStatus = (input: {
   redeemedAt?: number
@@ -54,3 +58,7 @@ export const seedStatus = (input: {
 export type SeedUsageKind = 'abstract-draft' | 'abstract-revision' | 'demo' | 'literature' | 'other'
 export const seedUsageIsFree = (kind: SeedUsageKind): boolean =>
   kind === 'demo' || kind === 'literature'
+
+// A fresh status for profiles and backends predating seed invites. No key is active.
+export const createDefaultSeedInviteStatus = (): SeedInviteStatus =>
+  seedStatus({ companyProviderActive: false, byokProviderActive: false })

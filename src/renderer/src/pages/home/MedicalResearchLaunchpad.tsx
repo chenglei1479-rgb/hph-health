@@ -75,7 +75,7 @@ const MedicalResearchLaunchpad = ({
   onSelectWorkflow
 }: MedicalResearchLaunchpadProps): React.JSX.Element => {
   const { t } = useTranslation()
-  const seedMode = useSettingsStore((state) => state.seedInvite.mode)
+  const seedMode = useSettingsStore((state) => state.seedInvite?.mode ?? 'none')
   const consumeSeedPackage = useSettingsStore((state) => state.consumeSeedPackage)
   const [seedUsageError, setSeedUsageError] = useState<string>()
   const [researchTheme, setResearchTheme] = useState('')

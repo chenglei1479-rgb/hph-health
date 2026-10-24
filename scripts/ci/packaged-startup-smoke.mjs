@@ -41,6 +41,13 @@ export const smokeSettingsJson = (dataRoot) =>
   `${JSON.stringify({
     version: 2,
     providers: [],
+    seedInvite: {
+      mode: 'none',
+      redeemed: false,
+      packagesUsed: 0,
+      packagesRemaining: 2,
+      exhausted: false
+    },
     onboardingCompletedAt: 1,
     betaTermsAcceptance: { version: SMOKE_BETA_TERMS_VERSION, acceptedAt: 1 },
     dataRoot

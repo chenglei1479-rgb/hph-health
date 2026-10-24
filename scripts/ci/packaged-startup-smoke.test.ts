@@ -77,6 +77,13 @@ it('seeds completed onboarding and launches the packaged app in prerelease mode'
   expect(JSON.parse(smokeSettingsJson('/Users/doctor/DRA Test/MedResearchAgent'))).toEqual({
     version: 2,
     providers: [],
+    seedInvite: {
+      mode: 'none',
+      redeemed: false,
+      packagesUsed: 0,
+      packagesRemaining: 2,
+      exhausted: false
+    },
     onboardingCompletedAt: 1,
     betaTermsAcceptance: { version: BETA_TERMS_VERSION, acceptedAt: 1 },
     dataRoot: '/Users/doctor/DRA Test/MedResearchAgent'

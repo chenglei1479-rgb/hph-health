@@ -28,7 +28,7 @@ import {
 } from '../../../shared/permission-profiles'
 import type { OfficialVendorId } from '../../../shared/provider-registry'
 import type { SeedInviteStatus } from '../../../shared/seed-invite'
-import { seedStatus } from '../../../shared/seed-invite'
+import { createDefaultSeedInviteStatus } from '../../../shared/seed-invite'
 import type {
   AgentFrameworkId,
   AgentFrameworkView,
@@ -204,7 +204,7 @@ export const createInitialSettingsState = (): SettingsStoreData => ({
   claudeSubscriptionProviderId: undefined,
   activeModel: undefined,
   providers: [],
-  seedInvite: seedStatus({ companyProviderActive: false, byokProviderActive: false }),
+  seedInvite: createDefaultSeedInviteStatus(),
   agentFrameworkId: 'claude-code',
   agentFrameworkSelected: false,
   agentFrameworks: [],
@@ -247,8 +247,7 @@ const applySnapshot = (snapshot: SettingsSnapshot): Partial<SettingsStoreData> =
   claudeSubscriptionProviderId: snapshot.claudeSubscriptionProviderId,
   activeModel: snapshot.activeModel,
   providers: snapshot.providers,
-  seedInvite:
-    snapshot.seedInvite ?? seedStatus({ companyProviderActive: false, byokProviderActive: false }),
+  seedInvite: snapshot.seedInvite ?? createDefaultSeedInviteStatus(),
   onboardingCompletedAt: snapshot.onboardingCompletedAt,
   betaTermsAcceptance: snapshot.betaTermsAcceptance,
   packageMirror: isMirrorConfigured(snapshot.packageMirror) ? snapshot.packageMirror : undefined,
