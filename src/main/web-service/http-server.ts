@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { projectSessionEventPayload } from '../session-event-payload'
 import { RUNTIME_PAYLOAD_CAPABILITY } from '../../shared/runtime-payload-transfer'
 import { runtimePayloadTransfers } from '../runtime-payload-transfers'
@@ -1452,7 +1453,7 @@ const startWebHttpServer = async (options: WebServerOptions): Promise<RunningWeb
           'cache-control': 'no-store'
         })
         response.end(
-          'Sign in to your DRA account on the desktop, then reload. / 请先在桌面端登录 DRA 账号，再刷新。'
+          `Sign in to your ${PRODUCT_DISPLAY_NAME} account on the desktop, then reload. / 请先在桌面端登录 ${PRODUCT_DISPLAY_NAME} 账号，再刷新。`
         )
         return
       }

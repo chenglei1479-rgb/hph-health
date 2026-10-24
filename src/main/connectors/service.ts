@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { isSensitiveDiagnosticKey, redactSensitiveText } from '@aipoch/diagnostics'
 import { ConnectorHttpError, ParserEngine } from '@aipoch/connector-core'
 import type { ConnectorRegistry } from '@aipoch/connector-core'
@@ -214,8 +215,7 @@ const connectorGateGuidance: Readonly<Record<string, string>> = {
     'The Connector is disabled. Do not retry until the user enables it in Settings > Connectors, then retry the same call.',
   connector_unauthenticated:
     'Connector authentication is required. Do not retry until the user signs in from Settings > Connectors, then retry the same call.',
-  connector_runtime_unavailable:
-    'The Connector runtime is unavailable. Wait briefly and retry the same call once. If it fails again, ask the user to restart DRA before retrying.',
+  connector_runtime_unavailable: `The Connector runtime is unavailable. Wait briefly and retry the same call once. If it fails again, ask the user to restart ${PRODUCT_DISPLAY_NAME} before retrying.`,
   connector_configuration_changed:
     'The Connector configuration changed before the external tool was called. Retry the exact same call once.',
   credential_unavailable:

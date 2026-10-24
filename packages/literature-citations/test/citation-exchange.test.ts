@@ -46,7 +46,7 @@ describe('RIS literal creator compatibility', () => {
       translator: [{ literal: 'Translation, Institute' }]
     }
     const text = exportRisFields(item)
-    expect(text).toContain('DRA literal creator: ')
+    expect(text).toContain('Baselio literal creator: ')
     expect(text).not.toContain('DRA literal creator: ')
     expect(importRisFields(text, { type })).toMatchObject({
       editor: item.editor,
@@ -54,7 +54,7 @@ describe('RIS literal creator compatibility', () => {
     })
   })
 
-  it.each(['DRA literal creator: ', 'DRA literal creator: '])(
+  it.each(['Baselio literal creator: ', 'DRA literal creator: '])(
     'validates all %s markers against the visible tag, index and value',
     (prefix) => {
       for (const marker of [

@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import {
   spawn,
   type ChildProcessWithoutNullStreams,
@@ -254,14 +255,13 @@ export const createCodeBuddyFramework = ({
   buildSessionSetup(ctx: SessionSetupContext): SessionSetup {
     const sessionOptions = { ...(ctx.sessionOptions ?? {}) }
     const skillRuntime = recordValue(sessionOptions[OPEN_SCIENCE_SKILL_RUNTIME_SESSION_OPTION])
-    const externalRetrievalGuidance =
-      'DRA owns external-data routing for CodeBuddy. Do not use WebFetch, WebSearch, or direct HTTP (including curl or wget from Bash or PowerShell) as a fallback for missing or failed Skill/Connector routing. If no routed Skill or Connector is available, report that external retrieval is unavailable.'
+    const externalRetrievalGuidance = `${PRODUCT_DISPLAY_NAME} owns external-data routing for CodeBuddy. Do not use WebFetch, WebSearch, or direct HTTP (including curl or wget from Bash or PowerShell) as a fallback for missing or failed Skill/Connector routing. If no routed Skill or Connector is available, report that external retrieval is unavailable.`
     const skillProjectionAvailable =
       ctx.skillRuntimeScope !== undefined &&
       (ctx.skillRuntimeScope === 'all' || ctx.skillRuntimeScope.length > 0) &&
       typeof skillRuntime.root === 'string'
     const skillLoaderGuidance = skillProjectionAvailable
-      ? 'DRA pre-routes and loads required Skill documents into the current turn before CodeBuddy runs. Follow only that current route; do not call `mcp__skills__load_skill`, use Notebook `host.skills`, guess Connector names or methods, or replace a routed Connector with WebFetch, WebSearch, or direct HTTP.'
+      ? `${PRODUCT_DISPLAY_NAME} pre-routes and loads required Skill documents into the current turn before CodeBuddy runs. Follow only that current route; do not call \`mcp__skills__load_skill\`, use Notebook \`host.skills\`, guess Connector names or methods, or replace a routed Connector with WebFetch, WebSearch, or direct HTTP.`
       : undefined
     const promptPrefix = [
       ...ctx.systemPromptAppends,

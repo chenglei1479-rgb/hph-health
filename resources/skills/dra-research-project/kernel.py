@@ -164,7 +164,7 @@ def prepare_expert_collaboration(project, input_versions, confirmation_reference
         output_schema = _clone(schema)
         output_schema["properties"]["role"] = {"const": role}
         requests.append({"name": key + "-" + role, "profile": profile, "inputs": versions,
-                         "task": "DRA project: " + _text(project.get("title"), "title") + ". " + scope +
+                         "task": "Baselio project: " + _text(project.get("title"), "title") + ". " + scope +
                          " Use only the supplied immutable inputs. Report limitations explicitly. Submit the structured output through host.submitOutput. An expert response does not close an issue.",
                          "outputSchema": output_schema})
     return {"status": "prepared-not-dispatched", "confirmationReference": confirmation,
@@ -292,7 +292,7 @@ def build_research_review_bundle(project, evidence_rows, sections, notebook_runs
         warnings.append("No approved analysis-plan artifact reference supplied.")
     unresolved = sorted({ref for section in manuscript["sections"] for ref in section["unresolvedEvidenceIds"]})
     if unresolved: warnings.append("Unresolved manuscript references: " + ", ".join(unresolved))
-    payloads = {"README.md": ("# DRA research review archive\n\n" + "\n".join("- " + warning for warning in warnings) + "\n").encode(),
+    payloads = {"README.md": ("# Baselio research review archive\n\n" + "\n".join("- " + warning for warning in warnings) + "\n").encode(),
                 "evidence.csv": csv_buffer.getvalue().encode("utf-8-sig"), "manuscript.md": markdown.encode(),
                 "evidence.json": json.dumps(table, ensure_ascii=False, indent=2).encode(),
                 "notebook.ipynb": json.dumps(notebook, ensure_ascii=False, indent=2).encode(),

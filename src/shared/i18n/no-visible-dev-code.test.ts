@@ -37,11 +37,73 @@ const bypassFiles: string[] = [
   'src/main/specialist/identity.ts',
   'src/main/specialist/marketplace/official-source.ts',
   'src/main/literature/mcp-server.ts',
-  'src/main/literature/library-mcp-server.ts'
+  'src/main/literature/library-mcp-server.ts',
+  'src/main/agent-framework/codebuddy.ts',
+  'src/main/acp/runtime-plan-composition.ts',
+  'src/main/session-plan/plan-mcp-server.ts',
+  'src/main/notebook/managed-runtime-guard.ts',
+  'src/main/notebook/execution-recovery.ts',
+  'src/main/connectors/service.ts',
+  'src/main/account/owner.ts',
+  'src/main/web-service/http-server.ts',
+
+  'packages/literature-citations/src/citation-exchange.ts',
+  'scripts/prepare-dra-membership-workflows.cjs',
+  'resources/skills/manifest.json',
+  'resources/skills/biomedical-discovery/SKILL.md',
+  'resources/skills/clinical-data-audit/SKILL.md',
+  'resources/skills/dra-research-project/SKILL.md',
+  'resources/skills/dra-research-project/kernel.py',
+  'resources/skills/research-deliverables/SKILL.md'
 ]
 
 // Each exception names the exact source line and why it is safe. Changes require review.
 const exceptions: { file: string; line: string; reason: string }[] = [
+  {
+    file: 'src/shared/settings.ts',
+    line: "description: replaceVisibleDevelopmentCode('The light DRA logo.', 'en')",
+    reason:
+      'Source key is retained for catalog consistency; replaceVisibleDevelopmentCode resolves it before preview metadata leaves shared settings.'
+  },
+  {
+    file: 'src/shared/settings.ts',
+    line: "description: replaceVisibleDevelopmentCode('The dark DRA logo.', 'en')",
+    reason:
+      'Source key is retained for catalog consistency; replaceVisibleDevelopmentCode resolves it before preview metadata leaves shared settings.'
+  },
+  {
+    file: 'src/main/agent-framework/codebuddy.ts',
+    line: "// TaskStop, WebFetch, and WebSearch stay absent so native capabilities cannot bypass DRA's",
+    reason: 'Internal comment; not rendered, exported, or sent to a model.'
+  },
+  {
+    file: 'src/main/connectors/service.ts',
+    line: "'Mozilla/5.0 (compatible; DRA/1.0; +https://github.com/chenglei1479-rgb/hph-health)'",
+    reason: 'Existing User-Agent left unchanged pending external-service identification review.'
+  },
+  {
+    file: 'src/main/account/owner.ts',
+    line: "if (state.required && !state.user) throw new Error('DRA account login required.')",
+    reason:
+      'Internal account-login sentinel used in routing and compatibility checks; visible browser copy uses the public name.'
+  },
+  {
+    file: 'src/main/account/owner.ts',
+    line: "message !== 'DRA account login required.'",
+    reason:
+      'Internal account-login sentinel used in routing and compatibility checks; visible browser copy uses the public name.'
+  },
+  {
+    file: 'src/main/web-service/http-server.ts',
+    line: "socket.close(1008, 'DRA account login required')",
+    reason:
+      'Internal account-login sentinel used in routing and compatibility checks; visible browser copy uses the public name.'
+  },
+  {
+    file: 'packages/literature-citations/src/citation-exchange.ts',
+    line: "const readableLiteralNamePrefixes = [literalNamePrefix, 'DRA literal creator: ']",
+    reason: 'Read historical RIS notes without changing their structured corporate-creator meaning.'
+  },
   {
     file: 'src/main/notifications/electron-wiring.ts',
     line: "deps.translate?.('System notifications from DRA are working.') ??",
@@ -134,7 +196,7 @@ const exceptions: { file: string; line: string; reason: string }[] = [
   },
   {
     file: 'src/main/cli-install/launcher.ts',
-    line: "const header = lines[1]?.replace('DRA command-line launcher.', 'DRA command-line launcher.')",
+    line: '/^(# |rem )(?:DRA|Open-Science) command-line launcher\\./,',
     reason: 'Historical ownership matching must keep old launcher signatures repairable.'
   },
   {
@@ -166,6 +228,11 @@ describe('no user-visible development code', () => {
 
   const files = [
     ...bypassFiles,
+    ...(
+      JSON.parse(readFileSync(resolve(root, 'resources/specialists/manifest.json'), 'utf8')) as {
+        specialists: string[]
+      }
+    ).specialists.map((id) => `resources/specialists/${id}/specialist.json`),
     ...readdirSync(resolve(root, 'build'))
       .filter((f) => f.endsWith('.svg') || /^license_.*\.txt$/.test(f))
       .map((f) => `build/${f}`),

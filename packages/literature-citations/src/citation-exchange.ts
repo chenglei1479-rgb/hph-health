@@ -26,7 +26,7 @@ export const normalizeBibtexEntry = (entry: Record<string, unknown>): Record<str
   }
 }
 
-const literalNamePrefix = 'DRA literal creator: '
+const literalNamePrefix = 'Baselio literal creator: '
 const readableLiteralNamePrefixes = [literalNamePrefix, 'DRA literal creator: ']
 
 const lineValue = (value: string): string => value.replace(/[\r\n]+/gu, ' ').trim()

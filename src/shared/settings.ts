@@ -1,4 +1,4 @@
-import { PRODUCT_DISPLAY_NAME } from './product-identity'
+import { replaceVisibleDevelopmentCode } from './product-identity'
 import { ApplicationCommandError } from './application-command-contract'
 import type { BetaTermsAcceptance } from './beta-terms'
 import type {
@@ -552,8 +552,16 @@ export type AppIconVariantInfo = {
 
 // The ordered icon variants shown in Settings. The default (light) leads.
 export const APP_ICON_VARIANT_INFOS: readonly AppIconVariantInfo[] = [
-  { id: 'light', label: 'Light', description: `The light ${PRODUCT_DISPLAY_NAME} logo.` },
-  { id: 'dark', label: 'Dark', description: `The dark ${PRODUCT_DISPLAY_NAME} logo.` }
+  {
+    id: 'light',
+    label: 'Light',
+    description: replaceVisibleDevelopmentCode('The light DRA logo.', 'en')
+  },
+  {
+    id: 'dark',
+    label: 'Dark',
+    description: replaceVisibleDevelopmentCode('The dark DRA logo.', 'en')
+  }
 ]
 
 // Renderer-facing descriptor for one selectable agent framework (built from the main registry).

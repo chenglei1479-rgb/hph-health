@@ -7,7 +7,7 @@ const catalog = JSON.parse(fs.readFileSync(skills, 'utf8'))
 if (!catalog.skills.some((item) => item.id === 'dra-research-project'))
   catalog.skills.push({
     id: 'dra-research-project',
-    name: 'DRA Research Project',
+    name: 'Baselio Research Project',
     source: 'featured',
     updatedAt: '2026-10-04T00:00:00.000Z'
   })
@@ -15,19 +15,19 @@ fs.writeFileSync(skills, JSON.stringify(catalog, null, 2) + '\n')
 const definitions = [
   [
     'dra-literature-expert',
-    'DRA Literature Expert',
+    'Baselio Literature Expert',
     ['dra-research-project', 'literature-review'],
     'Review actually retrieved sources, selection criteria, source excerpts, evidence scope and contradictory findings. Record PMID/DOI or source URLs and exact evidence locations. Never invent sources or claim unavailable full text was read.'
   ],
   [
     'dra-statistics-expert',
-    'DRA Statistics Expert',
+    'Baselio Statistics Expert',
     ['dra-research-project', 'clinical-data-audit'],
     'Review approved endpoints, variable definitions, missingness, analysis assumptions, Notebook Run evidence and diagnostics. Distinguish an unrun plan from actual analysis. Do not execute patient-level analysis or install packages without researcher approval and normal host permissions.'
   ],
   [
     'dra-writing-reviewer',
-    'DRA Writing Reviewer',
+    'Baselio Writing Reviewer',
     ['dra-research-project', 'paper-narrative'],
     'Review manuscript structure, source-to-claim alignment and consistency with actual Notebook results. Flag missing evidence, uncertain interpretations and unapproved decisions. Do not invent numerical results, figures or citations.'
   ]

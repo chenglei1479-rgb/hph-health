@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { Buffer } from 'node:buffer'
 import { realpathSync } from 'node:fs'
 import { join, posix, resolve, win32 } from 'node:path'
@@ -1208,7 +1209,7 @@ export const detectManagedRuntimeMutation = ({
       installer: rule.installer,
       message:
         `${rule.installer} cannot modify packages from a ${surface} execution. ` +
-        'Use manage_packages so DRA can preserve the bound interpreter and audit the change.'
+        `Use manage_packages so ${PRODUCT_DISPLAY_NAME} can preserve the bound interpreter and audit the change.`
     }
   }
 

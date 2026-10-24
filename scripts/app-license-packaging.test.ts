@@ -102,7 +102,18 @@ it('uses the original license with informational NSIS copy and a normal Next but
   const original = await readFile(join(root, 'LICENSE'))
   for (const language of ['en_US', 'ja_JP', 'zh_CN']) {
     const localized = await readFile(join(root, `build/license_${language}.txt`))
-    expect(localized.subarray(-original.length)).toEqual(original)
+    const expectedLicense = Buffer.from(
+      original
+        .toString('utf8')
+        .replace(
+          'DRA distribution note: DRA is based on',
+          'Baselio distribution note: Baselio is based on'
+        )
+    )
+    expect(localized.subarray(-expectedLicense.length)).toEqual(expectedLicense)
+    expect(localized.toString('utf8')).toContain(
+      'Baselio distribution note: Baselio is based on AIPOCH Open-Science.'
+    )
     expect(localized.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]))
     expect(localized.toString('utf8')).toContain('Baselio')
   }
