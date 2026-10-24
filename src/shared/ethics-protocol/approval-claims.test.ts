@@ -32,7 +32,36 @@ const prohibited = [
   '提出前でも倫理審査に通ります。',
   '修正なしで承認される見込みです。',
   '这个版本保证通过。',
-  'The document will be approved tomorrow.'
+  'The document will be approved tomorrow.',
+  // §34.2 — high-impact fit / acceptance assurance (JA)
+  '高インパクト誌に適合します。',
+  'この研究は高インパクト誌への適合性が高い。',
+  '高インパクトジャーナルに適合する内容です。',
+  '本論文は採択を保証します。',
+  '採択可能性を保証しています。',
+  '採択が保証されます。',
+  'この研究は倫理に通ります。',
+  '倫理審査は通ります。',
+  '倫理は通っています。',
+  'このまま提出しても大丈夫です。',
+  'このまま提出可能です。',
+  // §34.2 — novelty / clinical value / journal fit / ethics-pass (ZH-Hans)
+  '本研究具有创新性。',
+  '该方案具备新颖性。',
+  '创新性高，适合发表。',
+  '本研究的创新性显著。',
+  '本研究临床价值高。',
+  '具有很高的临床价值。',
+  '具有重大临床价值。',
+  '本研究符合高分期刊。',
+  '符合高影响因子期刊的要求。',
+  '适合高分期刊发表。',
+  '本研究伦理能过。',
+  '伦理审查能通过。',
+  '伦理可以通过。',
+  // §34.2 — submission readiness (EN)
+  'The manuscript is ready for submission.',
+  'This paper is submission-ready.'
 ]
 
 const allowed = [
