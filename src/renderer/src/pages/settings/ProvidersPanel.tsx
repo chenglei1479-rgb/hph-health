@@ -3,7 +3,7 @@ import { Notice } from '@/components/notice'
 import type { TFunction } from 'i18next'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as AlertDialog from '@/components/ui/alert-dialog'
-import { Plus } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -47,6 +47,8 @@ import {
 import { ClaudeIsolatedSignInModal } from './ClaudeIsolatedSignInModal'
 import { XaiOAuthSignInDialog } from './XaiOAuthSignInDialog'
 import { localizeProviderResourceMessage } from './validation-message'
+import { SEED_UI_COPY } from '../../../../shared/seed-invite'
+import { SEED_EXHAUSTED_COPY } from '../../../../shared/seed-invite'
 
 type ProvidersPanelProps = {
   // Navigation callbacks into the page-level history: the add/edit provider form is a breadcrumb
@@ -117,6 +119,8 @@ const ProvidersPanel = ({
 }: ProvidersPanelProps): React.JSX.Element => {
   const { t } = useTranslation()
   const providers = useSettingsStore((state) => state.providers)
+  const seedInvite = useSettingsStore((state) => state.seedInvite)
+  const redeemSeedInvite = useSettingsStore((state) => state.redeemSeedInvite)
   const activeProviderId = useSettingsStore((state) => state.activeProviderId)
   const activeModel = useSettingsStore((state) => state.activeModel)
   const claudeSubscriptionProviderId = useSettingsStore(
@@ -151,6 +155,9 @@ const ProvidersPanel = ({
   const [providerTestError, setProviderTestError] = useState<ProviderPanelError | undefined>(
     undefined
   )
+  const [inviteCode, setInviteCode] = useState('')
+  const [invitePending, setInvitePending] = useState(false)
+  const [inviteError, setInviteError] = useState<string>()
   // True while the explicit isolated Codex sign-in is open in the browser; drives the cancel action.
   const [isCodexLoginPending, setIsCodexLoginPending] = useState(false)
   // True while the explicit shared Claude sign-in is open in the browser.
@@ -390,9 +397,7 @@ const ProvidersPanel = ({
     try {
       const result = await logoutSharedClaude()
       if (!result.ok) {
-        setProviderTestError(
-          result.message ?? t('Could not disconnect Claude from DRA.')
-        )
+        setProviderTestError(result.message ?? t('Could not disconnect Claude from DRA.'))
       }
     } catch (error) {
       setProviderTestError({ action: 'claude-disconnect', detail: errorDetail(error) })
@@ -497,6 +502,58 @@ const ProvidersPanel = ({
 
   return (
     <div className="space-y-5 p-5">
+      <SettingsSection title={SEED_UI_COPY.title} description={SEED_UI_COPY.description}>
+        {seedInvite.redeemed ? (
+          <div className="space-y-2">
+            <Notice
+              inline
+              level={seedInvite.exhausted ? 'warning' : 'success'}
+              description={
+                seedInvite.mode === 'company'
+                  ? `${SEED_UI_COPY.active} · ${SEED_UI_COPY.remaining.replace('{{count}}', String(seedInvite.packagesRemaining))}`
+                  : SEED_UI_COPY.byok
+              }
+            />
+            {seedInvite.exhausted && seedInvite.mode === 'company' ? (
+              <Notice inline level="warning" description={SEED_EXHAUSTED_COPY} />
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex items-end gap-2">
+            <SettingsField label={SEED_UI_COPY.code} className="flex-1">
+              <input
+                aria-label={SEED_UI_COPY.code}
+                type="password"
+                autoComplete="off"
+                value={inviteCode}
+                onChange={(event) => {
+                  setInviteCode(event.target.value)
+                  setInviteError(undefined)
+                }}
+                className="h-9 w-full rounded-md border border-border bg-bg-000 px-3 text-sm"
+              />
+            </SettingsField>
+            <Button
+              type="button"
+              disabled={invitePending || inviteCode.trim().length < 6}
+              onClick={() => {
+                setInvitePending(true)
+                setInviteError(undefined)
+                void redeemSeedInvite(inviteCode)
+                  .then(() => setInviteCode(''))
+                  .catch((error) => setInviteError(errorDetail(error)))
+                  .finally(() => setInvitePending(false))
+              }}
+            >
+              {invitePending ? <Loader2 className="animate-spin" aria-hidden="true" /> : null}
+              {SEED_UI_COPY.redeem}
+            </Button>
+          </div>
+        )}
+        {inviteError ? (
+          <Notice inline level="error" role="alert" description={inviteError} />
+        ) : null}
+      </SettingsSection>
       {/* Main model selection and reasoning effort share one section and one row, mirroring the
           scenario model selectors below. The Model field needs at least one provider; the effort
           control is always visible. */}
