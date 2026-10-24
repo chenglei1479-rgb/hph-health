@@ -60,6 +60,18 @@ const bypassFiles: string[] = [
 // Each exception names the exact source line and why it is safe. Changes require review.
 const exceptions: { file: string; line: string; reason: string }[] = [
   {
+    file: 'src/shared/settings.ts',
+    line: "description: replaceVisibleDevelopmentCode('The light DRA logo.', 'en')",
+    reason:
+      'Source key is retained for catalog consistency; replaceVisibleDevelopmentCode resolves it before preview metadata leaves shared settings.'
+  },
+  {
+    file: 'src/shared/settings.ts',
+    line: "description: replaceVisibleDevelopmentCode('The dark DRA logo.', 'en')",
+    reason:
+      'Source key is retained for catalog consistency; replaceVisibleDevelopmentCode resolves it before preview metadata leaves shared settings.'
+  },
+  {
     file: 'src/main/agent-framework/codebuddy.ts',
     line: "// TaskStop, WebFetch, and WebSearch stay absent so native capabilities cannot bypass DRA's",
     reason: 'Internal comment; not rendered, exported, or sent to a model.'
