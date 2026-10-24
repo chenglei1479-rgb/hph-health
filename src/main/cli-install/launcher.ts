@@ -506,7 +506,10 @@ const openManagedWindowsPathJournal = async (
 const isManagedCliLauncher = (content: string): boolean => {
   const lines = content.split(/\r?\n/)
   // New shims use the new brand, while both historical ownership generations remain repairable.
-  const header = lines[1]?.replace('DRA command-line launcher.', 'DRA command-line launcher.')
+  const header = lines[1]?.replace(
+    /^(# |rem )(?:DRA|Open-Science) command-line launcher\./,
+    '$1Deep Research Agent command-line launcher.'
+  )
   if (lines[0] === '#!/bin/sh') {
     return (
       header === `# ${MANAGED_LAUNCHER_HEADER_V1}` ||

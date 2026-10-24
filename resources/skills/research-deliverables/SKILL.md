@@ -41,7 +41,7 @@ An audit/consultation pack can be ready for review with an unexecuted statistica
 
 ### Beta export
 
-The statistician review package that leaves DRA is aggregate only, in files that open without DRA:
+The statistician review package that leaves Baselio is aggregate only, in files that open without Baselio:
 
 1. Statistical report: `.docx` or `.pdf`.
 2. Result tables: `.xlsx` with the real counts and no masking under 10. The audience is the internal research team.

@@ -105,8 +105,8 @@ describe('planCliLauncher', () => {
     expect(plan.shim).toContain('Format version: 1')
     expect(plan.shim).not.toContain('ELECTRON_RUN_AS_NODE=1')
     // The backend always executes the ordinary Node binary, independently of Electron.
-    expect(plan.shim).toContain("exec '/opt/Open-Science/resources/node-runtime/node'")
-    expect(plan.shim).toContain('\'/opt/Open-Science/resources/cli/index.mjs\' "$@"')
+    expect(plan.shim).toContain("exec '/opt/DRA/resources/node-runtime/node'")
+    expect(plan.shim).toContain('\'/opt/DRA/resources/cli/index.mjs\' "$@"')
   })
 
   it('omits OPEN_SCIENCE_APP_PATH for a development (unpackaged) build', () => {

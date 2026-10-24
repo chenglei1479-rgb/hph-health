@@ -2356,13 +2356,13 @@ describe('ACP Runtime Session Plan composition', () => {
       first.call({ projectId: 'project', sessionId: 'session', operation: 'approve' })
     ).rejects.toMatchObject({
       code: 'plan-unavailable',
-      message: expect.stringMatching(/not configured.*not attempted.*DRA must provide/)
+      message: expect.stringMatching(/not configured.*not attempted.*Baselio must provide/)
     })
     await expect(
       first.respond({ projectId: 'project', sessionId: 'session', feedback: 'continue' })
     ).rejects.toMatchObject({
       code: 'plan-unavailable',
-      message: expect.stringMatching(/not configured.*not attempted.*DRA must provide/)
+      message: expect.stringMatching(/not configured.*not attempted.*Baselio must provide/)
     })
   })
 
@@ -2380,7 +2380,7 @@ describe('ACP Runtime Session Plan composition', () => {
     ).rejects.toMatchObject({
       code: 'interaction-mismatch',
       message: expect.stringMatching(
-        /No active prompt interaction.*not attempted.*DRA.*active interaction/
+        /No active prompt interaction.*not attempted.*Baselio.*active interaction/
       )
     })
     expect(harness.generate).not.toHaveBeenCalled()
@@ -2399,7 +2399,7 @@ describe('ACP Runtime Session Plan composition', () => {
     ).rejects.toMatchObject({
       code: 'interaction-mismatch',
       message: expect.stringMatching(
-        /no durable Message identity.*not attempted.*DRA must establish/
+        /no durable Message identity.*not attempted.*Baselio must establish/
       )
     })
     expect(harness.generate).not.toHaveBeenCalled()

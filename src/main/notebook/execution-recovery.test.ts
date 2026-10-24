@@ -39,7 +39,7 @@ describe('execution recovery context', () => {
     })!
     expect(uncertain.guidance).toContain('Review its effects')
     expect(uncertain.guidance).toContain(
-      'affected runtime can resume after DRA verifies cleanup'
+      'affected runtime can resume after Baselio verifies cleanup'
     )
     expect(uncertain.guidance).not.toContain('Stop automatic retries')
     expect(uncertain.guidance).not.toContain('not started')

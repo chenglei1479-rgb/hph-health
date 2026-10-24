@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { nodeRuntimeEnvironmentEntries } from '../node-process-host'
 import type { McpServerStdio } from '@agentclientprotocol/sdk'
 import { McpServer as ModelContextProtocolServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -131,8 +132,7 @@ const INVALID_SUCCESS_MESSAGE =
   'The Session Plan service returned an invalid result. The operation outcome is unconfirmed.'
 const OUTCOME_UNCONFIRMED_GUIDANCE =
   'Stop automatic retries. Do not assume the operation failed or repeat it until later Session Plan context confirms whether it took effect. Do not repeat confirmed writes; report unresolved state for application recovery.'
-const AUTHENTICATION_REJECTED_GUIDANCE =
-  "Do not retry automatically or bypass the rejection. Report it so DRA can refresh this Session's Plan capability; retry only after the application provides a fresh capability."
+const AUTHENTICATION_REJECTED_GUIDANCE = `Do not retry automatically or bypass the rejection. Report it so ${PRODUCT_DISPLAY_NAME} can refresh this Session's Plan capability; retry only after the application provides a fresh capability.`
 
 const boundedRedactedMessage = (message: string): string => {
   const redacted = redactSensitiveText(message)
@@ -143,7 +143,7 @@ const guidanceForPlanError = (error: PlanCommandError): string | undefined => {
   if (error.code === 'invalid-backend-result') return OUTCOME_UNCONFIRMED_GUIDANCE
   if (error.code === 'invalid-plan') return undefined
   if (error.code === 'plan-unavailable') {
-    return 'The operation was not attempted. Do not rebuild or resubmit the Plan. DRA must provide the Session Plan capability before another Plan call.'
+    return `The operation was not attempted. Do not rebuild or resubmit the Plan. ${PRODUCT_DISPLAY_NAME} must provide the Session Plan capability before another Plan call.`
   }
   if (error.code === 'no-active-plan') {
     return 'Do not retry this command unless later application context establishes an active Plan.'

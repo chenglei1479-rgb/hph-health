@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import type { NotebookExecutionRecovery } from '../../shared/execution-recovery'
 
 /** Project trusted, bounded facts; never infer recovery instructions from command output. */
@@ -37,7 +38,7 @@ export const executionRecoveryContext = (
       : undefined
   const prerequisite =
     retryAfter === 'cleanup-verified'
-      ? 'At failure, cleanup was unverified. The affected runtime can resume after DRA verifies cleanup.'
+      ? `At failure, cleanup was unverified. The affected runtime can resume after ${PRODUCT_DISPLAY_NAME} verifies cleanup.`
       : 'Check that the affected runtime is available before retrying.'
   const effects =
     execution === 'not-started'

@@ -1,10 +1,10 @@
 ---
 name: dra-research-project
-description: 'DRA Research Project: organize a Plus research project from cited evidence through Notebook results and manuscript sections to a reviewable research package; coordinate Pro literature, statistics, and writing specialists with an issue register.'
+description: 'Baselio Research Project: organize a Plus research project from cited evidence through Notebook results and manuscript sections to a reviewable research package; coordinate Pro literature, statistics, and writing specialists with an issue register.'
 license: Apache-2.0
 ---
 
-# DRA Research Project
+# Baselio Research Project
 
 Respond in the researcher's language. Preserve the six existing entry workflows. The home screen offers three deliverable packages (mentor-pack, consultation-pack, writing-pack) as step 2 after project setup; when one is selected, follow the research-deliverables skill and the recorded package mode. For consultation-pack, the beta export is aggregate files only: a statistical report (Word or PDF), result tables (Excel, real counts, no masking under 10), a runnable R or Python script, and the variable definition table and execution log as PDF. Do not export raw data, individual Notebook rows, or chat history, and do not offer those options. Do not add a data-flow or special-requirements panel. Use this skill in the conversation when the researcher asks for a complete project, an evidence table, manuscript organization, a research package, or specialist collaboration.
 
@@ -41,7 +41,7 @@ Use the real `write_artifact_file` tool with `source:{kind:"localPath",path:"rev
 
 ## Pro: literature + statistics + writing review
 
-Pro supplements Plus. Present the three scopes and ask the researcher to confirm collaboration before dispatch. Select the bundled DRA Literature Expert, DRA Statistics Expert and DRA Writing Reviewer by their actual IDs when present. Use the real delegated-agent capabilities, never simulate three agents in prose. If a specialist or delegation tool is absent, report the missing capability and retain the unexecuted plan. Share only the necessary approved artifact versions with each expert.
+Pro supplements Plus. Present the three scopes and ask the researcher to confirm collaboration before dispatch. Select the bundled Baselio Literature Expert, Baselio Statistics Expert and Baselio Writing Reviewer by their actual IDs when present. Use the real delegated-agent capabilities, never simulate three agents in prose. If a specialist or delegation tool is absent, report the missing capability and retain the unexecuted plan. Share only the necessary approved artifact versions with each expert.
 
 - Literature expert: source selection, evidence locations, contradiction and coverage limits.
 - Statistics expert: variables/endpoints, missingness, assumptions, reproducibility and diagnostic gaps. No new analysis without approved plan/data access.

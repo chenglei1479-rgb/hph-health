@@ -14,7 +14,7 @@ Use this workflow when a researcher asks to inspect a cohort or audit dataset qu
 3. Agree on the cohort sheet and clinical meanings before interpreting event/time fields, units, censoring, or variable labels. If definitions are absent, mark those checks unverified rather than guessing.
 4. Call `audit_synthetic_cohort(path, sheet_name=..., id_column=..., event_column=..., event_time_column=..., followup_time_column=...)` with only mappings that are explicit in the data dictionary or confirmed by the researcher. NLR field names default to `neutrophils`, `lymphocytes`, and `baseline_nlr_ratio`; pass alternatives only when confirmed.
 5. Report measured findings separately from unresolved definitions. Duplicate, missingness, NLR mismatch, and outlier rows should use source row numbers; never impute, delete, overwrite, or run inferential statistical tests during this audit.
-6. Do not invent a quality score from unverified checks. If a score is requested, show the scoring rubric, verified coverage, and unresolved items; label it as a data-quality screening score, not clinical validity or a DRA benchmark.
+6. Do not invent a quality score from unverified checks. If a score is requested, show the scoring rubric, verified coverage, and unresolved items; label it as a data-quality screening score, not clinical validity or a Baselio benchmark.
 
 ## Helper use
 

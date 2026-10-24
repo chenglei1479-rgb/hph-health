@@ -1,3 +1,4 @@
+import { PRODUCT_DISPLAY_NAME } from '../../shared/product-identity'
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:http'
 import { createLocalJWKSet, jwtVerify, type JSONWebKeySet } from 'jose'
@@ -336,7 +337,9 @@ export class AccountOwner {
       }
       const code = url.searchParams.get('code')
       if (!code || url.searchParams.has('error')) {
-        response.writeHead(400).end('Login was not completed. Return to DRA and retry.')
+        response
+          .writeHead(400)
+          .end(`Login was not completed. Return to ${PRODUCT_DISPLAY_NAME} and retry.`)
         this.error = 'login'
         this.stopAttempt()
         return
@@ -347,8 +350,8 @@ export class AccountOwner {
           .writeHead(ok ? 200 : 400)
           .end(
             ok
-              ? 'DRA login complete. You can close this tab and return to DRA. / 登录完成，请返回 DRA。'
-              : 'DRA login failed. Return to DRA for details. / 登录失败，请返回 DRA。'
+              ? `${PRODUCT_DISPLAY_NAME} login complete. You can close this tab and return to ${PRODUCT_DISPLAY_NAME}. / 登录完成，请返回 ${PRODUCT_DISPLAY_NAME}。`
+              : `${PRODUCT_DISPLAY_NAME} login failed. Return to ${PRODUCT_DISPLAY_NAME} for details. / 登录失败，请返回 ${PRODUCT_DISPLAY_NAME}。`
           )
         if (this.attempt === attempt) {
           // Let the final response flush before closing keep-alive sockets.
