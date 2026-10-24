@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { PRERELEASE_DATA_DESTINATION_NOTICE } from '../../../shared/prerelease'
+import { i18next, initI18n } from '../i18n'
 import { createEmptyProviderFormValue } from '../pages/settings/provider-form-value'
 import { ProviderForm } from '../pages/settings/ProviderForm'
 import { PrereleaseFirstModelCallNotice } from './PrereleaseFirstModelCallNotice'
@@ -56,6 +57,30 @@ it('hides the provider-key sentence on a stable build', async () => {
   )
   expect(host?.querySelector('[data-testid="prerelease-provider-key-notice"]')).toBeNull()
   expect(host?.querySelector('[aria-label="API key"]')?.getAttribute('aria-describedby')).toBeNull()
+})
+
+it('shows the canonical destination sentence in the active locale, not a fixed Japanese one', async () => {
+  initI18n('ja')
+  vi.stubEnv('DRA_PRERELEASE', '1')
+  try {
+    await act(async () => {
+      await i18next.changeLanguage('ja')
+    })
+    await render(
+      <ProviderForm
+        value={createEmptyProviderFormValue({ type: 'official', vendorId: 'openai' })}
+        onChange={() => undefined}
+      />
+    )
+    expect(host?.querySelector('[data-testid="prerelease-provider-key-notice"]')?.textContent).toBe(
+      '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
+    )
+  } finally {
+    initI18n('en')
+    await act(async () => {
+      await i18next.changeLanguage('en')
+    })
+  }
 })
 
 it('shows the same sentence on the first model call and lets that call continue', async () => {

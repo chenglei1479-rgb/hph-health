@@ -2636,7 +2636,7 @@
     "Model ID must not exceed {{limit}} characters.": "모델 ID는 {{limit}}자를 초과할 수 없습니다.",
     "Awaiting your answer…": "답변 대기 중…",
     "Included": "수록됨",
-    "Your key stays private.": "키는 비공개로 유지됩니다.",
+    "Your API key is stored securely.": "API 키는 안전하게 저장됩니다.",
     "Go-to locations": "이동 위치",
     "Force update…": "강제 업데이트…",
     "Mention {{name}}": "멘션 추가: {{name}}",
@@ -6963,7 +6963,7 @@
     "Providers": "모델 제공업체",
     "Open files, generated artifacts, code, and notebooks.": "파일, 생성된 아티팩트, 코드 및 Notebook을 엽니다.",
     "Retry turning off": "끄기 다시 시도",
-    "Research files remain on this computer.": "연구 파일은 이 컴퓨터에 보관됩니다.",
+    "Research files are stored on this computer. Requests go to the AI service you configure.": "연구 파일은 이 컴퓨터에 저장됩니다. 요청은 설정한 AI 서비스로 전송됩니다.",
     "Create references from PDF files": "PDF 파일에서 문헌 정보 만들기",
     "DRA will run a one-time root installation in {{distro}} for missing Linux packages only. It will not change sudoers, and {{user}} will remain the selected non-root user for everyday and future runs.": "DRA는 {{distro}}에서 누락된 Linux 패키지만 대상으로 root 권한의 일회성 설치를 실행합니다. sudoers는 변경하지 않으며, {{user}} 사용자는 일상적인 사용과 향후 실행에서도 선택된 비 root 사용자로 유지됩니다.",
     "Not yet verified": "아직 확인되지 않음",
@@ -7517,7 +7517,7 @@
     "Reason it does not apply": "Reason it does not apply",
     "Enter a reason.": "Enter a reason.",
     "Draft": "Draft",
-    "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "Baselio는 환자 데이터를 PC에서 분석하고 직접 식별자를 포함하지 않는 정보(열 이름 및 집계 결과 등)만 AI 서비스로 전송합니다. 위탁에 해당하는지는 소속 기관의 규정 또는 윤리심사위원회에 확인하세요.",
+    "Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results; direct identifiers such as names or medical record numbers are not sent. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "분석은 이 PC에서 실행됩니다. 보내는 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. 해당 서비스는 열 이름, 데이터 유형, 합성 샘플, 선택한 범주 값, 집계 결과를 받을 수 있습니다. 이름이나 진료 기록 번호 같은 직접 식별자는 전송하지 않습니다. 위탁에 해당하는지는 소속 기관의 규정 또는 윤리심사위원회에 확인하세요.",
     "Research title": "Research title",
     "Research organization": "Research organization",
     "Purpose and significance": "Purpose and significance",
@@ -7635,6 +7635,7 @@
     "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "선택한 열의 범주 값은 많은 순으로 최대 {{limit}}개만 보냅니다. 나머지는 {{omission}}으로 표시합니다.",
     "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "분석 결과는 보내기 전에 마스킹 검사를 하며, 개별 행이 포함된 출력은 보내지 않습니다.",
     "Details_privacy": "자세히",
-    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "환자 데이터는 사용 중인 컴퓨터에서 분석합니다. AI 서비스에는 기본적으로 열 이름, 데이터 유형, 행 수, 합성 표본, 선택한 열의 범주 값, 그리고 분석의 집계 결과를 보냅니다. 이름이나 의무기록번호 같은 직접 식별자는 보내지 않습니다."
+    "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "환자 데이터 분석은 이 PC에서 수행됩니다. 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. AI 서비스에는 기본적으로 열 이름, 데이터 유형, 행 수, 합성 샘플, 선택한 열의 범주 값, 분석 집계 결과가 전송됩니다. 이름이나 진료 기록 번호 같은 직접 식별자는 전송하지 않습니다.",
+    "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "가상 데이터만 사용합니다. 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. 사용 요금은 사용자의 모델 제공업체에서 청구됩니다."
   }
 }

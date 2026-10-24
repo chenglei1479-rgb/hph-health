@@ -259,7 +259,7 @@ const MedicalResearchLaunchpad = ({
           <p className="w-full min-w-0">
             <span data-testid="home-patient-data-note-text">
               {t(
-                'Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.'
+                'Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.'
               )}
             </span>
             {SHOW_HOME_PATIENT_DATA_MASKING_NOTE ? (

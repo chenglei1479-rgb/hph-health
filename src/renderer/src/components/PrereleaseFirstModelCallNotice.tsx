@@ -26,7 +26,7 @@ const Dialog = ({ onContinue }: { onContinue: () => void }): React.JSX.Element =
           if (event.key === 'Escape') event.preventDefault()
         }}
       >
-        <p id="prerelease-first-model-call-notice">{PRERELEASE_DATA_DESTINATION_NOTICE}</p>
+        <p id="prerelease-first-model-call-notice">{t(PRERELEASE_DATA_DESTINATION_NOTICE)}</p>
         <Button type="button" className="mt-3" autoFocus onClick={onContinue}>
           {t('Continue')}
         </Button>

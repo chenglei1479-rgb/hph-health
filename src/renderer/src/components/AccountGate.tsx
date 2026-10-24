@@ -147,7 +147,9 @@ export const AccountGate = ({ children }: { children: ReactNode }): React.JSX.El
         <>
           <p className="break-all text-sm">{state.user.email ?? state.user.name}</p>
           <p className="text-sm text-muted-foreground">
-            {t('Research files remain on this computer.')}
+            {t(
+              'Research files are stored on this computer. Requests go to the AI service you configure.'
+            )}
           </p>
           <Button variant="outline" onClick={() => setShowMembership((value) => !value)}>
             {t('Membership and plans')}

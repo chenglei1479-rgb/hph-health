@@ -18,7 +18,9 @@ describe('EthicsProtocolChecklist', () => {
     expect(
       screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked)
     ).toBe(true)
-    expect(screen.getByText(/Baselio analyzes patient data/)).toBeTruthy()
+    expect(
+      screen.getByText(/Analysis runs on this computer\. Requests you send go to the AI service/)
+    ).toBeTruthy()
   })
   it('renders English source keys when no translated locale is active', () => {
     render(<EthicsProtocolChecklist projectId="" />)
