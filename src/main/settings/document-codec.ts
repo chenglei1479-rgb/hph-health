@@ -295,6 +295,23 @@ const sanitizeSettings = (value: unknown): StoredSettings => {
   const betaTermsAcceptance = normalizeBetaTermsAcceptance(value.betaTermsAcceptance)
   if (betaTermsAcceptance) settings.betaTermsAcceptance = betaTermsAcceptance
 
+  if (isRecord(value.seedInvite)) {
+    const redeemedAt = asNumber(value.seedInvite.redeemedAt)
+    const redeemedCodeHash = asString(value.seedInvite.redeemedCodeHash)
+    const companyKeyRef = asString(value.seedInvite.companyKeyRef)
+    const companyKeyMask = asString(value.seedInvite.companyKeyMask)
+    const packagesUsed = asNumber(value.seedInvite.packagesUsed)
+    if (redeemedAt !== undefined && redeemedCodeHash && companyKeyRef && companyKeyMask) {
+      settings.seedInvite = {
+        redeemedAt,
+        redeemedCodeHash,
+        companyKeyRef,
+        companyKeyMask,
+        packagesUsed: Math.max(0, Math.min(2, Math.trunc(packagesUsed ?? 0)))
+      }
+    }
+  }
+
   const disabledSkillIds = Array.isArray(value.disabledSkillIds)
     ? [
         ...new Set(

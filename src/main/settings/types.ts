@@ -272,6 +272,14 @@ export type StoredSettings = {
   // pre-v2 settings file (which had no per-model selection) is read.
   activeModel?: string
   providers: StoredProvider[]
+  seedInvite?: {
+    redeemedAt: number
+    redeemedCodeHash: string
+    companyKeyRef: string
+    companyKeyMask: string
+    packagesUsed: number
+    sessionTurns?: Record<string, number>
+  }
   // Set once the first-run onboarding wizard has been completed (or auto-completed for an
   // already-configured install). Absent means onboarding has never finished.
   onboardingCompletedAt?: number

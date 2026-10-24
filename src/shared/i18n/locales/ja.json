@@ -7567,7 +7567,7 @@
     "Fictitious or de-identified data only": "架空または匿名化済みデータのみ",
     "Use only fictitious data or data from which identifying information has already been removed.": "取り扱えるのは、架空のデータまたはすでに識別情報を除去したデータだけです。",
     "Where your input is sent": "入力内容の送信先",
-    "Your input is sent to the AI service you configure. The AI service provider bills you directly for usage. Your API key is stored on this computer.": "入力内容は、先生ご自身が設定した AI サービスに送信されます。利用料金は、その AI サービス事業者から先生ご本人に直接請求されます。API キーはこのコンピューター内に保存されます。",
+    "Your input is sent to the destination shown for the active key mode: the AI contracted by the operator for a seed invite, or the provider you registered for BYOK. Your API key is stored on this computer.": "入力内容は、現在のキーモードに応じて、シード招待では運営が契約した AI（β は OpenAI）、BYOK では先生が登録した事業者へ送信されます。API キーはこのコンピューター内に保存されます。",
     "Beta defects": "β版の不具合",
     "During the beta, defects and changes to behavior may occur. Do not rely on this build for critical work.": "β期間中は、不具合や仕様の変更が発生する可能性があります。重要な作業にはこのビルドに依存しないでください。",
     "I agree to the terms above.": "上記に同意します",

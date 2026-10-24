@@ -86,6 +86,12 @@ export const settingsMarkOnboardingCompleteContracts = {
   'settings.acceptBetaTerms': callable<() => Promise<SettingsSnapshot>>()('settings', [
     'settings:accept-beta-terms'
   ]),
+  'settings.redeemSeedInvite': callable<(code: string) => Promise<SettingsSnapshot>>()('settings', [
+    'settings:redeem-seed-invite'
+  ]),
+  'settings.consumeSeedPackage': callable<() => Promise<SettingsSnapshot>>()('settings', [
+    'settings:consume-seed-package'
+  ]),
   'settings.reopenOnboarding': callable<() => Promise<SettingsSnapshot>>()('settings', [
     'settings:reopen-onboarding',
     LOCAL

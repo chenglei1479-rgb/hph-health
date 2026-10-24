@@ -49,7 +49,7 @@ export const BETA_TERMS_COPY = {
     },
     {
       title: 'Where your input is sent',
-      body: 'Your input is sent to the AI service you configure. The AI service provider bills you directly for usage. Your API key is stored on this computer.'
+      body: 'Your input is sent to the destination shown for the active key mode: the AI contracted by the operator for a seed invite, or the provider you registered for BYOK. Your API key is stored on this computer.'
     },
     {
       title: 'Beta defects',

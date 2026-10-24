@@ -347,6 +347,12 @@ const registerSettingsIpcHandlers = ({
   ipcMainHandle('settings:accept-beta-terms', () =>
     snapshotCommits.currentSnapshotAfter(service.acceptBetaTerms())
   )
+  ipcMainHandle('settings:redeem-seed-invite', (_event, code: string) =>
+    snapshotCommits.currentSnapshotAfter(service.redeemSeedInvite(code))
+  )
+  ipcMainHandle('settings:consume-seed-package', () =>
+    snapshotCommits.currentSnapshotAfter(service.consumeSeedPackage())
+  )
   ipcMainHandle('settings:reopen-onboarding', () =>
     snapshotCommits.currentSnapshotAfter(service.reopenOnboarding())
   )

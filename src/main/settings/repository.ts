@@ -914,6 +914,46 @@ class SettingsRepository {
     )
   }
 
+  async redeemSeedInvite(input: {
+    redeemedAt: number
+    redeemedCodeHash: string
+    companyKeyRef: string
+    companyKeyMask: string
+    provider: StoredProvider
+  }): Promise<StoredSettings> {
+    return this.mutate((settings) => {
+      if (settings.seedInvite)
+        throw new Error('This invite has already been redeemed on this device.')
+      const providers = settings.providers.filter(({ id }) => id !== input.provider.id)
+      providers.push(input.provider)
+      return {
+        ...settings,
+        providers,
+        activeProviderId: input.provider.id,
+        activeModel: input.provider.model,
+        seedInvite: {
+          redeemedAt: input.redeemedAt,
+          redeemedCodeHash: input.redeemedCodeHash,
+          companyKeyRef: input.companyKeyRef,
+          companyKeyMask: input.companyKeyMask,
+          packagesUsed: 0
+        }
+      }
+    })
+  }
+
+  async consumeSeedPackage(): Promise<StoredSettings> {
+    return this.mutate((settings) => {
+      if (!settings.seedInvite) return settings
+      if (settings.activeProviderId !== 'seed-company-openai') return settings
+      if (settings.seedInvite.packagesUsed >= 2) throw new Error('seed-invite-exhausted')
+      return {
+        ...settings,
+        seedInvite: { ...settings.seedInvite, packagesUsed: settings.seedInvite.packagesUsed + 1 }
+      }
+    })
+  }
+
   // Reopens onboarding from Settings without touching providers, credentials, or the data root.
   // Beta acceptance stays recorded so the lighter gate does not ask again.
   async clearOnboardingCompletion(): Promise<StoredSettings> {
