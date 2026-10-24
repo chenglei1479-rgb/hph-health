@@ -31,6 +31,8 @@ import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-deliv
 import { PackNextStepCard } from './PackNextStepCard'
 import { SampleAbstractDialog } from './SampleAbstractDialog'
 import { homeExternalDestinationLines } from './external-destinations'
+import { useSettingsStore } from '@/stores/settings-store'
+import { SEED_EXHAUSTED_COPY } from '../../../../shared/seed-invite'
 
 // Off until the PHI release gate merges. The sentence stays translated so the
 // home line can show it by flipping this flag; it is not rendered while false.
@@ -73,6 +75,9 @@ const MedicalResearchLaunchpad = ({
   onSelectWorkflow
 }: MedicalResearchLaunchpadProps): React.JSX.Element => {
   const { t } = useTranslation()
+  const seedMode = useSettingsStore((state) => state.seedInvite.mode)
+  const consumeSeedPackage = useSettingsStore((state) => state.consumeSeedPackage)
+  const [seedUsageError, setSeedUsageError] = useState<string>()
   const [researchTheme, setResearchTheme] = useState('')
   const [sampleOpen, setSampleOpen] = useState(false)
   const [stepsOpen, setStepsOpen] = useState(false)
@@ -129,6 +134,16 @@ const MedicalResearchLaunchpad = ({
       icon: Languages
     }
   ]
+  const selectWorkflow = (workflow: MedicalResearchWorkflow, theme: string): void => {
+    if (seedMode !== 'company' || workflow === 'novelty' || workflow === 'evidence') {
+      onSelectWorkflow(workflow, theme)
+      return
+    }
+    setSeedUsageError(undefined)
+    void consumeSeedPackage()
+      .then(() => onSelectWorkflow(workflow, theme))
+      .catch(() => setSeedUsageError(SEED_EXHAUSTED_COPY))
+  }
   const themeReady = researchTheme.trim().length > 0
 
   return (
@@ -207,7 +222,7 @@ const MedicalResearchLaunchpad = ({
                 data-testid={`home-entry-${id}`}
                 data-home-entry={id}
                 disabled={!themeReady}
-                onClick={() => onSelectWorkflow(workflow, researchTheme.trim())}
+                onClick={() => selectWorkflow(workflow, researchTheme.trim())}
                 className={cn(homeCardInteractiveClassName, 'min-h-44')}
               >
                 <span className="flex w-full items-start justify-between gap-4">
@@ -294,11 +309,16 @@ const MedicalResearchLaunchpad = ({
             onContinue={() => {
               const step = nextStepAfter(deliveryLedger.lastCompletionId!)
               if (!step || step.kind !== 'available' || !themeReady) return
-              onSelectWorkflow(step.id, researchTheme.trim())
+              selectWorkflow(step.id, researchTheme.trim())
             }}
           />
         ) : null}
       </section>
+      {seedUsageError ? (
+        <div role="alert" className={cn(homeWarningClassName, 'rounded-2xl bg-bg-200 p-4')}>
+          {seedUsageError}
+        </div>
+      ) : null}
       <SampleAbstractDialog open={sampleOpen} onClose={() => setSampleOpen(false)} />
 
       <div data-testid="home-secondary-actions" className="flex w-full min-w-0 flex-col gap-2">
@@ -363,7 +383,7 @@ const MedicalResearchLaunchpad = ({
                 data-testid={`research-entry-${id}`}
                 disabled={!themeReady}
                 onClick={() =>
-                  onSelectWorkflow(
+                  selectWorkflow(
                     id === 'analysis'
                       ? (entries.find((entry) => entry.id === 'analyze-data')?.workflow ?? id)
                       : id,
@@ -414,7 +434,7 @@ const MedicalResearchLaunchpad = ({
           {t('Network connections')}
         </summary>
         <ul className={cn(homeMutedClassName, 'mt-2 list-disc space-y-1 pl-5')}>
-          {homeExternalDestinationLines(t).map((line) => (
+          {homeExternalDestinationLines(t, seedMode).map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>

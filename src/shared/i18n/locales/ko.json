@@ -7565,7 +7565,7 @@
     "Fictitious or de-identified data only": "가상 또는 비식별화된 데이터만",
     "Use only fictitious data or data from which identifying information has already been removed.": "가상 데이터 또는 이미 식별 정보가 제거된 데이터만 사용하세요.",
     "Where your input is sent": "입력 내용의 전송 대상",
-    "Your input is sent to the AI service you configure. The AI service provider bills you directly for usage. Your API key is stored on this computer.": "입력 내용은 사용자가 설정한 AI 서비스로 전송됩니다. 이용 요금은 해당 AI 모델 제공업체가 사용자에게 직접 청구합니다. API 키는 이 컴퓨터에 저장됩니다.",
+    "Your input is sent to the destination shown for the active key mode: the AI contracted by the operator for a seed invite, or the provider you registered for BYOK. Your API key is stored on this computer.": "입력 내용은 현재 키 모드에 따라 시드 초대에서는 운영자가 계약한 AI 모델 제공업체(베타는 OpenAI), BYOK에서는 사용자가 등록한 모델 제공업체로 전송됩니다. API 키는 이 컴퓨터에 저장됩니다.",
     "Beta defects": "베타 버전 결함",
     "During the beta, defects and changes to behavior may occur. Do not rely on this build for critical work.": "베타 기간에는 결함이나 동작 변경이 발생할 수 있습니다. 중요한 작업에 이 빌드를 의존하지 마세요.",
     "I agree to the terms above.": "위 약관에 동의합니다.",

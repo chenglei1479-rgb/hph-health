@@ -7567,7 +7567,7 @@
     "Fictitious or de-identified data only": "仅限虚构数据或已去标识化数据",
     "Use only fictitious data or data from which identifying information has already been removed.": "只能使用虚构数据或已经去除识别信息的数据。",
     "Where your input is sent": "输入内容的发送目的地",
-    "Your input is sent to the AI service you configure. The AI service provider bills you directly for usage. Your API key is stored on this computer.": "输入内容会发送到您自己设置的 AI 服务。费用由该 AI 服务提供商直接向您本人收取。API 密钥保存在本机。",
+    "Your input is sent to the destination shown for the active key mode: the AI contracted by the operator for a seed invite, or the provider you registered for BYOK. Your API key is stored on this computer.": "输入内容会按当前密钥模式发送：种子邀请发送至运营方签约的 AI（测试版为 OpenAI），BYOK 发送至您注册的服务商。API 密钥保存在本机。",
     "Beta defects": "β 版缺陷",
     "During the beta, defects and changes to behavior may occur. Do not rely on this build for critical work.": "在 β 期间，可能出现缺陷或行为变更。请勿将本版本用于关键工作。",
     "I agree to the terms above.": "我同意上述条件",
