@@ -1,8 +1,10 @@
 declare const __DRA_PRERELEASE__: boolean | undefined
 
-// Shown beside the provider key and before the first model call. Fixed Japanese on every locale.
+// Shown beside the provider key and before the first model call. The English source text is the
+// renderer catalog key: every translated locale carries the founder-locked wording from
+// build/prerelease-release-notes.md, so the notice is never hard-coded Japanese on other locales.
 export const PRERELEASE_DATA_DESTINATION_NOTICE =
-  '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
+  'Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.'
 
 // Settings → About. Fixed Japanese on every locale; beta builds do not offer an update check.
 export const PRERELEASE_UPDATE_NOTICE =

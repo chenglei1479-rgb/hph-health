@@ -5,7 +5,7 @@
 // here and a stale copy of the same sentence elsewhere fail to compile.
 type ApiKeySecurityCopyKeys =
   | {
-      readonly title: 'Your key stays private.'
+      readonly title: 'Your API key is stored securely.'
       readonly description: 'It is stored only on this device and never uploaded to DRA. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
     }
   | {
@@ -16,7 +16,7 @@ type ApiKeySecurityCopyKeys =
 const getApiKeySecurityCopyKeys = (encryptionAvailable: boolean): ApiKeySecurityCopyKeys =>
   encryptionAvailable
     ? ({
-        title: 'Your key stays private.',
+        title: 'Your API key is stored securely.',
         description:
           'It is stored only on this device and never uploaded to DRA. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
       } as const)

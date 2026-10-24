@@ -2805,7 +2805,7 @@
     "Model ID must not exceed {{limit}} characters.": "Идентификатор модели не должен превышать {{limit}} символов.",
     "Awaiting your answer…": "Ожидание вашего ответа…",
     "Included": "Включено",
-    "Your key stays private.": "Ваш ключ остаётся приватным.",
+    "Your API key is stored securely.": "Ваш API-ключ хранится в защищённом виде.",
     "Go-to locations": "Места для перехода",
     "Force update…": "Принудительно обновить…",
     "Mention {{name}}": "Упомянуть {{name}}",
@@ -3317,7 +3317,7 @@
     "Running {{noun}}": "запускается {{noun}}",
     "Allow remote command?": "Разрешить удалённую команду?",
     "DRA couldn't start": "Не удалось запустить DRA",
-    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "Число завершённых сдач пакетов остаётся только на этом компьютере. Его можно переписать в бумажный журнал. Ничего не отправляется.",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "Число завершённых сдач пакетов остаётся только на этом компьютере. Его можно переписать в бумажный журнал. Они не загружаются.",
     "Package mirror": "Зеркало репозитория пакетов",
     "This release would downgrade the Skill or change an existing release. Installation remains blocked.": "Этот выпуск понизит версию навыка или изменит существующий выпуск. Установка остаётся заблокированной.",
     "Exclude": "Исключить",
@@ -7406,7 +7406,7 @@
     "Providers": "Поставщики",
     "Open files, generated artifacts, code, and notebooks.": "Открывайте файлы, созданные артефакты, код и Notebook.",
     "Retry turning off": "Повторить выключение",
-    "Research files remain on this computer.": "Исследовательские файлы остаются на этом компьютере.",
+    "Research files are stored on this computer. Requests go to the AI service you configure.": "Исследовательские файлы хранятся на этом компьютере. Запросы отправляются в настроенную вами службу ИИ.",
     "Create references from PDF files": "Создать источники из файлов PDF",
     "DRA will run a one-time root installation in {{distro}} for missing Linux packages only. It will not change sudoers, and {{user}} will remain the selected non-root user for everyday and future runs.": "DRA выполнит в {{distro}} однократную установку от имени root только для недостающих пакетов Linux. Конфигурация sudoers не изменится, а {{user}} останется выбранной непривилегированной учётной записью для повседневной работы и будущих запусков.",
     "Not yet verified": "Еще не проверено",
@@ -7986,7 +7986,7 @@
     "Reason it does not apply": "Reason it does not apply",
     "Enter a reason.": "Enter a reason.",
     "Draft": "Draft",
-    "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.",
+    "Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results; direct identifiers such as names or medical record numbers are not sent. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "Анализ выполняется на этом компьютере. Отправляемые вами запросы передаются в настроенную вами службу ИИ (для OpenAI — в США). Служба может получать имена столбцов, типы данных, синтетические образцы, выбранные значения категорий и агрегированные результаты; прямые идентификаторы, такие как имена или номера медицинских карт, не отправляются. Проверьте правила вашего учреждения или уточните в комитете по этике, считается ли это аутсорсингом.",
     "Research title": "Research title",
     "Research organization": "Research organization",
     "Purpose and significance": "Purpose and significance",
@@ -8104,6 +8104,7 @@
     "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "Для выбранного вами столбца отправляется не более {{limit}} категориальных значений, сначала самые частые. Остальные показываются как {{omission}}.",
     "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "Результаты анализа перед отправкой проходят проверку маскирования, а выходные данные с отдельными строками не отправляются.",
     "Details_privacy": "Подробнее",
-    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Данные пациентов анализируются на вашем компьютере. По умолчанию сервис ИИ получает имена столбцов, типы данных, число строк, синтетические образцы, категориальные значения выбранных вами столбцов и сводные результаты анализа. Прямые идентификаторы, такие как имена или номера медицинских карт, не отправляются."
+    "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Анализ данных пациентов выполняется на этом компьютере. Запросы отправляются в настроенную вами службу ИИ (для OpenAI — в США). По умолчанию служба ИИ получает имена столбцов, типы данных, число строк, синтетические образцы, значения категорий выбранных вами столбцов и агрегированные результаты анализа. Прямые идентификаторы, такие как имена или номера медицинских карт, не отправляются.",
+    "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "Используйте только вымышленные данные. Запросы отправляются в настроенную вами службу ИИ (для OpenAI — в США). Плата за использование выставляется вашим поставщиком."
   }
 }

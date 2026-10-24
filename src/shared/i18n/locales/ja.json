@@ -2637,7 +2637,7 @@
     "Model ID must not exceed {{limit}} characters.": "モデル ID は {{limit}} 文字以内である必要があります。",
     "Awaiting your answer…": "あなたの答えを待っています…",
     "Included": "収録済み",
-    "Your key stays private.": "API キーは非公開のままです。",
+    "Your API key is stored securely.": "API キーは安全に保存されます。",
     "Go-to locations": "よく行く場所",
     "Force update…": "強制更新…",
     "Mention {{name}}": "{{name}}をメンション",
@@ -6965,7 +6965,7 @@
     "Providers": "プロバイダー",
     "Open files, generated artifacts, code, and notebooks.": "ファイル、生成されたアーティファクト、コード、および Notebook を開きます。",
     "Retry turning off": "オフにする操作を再試行",
-    "Research files remain on this computer.": "研究ファイルはこのコンピューターに保存されます。",
+    "Research files are stored on this computer. Requests go to the AI service you configure.": "研究ファイルはこのコンピューターに保存されます。リクエストは設定した AI サービスへ送信されます。",
     "Create references from PDF files": "PDF ファイルから参考文献を作成",
     "DRA will run a one-time root installation in {{distro}} for missing Linux packages only. It will not change sudoers, and {{user}} will remain the selected non-root user for everyday and future runs.": "DRA は {{distro}} で、不足している Linux パッケージだけを対象に、root として一度限りのインストールを実行します。sudoers は変更されず、{{user}} は日常および今後の実行でも選択された非 root ユーザーのままです。",
     "Not yet verified": "未確認",
@@ -7519,7 +7519,7 @@
     "Reason it does not apply": "該当しない理由",
     "Enter a reason.": "理由を入力してください",
     "Draft": "草案",
-    "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "Baselio では患者データの分析はお使いの PC 内で行い、AI サービスには直接識別子を含まない情報（列名・集計結果など）を送信します。委託に該当するかどうかは、所属機関の規程または倫理審査委員会にご確認ください。",
+    "Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results; direct identifiers such as names or medical record numbers are not sent. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "解析はこの PC 内で実行されます。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。AI サービスには、列名・データ型・合成サンプル・選択した区分値・集計結果が送信される場合があります。氏名やカルテ番号などの直接識別子は送信しません。委託に該当するかどうかは、所属機関の規程または倫理審査委員会にご確認ください。",
     "Research title": "研究の名称",
     "Research organization": "研究の実施体制",
     "Purpose and significance": "研究の目的及び意義",
@@ -7637,6 +7637,7 @@
     "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "選択した列の区分値は、多いものから最大 {{limit}} 種類だけ送ります。残りは {{omission}} と示します。",
     "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "解析結果は送信前にマスキングチェックを行い、個別の行を含む出力は送信しません。",
     "Details_privacy": "詳しく",
-    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者データの分析はお使いの PC 内で行います。AI サービスには既定で、列名・データ型・行数、合成サンプル、先生が選択した列の区分値、および解析の集計結果を送信します。氏名やカルテ番号などの直接識別子は送りません。"
+    "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者データの分析はお使いの PC 内で行います。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。AI サービスには既定で、列名・データ型・行数、合成サンプル、先生が選択した列の区分値、および解析の集計結果を送信します。氏名やカルテ番号などの直接識別子は送信しません。",
+    "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。"
   }
 }

@@ -47,7 +47,7 @@ it('shows three primary entries in order and keeps the six research entries behi
     expect(step2?.textContent).toContain('Analyze your own data')
     expect(step2?.textContent).toContain('Prepare a conference abstract or paper')
     expect(host.querySelector('[data-testid="home-patient-data-note-text"]')?.textContent).toBe(
-      'Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.'
+      'Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.'
     )
     expect(host.querySelector('[data-testid="home-patient-data-masking-note"]')).toBeNull()
     expect(host.textContent).not.toContain(
@@ -139,7 +139,7 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(
       japanese.host.querySelector('[data-testid="home-patient-data-note-text"]')?.textContent
     ).toBe(
-      '患者データの分析はお使いの PC 内で行います。AI サービスには既定で、列名・データ型・行数、合成サンプル、先生が選択した列の区分値、および解析の集計結果を送信します。氏名やカルテ番号などの直接識別子は送りません。'
+      '患者データの分析はお使いの PC 内で行います。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。AI サービスには既定で、列名・データ型・行数、合成サンプル、先生が選択した列の区分値、および解析の集計結果を送信します。氏名やカルテ番号などの直接識別子は送信しません。'
     )
     expect(japanese.host.querySelector('[data-testid="home-patient-data-masking-note"]')).toBeNull()
     expect(japanese.host.textContent).not.toContain(
@@ -205,7 +205,7 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     expect(
       chinese.host.querySelector('[data-testid="home-patient-data-note-text"]')?.textContent
     ).toBe(
-      '患者数据在您的电脑上分析。默认向 AI 服务发送列名、数据类型、行数、合成样例、您选定的列的分类值，以及分析的汇总结果。姓名、病历号等直接标识符不会发送。'
+      '患者数据在您的电脑上分析。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。默认向 AI 服务发送列名、数据类型、行数、合成样例、您选定的列的分类值，以及分析的汇总结果。姓名、病历号等直接标识符不会发送。'
     )
     expect(chinese.host.querySelector('[data-testid="home-patient-data-masking-note"]')).toBeNull()
     expect(chinese.host.textContent).not.toContain(

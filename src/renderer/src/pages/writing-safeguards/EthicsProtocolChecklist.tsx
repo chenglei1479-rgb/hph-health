@@ -53,7 +53,7 @@ const copy = (t: (key: string, options?: { context: string }) => string): Checkl
   mappingConfirm: t('Confirm heading mappings'),
   sectionContent: t('Protocol section content'),
   outsourcing: t(
-    'Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.'
+    'Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results; direct identifiers such as names or medical record numbers are not sent. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.'
   )
 })
 

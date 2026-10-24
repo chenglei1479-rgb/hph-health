@@ -2756,7 +2756,7 @@
     "Model ID must not exceed {{limit}} characters.": "El ID del modelo no debe exceder los {{limit}} caracteres.",
     "Awaiting your answer…": "Esperando su respuesta…",
     "Included": "Incluidos",
-    "Your key stays private.": "Su clave permanece privada.",
+    "Your API key is stored securely.": "Su clave de API se guarda de forma segura.",
     "Go-to locations": "Accesos rápidos",
     "Force update…": "Forzar actualización…",
     "Mention {{name}}": "Mencionar a {{name}}",
@@ -3257,7 +3257,7 @@
     "Running {{noun}}": "Ejecutando {{noun}}",
     "Allow remote command?": "¿Permitir comando remoto?",
     "DRA couldn't start": "DRA no se pudo iniciar",
-    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "El número de entregas terminadas permanece en este equipo. Puede copiarlo en un registro en papel. No se envía nada.",
+    "Counts of finished pack deliveries stay on this computer. Copy them into a paper log. They are not uploaded.": "El número de entregas terminadas permanece en este equipo. Puede copiarlo en un registro en papel. No se suben.",
     "Package mirror": "Repositorio espejo de paquetes",
     "This release would downgrade the Skill or change an existing release. Installation remains blocked.": "Esta versión supondría una reversión de la habilidad o modificaría una versión existente. La instalación sigue bloqueada.",
     "Exclude": "Excluir",
@@ -7276,7 +7276,7 @@
     "Providers": "Proveedores",
     "Open files, generated artifacts, code, and notebooks.": "Abrir archivos, artefactos generados, código y Notebooks.",
     "Retry turning off": "Reintentar la desactivación",
-    "Research files remain on this computer.": "Los archivos de investigación permanecen en este equipo.",
+    "Research files are stored on this computer. Requests go to the AI service you configure.": "Los archivos de investigación se guardan en este equipo. Las solicitudes se envían al servicio de IA que configure.",
     "Create references from PDF files": "Crear referencias a partir de archivos PDF",
     "DRA will run a one-time root installation in {{distro}} for missing Linux packages only. It will not change sudoers, and {{user}} will remain the selected non-root user for everyday and future runs.": "DRA realizará una instalación única como root en {{distro}} solo para los paquetes de Linux que faltan. No modificará sudoers y {{user}} seguirá siendo el usuario no root seleccionado para el uso diario y las ejecuciones futuras.",
     "Not yet verified": "Aún no verificado",
@@ -7847,7 +7847,7 @@
     "Reason it does not apply": "Reason it does not apply",
     "Enter a reason.": "Enter a reason.",
     "Draft": "Draft",
-    "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.",
+    "Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results; direct identifiers such as names or medical record numbers are not sent. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "El análisis se ejecuta en su equipo. Las solicitudes que envíe se dirigen al servicio de IA que configure (con OpenAI, a Estados Unidos). El servicio puede recibir nombres de columna, tipos de datos, muestras sintéticas, valores de categoría seleccionados y resultados agregados; no se envían identificadores directos como nombres o números de historia clínica. Revise las normas de su institución o consulte al comité de ética si esto constituye una externalización.",
     "Research title": "Research title",
     "Research organization": "Research organization",
     "Purpose and significance": "Purpose and significance",
@@ -7965,6 +7965,7 @@
     "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "Para una columna que usted seleccione, se envían como máximo {{limit}} valores de categoría, primero los más frecuentes. El resto se muestra como {{omission}}.",
     "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "Los resultados del análisis se comprueban mediante enmascaramiento antes de enviarlos, y no se envían las salidas que contienen filas individuales.",
     "Details_privacy": "Detalles",
-    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Los datos de pacientes se analizan en su equipo. De forma predeterminada, el servicio de IA recibe los nombres de columna, los tipos de datos, el número de filas, muestras sintéticas, los valores de categoría de las columnas que usted seleccione y los resultados agregados del análisis. No se envían identificadores directos como nombres o números de historia clínica."
+    "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "El análisis de datos de pacientes se ejecuta en su equipo. Las solicitudes se envían al servicio de IA que configure (con OpenAI, a Estados Unidos). De forma predeterminada, el servicio de IA recibe los nombres de columna, los tipos de datos, el número de filas, muestras sintéticas, los valores de categoría de las columnas que seleccione y los resultados agregados del análisis. No se envían identificadores directos como nombres o números de historia clínica.",
+    "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "Utilice solo datos ficticios. Las solicitudes se envían al servicio de IA que configure (con OpenAI, a Estados Unidos). Las tarifas de uso las factura su propio proveedor."
   }
 }

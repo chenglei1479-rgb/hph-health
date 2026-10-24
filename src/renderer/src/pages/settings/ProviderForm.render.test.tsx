@@ -770,7 +770,7 @@ describe('ProviderForm field switching', () => {
     expect(document.body.textContent).toContain('Choose the protocol documented by the gateway')
 
     await act(async () => helpButtons[3]?.focus())
-    expect(document.body.textContent).toContain('Your key stays private.')
+    expect(document.body.textContent).toContain('Your API key is stored securely.')
   })
 
   it('uses field help for provider, key, and supported-model descriptions for official vendors', async () => {
@@ -802,7 +802,7 @@ describe('ProviderForm field switching', () => {
     }
 
     expect(resolve(true)).toEqual({
-      title: 'Your key stays private.',
+      title: 'Your API key is stored securely.',
       description:
         'It is stored only on this device and never uploaded to Baselio. Your OS secure storage protects it, and it is sent only to the selected provider when you make a request.'
     })

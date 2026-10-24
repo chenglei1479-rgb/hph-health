@@ -2637,7 +2637,7 @@
     "Model ID must not exceed {{limit}} characters.": "模型 ID 不得超过 {{limit}} 个字符。",
     "Awaiting your answer…": "等待你的回答…",
     "Included": "已收录",
-    "Your key stays private.": "你的密钥不会外泄。",
+    "Your API key is stored securely.": "您的 API 密钥已安全保存。",
     "Go-to locations": "快速前往位置",
     "Force update…": "强制更新…",
     "Mention {{name}}": "提及 {{name}}",
@@ -6965,7 +6965,7 @@
     "Providers": "模型服务商",
     "Open files, generated artifacts, code, and notebooks.": "打开文件、生成的产物、代码和 Notebook。",
     "Retry turning off": "重试关闭",
-    "Research files remain on this computer.": "研究文件仍保存在这台电脑上。",
+    "Research files are stored on this computer. Requests go to the AI service you configure.": "研究文件保存在这台电脑上。请求会发送到您设置的 AI 服务。",
     "Create references from PDF files": "从 PDF 文件创建题录",
     "DRA will run a one-time root installation in {{distro}} for missing Linux packages only. It will not change sudoers, and {{user}} will remain the selected non-root user for everyday and future runs.": "DRA 将在 {{distro}} 中以 root 身份执行一次性安装，且仅安装缺失的 Linux 软件包。它不会更改 sudoers，{{user}} 仍将是日常及未来运行所选用的非 root 用户。",
     "Not yet verified": "尚未验证",
@@ -7519,7 +7519,7 @@
     "Reason it does not apply": "不适用理由",
     "Enter a reason.": "请填写理由",
     "Draft": "草稿",
-    "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "Baselio 在您的电脑内分析患者数据，仅向 AI 服务发送不含直接标识符的信息（如列名和汇总结果）。是否属于委托，请确认所属机构规定或咨询伦理审查委员会。",
+    "Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results; direct identifiers such as names or medical record numbers are not sent. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "分析在您的电脑上运行。您发送的请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。该服务可能收到列名、数据类型、合成样例、选定的分类值和汇总结果；姓名、病历号等直接标识符不会发送。是否属于委托，请确认所属机构规定或咨询伦理审查委员会。",
     "Research title": "研究名称",
     "Research organization": "研究实施体制",
     "Purpose and significance": "研究目的和意义",
@@ -7637,6 +7637,7 @@
     "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "对于您选定的列，最多发送 {{limit}} 个分类值，按出现次数从多到少。其余显示为 {{omission}}。",
     "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "分析结果在发送前会做脱敏检查，含单个病例行的输出不会发送。",
     "Details_privacy": "详细",
-    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者数据在您的电脑上分析。默认向 AI 服务发送列名、数据类型、行数、合成样例、您选定的列的分类值，以及分析的汇总结果。姓名、病历号等直接标识符不会发送。"
+    "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者数据在您的电脑上分析。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。默认向 AI 服务发送列名、数据类型、行数、合成样例、您选定的列的分类值，以及分析的汇总结果。姓名、病历号等直接标识符不会发送。",
+    "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "仅使用虚构数据。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。使用费用由您自己的服务商收取。"
   }
 }

@@ -2693,7 +2693,7 @@
     "Model ID must not exceed {{limit}} characters.": "Die Modell-ID darf nicht länger als {{limit}} Zeichen sein.",
     "Awaiting your answer…": "Warten auf Ihre Antwort…",
     "Included": "Aufgenommen",
-    "Your key stays private.": "Ihr Schlüssel bleibt privat.",
+    "Your API key is stored securely.": "Ihr API-Schlüssel wird sicher gespeichert.",
     "Go-to locations": "Schnellzugriffsorte",
     "Force update…": "Update erzwingen…",
     "Mention {{name}}": "Erwähnen Sie {{name}}",
@@ -7115,7 +7115,7 @@
     "Providers": "Anbieter",
     "Open files, generated artifacts, code, and notebooks.": "Öffnen Sie Dateien, generierte Artefakte, Code und Notebooks.",
     "Retry turning off": "Ausschalten erneut versuchen",
-    "Research files remain on this computer.": "Forschungsdateien bleiben auf diesem Computer.",
+    "Research files are stored on this computer. Requests go to the AI service you configure.": "Forschungsdateien werden auf diesem Computer gespeichert. Anfragen werden an den von Ihnen konfigurierten KI-Dienst gesendet.",
     "Create references from PDF files": "Literaturangaben aus PDF-Dateien erstellen",
     "DRA will run a one-time root installation in {{distro}} for missing Linux packages only. It will not change sudoers, and {{user}} will remain the selected non-root user for everyday and future runs.": "DRA führt in {{distro}} einmalig als root eine Installation ausschließlich für fehlende Linux-Pakete durch. Die sudoers-Konfiguration wird nicht geändert und {{user}} bleibt für die tägliche und zukünftige Nutzung der ausgewählte Benutzer ohne root-Rechte.",
     "Not yet verified": "Noch nicht verifiziert",
@@ -7679,7 +7679,7 @@
     "Reason it does not apply": "Reason it does not apply",
     "Enter a reason.": "Enter a reason.",
     "Draft": "Draft",
-    "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "Baselio analyzes patient data on your PC and sends only information without direct identifiers (such as column names and aggregate results) to AI services. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.",
+    "Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results; direct identifiers such as names or medical record numbers are not sent. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "Die Analyse läuft auf diesem Computer. Von Ihnen gesendete Anfragen gehen an den von Ihnen konfigurierten KI-Dienst (bei OpenAI in die USA). Der Dienst kann Spaltennamen, Datentypen, synthetische Stichproben, ausgewählte Kategoriewerte und aggregierte Ergebnisse erhalten; direkte Identifikatoren wie Namen oder Krankenaktennummern werden nicht gesendet. Prüfen Sie die Vorgaben Ihrer Einrichtung oder fragen Sie die Ethikkommission, ob dies als Auftragsverarbeitung gilt.",
     "Research title": "Research title",
     "Research organization": "Research organization",
     "Purpose and significance": "Purpose and significance",
@@ -7797,6 +7797,7 @@
     "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "Für eine von Ihnen ausgewählte Spalte werden höchstens {{limit}} Kategoriewerte gesendet, die häufigsten zuerst. Weitere Werte werden als {{omission}} angezeigt.",
     "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "Analyseergebnisse werden vor dem Senden maskiert geprüft, und Ausgaben mit einzelnen Zeilen werden nicht gesendet.",
     "Details_privacy": "Details",
-    "Patient data is analyzed on your computer. By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Patientendaten werden auf Ihrem Computer analysiert. Standardmäßig erhält der KI-Dienst Spaltennamen, Datentypen, die Zeilenanzahl, synthetische Stichproben, die Kategoriewerte der von Ihnen ausgewählten Spalten und aggregierte Analyseergebnisse. Direkte Identifikatoren wie Namen oder Krankenaktennummern werden nicht gesendet."
+    "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "Die Patientenanalyse läuft auf diesem Computer. Anfragen werden an den von Ihnen konfigurierten KI-Dienst gesendet (bei OpenAI in die USA). Standardmäßig erhält der KI-Dienst Spaltennamen, Datentypen, Zeilenanzahl, synthetische Stichproben, die Kategoriewerte der von Ihnen ausgewählten Spalten und aggregierte Analyseergebnisse. Direkte Identifikatoren wie Namen oder Krankenaktennummern werden nicht gesendet.",
+    "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "Nur fiktive Daten verwenden. Anfragen werden an den von Ihnen konfigurierten KI-Dienst gesendet (bei OpenAI in die USA). Die Nutzungsgebühren werden von Ihrem eigenen Anbieter abgerechnet."
   }
 }
