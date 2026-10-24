@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigationStore } from '@/stores/navigation-store'
 import { useProjectStore } from '@/stores/project-store'
 import { isMentorDiscussionPack } from '../../../../shared/deliverable-pack-policy'
+import { S34_2_RESEARCH_DESIGN_CHECKLIST } from '../../../../shared/s34-disclaimers'
 import { deliverableCardCopy } from './deliverable-packages'
 
 export const MentorPackComposerNotice = ({
@@ -25,6 +26,9 @@ export const MentorPackComposerNotice = ({
     >
       <p className="font-medium text-[#9a5046]">{copy.hardRule}</p>
       <p>{copy.inputNotice}</p>
+      <p data-testid="s34-disclaimer-research-design" className="border-t border-[#e4ded2] pt-2">
+        {S34_2_RESEARCH_DESIGN_CHECKLIST}
+      </p>
     </div>
   )
 }
