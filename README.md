@@ -55,7 +55,7 @@ DRA 可由运行中的桌面端提供浏览器界面。先在桌面端启用远�
 
 本仓库基于 [AIPOCH Open-Science v1.0.0](https://github.com/aipoch/open-science/releases/tag/v1.0.0)（源码提交 `046fa0a22da72f3f51e19347dbfa2ae15682c153`）改造，保留 Apache-2.0 许可与上游来源说明。此前的统一候选基于 v0.36.0；更早的快照参考是 [v0.33.3](https://github.com/aipoch/open-science/releases/tag/v0.33.3)（`3cc68699d616d80325ad893be4c1a65659d29aed`）。原始项目文档保存在 [UPSTREAM_README.md](UPSTREAM_README.md)。
 
-源码仓库：[chenglei1479-rgb/hph-health](https://github.com/chenglei1479-rgb/hph-health)。当前目录是产品开发源码，不是已签名安装包。应用内仓库、帮助、反馈和发行说明入口指向该 GitHub 仓库；桌面自动更新清单、安装包下载页面、代码签名和正式发行流程仍需单独配置。
+源码仓库：[chenglei1479-rgb/hph-66health](https://github.com/chenglei1479-rgb/hph-health)。当前目录是产品开发源码，不是已签名安装包。应用内仓库、帮助、反馈和发行说明入口指向该 GitHub 仓库；桌面自动更新清单、安装包下载页面、代码签名和正式发行流程仍需单独配置。
 
 ## 统一候选 0.1.33-unified.1
 
