@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { errorDetail } from '@/lib/error-detail'
+import { errorNoticeDetail } from '@/lib/error-detail'
 import type { MachineApprovalStatus } from '../../../../shared/machine-approval'
 import { SettingsSection } from './SettingsLayout'
 
@@ -20,7 +20,7 @@ const MachineApprovalSection = (): React.JSX.Element => {
         setError(undefined)
       },
       (cause: unknown) => {
-        setError(errorDetail(cause) ?? t('Could not read hospital approval.'))
+        setError(errorNoticeDetail(cause, t) ?? t('Could not read hospital approval.'))
       }
     )
   }, [t])
@@ -45,7 +45,7 @@ const MachineApprovalSection = (): React.JSX.Element => {
           setError(undefined)
         },
         (cause: unknown) => {
-          setError(errorDetail(cause) ?? t('Could not update hospital approval.'))
+          setError(errorNoticeDetail(cause, t) ?? t('Could not update hospital approval.'))
         }
       )
       .finally(() => setPending(false))
@@ -60,7 +60,7 @@ const MachineApprovalSection = (): React.JSX.Element => {
         setPending(false)
       },
       (cause: unknown) => {
-        setError(errorDetail(cause) ?? t('Could not update hospital approval.'))
+        setError(errorNoticeDetail(cause, t) ?? t('Could not update hospital approval.'))
         setPending(false)
       }
     )

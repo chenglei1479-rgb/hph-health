@@ -7638,6 +7638,14 @@
     "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "환자 데이터 분석은 이 PC에서 수행됩니다. 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. AI 서비스에는 기본적으로 열 이름, 데이터 유형, 행 수, 합성 샘플, 선택한 열의 범주 값, 분석 집계 결과가 전송됩니다. 이름이나 진료 기록 번호 같은 직접 식별자는 전송하지 않습니다.",
     "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "가상 데이터만 사용합니다. 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. 사용 요금은 사용자의 모델 제공업체에서 청구됩니다.",
     "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "테스트 버전에서는 자동 업데이트가 비활성화됩니다. 새 버전은 배포처에서 안내합니다.",
-    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "이 PC에서 보호된 실행을 시작할 수 없습니다. 설정 > 네트워크에서 Notebook 보호 설정을 완료한 후 다시 시도하세요. ({{code}})"
+    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "이 PC에서 보호된 실행을 시작할 수 없습니다. 설정 > 네트워크에서 Notebook 보호 설정을 완료한 후 다시 시도하세요. ({{code}})",
+    "The app could not finish that action. Retry. If it keeps failing, reload the app. (Code: {{code}})": "앱이 해당 작업을 완료하지 못했습니다. 다시 시도하세요. 계속 실패하면 앱을 다시 로드하세요. (코드: {{code}})",
+    "The app is not connected to its backend right now. Wait a moment, then retry. (Code: {{code}})": "앱이 현재 백엔드에 연결되어 있지 않습니다. 잠시 기다린 후 다시 시도하세요. (코드: {{code}})",
+    "Settings could not be saved on this device. Check free disk space and folder permissions, then retry. (Code: {{code}})": "이 기기에 설정을 저장하지 못했습니다. 디스크 여유 공간과 폴더 권한을 확인한 후 다시 시도하세요. (코드: {{code}})",
+    "The system credential store is locked or unavailable. Unlock it, then retry. (Code: {{code}})": "시스템 자격 증명 저장소가 잠겨 있거나 사용할 수 없습니다. 잠금을 해제한 후 다시 시도하세요. (코드: {{code}})",
+    "This Session has reached its size limit. Start a new Session or remove large attachments, then retry. (Code: {{code}})": "이 세션이 크기 한도에 도달했습니다. 새 세션을 시작하거나 큰 첨부 파일을 제거한 후 다시 시도하세요. (코드: {{code}})",
+    "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "이 세션이 다른 창에서 변경되었습니다. 다시 연 후 재시도하세요. (코드: {{code}})",
+    "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "인용 스타일 파일을 가져오지 못했습니다. 유효한 독립형 CSL 1.0 스타일인지 확인한 후 다시 시도하세요. (코드: {{code}})",
+    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "앱이 해당 작업을 완료하지 못했습니다. 다시 시도하세요. 계속 발생하면 도움을 요청할 때 이 코드를 알려 주세요. (코드: {{code}})"
   }
 }

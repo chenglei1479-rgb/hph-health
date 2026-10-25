@@ -7640,6 +7640,14 @@
     "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者資料在您的電腦上分析。請求會傳送到您設定的 AI 服務（如果是 OpenAI，則傳送到美國）。預設向 AI 服務傳送欄名、資料類型、行數、合成樣例、您選定的欄的分類值，以及分析的匯總結果。姓名、病歷號等直接識別符不會傳送。",
     "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "僅使用虛構資料。請求會傳送到您設定的 AI 服務（如果是 OpenAI，則傳送到美國）。使用費用由您自己的服務商收取。",
     "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "測試版不提供自動更新。新版本由發佈方公布。",
-    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "無法在此電腦上啟動受保護的執行。請在「設定 > 網路」中完成 Notebook 保護的設定，然後重試。（{{code}}）"
+    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "無法在此電腦上啟動受保護的執行。請在「設定 > 網路」中完成 Notebook 保護的設定，然後重試。（{{code}}）",
+    "The app could not finish that action. Retry. If it keeps failing, reload the app. (Code: {{code}})": "應用程式未能完成該操作。請重試。若仍持續失敗，請重新載入應用程式。（代碼：{{code}}）",
+    "The app is not connected to its backend right now. Wait a moment, then retry. (Code: {{code}})": "應用程式目前未連線至後端。請稍候片刻，然後重試。（代碼：{{code}}）",
+    "Settings could not be saved on this device. Check free disk space and folder permissions, then retry. (Code: {{code}})": "無法將設定儲存到這部裝置。請檢查磁碟可用空間與資料夾權限，然後重試。（代碼：{{code}}）",
+    "The system credential store is locked or unavailable. Unlock it, then retry. (Code: {{code}})": "系統認證資訊儲存區已鎖定或無法使用。請先解除鎖定，然後重試。（代碼：{{code}}）",
+    "This Session has reached its size limit. Start a new Session or remove large attachments, then retry. (Code: {{code}})": "此工作階段已達到大小上限。請開始新的工作階段或移除較大的附件，然後重試。（代碼：{{code}}）",
+    "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "此工作階段已在另一個視窗中變更。請重新開啟後再試。（代碼：{{code}}）",
+    "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "無法匯入引用樣式檔案。請確認它是有效且獨立的 CSL 1.0 樣式，然後重試。（代碼：{{code}}）",
+    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "應用程式未能完成該操作。請重試。若仍持續發生，請在尋求協助時提供此代碼。（代碼：{{code}}）"
   }
 }
