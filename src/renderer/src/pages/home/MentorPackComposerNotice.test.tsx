@@ -83,6 +83,16 @@ it('does not show the ① checklist outside the mentor pack', async () => {
     await renderNotice(agentContext)
     expect(document.body.querySelector('[data-testid="mentor-pack-input-notice"]')).toBeNull()
     expect(document.body.querySelector('[data-testid="s34-disclaimer-research-design"]')).toBeNull()
+    expect(document.body.querySelector('[data-testid="s34-research-plan-checklist"]')).toBeNull()
     await unmount()
   }
+})
+
+it('mounts the T3 four-question checklist inside the mentor pack only', async () => {
+  await renderNotice(MENTOR_PACK_MODE_LINE)
+  const notice = document.body.querySelector('[data-testid="mentor-pack-input-notice"]')
+  const checklist = document.body.querySelector('[data-testid="s34-research-plan-checklist"]')
+  expect(checklist).not.toBeNull()
+  expect(notice?.contains(checklist!)).toBe(true)
+  expect(checklist?.querySelectorAll('[data-testid^="s34-plan-block-"]')).toHaveLength(4)
 })

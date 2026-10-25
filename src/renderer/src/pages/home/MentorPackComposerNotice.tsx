@@ -5,6 +5,7 @@ import { useProjectStore } from '@/stores/project-store'
 import { isMentorDiscussionPack } from '../../../../shared/deliverable-pack-policy'
 import { S34_2_RESEARCH_DESIGN_CHECKLIST } from '../../../../shared/s34-disclaimers'
 import { deliverableCardCopy } from './deliverable-packages'
+import { ResearchPlanChecklistPanel } from './ResearchPlanChecklistPanel'
 
 export const MentorPackComposerNotice = ({
   sessionProjectId
@@ -29,6 +30,7 @@ export const MentorPackComposerNotice = ({
       <p data-testid="s34-disclaimer-research-design" className="border-t border-[#e4ded2] pt-2">
         {S34_2_RESEARCH_DESIGN_CHECKLIST}
       </p>
+      <ResearchPlanChecklistPanel projectId={projectId} />
     </div>
   )
 }
