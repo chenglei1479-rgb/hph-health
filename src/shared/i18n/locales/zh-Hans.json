@@ -7640,6 +7640,14 @@
     "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者数据在您的电脑上分析。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。默认向 AI 服务发送列名、数据类型、行数、合成样例、您选定的列的分类值，以及分析的汇总结果。姓名、病历号等直接标识符不会发送。",
     "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "仅使用虚构数据。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。使用费用由您自己的服务商收取。",
     "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "测试版不提供自动更新。新版本由分发方公布。",
-    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "无法在此电脑上启动受保护的执行。请在“设置 > 网络”中完成 Notebook 保护的设置，然后重试。（{{code}}）"
+    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "无法在此电脑上启动受保护的执行。请在“设置 > 网络”中完成 Notebook 保护的设置，然后重试。（{{code}}）",
+    "The app could not finish that action. Retry. If it keeps failing, reload the app. (Code: {{code}})": "应用未能完成该操作。请重试。如果仍然失败，请重新加载应用。（代码：{{code}}）",
+    "The app is not connected to its backend right now. Wait a moment, then retry. (Code: {{code}})": "应用当前未连接到后端。请稍候片刻，然后重试。（代码：{{code}}）",
+    "Settings could not be saved on this device. Check free disk space and folder permissions, then retry. (Code: {{code}})": "无法将设置保存到这台设备。请检查磁盘可用空间和文件夹权限，然后重试。（代码：{{code}}）",
+    "The system credential store is locked or unavailable. Unlock it, then retry. (Code: {{code}})": "系统凭据存储已锁定或不可用。请先解锁，然后重试。（代码：{{code}}）",
+    "This Session has reached its size limit. Start a new Session or remove large attachments, then retry. (Code: {{code}})": "此会话已达到大小上限。请新建会话或移除较大的附件，然后重试。（代码：{{code}}）",
+    "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "此会话已在另一个窗口中更改。请重新打开后再试。（代码：{{code}}）",
+    "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "无法导入引文样式文件。请确认它是有效且独立的 CSL 1.0 样式，然后重试。（代码：{{code}}）",
+    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "应用未能完成该操作。请重试。如果仍然出现，请在寻求帮助时提供此代码。（代码：{{code}}）"
   }
 }

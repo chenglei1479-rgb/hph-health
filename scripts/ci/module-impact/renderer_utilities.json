@@ -1,6 +1,8 @@
 {
   "ownerPaths": [
     "src/renderer/src/lib/active-session-display.test.ts",
+    "src/renderer/src/lib/application-command-error-message.test.ts",
+    "src/renderer/src/lib/application-command-error-message.ts",
     "src/renderer/src/lib/customize-chat.test.ts",
     "src/renderer/src/lib/customize-chat.ts",
     "src/renderer/src/lib/deep-link.navigation.test.tsx",
@@ -54,6 +56,7 @@
   "testFiles": {
     "owner": [
       "src/renderer/src/lib/active-session-display.test.ts",
+      "src/renderer/src/lib/application-command-error-message.test.ts",
       "src/renderer/src/lib/customize-chat.test.ts",
       "src/renderer/src/lib/deep-link.navigation.test.tsx",
       "src/renderer/src/lib/deep-link.test.ts",

@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { errorDetail } from '@/lib/error-detail'
+import { errorDetail, errorNoticeDetail } from '@/lib/error-detail'
 import {
   INTERFACE_SCALE_OPTIONS,
   isDesktopRenderer,
@@ -171,7 +171,7 @@ const GeneralPanel = (): React.JSX.Element => {
     try {
       await reopenOnboarding()
     } catch (error) {
-      setReopenError(errorDetail(error) ?? t('Could not reopen setup.'))
+      setReopenError(errorNoticeDetail(error, t) ?? t('Could not reopen setup.'))
       setIsReopeningSetup(false)
     }
   }

@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dialog-chrome'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { errorDetail } from '@/lib/error-detail'
+import { errorNoticeDetail } from '@/lib/error-detail'
 import { useSettingsStore } from '@/stores/settings-store'
 import { GitHubTokenControl } from './GitHubTokenControl'
 import { MaskedPasswordField } from './MaskedPasswordField'
@@ -189,7 +189,7 @@ export function CredentialsPanel({
       setApiKeyDraft(undefined)
       setMessage(t('OpenAlex API key saved.'))
     } catch (error) {
-      setMessage(errorDetail(error) ?? t('Could not save the OpenAlex API key.'))
+      setMessage(errorNoticeDetail(error, t) ?? t('Could not save the OpenAlex API key.'))
     } finally {
       setBusy(false)
     }
@@ -218,7 +218,7 @@ export function CredentialsPanel({
       await setOpenAlexCredential({ apiKey: '' })
       setApiKeyDraft(undefined)
     } catch (error) {
-      setMessage(errorDetail(error) ?? t('Could not remove the OpenAlex API key.'))
+      setMessage(errorNoticeDetail(error, t) ?? t('Could not remove the OpenAlex API key.'))
     } finally {
       setBusy(false)
     }
@@ -233,7 +233,7 @@ export function CredentialsPanel({
       setApiKeyDraft(undefined)
       setMessage(t('Literature credentials saved.'))
     } catch (error) {
-      setMessage(errorDetail(error) ?? t('Could not save literature credentials.'))
+      setMessage(errorNoticeDetail(error, t) ?? t('Could not save literature credentials.'))
     } finally {
       setBusy(false)
     }
@@ -248,7 +248,7 @@ export function CredentialsPanel({
       setApiKeyDraft(undefined)
       setMessage(t('Literature credentials saved.'))
     } catch (error) {
-      setMessage(errorDetail(error) ?? t('Could not save literature credentials.'))
+      setMessage(errorNoticeDetail(error, t) ?? t('Could not save literature credentials.'))
     } finally {
       setBusy(false)
     }
