@@ -13,7 +13,10 @@ import {
   dialogPanelClassName
 } from '@/components/ui/dialog-chrome'
 import { recordPackDelivery } from './pack-delivery-ledger'
-import { classifyStatisticianExportFailure } from '../../../../shared/statistician-export-diagnostics'
+import {
+  classifyStatisticianExportFailure,
+  STATISTICIAN_EXPORT_RESOURCE_CODE
+} from '../../../../shared/statistician-export-diagnostics'
 import {
   parseResultTableTsv,
   parseVariableDefinitionTsv,
@@ -153,11 +156,17 @@ const StatisticianReviewExportDialog = ({
       recordPackDelivery('statistician-export', `export:${crypto.randomUUID()}`)
       setStatus(t('Statistician package exported.'))
     } catch (error) {
+      const code = classifyStatisticianExportFailure(error)
       setStatus(
-        t(
-          'The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}',
-          { code: classifyStatisticianExportFailure(error) }
-        )
+        code === STATISTICIAN_EXPORT_RESOURCE_CODE
+          ? t(
+              'A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}',
+              { code }
+            )
+          : t(
+              'The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}',
+              { code }
+            )
       )
     } finally {
       setPending(false)

@@ -235,7 +235,8 @@ it('reports the resource diagnostic when a bundled export resource is missing', 
     await clickExport()
 
     expect(statusText()).toContain('WIN-EXPORT-01')
-    expect(statusText()).toContain('Check the destination folder and retry')
+    expect(statusText()).toContain('A bundled export resource is missing')
+    expect(statusText()).not.toContain('Check the destination folder')
     expect(getPackDeliveryLedger().totalCompleted).toBe(0)
   } finally {
     await mounted.unmount()

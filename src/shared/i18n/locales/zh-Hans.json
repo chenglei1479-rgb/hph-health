@@ -7649,6 +7649,9 @@
     "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "此会话已在另一个窗口中更改。请重新打开后再试。（代码：{{code}}）",
     "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "无法导入引文样式文件。请确认它是有效且独立的 CSL 1.0 样式，然后重试。（代码：{{code}}）",
     "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "应用未能完成该操作。请重试。如果仍然出现，请在寻求帮助时提供此代码。（代码：{{code}}）",
-    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "无法写出资料包。请检查保存位置后重试；如果仍然失败，请报告此诊断编号：{{code}}"
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "无法写出资料包。请检查保存位置后重试；如果仍然失败，请报告此诊断编号：{{code}}",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "无法写出资料包。请检查保存位置后重试；如果仍然失败，请报告此诊断编号：{{code}}",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "无法写出资料包。请检查保存位置后重试；如果仍然失败，请报告此诊断编号：{{code}}",
+    "A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}": "缺少随应用附带的导出资源。请重试一次；如果仍然失败，请报告此诊断编号：{{code}}"
   }
 }
