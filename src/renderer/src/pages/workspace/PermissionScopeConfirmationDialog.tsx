@@ -96,7 +96,9 @@ const PermissionScopeConfirmationDialog = ({
               <strong className="font-semibold text-foreground">{settingsTarget}</strong>
             </AlertDialog.Description>
           </div>
-          <div className={`${dialogFooterClassName} flex-wrap`}>
+          <div
+            className={`${dialogFooterClassName} flex-wrap [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere]`}
+          >
             <AlertDialog.Cancel asChild>
               <Button
                 type="button"

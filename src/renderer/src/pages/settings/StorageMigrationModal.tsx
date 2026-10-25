@@ -334,7 +334,12 @@ const StorageMigrationModal = ({
                   </li>
                 ))}
               </ul>
-              <div className={cn(dialogFooterClassName, 'mt-5 border-0 p-0')}>
+              <div
+                className={cn(
+                  dialogFooterClassName,
+                  'mt-5 border-0 p-0 [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere]'
+                )}
+              >
                 <Button
                   type="button"
                   variant={hasDelegatedWork ? 'outline' : 'ghost'}
@@ -407,9 +412,7 @@ const StorageMigrationModal = ({
                 role="alert"
                 tone="amber"
                 className="mt-3"
-                description={t(
-                  "Don't quit DRA or turn off your computer until this finishes."
-                )}
+                description={t("Don't quit DRA or turn off your computer until this finishes.")}
               />
               <div className={cn(dialogFooterClassName, 'mt-5 border-0 p-0')}>
                 <Button
