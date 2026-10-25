@@ -23,20 +23,21 @@ const REDACTED_PATH = '<path>'
 // Node prints the paths this module has to diagnose in several shapes: an ENOENT open argument
 // ('C:\Users\Jane Doe\...'), a module URL ('file:///C:/Users/...'), a forward-slash Windows path
 // ('C:/Users/...'), a POSIX home ('/Users/...', '/home/...'), and a UNC share ('\\server\share\...').
-// The quoted rule replaces a quoted path as one token, which is how Node reports ENOENT and "Cannot
-// find module" values; that also stops a space inside a user name from being only partly replaced.
-// The unquoted rule covers the same shapes when Node does not quote them. Every absolute form is
-// replaced, over- rather than under-matching: a leaked user name in main.log is worse than an
-// over-redacted diagnostic.
+// The quoted rule replaces a quoted path as one token, which is how Node reports ENOENT and the
+// "Cannot find module '<id>'" value; that also stops a space inside a user name from being only
+// partly replaced. The unquoted rule covers the shapes Node prints without quotes, including the
+// `imported from C:\Users\Jane Doe\...` and `Unknown file extension ".otf" for C:\Users\Jane Doe\...`
+// lines: there the path itself contains spaces and is not wrapped in quotes.
 //
-// Known limit: an unquoted Windows path that contains a space ('open C:\Users\Jane Doe\x failed') is
-// cut at the space and leaves ' Doe\x'. Node quotes the path for the error classes this channel logs
-// (ENOENT / Cannot find module / ERR_UNKNOWN_FILE_EXTENSION), so that shape does not reach here
-// unquoted; it is documented rather than guessed at with a greedy rule that would eat whole sentences.
+// Every absolute form is replaced, over- rather than under-matching: a leaked user name in main.log
+// is worse than an over-redacted diagnostic. The price is that once an unquoted absolute path starts,
+// the rest of that line is replaced with it, because a path with spaces cannot be told apart from the
+// prose that follows it. That is the accepted trade: the diagnostic still names the failing stage,
+// and the message is bounded to 300 characters afterwards.
 const QUOTED_ABSOLUTE_PATH =
   /(['"`])(?:file:\/\/\/)?(?:[A-Za-z]:[\\/]|\/(?:Users|home)\/|[\\/]{2})[^'"`\n]*?\1/gu
 const UNQUOTED_ABSOLUTE_PATH =
-  /(?:file:\/\/\/)?[A-Za-z]:[\\/][^\s'"`<>]*|\/(?:Users|home)\/[^\s'"`<>]*|\\\\[^\s'"`<>]*/gu
+  /(?:file:\/\/\/)?[A-Za-z]:[\\/][^\n'"`<>]*|\/(?:Users|home)\/[^\n'"`<>]*|\\\\[^\n'"`<>]*/gu
 
 /**
  * Diagnostic-safe error text: absolute paths (which can carry a user name or a project folder) are

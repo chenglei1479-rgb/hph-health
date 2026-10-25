@@ -79,6 +79,30 @@ describe('statistician export failure diagnostics', () => {
     expect(redacted).toContain('<path>')
   })
 
+  it('redacts the unquoted trailing path in a module-not-found line that contains spaces', () => {
+    const redacted = redact(
+      new Error(
+        "Cannot find module 'C:\\Users\\Jane Doe\\WorkBuddy AI\\hph-health\\missing.mjs' imported from C:\\Users\\Jane Doe\\WorkBuddy AI\\hph-health\\[eval]"
+      )
+    )
+    for (const fragment of ['Jane', 'Doe', 'WorkBuddy', 'hph-health', 'missing.mjs']) {
+      expect(redacted).not.toContain(fragment)
+    }
+    expect(redacted).toContain('imported from <path>')
+  })
+
+  it('redacts the unquoted trailing path in an unknown-extension line that contains spaces', () => {
+    const redacted = redact(
+      new Error(
+        'Unknown file extension ".otf" for C:\\Users\\Jane Doe\\WorkBuddy AI\\hph-health\\resources\\NotoSansSC-Regular.otf'
+      )
+    )
+    for (const fragment of ['Jane', 'Doe', 'WorkBuddy', 'hph-health', 'NotoSansSC']) {
+      expect(redacted).not.toContain(fragment)
+    }
+    expect(redacted).toContain('Unknown file extension ".otf"')
+  })
+
   it('redacts a POSIX home path', () => {
     const redacted = redact(new Error('EACCES: permission denied, open /Users/cheng/export.zip'))
     expect(redacted).not.toContain('cheng')
@@ -99,6 +123,9 @@ describe('statistician export failure diagnostics', () => {
     expect(redact(new Error('The PDF font loader is unavailable. Nothing was exported.'))).toBe(
       'Error: The PDF font loader is unavailable. Nothing was exported.'
     )
+    // A quoted relative path or a quoted phrase is not an absolute path and must survive.
+    expect(redact(new Error("Cannot open 'path/to/file' for reading"))).toContain("'path/to/file'")
+    expect(redact(new Error("The dialog said 'save as' and stopped"))).toContain("'save as'")
   })
 
   it('does not swallow the sentence that follows a quoted path', () => {
