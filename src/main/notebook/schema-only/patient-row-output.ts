@@ -233,11 +233,7 @@ const collectTables = (text: string): ParsedTable[] => [
 
 /** Which shape decision blocked the text. `null` means the text was released. */
 export type PatientRowBlockBranch =
-  | 'record-series'
-  | 'per-row-dicts'
-  | 'single-patient-fields'
-  | 'non-aggregate-table'
-  | null
+  'record-series' | 'per-row-dicts' | 'single-patient-fields' | 'non-aggregate-table' | null
 
 /** Per-table shape only: no headers, no cells, no variable names. */
 export type PatientRowTableShape = {
@@ -256,10 +252,12 @@ export type PatientRowTableShape = {
 export type PatientRowAttribution = {
   block: PatientRowBlockBranch
   textLength: number
+  /** First 12 hex characters of SHA-256 over the refused text; empty when the text was released. */
   digest: string
   tables: number
   tableShapes: PatientRowTableShape[]
   describeTables: number
+  /** Only computed for a refusal; always false on the released path. */
   frameFooter: boolean
   frequencySeries: boolean
 }
@@ -308,27 +306,51 @@ export const patientRowAttribution = (text: string): PatientRowDecision => {
   if (containsRecordSeries(text)) {
     return {
       containsPatientRows: true,
-      attribution: { ...emptyAttribution(text, 'record-series'), frequencySeries: isFrequencySeries(text) }
+      attribution: {
+        ...emptyAttribution(text, 'record-series'),
+        frequencySeries: isFrequencySeries(text)
+      }
     }
   }
   if (containsPerRowDicts(text)) {
     return { containsPatientRows: true, attribution: emptyAttribution(text, 'per-row-dicts') }
   }
   if (containsSinglePatientFields(text)) {
-    return { containsPatientRows: true, attribution: emptyAttribution(text, 'single-patient-fields') }
+    return {
+      containsPatientRows: true,
+      attribution: emptyAttribution(text, 'single-patient-fields')
+    }
   }
   const tables = collectTables(text)
   const shapes = tables.map(tableShape)
   const nonAggregate = tables.some((table) => !isAggregateTable(table))
+  const describeTables = shapes.filter((shape) => shape.describe).length
+  if (!nonAggregate) {
+    // Released output needs no forensic fingerprint: hashing the whole string and scanning every
+    // line for a frame footer would cost this gate work on every aggregate that passes.
+    return {
+      containsPatientRows: false,
+      attribution: {
+        block: null,
+        textLength: text.length,
+        digest: '',
+        tables: tables.length,
+        tableShapes: shapes.slice(0, ATTRIBUTION_TABLE_LIMIT),
+        describeTables,
+        frameFooter: false,
+        frequencySeries: false
+      }
+    }
+  }
   return {
-    containsPatientRows: nonAggregate,
+    containsPatientRows: true,
     attribution: {
-      block: nonAggregate ? 'non-aggregate-table' : null,
+      block: 'non-aggregate-table',
       textLength: text.length,
       digest: digestOf(text),
       tables: tables.length,
       tableShapes: shapes.slice(0, ATTRIBUTION_TABLE_LIMIT),
-      describeTables: shapes.filter((shape) => shape.describe).length,
+      describeTables,
       frameFooter: hasFrameFooter(text),
       frequencySeries: false
     }

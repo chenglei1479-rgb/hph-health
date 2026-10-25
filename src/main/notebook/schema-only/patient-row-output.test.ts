@@ -137,10 +137,13 @@ describe('patient-row gate attribution', () => {
     for (const fragment of fragments) expect(payload).not.toContain(fragment)
   })
 
-  it('attributes a released aggregate to no branch', () => {
+  it('attributes a released aggregate to no branch and skips the forensic work', () => {
     const decision = patientRowAttribution('sex,mean,n\n男性,55.2,120\n女性,60.1,130')
     expect(decision.containsPatientRows).toBe(false)
     expect(decision.attribution.block).toBeNull()
+    // Released output is neither fingerprinted nor scanned for a frame footer.
+    expect(decision.attribution.digest).toBe('')
+    expect(decision.attribution.frameFooter).toBe(false)
     expect(decision.attribution.tableShapes[0]).toEqual({
       rows: 2,
       columns: 3,

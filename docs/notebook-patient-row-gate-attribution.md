@@ -32,8 +32,12 @@ the record deliberately holds only counts, booleans, a length, and a truncated d
    (`main.log` under the app log directory).
 3. Search for `notebook:patient-row-gate`. The matching record is the refusal, and its `block` plus
    `tableShapes` say why.
-4. Report the record as-is. It is safe to paste: it holds no patient content. Add how the table was
-   produced (`groupby` keys, aggregation columns, row count) so the shape can be compared.
+4. Do **not** paste the whole line: it includes `digest`, a local fingerprint that must not leave the
+   machine. Copy only `block`, `tableShapes` (`rows`, `columns`, `statHeaders`, `groupKeys`,
+   `describe`), `tables`, `describeTables`, `frameFooter`, `textLength`. Diagnostics exports strip
+   `digest` automatically; a manual copy is on the reader.
+5. Add how the table was produced (`groupby` keys, aggregation columns, row count) so the shape can be
+   compared.
 
 ## What this does not do
 

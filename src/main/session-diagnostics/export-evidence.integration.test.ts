@@ -234,3 +234,41 @@ it('exports separate Desktop and Runtime logs with transport budgets and redacte
   )
   expect(files['logs/main.log']).not.toContain('runtime-attach')
 })
+
+it('keeps the patient-row gate digest local and strips it from an exported log', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'patient-row-gate-digest-'))
+  roots.push(root)
+  const logDir = join(root, 'logs')
+  const configRoot = join(root, 'config')
+  await mkdir(configRoot)
+  initLogger({ logDir, mirrorToConsole: false })
+  const digest = 'a1b2c3d4e5f6'
+  createLogger('notebook:patient-row-gate').info(
+    'blocked notebook output attributed to patient rows',
+    {
+      block: 'non-aggregate-table',
+      digest,
+      tables: 1,
+      tableShapes: [{ rows: 2, columns: 7, statHeaders: 2, groupKeys: 5, describe: false }]
+    }
+  )
+  await flushLogs()
+  const logPath = join(logDir, 'main.log')
+  // The fingerprint stays in the local log: that is what makes two recurrences comparable.
+  expect(await readFile(logPath, 'utf8')).toContain(digest)
+
+  const files = await exportDiagnosticFiles(
+    { configRoot, dataRoot: join(root, 'data'), logPath, appVersion: 'test' },
+    { projectId: 'project', sessionId: 'session', selectedItems: ['log:main.log'] }
+  )
+
+  const exported = files['logs/main.log']
+  // The record itself survives the export; only its fingerprint is gone. The log projection also
+  // omits unknown data fields, so the readSource redaction is the belt-and-braces layer.
+  expect(exported).toContain('notebook:patient-row-gate')
+  expect(exported).toContain('blocked notebook output attributed to patient rows')
+  expect(exported).not.toContain(digest)
+  expect(exported).not.toContain('non-aggregate-table')
+  expect(await readFile(logPath, 'utf8')).toContain(digest)
+  expect(await readFile(logPath, 'utf8')).toContain('non-aggregate-table')
+})
