@@ -22,6 +22,8 @@ import {
   homeCardInteractiveClassName,
   homeIconTileClassName,
   homeMutedClassName,
+  homePrimaryColumnClassName,
+  homePrimaryGridClassName,
   homeTitleClassName,
   homeWarningClassName
 } from './home-layout'
@@ -214,10 +216,10 @@ const MedicalResearchLaunchpad = ({
           </p>
           <h2 className={homeTitleClassName}>{t('Choose where to begin')}</h2>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3" data-testid="home-primary-entries">
+        <div className={homePrimaryGridClassName} data-testid="home-primary-entries">
           {entries.map(
             ({ id, workflow, title, description, hardRule, inputNotice, icon: Icon }) => (
-              <div key={id} className="flex w-full min-w-0 flex-col gap-2">
+              <div key={id} className={homePrimaryColumnClassName}>
                 <button
                   type="button"
                   data-testid={`home-entry-${id}`}
@@ -236,29 +238,35 @@ const MedicalResearchLaunchpad = ({
                       aria-hidden="true"
                     />
                   </span>
-                  <span className={cn(homeBodyClassName, 'mt-4')}>{title}</span>
+                  <span className={cn(homeBodyClassName, 'mt-4 min-w-0 [overflow-wrap:anywhere]')}>
+                    {title}
+                  </span>
                   <span
                     data-testid={`home-entry-description-${id}`}
-                    className={cn(homeMutedClassName, 'mt-1')}
+                    className={cn(homeMutedClassName, 'mt-2 min-w-0 [overflow-wrap:anywhere]')}
                   >
                     {description}
                   </span>
                   {hardRule ? (
                     <span
                       data-testid="mentor-pack-hard-rule"
-                      className={cn(homeWarningClassName, 'mt-2')}
+                      className={cn(homeWarningClassName, 'mt-4 min-w-0 [overflow-wrap:anywhere]')}
                     >
                       {hardRule}
                     </span>
                   ) : null}
                   {inputNotice ? (
-                    <span className={cn(homeWarningClassName, 'mt-1')}>{inputNotice}</span>
+                    <span
+                      className={cn(homeWarningClassName, 'mt-2 min-w-0 [overflow-wrap:anywhere]')}
+                    >
+                      {inputNotice}
+                    </span>
                   ) : null}
                 </button>
                 {id === 'mentor-prep' ? (
                   <p
                     data-testid="s34-disclaimer-research-design"
-                    className="rounded-xl border border-[#e4ded2] bg-[#faf8f2] px-3.5 py-3 text-xs leading-5 text-[#635f56]"
+                    className="min-w-0 rounded-xl border border-[#e4ded2] bg-[#faf8f2] px-3.5 py-3 text-xs leading-5 text-[#635f56] [overflow-wrap:anywhere]"
                   >
                     {S34_2_RESEARCH_DESIGN_CHECKLIST}
                   </p>
@@ -366,7 +374,9 @@ const MedicalResearchLaunchpad = ({
             strokeWidth={1.8}
             aria-hidden="true"
           />
-          <span className="min-w-0">
+          {/* JA packs the whole label into one unbroken run, so allow it to break inside the row
+              instead of pushing the chevron off the control. */}
+          <span className="min-w-0 [overflow-wrap:anywhere]">
             {t('Start from a step (literature, planning, analysis, and more)')}
           </span>
         </button>
