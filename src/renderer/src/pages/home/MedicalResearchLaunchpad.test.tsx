@@ -50,8 +50,9 @@ it('shows three primary entries in order and keeps the six research entries behi
     expect(host.querySelector('[data-testid="home-patient-data-note-text"]')?.textContent).toBe(
       'Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.'
     )
-    expect(host.querySelector('[data-testid="home-patient-data-masking-note"]')).toBeNull()
-    expect(host.textContent).not.toContain(
+    expect(
+      host.querySelector('[data-testid="home-patient-data-masking-note"]')?.textContent
+    ).toContain(
       'Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.'
     )
     expect(host.querySelector('[data-testid="home-patient-data-details"]')?.textContent).toBe(
@@ -142,10 +143,9 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     ).toBe(
       '患者データの分析はお使いの PC 内で行います。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。AI サービスには既定で、列名・データ型・行数、合成サンプル、先生が選択した列の区分値、および解析の集計結果を送信します。氏名やカルテ番号などの直接識別子は送信しません。'
     )
-    expect(japanese.host.querySelector('[data-testid="home-patient-data-masking-note"]')).toBeNull()
-    expect(japanese.host.textContent).not.toContain(
-      '解析結果は送信前にマスキングチェックを行い、個別の行を含む出力は送信しません。'
-    )
+    expect(
+      japanese.host.querySelector('[data-testid="home-patient-data-masking-note"]')?.textContent
+    ).toContain('解析結果は送信前にマスキングチェックを行い、個別の行を含む出力は送信しません。')
     expect(japanese.host.textContent).toContain('データの解析は「自分のデータを分析する」から。')
     expect(japanese.host.textContent).not.toContain('データ監査・統計相談資料')
     expect(japanese.host.textContent).toContain('英語論文の執筆')
@@ -208,10 +208,9 @@ it('follows the language switcher for pack copy instead of forcing Japanese', as
     ).toBe(
       '患者数据在您的电脑上分析。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。默认向 AI 服务发送列名、数据类型、行数、合成样例、您选定的列的分类值，以及分析的汇总结果。姓名、病历号等直接标识符不会发送。'
     )
-    expect(chinese.host.querySelector('[data-testid="home-patient-data-masking-note"]')).toBeNull()
-    expect(chinese.host.textContent).not.toContain(
-      '分析结果在发送前会做脱敏检查，含单个病例行的输出不会发送。'
-    )
+    expect(
+      chinese.host.querySelector('[data-testid="home-patient-data-masking-note"]')?.textContent
+    ).toContain('分析结果在发送前会做脱敏检查，含单个病例行的输出不会发送。')
     expect(chinese.host.textContent).toContain('数据分析请从「分析自己的数据」开始。')
     expect(chinese.host.textContent).not.toContain('数据审计与统计咨询包')
     expect(chinese.host.textContent).toContain('英语论文撰写')
@@ -361,14 +360,14 @@ it('keeps the entry cards and secondary row aligned without a continue-project s
   }
 })
 
-it('keeps the masking sentence translated but hidden, and explains the real category cap', async () => {
-  expect(SHOW_HOME_PATIENT_DATA_MASKING_NOTE).toBe(false)
+it('shows the masking sentence in Japanese and explains the real category cap', async () => {
+  expect(SHOW_HOME_PATIENT_DATA_MASKING_NOTE).toBe(true)
   expect(HOME_CATEGORICAL_VALUE_LIMIT).toBe(CATEGORICAL_RELEASE_LIMIT)
   expect(HOME_CATEGORICAL_OMISSION).toBe('他 N 種類は省略')
   initI18n('ja')
   const { host, root } = await renderLaunchpad()
   try {
-    expect(host.textContent).not.toContain('個別の行を含む出力は送信しません。')
+    expect(host.textContent).toContain('個別の行を含む出力は送信しません。')
     const details = host.querySelector<HTMLButtonElement>(
       '[data-testid="home-patient-data-details"]'
     )

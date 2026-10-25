@@ -35,9 +35,9 @@ import { homeExternalDestinationLines } from './external-destinations'
 import { useSettingsStore } from '@/stores/settings-store'
 import { SEED_EXHAUSTED_COPY } from '../../../../shared/seed-invite'
 
-// Off until the PHI release gate merges. The sentence stays translated so the
-// home line can show it by flipping this flag; it is not rendered while false.
-export const SHOW_HOME_PATIENT_DATA_MASKING_NOTE = false
+// On since the PHI release gate merged (#39); the flag is the enable switch for the already
+// translated sentence, so a future rollback only has to flip it back.
+export const SHOW_HOME_PATIENT_DATA_MASKING_NOTE = true
 
 // Same cap as CATEGORICAL_RELEASE_LIMIT in the schema-only release path.
 // The renderer does not import that main-process module.
