@@ -7646,6 +7646,7 @@
     "This Session has reached its size limit. Start a new Session or remove large attachments, then retry. (Code: {{code}})": "이 세션이 크기 한도에 도달했습니다. 새 세션을 시작하거나 큰 첨부 파일을 제거한 후 다시 시도하세요. (코드: {{code}})",
     "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "이 세션이 다른 창에서 변경되었습니다. 다시 연 후 재시도하세요. (코드: {{code}})",
     "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "인용 스타일 파일을 가져오지 못했습니다. 유효한 독립형 CSL 1.0 스타일인지 확인한 후 다시 시도하세요. (코드: {{code}})",
-    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "앱이 해당 작업을 완료하지 못했습니다. 다시 시도하세요. 계속 발생하면 도움을 요청할 때 이 코드를 알려 주세요. (코드: {{code}})"
+    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "앱이 해당 작업을 완료하지 못했습니다. 다시 시도하세요. 계속 발생하면 도움을 요청할 때 이 코드를 알려 주세요. (코드: {{code}})",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "자료 패키지를 저장하지 못했습니다. 저장 폴더를 확인한 후 다시 시도하세요. 계속 실패하면 이 진단 번호를 알려 주세요: {{code}}"
   }
 }
