@@ -1,9 +1,15 @@
+import { createLogger } from '@aipoch/diagnostics/node'
+
 import type { GatedNotebookOutput } from '../../../shared/schema-notebook'
 import { PHI_OUTPUT_BLOCK_MESSAGE, releaseTextThroughPhiGate } from './notebook-phi-release'
-import { notebookOutputContainsPatientRows, PATIENT_ROW_BLOCK_MESSAGE } from './patient-row-output'
+import { patientRowAttribution, PATIENT_ROW_BLOCK_MESSAGE } from './patient-row-output'
 import { redactPatientPhi } from './patient-phi'
 import { suppressSmallAggregateText } from './small-cell'
 import { assertModelBoundTextReleased } from '../../phi/gate'
+
+// Content-free by construction: the payload is counts, booleans, a length and a digest, so a
+// misjudged aggregate can be diagnosed from main.log without ever writing patient text there.
+const patientRowLog = createLogger('notebook:patient-row-gate')
 
 export type NotebookModelTextReleaser = (
   text: string,
@@ -36,7 +42,9 @@ export const releaseNotebookModelText = async (
   text: string,
   projectId: string
 ): Promise<string> => {
-  if (notebookOutputContainsPatientRows(text)) {
+  const decision = patientRowAttribution(text)
+  if (decision.containsPatientRows) {
+    patientRowLog.info('blocked notebook output attributed to patient rows', decision.attribution)
     return assertModelBoundTextReleased(PATIENT_ROW_BLOCK_MESSAGE, projectId)
   }
   const released = await releaser(text, projectId)
