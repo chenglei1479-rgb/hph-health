@@ -13,14 +13,17 @@ const sampleLocale = (language?: string): SampleLocale => {
   return 'en'
 }
 
-const downloadSample = (locale: SampleLocale): void => {
-  const html = sampleAbstracts.documents[locale].html
-  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `dra-demo-abstract.${locale}.html`
-  link.click()
-  URL.revokeObjectURL(url)
+const sampleFileName = (locale: SampleLocale): string => `dra-demo-abstract.${locale}.html`
+
+const saveSample = async (locale: SampleLocale): Promise<boolean> => {
+  const bytes = new TextEncoder().encode(sampleAbstracts.documents[locale].html)
+  const result = await window.api.saveBlobFile({
+    suggestedName: sampleFileName(locale),
+    mimeType: 'text/html;charset=utf-8',
+    // Copy the exact bytes: a Uint8Array view can expose a larger backing buffer to IPC.
+    data: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+  })
+  return result?.saved === true
 }
 
 export const SampleAbstractDialog = ({
@@ -50,8 +53,12 @@ export const SampleAbstractDialog = ({
               type="button"
               className="rounded-md border border-[#d5dfdc] bg-white px-3 py-1.5 text-sm"
               onClick={() => {
-                downloadSample(sampleLocale(locale))
-                setSaved(true)
+                // Report a save only after the file actually landed on disk. Cancelling the Save As
+                // dialog resolves with saved:false and must not claim the sample was saved.
+                void saveSample(sampleLocale(locale)).then(
+                  (didSave) => setSaved(didSave),
+                  () => setSaved(false)
+                )
               }}
             >
               {t('Save this sample')}
