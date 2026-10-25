@@ -61,6 +61,15 @@ const unmount = async (): Promise<void> => {
   container = null
 }
 
+const rerenderAs = async (projectId: string): Promise<void> => {
+  await act(async () => {
+    root?.render(<SchemaNotebookEntry projectId={projectId} />)
+  })
+  await act(async () => {
+    await Promise.resolve()
+  })
+}
+
 const clickText = async (label: string): Promise<void> => {
   const button = Array.from(container?.querySelectorAll('button') ?? []).find(
     (candidate) => candidate.textContent === label
@@ -204,5 +213,19 @@ describe('schema notebook panel restore', () => {
     // The user's code stays; it simply is not attached to any table any more.
     expect(container?.querySelector('textarea')?.value).toBe('print(df.head())')
     expect(container?.textContent).not.toContain('行数: 3')
+  })
+
+  it('does not write the previous project draft into the next project on a switch', async () => {
+    await mount('study-1')
+    await clickText('患者表を分析')
+    await importCsv()
+    await setCode('print("study 1")')
+
+    await rerenderAs('study-2')
+
+    const next = loadSchemaNotebookDraft('study-2')
+    expect(next.code).toBe(SCHEMA_NOTEBOOK_DEFAULT_CODE)
+    expect(next.tableId).toBeUndefined()
+    expect(container?.querySelector('textarea')?.value).toBe(SCHEMA_NOTEBOOK_DEFAULT_CODE)
   })
 })

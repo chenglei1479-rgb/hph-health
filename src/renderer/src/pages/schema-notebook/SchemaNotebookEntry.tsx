@@ -108,6 +108,10 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     const draft = loadSchemaNotebookDraft(projectId)
     return { tableId: draft.tableId, filename: draft.filename }
   })
+  // Which project the in-memory state belongs to. Until the load effect has applied the new project,
+  // the save effect must not run: it would otherwise write the previous project's code and table id
+  // into the new project's key for one frame.
+  const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null)
 
   useEffect(() => {
     const draft = loadSchemaNotebookDraft(projectId)
@@ -118,6 +122,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     setBlocked(null)
     setRestoreNotice(false)
     setTableInfo({ tableId: draft.tableId, filename: draft.filename })
+    setLoadedProjectId(projectId)
     if (!draft.tableId) return
     const notebook = api()
     if (!notebook?.modelContext) {
@@ -146,8 +151,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
   }, [projectId])
 
   useEffect(() => {
+    if (loadedProjectId !== projectId) return
     saveSchemaNotebookDraft(projectId, { ...tableInfo, code, language })
-  }, [projectId, tableInfo, code, language])
+  }, [projectId, loadedProjectId, tableInfo, code, language])
 
   useEffect(() => {
     if (!consultationPack || !window.api?.writingSafeguards) return
