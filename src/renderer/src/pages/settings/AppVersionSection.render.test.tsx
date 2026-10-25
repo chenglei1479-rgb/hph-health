@@ -3,7 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { i18next } from '@/i18n'
+import { i18next, initI18n } from '@/i18n'
 import { useLocaleStore } from '@/stores/locale-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useUpdateStore } from '@/stores/update-store'
@@ -56,14 +56,14 @@ describe('AppVersionSection', () => {
     expect(container.textContent).not.toContain('You are on the latest version')
   })
 
-  it('shows a fixed Japanese notice and no update actions in a prerelease build', () => {
+  it('shows the beta update notice and no update actions in a prerelease build', () => {
     vi.stubEnv('DRA_PRERELEASE', '1')
     useUpdateStore.setState({
       status: { state: 'available', current: '0.1.33-beta.1', latest: '0.2.0', notes: 'n' }
     })
     act(() => root.render(<AppVersionSection />))
     expect(container.textContent).toContain(
-      'テスト版では自動更新は無効です。新しい版は配布元からお知らせします。'
+      'Automatic updates are disabled in the beta build. New versions are announced by the distributor.'
     )
     expect(container.textContent).not.toContain('Check now')
     expect(container.textContent).not.toContain('Update to 0.2.0')
@@ -73,6 +73,28 @@ describe('AppVersionSection', () => {
     const buttons = Array.from(container.querySelectorAll('button'))
     expect(buttons).toHaveLength(1)
     expect(buttons[0]?.textContent).toContain('Licenses')
+  })
+
+  it('states the beta update policy in the active locale, not a fixed Japanese one', async () => {
+    vi.stubEnv('DRA_PRERELEASE', '1')
+    useUpdateStore.setState({
+      status: { state: 'available', current: '0.1.33-beta.1', latest: '0.2.0', notes: 'n' }
+    })
+    initI18n('ja')
+    try {
+      await act(async () => {
+        await i18next.changeLanguage('ja')
+      })
+      act(() => root.render(<AppVersionSection />))
+      expect(container.textContent).toContain(
+        'テスト版では自動更新は無効です。新しい版は配布元からお知らせします。'
+      )
+    } finally {
+      initI18n('en')
+      await act(async () => {
+        await i18next.changeLanguage('en')
+      })
+    }
   })
   it('opens the project license from a resource row without an inline disclosure', () => {
     act(() => root.render(<AppVersionSection />))
