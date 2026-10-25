@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest'
 import { initI18n } from '@/i18n'
 import { S34_2_RESEARCH_DESIGN_CHECKLIST } from '../../../../shared/s34-disclaimers'
 import { ResearchPlanChecklistPanel } from './ResearchPlanChecklistPanel'
+import { checklistDraftKey } from './research-plan-checklist-draft'
 
 let root: Root | null = null
 let host: HTMLDivElement | null = null
@@ -114,8 +115,10 @@ it('renders nothing without a project', async () => {
 })
 
 it('falls back to an empty draft when the stored draft is corrupted', async () => {
-  // The panel's beforeEach clears storage, so seed the damage explicitly.
-  localStorage.setItem('dra.research-plan-checklist.v1.project-1', '{"checks": ')
+  // The panel's beforeEach clears storage, so seed the damage explicitly. The key comes from the
+  // module, so a prefix bump cannot leave this test passing without exercising the same read path.
+  const corrupted = '{"checks": '
+  localStorage.setItem(checklistDraftKey('project-1'), corrupted)
 
   await renderPanel('project-1')
 
@@ -129,5 +132,5 @@ it('falls back to an empty draft when the stored draft is corrupted', async () =
     ''
   )
   // A failed read must not erase or rewrite the stored value behind the user's back.
-  expect(localStorage.getItem('dra.research-plan-checklist.v1.project-1')).toBe('{"checks": ')
+  expect(localStorage.getItem(checklistDraftKey('project-1'))).toBe(corrupted)
 })

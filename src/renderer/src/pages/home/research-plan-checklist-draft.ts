@@ -14,7 +14,10 @@ import {
 // panel's props stay as they are.
 const KEY_PREFIX = 'dra.research-plan-checklist.v1.'
 
-const keyFor = (projectId: string): string => `${KEY_PREFIX}${projectId}`
+/** Storage key for one project's draft. Tests build fixtures through this, not a literal. */
+export const checklistDraftKey = (projectId: string): string => `${KEY_PREFIX}${projectId}`
+
+const keyFor = checklistDraftKey
 
 export const loadResearchPlanChecklistDraft = (
   projectId: string | undefined
