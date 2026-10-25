@@ -18,9 +18,35 @@ import {
 // that ship their own stable codes later (protected execution, statistician export) extend this table
 // instead of starting a second mapping.
 
+// Temporary bridge: the preload encodes an ApplicationCommandError code in the message because
+// contextBridge drops custom Error properties. Only published codes are recognized, so an arbitrary
+// `[foo]` prefix produced by backend text is not re-labelled. Both this module and the preload
+// adapter name it as provisional until the outcome unwrap moves into the renderer world.
+const BRIDGED_COMMAND_ERROR_PREFIX = /^\[([A-Za-z][A-Za-z0-9_-]*)\]\s/u
+
+const bridgedCommandErrorCode = (error: unknown): string | undefined => {
+  if (!(error instanceof Error)) return undefined
+  const code = BRIDGED_COMMAND_ERROR_PREFIX.exec(error.message)?.[1]
+  return code !== undefined && isApplicationCommandErrorCode(code) ? code : undefined
+}
+
+// Drops the transport prefix from text shown to a doctor, but only for codes this build publishes so
+// a plain backend message that starts with square brackets keeps its own words.
+const stripBridgedCommandErrorCode = (message: string): string => {
+  const match = BRIDGED_COMMAND_ERROR_PREFIX.exec(message)
+  const code = match?.[1]
+  return match && code !== undefined && isApplicationCommandErrorCode(code)
+    ? message.slice(match[0].length)
+    : message
+}
+
 const applicationCommandErrorCode = (error: unknown): string | undefined => {
   if (error instanceof ApplicationCommandError) return error.code
   if (typeof error !== 'object' || error === null) return undefined
+
+  // A bridged plain Error carries the code only in its message.
+  const bridged = bridgedCommandErrorCode(error)
+  if (bridged !== undefined) return bridged
 
   // Envelopes cross contextBridge as plain objects. An arbitrary thrown object with a `code` field
   // must not be re-labeled: Node reports EACCES through that field, and its English detail is still
@@ -101,4 +127,8 @@ const localizeApplicationCommandError = (error: unknown, t: TFunction): string |
   return code === undefined ? undefined : localizeApplicationCommandCode(code, t)
 }
 
-export { localizeApplicationCommandCode, localizeApplicationCommandError }
+export {
+  localizeApplicationCommandCode,
+  localizeApplicationCommandError,
+  stripBridgedCommandErrorCode
+}

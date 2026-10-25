@@ -1,17 +1,22 @@
 import type { TFunction } from 'i18next'
 
-import { localizeApplicationCommandError } from './application-command-error-message'
+import {
+  localizeApplicationCommandError,
+  stripBridgedCommandErrorCode
+} from './application-command-error-message'
 
+// The preload carries a command code in the message so it survives contextBridge; a doctor must not
+// read that prefix when the surface falls back to the raw detail.
 const errorDetail = (error: unknown): string | undefined => {
-  if (error instanceof Error) return error.message
-  if (typeof error === 'string') return error
+  if (error instanceof Error) return stripBridgedCommandErrorCode(error.message)
+  if (typeof error === 'string') return stripBridgedCommandErrorCode(error)
   if (
     typeof error === 'object' &&
     error !== null &&
     'message' in error &&
     typeof error.message === 'string'
   ) {
-    return error.message
+    return stripBridgedCommandErrorCode(error.message)
   }
   return undefined
 }

@@ -1229,9 +1229,11 @@ describe('preload bridge — core renderer contract catalog', () => {
       }
     })
 
-    await expect(api.sessions.saveSession({ id: 'session-1' })).rejects.toMatchObject({
-      code: 'session-revision-conflict'
-    })
+    await expect(api.sessions.saveSession({ id: 'session-1' })).rejects.toEqual(
+      new Error(
+        '[session-revision-conflict] Session revision conflict: expected 3, actual 4. Reload the latest conversation before retrying.'
+      )
+    )
     expect(invokeMock).toHaveBeenCalledWith('sessions:save-session', { id: 'session-1' })
   })
 
@@ -1244,9 +1246,11 @@ describe('preload bridge — core renderer contract catalog', () => {
       }
     })
 
-    await expect(api.sessions.editDetails(sampleEditSessionDetails)).rejects.toMatchObject({
-      code: 'session-details-conflict'
-    })
+    await expect(api.sessions.editDetails(sampleEditSessionDetails)).rejects.toEqual(
+      new Error(
+        '[session-details-conflict] Session details changed elsewhere. Reopen the editor and try again.'
+      )
+    )
     expect(invokeMock).toHaveBeenCalledWith('sessions:edit-details', sampleEditSessionDetails)
   })
 

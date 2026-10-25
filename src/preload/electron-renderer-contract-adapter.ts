@@ -145,6 +145,14 @@ const encodeRequestArguments = (
   }
 }
 
+// contextBridge keeps Error.message but drops custom Error properties. An ApplicationCommandError
+// thrown from the isolated world therefore reaches the renderer without its `code`; encode the stable
+// code in the message so the renderer can map it, and strip it before showing text to a doctor. Plain
+// objects would survive the bridge but stop being Errors, which every `instanceof Error` catch relies
+// on. Provisional: delete this once the outcome unwrap moves into the renderer world (contract ticket).
+export const toBridgeableCommandError = (error: unknown): unknown =>
+  error instanceof ApplicationCommandError ? new Error(`[${error.code}] ${error.message}`) : error
+
 export const createElectronRendererContractAdapter = (
   port: ElectronRendererContractPort
 ): ElectronRendererContractAdapter => ({
@@ -162,13 +170,15 @@ export const createElectronRendererContractAdapter = (
         ? unwrapApplicationCommandOutcome<Result>(result)
         : (result as Result)
     } catch (error) {
-      if (
-        error instanceof ApplicationCommandError &&
-        (publicPath === 'settings.getSettings' ||
-          (publicPath === 'literature.citationStyles' && error.code.startsWith('csl-')))
-      ) {
-        // contextBridge strips custom Error properties; plain rejections retain reviewed domain diagnostics.
-        throw toApplicationCommandErrorEnvelope(error)
+      if (error instanceof ApplicationCommandError) {
+        if (
+          publicPath === 'settings.getSettings' ||
+          (publicPath === 'literature.citationStyles' && error.code.startsWith('csl-'))
+        ) {
+          // contextBridge strips custom Error properties; plain rejections retain reviewed domain diagnostics.
+          throw toApplicationCommandErrorEnvelope(error)
+        }
+        throw toBridgeableCommandError(error)
       }
       throw error
     }
