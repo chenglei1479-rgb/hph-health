@@ -248,7 +248,11 @@ it('keeps the patient-row gate digest local and strips it from an exported log',
     {
       block: 'non-aggregate-table',
       digest,
+      textLength: 123,
       tables: 1,
+      describeTables: 0,
+      frameFooter: false,
+      frequencySeries: false,
       tableShapes: [{ rows: 2, columns: 7, statHeaders: 2, groupKeys: 5, describe: false }]
     }
   )
@@ -263,12 +267,72 @@ it('keeps the patient-row gate digest local and strips it from an exported log',
   )
 
   const exported = files['logs/main.log']
-  // The record itself survives the export; only its fingerprint is gone. The log projection also
-  // omits unknown data fields, so the readSource redaction is the belt-and-braces layer.
   expect(exported).toContain('notebook:patient-row-gate')
-  expect(exported).toContain('blocked notebook output attributed to patient rows')
   expect(exported).not.toContain(digest)
-  expect(exported).not.toContain('non-aggregate-table')
+  const gateRecord = exported
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line) as { scope?: string; diagnostics?: Record<string, unknown> })
+    .find((line) => line.scope === 'notebook:patient-row-gate')
+  // The export keeps the gate's non-text shape so a shared diagnostics package can still name the
+  // branch and the table geometry; only the fingerprint and any text stay out.
+  expect(gateRecord?.diagnostics).toEqual({
+    block: 'non-aggregate-table',
+    textLength: 123,
+    tables: 1,
+    describeTables: 0,
+    frameFooter: false,
+    frequencySeries: false,
+    tableShapes: [{ rows: 2, columns: 7, statHeaders: 2, groupKeys: 5, describe: false }]
+  })
+  expect(JSON.stringify(gateRecord)).not.toContain(digest)
   expect(await readFile(logPath, 'utf8')).toContain(digest)
   expect(await readFile(logPath, 'utf8')).toContain('non-aggregate-table')
+})
+
+it('caps exported patient-row gate table shapes at 20 entries', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'patient-row-gate-shapes-'))
+  roots.push(root)
+  const logDir = join(root, 'logs')
+  const configRoot = join(root, 'config')
+  await mkdir(configRoot)
+  initLogger({ logDir, mirrorToConsole: false })
+  const tableShapes = Array.from({ length: 25 }, (_, index) => ({
+    rows: index,
+    columns: 3,
+    statHeaders: 1,
+    groupKeys: 2,
+    describe: false
+  }))
+  createLogger('notebook:patient-row-gate').info(
+    'blocked notebook output attributed to patient rows',
+    { block: 'non-aggregate-table', tables: 25, tableShapes }
+  )
+  await flushLogs()
+
+  const files = await exportDiagnosticFiles(
+    {
+      configRoot,
+      dataRoot: join(root, 'data'),
+      logPath: join(logDir, 'main.log'),
+      appVersion: 'test'
+    },
+    { projectId: 'project', sessionId: 'session', selectedItems: ['log:main.log'] }
+  )
+
+  const record = files['logs/main.log']
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line) as { scope?: string; diagnostics?: Record<string, unknown> })
+    .find((line) => line.scope === 'notebook:patient-row-gate')
+  const shapes = record?.diagnostics?.tableShapes as unknown[]
+  expect(shapes).toHaveLength(20)
+  expect(shapes[0]).toEqual({ rows: 0, columns: 3, statHeaders: 1, groupKeys: 2, describe: false })
+  expect(shapes[19]).toEqual({
+    rows: 19,
+    columns: 3,
+    statHeaders: 1,
+    groupKeys: 2,
+    describe: false
+  })
 })

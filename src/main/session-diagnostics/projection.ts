@@ -290,6 +290,13 @@ const diagnosticStringFields = [
 ] as const
 
 // Permission traces carry fixed product classifications and hashed correlation identities only.
+const patientRowGateBlocks: readonly string[] = [
+  'record-series',
+  'per-row-dicts',
+  'single-patient-fields',
+  'non-aggregate-table'
+]
+const PATIENT_ROW_GATE_SHAPE_LIMIT = 20
 const permissionLogStates: Record<string, readonly string[]> = {
   stage: ['request', 'decision', 'settlement', 'context', 'profile'],
   modelRoute: [
@@ -352,6 +359,29 @@ export function projectDiagnosticLog(
   if (typeof source.msg === 'string') result.event = diagnosticText(source.msg, options, 2_000)
   const data = object(source.data)
   const diagnostic = fields(data, options)
+  if (source.scope === 'notebook:patient-row-gate') {
+    // The gate's attribution is the reason this record exists: keep its non-text shape so a
+    // diagnostics package can name the branch and the table geometry. `digest` stays excluded — it
+    // is the one value that must not leave the machine.
+    const block = data.block
+    if (patientRowGateBlocks.includes(block as string)) diagnostic.block = block as string
+    for (const key of ['textLength', 'tables', 'describeTables'])
+      if (typeof data[key] === 'number' && Number.isFinite(data[key])) diagnostic[key] = data[key]
+    for (const key of ['frameFooter', 'frequencySeries'])
+      if (typeof data[key] === 'boolean') diagnostic[key] = data[key]
+    if (Array.isArray(data.tableShapes))
+      diagnostic.tableShapes = data.tableShapes
+        .slice(0, PATIENT_ROW_GATE_SHAPE_LIMIT)
+        .map((shape) => {
+          const source = object(shape)
+          const projected: ObjectValue = {}
+          for (const key of ['rows', 'columns', 'statHeaders', 'groupKeys'])
+            if (typeof source[key] === 'number' && Number.isFinite(source[key]))
+              projected[key] = source[key]
+          if (typeof source.describe === 'boolean') projected.describe = source.describe
+          return projected
+        })
+  }
   if (source.scope === 'permission' && source.msg === 'permission decision trace') {
     for (const [key, allowed] of Object.entries(permissionLogStates)) {
       delete diagnostic[key]
