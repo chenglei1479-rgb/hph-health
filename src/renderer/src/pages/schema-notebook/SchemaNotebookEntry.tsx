@@ -151,9 +151,11 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
   }, [projectId])
 
   useEffect(() => {
-    if (loadedProjectId !== projectId) return
-    saveSchemaNotebookDraft(projectId, { ...tableInfo, code, language })
-  }, [projectId, loadedProjectId, tableInfo, code, language])
+    // Save under the project this in-memory state actually belongs to. A superseded frame during a
+    // project switch can then only re-write the outgoing project's own key, never the incoming one.
+    if (!loadedProjectId) return
+    saveSchemaNotebookDraft(loadedProjectId, { ...tableInfo, code, language })
+  }, [loadedProjectId, tableInfo, code, language])
 
   useEffect(() => {
     if (!consultationPack || !window.api?.writingSafeguards) return

@@ -12,7 +12,8 @@ import { SchemaNotebookEntry } from './SchemaNotebookEntry'
 import {
   SCHEMA_NOTEBOOK_DEFAULT_CODE,
   loadSchemaNotebookDraft,
-  saveSchemaNotebookDraft
+  saveSchemaNotebookDraft,
+  schemaNotebookDraftKey
 } from './schema-notebook-draft'
 
 const context: SchemaModelContext = {
@@ -221,7 +222,25 @@ describe('schema notebook panel restore', () => {
     await importCsv()
     await setCode('print("study 1")')
 
-    await rerenderAs('study-2')
+    // The observable invariant is "the incoming project's key never received the outgoing project's
+    // code". This is deliberately weaker than a frame-level assertion: jsdom coalesces a passive
+    // effect whose render was superseded, so removing the write-key derivation still leaves this
+    // test green — the transient write cannot be observed from a component test at all.
+    // `writes.length > 0` also pins "a switch writes at least once"; a future "skip when unchanged"
+    // optimization would need this expectation revisited.
+    const writes: string[] = []
+    const spy = vi.spyOn(window.localStorage, 'setItem')
+    try {
+      await rerenderAs('study-2')
+    } finally {
+      for (const [key, value] of spy.mock.calls) {
+        if (key === schemaNotebookDraftKey('study-2')) writes.push(String(value))
+      }
+      spy.mockRestore()
+    }
+
+    expect(writes.length).toBeGreaterThan(0)
+    for (const value of writes) expect(value).not.toContain('print("study 1")')
 
     const next = loadSchemaNotebookDraft('study-2')
     expect(next.code).toBe(SCHEMA_NOTEBOOK_DEFAULT_CODE)
