@@ -1808,6 +1808,7 @@ export const parseSettingsSnapshot = (snapshot: unknown): SettingsSnapshot => {
         snapshot.revision < 0))
   )
     throw new ApplicationCommandError('invalid-command-result', 'Invalid settings snapshot.')
+  if (snapshot.seedInvite != null) return snapshot as SettingsSnapshot
   return {
     ...snapshot,
     seedInvite: snapshot.seedInvite ?? createDefaultSeedInviteStatus()

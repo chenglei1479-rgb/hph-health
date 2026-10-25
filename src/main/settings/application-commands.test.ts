@@ -82,6 +82,8 @@ const expectedChannels = [
   'settings:get-skill-marketplace-detail',
   'settings:mark-onboarding-complete',
   'settings:accept-beta-terms',
+  'settings:redeem-seed-invite',
+  'settings:consume-seed-package',
   'settings:reopen-onboarding',
   'settings:preview-agent-home-skill',
   'settings:preview-github-skill',
@@ -192,6 +194,44 @@ const createDependencies = (
 }
 
 describe('Settings core application commands', () => {
+  it('routes seed invite mutations through the Node command router and current snapshot owner', async () => {
+    const current = validSnapshot()
+    const getSettingsView = vi.fn().mockResolvedValue(current)
+    const events = { publish: vi.fn() }
+    const { dependencies, serviceMethod } = createDependencies(
+      new SettingsSnapshotCommitOwner({ getSettingsView }, events)
+    )
+    const router = createApplicationCommandRouter()
+    registerCoreSettingsApplicationCommands(router.registrar, dependencies)
+    for (const location of ['local', 'remote'] as const) {
+      serviceMethod('redeemSeedInvite').mockResolvedValue(validSnapshot())
+      serviceMethod('consumeSeedPackage').mockResolvedValue(validSnapshot())
+      await expect(
+        router.dispatcher.invoke(
+          settingsCoreApplicationCommands.redeemSeedInvite,
+          invocation(['test-invite'] as const, location)
+        )
+      ).resolves.toBe(current)
+      await expect(
+        router.dispatcher.invoke(
+          settingsCoreApplicationCommands.consumeSeedPackage,
+          invocation([] as const, location)
+        )
+      ).resolves.toBe(current)
+    }
+    expect(serviceMethod('redeemSeedInvite')).toHaveBeenCalledWith('test-invite')
+    expect(serviceMethod('consumeSeedPackage')).toHaveBeenCalledTimes(2)
+    expect(events.publish).toHaveBeenCalledTimes(4)
+    serviceMethod('redeemSeedInvite').mockRejectedValueOnce(new Error('Invalid invite code.'))
+    await expect(
+      router.dispatcher.invoke(
+        settingsCoreApplicationCommands.redeemSeedInvite,
+        invocation(['invalid'] as const, 'local')
+      )
+    ).rejects.toThrow('Invalid invite code.')
+    expect(events.publish).toHaveBeenCalledTimes(4)
+  })
+
   it('validates snapshot reads for local and remote callers without rewriting optional preferences', async () => {
     const snapshot = validSnapshot()
     const getSettingsView = vi.fn().mockResolvedValue(snapshot)
