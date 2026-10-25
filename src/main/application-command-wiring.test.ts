@@ -566,15 +566,15 @@ describe('production application command wiring', () => {
     const startup = compact(
       between(
         nodeEntrySource,
-        'remoteAccess = await RemoteAccessService.create()',
+        'remoteAccess = await RemoteAccessService.create({',
         'void remoteAccess.restore()'
       )
     )
-    expect(occurrences(nodeEntrySource, 'RemoteAccessService.create()')).toBe(1)
-    expect(indexSource).not.toContain('RemoteAccessService.create()')
+    expect(occurrences(nodeEntrySource, 'await RemoteAccessService.create(')).toBe(1)
+    expect(indexSource).not.toContain('RemoteAccessService.create(')
     // Ownership bookkeeping may sit between acquisition and binding; preserve their order.
     expect(startup).toMatch(
-      /remoteAccess = await RemoteAccessService\.create\(\).*?runtime\.bindRemoteAccess\(remoteAccess\) web = createWebServiceController\(\{[^}]*externalAccess: remoteAccess\.webAccess/
+      /remoteAccess = await RemoteAccessService\.create\(\{[^}]*\}\).*?runtime\.bindRemoteAccess\(remoteAccess\) web = createWebServiceController\(\{[^}]*externalAccess: remoteAccess\.webAccess/
     )
     expect(startup).toContain('remoteAccess.attachWebController(web)')
     expect(startup).toContain('...runtime,')
@@ -643,6 +643,10 @@ describe('production application command wiring', () => {
 })
 
 const rootFixture = vi.hoisted(() => ({ owners: {} as Record<string, unknown> }))
+// The composition root reaches resolveConfigRoot() through the account owner, and production binds a
+// complete RuntimeMetadata record (index.ts / node-entry.ts) before composing any owner. The double
+// must carry the same fields; the OS temp directory keeps a config-root write out of the repository.
+const wiringHomePath = await vi.hoisted(async () => (await import('node:os')).tmpdir())
 vi.mock('./composition/agent-activation', () => ({
   composeAgentActivation: vi.fn(() => rootFixture.owners)
 }))
@@ -758,7 +762,17 @@ vi.mock('./desktop-surface-declarations', () => ({
   createConnectorApprovalElectronSurface: vi.fn(() => ({ name: 'connector-approval' })),
   createCoreElectronSurfaces: vi.fn(() => [])
 }))
-vi.mock('./runtime-metadata', () => ({ runtimeMetadata: () => ({ version: 'test' }) }))
+vi.mock('./runtime-metadata', () => ({
+  runtimeMetadata: () => ({
+    version: 'test',
+    locale: 'en-US',
+    packaged: false,
+    applicationPath: process.cwd(),
+    homePath: wiringHomePath,
+    downloadsPath: wiringHomePath,
+    resourcesPath: wiringHomePath
+  })
+}))
 
 import { createApplicationModules } from './ipc-application-composition'
 import { composeProjectLifecycle } from './composition/project-lifecycle'
