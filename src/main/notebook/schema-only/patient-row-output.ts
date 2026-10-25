@@ -17,10 +17,10 @@ type ParsedTable = {
 }
 
 const STAT_HEADER =
-  /^(?:n|count|counts|freq|frequency|mean|std|sem|sd|median|min|max|sum|var|variance|percent|pct|proportion|rate|share|average|avg|value|values|result|estimate|statistic|stat|total|unique|top|25%|50%|75%|件数|例数|人数|度数|平均|平均値|中央値|標準偏差|分散|合計|割合|最小|最大|値)$/i
+  /^(?:n|count|counts|freq|frequency|mean|std|sem|sd|median|min|max|sum|var|variance|percent|pct|proportion|rate|share|average|avg|value|values|result|estimate|statistic|stat|total|unique|top|ci_low|ci_high|ci95_low|ci95_high|ci_lower|ci_upper|p|p_value|pvalue|se|iqr|q1|q3|numerator|denominator|missing|missing_cells|missing_count|duplicates|duplicate_rows|odds_ratio|risk_ratio|hazard_ratio|smd|effect_size|25%|50%|75%|件数|例数|人数|度数|平均|平均値|中央値|標準偏差|分散|合計|割合|最小|最大|値)$/i
 
 const STAT_PART =
-  /(?:^|_)(?:n|count|counts|freq|frequency|mean|std|sem|sd|median|min|max|sum|percent|pct|rate|avg|average)(?:_|$)/i
+  /(?:^|_)(?:n|count|counts|freq|frequency|mean|std|sem|sd|median|min|max|sum|percent|pct|avg|average|ci_low|ci_high|ci95_low|ci95_high|p_value|numerator|denominator|missing_cells|duplicate_rows)(?:_|$)/i
 
 const isStatHeader = (header: string): boolean => {
   const name = header.trim().replace(/^["']|["']$/g, '')
@@ -191,8 +191,22 @@ const dictKeyGroups = (text: string): string[][] => {
     .filter((keys) => keys.length >= 2)
 }
 
-const containsPerRowDicts = (text: string): boolean =>
-  dictKeyGroups(text).some((keys) => keys.some((key) => !isStatHeader(key)))
+// A dict key that names a person rather than a measured quantity. A summary object carries counts and
+// estimates; a per-patient record carries these.
+const IDENTIFIER_KEY =
+  /^(?:id|ids|row_id|patient_id|patientid|subject_id|subject|mrn|chart_no|chart_number|karte|karte_no|name|names|full_name|first_name|last_name|patient_name|patient|dob|birth_date|birthdate|birthday|age|sex|gender|address|phone|tel|email|postal_code|診療科|患者|患者id|患者ID|氏名|名前|年齢|性別|住所|電話|生年月日|メール)$/i
+
+// A list of dicts is a row listing. A single dict is a summary only when it actually carries a
+// statistic key: `df.iloc[0].to_dict()` is one patient's values under names the identifier list cannot
+// know (`stage`, `size_cm`, `nodes`), so "no identifier key" alone must not release it. The cost is a
+// label-only dict (`{'synthetic_only': true}`) being refused; that direction is the safe one.
+const containsPerRowDicts = (text: string): boolean => {
+  const groups = dictKeyGroups(text)
+  if (groups.length === 0) return false
+  if (groups.some((keys) => keys.some((key) => IDENTIFIER_KEY.test(key.trim())))) return true
+  if (groups.length > 1) return true
+  return !groups[0].some((key) => isStatHeader(key))
+}
 
 const isFrequencySeries = (text: string): boolean => {
   const name = text.match(/Name:\s*([^,\n]+),\s*dtype:\s*([A-Za-z0-9]+)/)

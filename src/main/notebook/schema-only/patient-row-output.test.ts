@@ -160,3 +160,105 @@ describe('patient-row gate attribution', () => {
     expect(decision.attribution.frameFooter).toBe(true)
   })
 })
+
+// The beta.15 refusal, copied from the reported run: analysis.py printed one JSON summary line and
+// then a six-row multi-group CSV. Both are aggregates and both used to be refused.
+//
+// Budget note: `events` was removed from the statistic vocabulary so that `id,events` patient frames
+// are refused again. In this CSV that moves `events` into the group-key count, leaving
+// variable/group/events = 3 against isAggregateTable's `groupKeys <= 4` limit — one spare key only.
+// Adding two more non-statistic columns to this fixture would flip it to a refusal; that is the
+// budget changing, not the beta.15 fix regressing.
+const BETA15_JSON =
+  '{"synthetic_only": true, "n": 240, "events": 40, "rate": 0.1667, "ci95_low": 0.121, "ci95_high": 0.221, "fisher_two_sided_p": 0.031, "missing_cells": 0, "duplicate_rows": 0}'
+const BETA15_CSV = [
+  'variable,group,n,events,rate,ci95_low,ci95_high',
+  'age,F,122,22,0.1803,0.1216,0.2591',
+  'age,M,118,18,0.1525,0.0987,0.2278',
+  'sex,F,122,22,0.1803,0.1216,0.2591',
+  'sex,M,118,18,0.1525,0.0987,0.2278',
+  'readmitted_30d,F,122,22,0.1803,0.1216,0.2591',
+  'readmitted_30d,M,118,18,0.1525,0.0987,0.2278'
+].join('\n')
+
+describe('beta.15 aggregate false positive', () => {
+  it('releases the reported JSON summary plus multi-group CSV', () => {
+    expect(notebookOutputContainsPatientRows(`${BETA15_JSON}\n${BETA15_CSV}`)).toBe(false)
+    expect(notebookOutputContainsPatientRows(BETA15_CSV)).toBe(false)
+    // Releasing the output must also mean no attribution branch claims it.
+    const decision = patientRowAttribution(`${BETA15_JSON}\n${BETA15_CSV}`)
+    expect(decision.containsPatientRows).toBe(false)
+    expect(decision.attribution.block).toBeNull()
+  })
+
+  it('still refuses a .head()-style patient frame', () => {
+    expect(
+      notebookOutputContainsPatientRows(
+        [
+          'id,name,sex,age,readmitted',
+          '0083341,山田太郎,男性,72,1',
+          '0083342,佐藤花子,女性,65,0'
+        ].join('\n')
+      )
+    ).toBe(true)
+    expect(
+      notebookOutputContainsPatientRows(
+        [
+          '   id     name sex age',
+          '0   0083341 山田太郎 男性  72',
+          '1   0083342 佐藤花子 女性  65'
+        ].join('\n')
+      )
+    ).toBe(true)
+  })
+
+  it('still refuses a list of per-row dicts', () => {
+    expect(
+      notebookOutputContainsPatientRows(
+        [
+          "{'name': '山田太郎', 'age': 72, 'readmitted': 1}",
+          "{'name': '佐藤花子', 'age': 65, 'readmitted': 0}"
+        ].join('\n')
+      )
+    ).toBe(true)
+    // A summary statistic list still reads as rows of a table, not as one object.
+    expect(
+      notebookOutputContainsPatientRows(
+        ["{'mean': 12.5, 'n': 40}", "{'mean': 13.1, 'n': 41}"].join('\n')
+      )
+    ).toBe(true)
+  })
+
+  it('still refuses a single dict that carries patient identifiers', () => {
+    expect(
+      notebookOutputContainsPatientRows("{'patient_id': '0083341', 'hba1c': 7.2, 'age': 72}")
+    ).toBe(true)
+    expect(
+      notebookOutputContainsPatientRows("{'name': '山田太郎', 'sex': '男性', 'readmitted': 1}")
+    ).toBe(true)
+    expect(
+      notebookOutputContainsPatientRows('{"患者ID": "0083341", "年齢": 72, "性別": "男性"}')
+    ).toBe(true)
+  })
+
+  it('refuses a single patient dict whose keys the identifier list cannot know', () => {
+    // df.iloc[0].to_dict(): no identifier key, no identifier-looking names, and no statistic key.
+    expect(notebookOutputContainsPatientRows("{'stage': 'II', 'size_cm': 3.1, 'nodes': 4}")).toBe(
+      true
+    )
+    // Accepted conservative cost: a label-only dict with no statistic key is refused too.
+    expect(notebookOutputContainsPatientRows("{'synthetic_only': true, 'mode': 'beta'}")).toBe(true)
+  })
+
+  it('refuses an id column next to a lone events column', () => {
+    expect(
+      notebookOutputContainsPatientRows(['id,events', '0083341,3', '0083342,1'].join('\n'))
+    ).toBe(true)
+    expect(
+      notebookOutputContainsPatientRows(['patient_id,events', '0083341,3', '0083342,1'].join('\n'))
+    ).toBe(true)
+    expect(
+      notebookOutputContainsPatientRows(['mrn,events', '0083341,3', '0083342,1'].join('\n'))
+    ).toBe(true)
+  })
+})
