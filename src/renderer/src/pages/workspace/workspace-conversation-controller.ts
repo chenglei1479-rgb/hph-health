@@ -1,4 +1,5 @@
 import { i18next } from '@/i18n'
+import { describeProtectedExecutionFailure } from '@/lib/protected-execution-error'
 import { requestPrereleaseModelCallNotice } from '@/lib/prerelease-model-call-notice'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
@@ -171,8 +172,10 @@ type WorkspaceConversationController = {
   admitApplicationMessage: WorkspaceMessageQueueController['lifecycle']['enqueueApplication']
 }
 
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
+const errorMessage = (error: unknown): string => {
+  const raw = error instanceof Error ? error.message : String(error)
+  return describeProtectedExecutionFailure(raw) ?? raw
+}
 
 const resolveDelegationPolicyForSend = (
   branchInNewSession: boolean,

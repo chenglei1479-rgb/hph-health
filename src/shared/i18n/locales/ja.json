@@ -7639,6 +7639,7 @@
     "Details_privacy": "詳しく",
     "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者データの分析はお使いの PC 内で行います。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。AI サービスには既定で、列名・データ型・行数、合成サンプル、先生が選択した列の区分値、および解析の集計結果を送信します。氏名やカルテ番号などの直接識別子は送信しません。",
     "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。",
-    "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "テスト版では自動更新は無効です。新しい版は配布元からお知らせします。"
+    "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "テスト版では自動更新は無効です。新しい版は配布元からお知らせします。",
+    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "この PC では保護された実行を開始できませんでした。設定 > ネットワーク で Notebook の保護のセットアップを完了してから、もう一度お試しください。（{{code}}）"
   }
 }

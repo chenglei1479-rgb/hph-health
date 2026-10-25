@@ -7,6 +7,7 @@ import {
   type FormEvent
 } from 'react'
 import { useTranslation } from 'react-i18next'
+import { describeProtectedExecutionFailure } from '@/lib/protected-execution-error'
 import type {
   DeleteSessionRequest,
   SessionDeletionResult
@@ -135,8 +136,10 @@ type WorkspaceSessionController = {
     isBarrierInFlight: (sessionId: string) => boolean
   }
 }
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
+const errorMessage = (error: unknown): string => {
+  const raw = error instanceof Error ? error.message : String(error)
+  return describeProtectedExecutionFailure(raw) ?? raw
+}
 const useWorkspaceSessionController = ({
   activeSession,
   selectedSessionId,
