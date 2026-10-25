@@ -14,6 +14,7 @@ import { projectDiagnosticSession, projectDiagnosticLog } from './projection'
 import { readDiagnosticDatabase } from './database'
 import { projectDiagnosticNotebook, type DiagnosticNotebookCodeCoverage } from './notebook'
 import { projectDiagnosticEnvironment } from './environment'
+import { redactPatientRowGateDigest } from './patient-row-gate-redaction'
 
 const FILE_LIMIT = 8 * 1024 * 1024
 const TOTAL_LIMIT = 32 * 1024 * 1024
@@ -307,7 +308,10 @@ async function readSource(
       offset += bytesRead
     }
     const after = await handle.stat()
-    const text = buffer.subarray(0, offset).toString('utf8')
+    const raw = buffer.subarray(0, offset).toString('utf8')
+    // Logs are the only export source that can carry the patient-row gate digest; it stays in the
+    // local main.log and is stripped here so no diagnostics archive carries it off the machine.
+    const text = source.kind === 'log' ? redactPatientRowGateDigest(raw) : raw
     if (source.kind === 'log') {
       const current = await lstat(source.path!).catch(() => undefined)
       const rotated = !current || current.ino !== before.ino || current.dev !== before.dev

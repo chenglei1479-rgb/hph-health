@@ -3,6 +3,8 @@
 // The check is on the output text, so .head() / .tail() / .sample() / print(df) / R head()
 // are treated the same when they render rows.
 
+import { createHash } from 'node:crypto'
+
 export const PATIENT_ROW_BLOCK_MESSAGE = [
   '個々の患者の行はモデルに渡しません。',
   '.head()、.tail()、.sample() のような行の一覧、行ごとの表示、1人分の値、1人に絞った表は、患者ごとの行が含まれるためブロックしました。',
@@ -229,12 +231,132 @@ const collectTables = (text: string): ParsedTable[] => [
   ...parseWhitespaceFrames(text)
 ]
 
-/** True when the text shows individual rows rather than an aggregate summary. */
-export const notebookOutputContainsPatientRows = (text: string): boolean => {
-  if (containsRecordSeries(text)) return true
-  if (containsPerRowDicts(text)) return true
-  if (containsSinglePatientFields(text)) return true
-  const tables = collectTables(text)
-  if (tables.some((table) => !isAggregateTable(table))) return true
-  return false
+/** Which shape decision blocked the text. `null` means the text was released. */
+export type PatientRowBlockBranch =
+  'record-series' | 'per-row-dicts' | 'single-patient-fields' | 'non-aggregate-table' | null
+
+/** Per-table shape only: no headers, no cells, no variable names. */
+export type PatientRowTableShape = {
+  rows: number
+  columns: number
+  statHeaders: number
+  groupKeys: number
+  describe: boolean
 }
+
+/**
+ * Content-free attribution for a gate decision. Beta builds misjudged some complex aggregates, and
+ * there was no record of which branch fired, so the gate now states its reasoning. Nothing here may
+ * carry output text: only counts, booleans, the input length, and a truncated digest.
+ */
+export type PatientRowAttribution = {
+  block: PatientRowBlockBranch
+  textLength: number
+  /** First 12 hex characters of SHA-256 over the refused text; empty when the text was released. */
+  digest: string
+  tables: number
+  tableShapes: PatientRowTableShape[]
+  describeTables: number
+  /** Only computed for a refusal; always false on the released path. */
+  frameFooter: boolean
+  frequencySeries: boolean
+}
+
+const ATTRIBUTION_TABLE_LIMIT = 20
+
+const digestOf = (text: string): string =>
+  createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 12)
+
+const hasFrameFooter = (text: string): boolean =>
+  text.split('\n').some((line) => isFrameFooter(line))
+
+const tableShape = (table: ParsedTable): PatientRowTableShape => {
+  const headers = table.headers.map((header) => header.trim()).filter((header) => header.length > 0)
+  const statHeaders = headers.filter((header) => isStatHeader(header)).length
+  return {
+    rows: table.rows.length,
+    columns: headers.length,
+    statHeaders,
+    groupKeys: Math.max(headers.length - statHeaders, 0),
+    describe: isDescribeTable(table)
+  }
+}
+
+const emptyAttribution = (text: string, block: PatientRowBlockBranch): PatientRowAttribution => ({
+  block,
+  textLength: text.length,
+  digest: digestOf(text),
+  tables: 0,
+  tableShapes: [],
+  describeTables: 0,
+  frameFooter: hasFrameFooter(text),
+  frequencySeries: false
+})
+
+export type PatientRowDecision = {
+  containsPatientRows: boolean
+  attribution: PatientRowAttribution
+}
+
+/**
+ * The same decision `notebookOutputContainsPatientRows` returns, plus the branch and shape metrics
+ * that explain it. Keep the branch order in step with the predicate below.
+ */
+export const patientRowAttribution = (text: string): PatientRowDecision => {
+  if (containsRecordSeries(text)) {
+    return {
+      containsPatientRows: true,
+      attribution: {
+        ...emptyAttribution(text, 'record-series'),
+        frequencySeries: isFrequencySeries(text)
+      }
+    }
+  }
+  if (containsPerRowDicts(text)) {
+    return { containsPatientRows: true, attribution: emptyAttribution(text, 'per-row-dicts') }
+  }
+  if (containsSinglePatientFields(text)) {
+    return {
+      containsPatientRows: true,
+      attribution: emptyAttribution(text, 'single-patient-fields')
+    }
+  }
+  const tables = collectTables(text)
+  const shapes = tables.map(tableShape)
+  const nonAggregate = tables.some((table) => !isAggregateTable(table))
+  const describeTables = shapes.filter((shape) => shape.describe).length
+  if (!nonAggregate) {
+    // Released output needs no forensic fingerprint: hashing the whole string and scanning every
+    // line for a frame footer would cost this gate work on every aggregate that passes.
+    return {
+      containsPatientRows: false,
+      attribution: {
+        block: null,
+        textLength: text.length,
+        digest: '',
+        tables: tables.length,
+        tableShapes: shapes.slice(0, ATTRIBUTION_TABLE_LIMIT),
+        describeTables,
+        frameFooter: false,
+        frequencySeries: false
+      }
+    }
+  }
+  return {
+    containsPatientRows: true,
+    attribution: {
+      block: 'non-aggregate-table',
+      textLength: text.length,
+      digest: digestOf(text),
+      tables: tables.length,
+      tableShapes: shapes.slice(0, ATTRIBUTION_TABLE_LIMIT),
+      describeTables,
+      frameFooter: hasFrameFooter(text),
+      frequencySeries: false
+    }
+  }
+}
+
+/** True when the text shows individual rows rather than an aggregate summary. */
+export const notebookOutputContainsPatientRows = (text: string): boolean =>
+  patientRowAttribution(text).containsPatientRows
