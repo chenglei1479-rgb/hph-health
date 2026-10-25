@@ -163,6 +163,12 @@ describe('patient-row gate attribution', () => {
 
 // The beta.15 refusal, copied from the reported run: analysis.py printed one JSON summary line and
 // then a six-row multi-group CSV. Both are aggregates and both used to be refused.
+//
+// Budget note: `events` was removed from the statistic vocabulary so that `id,events` patient frames
+// are refused again. In this CSV that moves `events` into the group-key count, leaving
+// variable/group/events = 3 against isAggregateTable's `groupKeys <= 4` limit — one spare key only.
+// Adding two more non-statistic columns to this fixture would flip it to a refusal; that is the
+// budget changing, not the beta.15 fix regressing.
 const BETA15_JSON =
   '{"synthetic_only": true, "n": 240, "events": 40, "rate": 0.1667, "ci95_low": 0.121, "ci95_high": 0.221, "fisher_two_sided_p": 0.031, "missing_cells": 0, "duplicate_rows": 0}'
 const BETA15_CSV = [
