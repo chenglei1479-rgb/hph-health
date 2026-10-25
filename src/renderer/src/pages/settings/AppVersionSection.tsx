@@ -81,7 +81,7 @@ const AppVersionSection = ({
           : ''
 
   const statusLine = prerelease
-    ? PRERELEASE_UPDATE_NOTICE
+    ? t(PRERELEASE_UPDATE_NOTICE)
     : ((): string => {
         if (status.error) return status.error
         switch (status.state) {

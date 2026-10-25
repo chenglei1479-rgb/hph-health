@@ -6,9 +6,10 @@ declare const __DRA_PRERELEASE__: boolean | undefined
 export const PRERELEASE_DATA_DESTINATION_NOTICE =
   'Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.'
 
-// Settings → About. Fixed Japanese on every locale; beta builds do not offer an update check.
+// Settings → About. Same scheme as the data-destination notice: the English source text is the
+// renderer catalog key, so a beta build states its update policy in the active language.
 export const PRERELEASE_UPDATE_NOTICE =
-  'テスト版では自動更新は無効です。新しい版は配布元からお知らせします。'
+  'Automatic updates are disabled in the beta build. New versions are announced by the distributor.'
 
 export const PRERELEASE_BLOCKED_REQUEST =
   'Prerelease builds do not contact Auth0, usage statistics, or the upstream update host.'
