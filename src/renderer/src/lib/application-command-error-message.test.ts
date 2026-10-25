@@ -10,9 +10,10 @@ import {
 } from '../../../shared/application-command-contract'
 import {
   localizeApplicationCommandCode,
-  localizeApplicationCommandError
+  localizeApplicationCommandError,
+  stripBridgedCommandErrorCode
 } from './application-command-error-message'
-import { errorNoticeDetail } from './error-detail'
+import { errorDetail, errorNoticeDetail } from './error-detail'
 
 const translate = i18next.t.bind(i18next)
 const ALL_CODES: ApplicationCommandErrorCode[] = [...APPLICATION_COMMAND_ERROR_CODES]
@@ -124,6 +125,35 @@ describe('localizeApplicationCommandError', () => {
     }
   })
 
+  it('reads the code the preload carries through contextBridge in the message', async () => {
+    await switchLanguage('ja')
+    const code = 'session-size-limit'
+    const bridged = new Error(`[${code}] Session exceeds the persistence limit.`)
+
+    const copy = localizeApplicationCommandError(bridged, translate)
+
+    expect(isJapaneseCopy(copy!, code)).toBe(true)
+    expect(copy).toContain(code)
+    expect(copy).not.toContain('Session exceeds')
+  })
+
+  it('does not re-label a bracketed prefix that is not a published code', () => {
+    const bridged = new Error('[EACCES] permission denied')
+
+    expect(localizeApplicationCommandError(bridged, translate)).toBeUndefined()
+    expect(errorDetail(bridged)).toBe('[EACCES] permission denied')
+  })
+
+  it('strips the transport prefix from fallback detail but keeps unrelated brackets', () => {
+    expect(stripBridgedCommandErrorCode('[command-failed] The action stopped.')).toBe(
+      'The action stopped.'
+    )
+    expect(stripBridgedCommandErrorCode('[EACCES] permission denied')).toBe(
+      '[EACCES] permission denied'
+    )
+    expect(stripBridgedCommandErrorCode('no prefix here')).toBe('no prefix here')
+  })
+
   it('leaves values that are not command failures untouched', () => {
     // Node reports filesystem failures through `code` too; their detail stays as-is.
     expect(localizeApplicationCommandError(new Error('EACCES: permission denied'), translate)).toBe(
@@ -159,6 +189,13 @@ describe('errorNoticeDetail', () => {
     expect(errorNoticeDetail(new Error('EACCES: permission denied'), translate)).toBe(
       'EACCES: permission denied'
     )
+    // The bridged Error keeps instanceof and its code survives in the message.
+    const bridgedNotice = errorNoticeDetail(
+      new Error('[command-failed] The action stopped.'),
+      translate
+    )
+    expect(bridgedNotice).toContain('（コード: command-failed）')
+    expect(bridgedNotice).not.toContain('The action stopped.')
     expect(errorNoticeDetail('a string detail', translate)).toBe('a string detail')
     expect(errorNoticeDetail(undefined, translate)).toBeUndefined()
   })

@@ -4,10 +4,7 @@ import {
 } from '../shared/literature-deletion'
 import { describe, expect, it, vi, type Mock } from 'vitest'
 
-import {
-  ApplicationCommandError,
-  toApplicationCommandErrorEnvelope
-} from '../shared/application-command-contract'
+import { toApplicationCommandErrorEnvelope } from '../shared/application-command-contract'
 import { createElectronRendererContractAdapter } from './electron-renderer-contract-adapter'
 
 type MockPort = Readonly<{
@@ -270,16 +267,15 @@ describe('electron renderer contract adapter', () => {
     })
 
     await expect(adapter.invoke('projects.get', 'project-1')).resolves.toBe(project)
+    // The code travels in the message so it survives contextBridge; the renderer maps and strips it.
     await expect(adapter.invoke('projects.create', { name: 42 })).rejects.toEqual(
-      expect.objectContaining<ApplicationCommandError>({
-        name: 'ApplicationCommandError',
-        code: 'invalid-command-arguments',
-        message: 'Invalid arguments for application command: projects:create'
-      })
+      new Error(
+        '[invalid-command-arguments] Invalid arguments for application command: projects:create'
+      )
     )
   })
 
-  it('reconstructs Session size-limit failures from the Electron ACP command boundary', async () => {
+  it('carries a Session size-limit code through contextBridge on the error message', async () => {
     const port = createPort()
     const adapter = createElectronRendererContractAdapter(port)
     port.invoke.mockResolvedValue({
@@ -290,15 +286,19 @@ describe('electron renderer contract adapter', () => {
       }
     })
 
-    await expect(
-      adapter.invoke('acp.respondToPermission', {
+    const failure = await adapter
+      .invoke('acp.respondToPermission', {
         requestId: 'permission-1',
         optionId: 'allow-once'
       })
-    ).rejects.toMatchObject({
-      name: 'ApplicationCommandError',
-      code: 'session-size-limit'
-    })
+      .catch((cause: unknown) => cause)
+
+    // contextBridge keeps Error.message and drops custom properties, so the code travels in the text.
+    expect(failure).toBeInstanceOf(Error)
+    expect((failure as Error).message).toBe(
+      '[session-size-limit] Session exceeds the persistence limit.'
+    )
+    expect((failure as { code?: string }).code).toBeUndefined()
   })
 
   it.each([

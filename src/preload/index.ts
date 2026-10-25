@@ -3,7 +3,10 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { unwrapApplicationCommandOutcome } from '../shared/application-command-contract'
 import { announceWindowFindReady, subscribeCloseActivePane } from '../shared/window-controls'
 import { createElectronRendererApi } from './electron-renderer-api'
-import { createElectronRendererContractAdapter } from './electron-renderer-contract-adapter'
+import {
+  createElectronRendererContractAdapter,
+  toBridgeableCommandError
+} from './electron-renderer-contract-adapter'
 
 const electronRendererContracts = createElectronRendererContractAdapter({
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
@@ -23,10 +26,16 @@ const api = createElectronRendererApi(electronRendererContracts, {
     chrome: process.versions.chrome,
     node: process.versions.node
   }),
-  'sessions.saveSession': async (session, options) =>
-    unwrapApplicationCommandOutcome(
-      await electronRendererContracts.invoke('sessions.saveSession', session, options)
-    ),
+  'sessions.saveSession': async (session, options) => {
+    try {
+      return unwrapApplicationCommandOutcome(
+        await electronRendererContracts.invoke('sessions.saveSession', session, options)
+      )
+    } catch (error) {
+      // This override unwraps outside the adapter, so apply the same bridge encoding to its failures.
+      throw toBridgeableCommandError(error)
+    }
+  },
   'remoteAccess.onChanged': (listener) =>
     electronRendererContracts.subscribe('remoteAccess.onChanged', () => (listener as () => void)()),
   'window.onCloseActivePane': (listener) =>
