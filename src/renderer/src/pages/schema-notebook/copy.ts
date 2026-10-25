@@ -30,6 +30,7 @@ export type SchemaNotebookCopy = {
   tagged: string
   language: string
   identifierWarnings: string
+  restoreNotice: string
 }
 
 const ja: SchemaNotebookCopy = {
@@ -64,7 +65,9 @@ const ja: SchemaNotebookCopy = {
   blocked: 'この端末は病院の承認を受けていないため、個人情報を含むファイルは取り込めません。',
   tagged: 'このプロジェクトは患者データを含むため、印を外すことはできません。',
   language: '言語',
-  identifierWarnings: '直接識別子の列はモデルに渡しません'
+  identifierWarnings: '直接識別子の列はモデルに渡しません',
+  restoreNotice:
+    '前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。'
 }
 
 const catalogs: Record<string, SchemaNotebookCopy> = {

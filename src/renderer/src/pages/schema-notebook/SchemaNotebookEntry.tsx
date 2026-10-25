@@ -14,6 +14,7 @@ import type {
 } from '../../../../shared/schema-notebook'
 import { deliverableCardCopy } from '../home/deliverable-packages'
 import { schemaNotebookCopy } from './copy'
+import { loadSchemaNotebookDraft, saveSchemaNotebookDraft } from './schema-notebook-draft'
 
 type SchemaNotebookApi = {
   importTable: (request: {
@@ -35,6 +36,7 @@ type SchemaNotebookApi = {
     language: 'python' | 'r'
     code: string
   }) => Promise<ExecuteAnalysisResponse>
+  modelContext: (request: { projectId: string; tableId: string }) => Promise<SchemaModelContext>
   patientDataTags: () => Promise<Array<{ projectId: string }>>
 }
 
@@ -93,12 +95,59 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
   const [context, setContext] = useState<SchemaModelContext | null>(null)
   const [blocked, setBlocked] = useState<string | null>(null)
   const [identifierWarnings, setIdentifierWarnings] = useState<string[]>([])
-  const [code, setCode] = useState(
-    'import pandas as pd\ndf = pd.read_csv("table.csv")\nprint(df.shape)'
+  const [code, setCode] = useState(() => loadSchemaNotebookDraft(projectId).code)
+  const [language, setLanguage] = useState<'python' | 'r'>(
+    () => loadSchemaNotebookDraft(projectId).language
   )
-  const [language, setLanguage] = useState<'python' | 'r'>('python')
+  const [restoreNotice, setRestoreNotice] = useState(false)
   const [result, setResult] = useState<ExecuteAnalysisResponse | null>(null)
   const [busy, setBusy] = useState(false)
+  // The imported table is referenced by its stored id, never by file contents. It can go missing
+  // (project cleanup, restarted storage), so the restore path re-reads the context and says so.
+  const [tableInfo, setTableInfo] = useState<{ tableId?: string; filename?: string }>(() => {
+    const draft = loadSchemaNotebookDraft(projectId)
+    return { tableId: draft.tableId, filename: draft.filename }
+  })
+
+  useEffect(() => {
+    const draft = loadSchemaNotebookDraft(projectId)
+    setCode(draft.code)
+    setLanguage(draft.language)
+    setContext(null)
+    setResult(null)
+    setBlocked(null)
+    setRestoreNotice(false)
+    setTableInfo({ tableId: draft.tableId, filename: draft.filename })
+    if (!draft.tableId) return
+    const notebook = api()
+    if (!notebook?.modelContext) {
+      setRestoreNotice(true)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const restored = await notebook.modelContext({ projectId, tableId: draft.tableId! })
+        if (cancelled) return
+        // A missing table must not leave the panel looking restored.
+        if (!restored || typeof restored !== 'object' || !('tableId' in restored)) {
+          throw new Error('The stored table could not be reopened.')
+        }
+        setContext(restored)
+      } catch {
+        if (cancelled) return
+        setTableInfo({})
+        setRestoreNotice(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [projectId])
+
+  useEffect(() => {
+    saveSchemaNotebookDraft(projectId, { ...tableInfo, code, language })
+  }, [projectId, tableInfo, code, language])
 
   useEffect(() => {
     if (!consultationPack || !window.api?.writingSafeguards) return
@@ -158,6 +207,8 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       setContext(response.context)
       setTagged(response.tagged)
       setResult(null)
+      setRestoreNotice(false)
+      setTableInfo({ tableId: response.context.tableId, filename: file.name })
     } catch (error) {
       setBlocked(error instanceof Error ? error.message : String(error))
     } finally {
@@ -264,6 +315,11 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
           {blocked ? (
             <pre className="whitespace-pre-wrap text-xs text-[#9a5046]">{blocked}</pre>
           ) : null}
+          {restoreNotice ? (
+            <p data-testid="schema-notebook-restore-notice" className="text-xs text-[#9a5046]">
+              {copy.restoreNotice}
+            </p>
+          ) : null}
           {identifierWarnings.length > 0 ? (
             <ul aria-label={copy.identifierWarnings} className="space-y-1 text-xs text-[#9a5046]">
               {identifierWarnings.map((warning) => (
@@ -271,6 +327,31 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
               ))}
             </ul>
           ) : null}
+          {/* The code editor stays available without a table: the draft survives a project switch
+              and a lost import, and Run only needs a table to execute against. */}
+          <label className="block text-xs">
+            {copy.language}
+            <select
+              className="ml-2"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as 'python' | 'r')}
+            >
+              <option value="python">Python</option>
+              <option value="r">R</option>
+            </select>
+          </label>
+          <label className="block text-xs">
+            {copy.code}
+            <textarea
+              className="mt-1 block w-full font-mono text-xs"
+              rows={5}
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+            />
+          </label>
+          <button type="button" disabled={busy || !context} onClick={() => void run()}>
+            {copy.run}
+          </button>
           {context ? (
             <div className="space-y-2">
               <p>
@@ -301,29 +382,6 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
               <pre className="overflow-auto text-xs">
                 {JSON.stringify(context.syntheticSampleRows)}
               </pre>
-              <label className="block text-xs">
-                {copy.language}
-                <select
-                  className="ml-2"
-                  value={language}
-                  onChange={(event) => setLanguage(event.target.value as 'python' | 'r')}
-                >
-                  <option value="python">Python</option>
-                  <option value="r">R</option>
-                </select>
-              </label>
-              <label className="block text-xs">
-                {copy.code}
-                <textarea
-                  className="mt-1 block w-full font-mono text-xs"
-                  rows={5}
-                  value={code}
-                  onChange={(event) => setCode(event.target.value)}
-                />
-              </label>
-              <button type="button" disabled={busy} onClick={() => void run()}>
-                {copy.run}
-              </button>
               {result ? (
                 <div className="grid gap-2">
                   <pre aria-label={copy.localResult}>{result.local.stdout}</pre>
