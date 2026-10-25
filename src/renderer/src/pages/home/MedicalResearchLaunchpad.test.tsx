@@ -2,6 +2,7 @@
 import { act, type ComponentProps } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, expect, it, vi } from 'vitest'
+import { dialogFooterClassName } from '../../components/ui/dialog-chrome'
 import { initI18n } from '../../i18n'
 import { useSettingsStore } from '../../stores/settings-store'
 import { CATEGORICAL_RELEASE_LIMIT } from '../../../../main/notebook/schema-only/categorical-release'
@@ -402,6 +403,57 @@ it('shows the §34.2 ① research-design checklist verbatim on the mentor-prep c
     } finally {
       await act(async () => root.unmount())
     }
+  }
+})
+
+it('keeps the primary row on one card track and overflow-safe without dropping the mentor note', async () => {
+  initI18n('ja')
+  const { host, root } = await renderLaunchpad()
+  try {
+    // Three columns share the card track at lg; the mentor §34.2 note owns the second track, so the
+    // cards stay one height instead of each column sizing itself from its own Japanese copy.
+    const grid = host.querySelector('[data-testid="home-primary-entries"]')
+    expect(grid?.className).toContain('lg:grid-cols-3')
+    expect(grid?.className).toContain('lg:grid-rows-[auto_auto]')
+    const columns = [...host.querySelectorAll('[data-home-entry]')].map(
+      (card) => card.parentElement
+    )
+    expect(columns).toHaveLength(3)
+    for (const column of columns) {
+      expect(column?.className).toContain('min-w-0')
+      expect(column?.className).toContain('lg:row-span-2')
+      expect(column?.className).toContain('lg:grid-rows-subgrid')
+    }
+
+    // The disclaimer still hangs under the mentor-prep column only.
+    const mentorColumn = columns[0]
+    const disclaimer = mentorColumn?.querySelector('[data-testid="s34-disclaimer-research-design"]')
+    expect(disclaimer?.textContent).toBe(S34_2_RESEARCH_DESIGN_CHECKLIST)
+    expect(mentorColumn?.querySelector('[data-testid="home-entry-mentor-prep"]')).not.toBeNull()
+    for (const otherColumn of columns.slice(1)) {
+      expect(
+        otherColumn?.querySelector('[data-testid="s34-disclaimer-research-design"]')
+      ).toBeNull()
+    }
+
+    // Long Japanese copy may wrap inside a column, never widen the row.
+    for (const entryId of ['mentor-prep', 'analyze-data', 'write-abstract'] as const) {
+      const card = host.querySelector(`[data-testid="home-entry-${entryId}"]`)
+      expect(card?.className).toContain('min-w-0')
+      expect(card?.className).not.toContain('whitespace-nowrap')
+      const description = host.querySelector(`[data-testid="home-entry-description-${entryId}"]`)
+      expect(description?.className).toContain('min-w-0')
+      expect(description?.className).toContain('[overflow-wrap:anywhere]')
+    }
+    const expanderLabel = host.querySelector('[data-testid="start-from-step"] span')
+    expect(expanderLabel?.className).toContain('min-w-0')
+    expect(expanderLabel?.className).toContain('[overflow-wrap:anywhere]')
+
+    // #63 must stay fixed: the shared footer no longer forces every button label to wrap.
+    expect(dialogFooterClassName).not.toContain('[&_button]:whitespace-normal')
+    expect(dialogFooterClassName).not.toContain('overflow-wrap')
+  } finally {
+    await act(async () => root.unmount())
   }
 })
 
