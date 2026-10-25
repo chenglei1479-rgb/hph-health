@@ -1,3 +1,4 @@
+import { modelReleaseError } from '../phi/gate'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
@@ -758,6 +759,34 @@ const hasCodexCredentialMaterial = (value: unknown): boolean => {
     isNonEmptyString(auth.tokens.refresh_token) &&
     isRfc3339(auth.last_refresh)
   )
+}
+
+// Main-process only. Never copy subscription secrets into a model runtime. Expired or
+// unsupported credentials fail closed; sign-in refresh remains the existing account flow.
+export const readCodexSubscriptionHeaders = async (
+  storageRoot: string
+): Promise<Record<string, string>> => {
+  try {
+    const auth: unknown = JSON.parse(
+      await readFile(join(codexSubscriptionStorageDir(storageRoot), 'auth.json'), 'utf8')
+    )
+    if (
+      !isJsonObject(auth) ||
+      ![undefined, 'chatgpt', 'chatgptAuthTokens'].includes(auth.auth_mode as string | undefined) ||
+      !isJsonObject(auth.tokens) ||
+      !isNonEmptyString(auth.tokens.access_token) ||
+      !isNonEmptyString(auth.tokens.account_id)
+    ) {
+      throw modelReleaseError()
+    }
+    return {
+      authorization: `Bearer ${auth.tokens.access_token}`,
+      'chatgpt-account-id': auth.tokens.account_id
+    }
+  } catch {
+    // Parsing failures can quote credential bytes. Expose only the common safe failure.
+    throw modelReleaseError()
+  }
 }
 
 export const inspectAppOwnedCodexAuthentication = async (

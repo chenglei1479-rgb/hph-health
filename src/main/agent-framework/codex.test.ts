@@ -179,7 +179,7 @@ describe('codexFramework', () => {
     }
   )
 
-  it('projects subscription authentication into a Windows delegated runtime home', async () => {
+  it('keeps subscription secrets and imported routes out of a Windows delegated runtime home', async () => {
     const root = await mkdtemp(join(tmpdir(), 'codex-delegated-subscription-'))
     const sourceHome = join(root, 'subscription')
     const runtimeHome = join(root, 'runtime')
@@ -219,10 +219,10 @@ describe('codexFramework', () => {
         USERPROFILE: runtimeHome,
         CODEX_HOME: runtimeHome
       })
-      expect(await readFile(join(runtimeHome, 'auth.json'), 'utf8')).toContain('secret')
+      expect(existsSync(join(runtimeHome, 'auth.json'))).toBe(false)
       const configToml = await readFile(join(runtimeHome, 'config.toml'), 'utf8')
-      expect(configToml).toContain('cli_auth_credentials_store = "file"')
-      expect(configToml).toContain('model_provider = "subscription-route"')
+      expect(configToml).toContain('cli_auth_credentials_store = "ephemeral"')
+      expect(configToml).not.toContain('subscription-route')
       expect(configToml).not.toContain('mcp_servers')
       expect(configToml).not.toContain('unsafe-tool')
     } finally {
@@ -230,12 +230,9 @@ describe('codexFramework', () => {
     }
   })
 
-  it.each([
-    ['https', 'open-science-chatgpt-https', false],
-    ['websocket', 'open-science-chatgpt-websocket', true]
-  ] as const)(
-    'projects the resolved %s subscription transport into a delegated runtime home',
-    async (codexSubscriptionTransport, providerId, supportsWebsockets) => {
+  it.each(['https', 'websocket'] as const)(
+    'does not restore a legacy %s subscription route into a delegated runtime home',
+    async (codexSubscriptionTransport) => {
       const root = await mkdtemp(join(tmpdir(), 'codex-delegated-transport-'))
       const sourceHome = join(root, 'subscription')
       const runtimeHome = join(root, 'runtime')
@@ -272,9 +269,9 @@ describe('codexFramework', () => {
         )
 
         const configToml = await readFile(join(runtimeHome, 'config.toml'), 'utf8')
-        expect(configToml).toContain(`model_provider = "${providerId}"`)
-        expect(configToml).toContain('base_url = "https://chatgpt.com/backend-api/codex"')
-        expect(configToml).toContain(`supports_websockets = ${String(supportsWebsockets)}`)
+        expect(configToml).not.toContain('model_provider')
+        expect(configToml).not.toContain('chatgpt.com')
+        expect(existsSync(join(runtimeHome, 'auth.json'))).toBe(false)
       } finally {
         await rm(root, { recursive: true, force: true })
       }
@@ -315,7 +312,7 @@ describe('codexFramework', () => {
 
       expect(prepared.env.CODEX_HOME).toBe(runtimeHome)
       expect(existsSync(join(runtimeHome, 'auth.json'))).toBe(false)
-      expect(await readFile(join(runtimeHome, 'config.toml'), 'utf8')).toBe(
+      expect(await readFile(join(runtimeHome, 'config.toml'), 'utf8')).toContain(
         'cli_auth_credentials_store = "ephemeral"\n'
       )
     } finally {
@@ -385,11 +382,21 @@ describe('codexFramework', () => {
         }
       ),
       framework.prepareModelConfig(
-        { type: 'codex-shared', model: 'gpt-5.4' },
+        {
+          type: 'custom',
+          baseUrl: 'http://127.0.0.1:41000/v1',
+          key: 'loopback-token',
+          model: 'gpt-5.4'
+        },
         { storageRoot: '/data/shared', executablePath: '/runtime/codex-acp' }
       ),
       framework.prepareModelConfig(
-        { type: 'codex-isolated', model: 'gpt-5.4' },
+        {
+          type: 'custom',
+          baseUrl: 'http://127.0.0.1:41000/v1',
+          key: 'loopback-token',
+          model: 'gpt-5.4'
+        },
         { storageRoot: '/data/subscription', executablePath: '/runtime/codex-acp' }
       )
     ]
@@ -819,9 +826,7 @@ describe('codexFramework', () => {
           shell_type: 'shell_command',
           visibility: 'list',
           supported_in_api: true,
-          base_instructions: expect.stringContaining(
-            'inside DRA through the Agent Client Protocol'
-          ),
+          base_instructions: expect.stringContaining('through the Agent Client Protocol'),
           include_skills_usage_instructions: true,
           default_reasoning_level: 'none',
           supported_reasoning_levels: [
@@ -975,152 +980,18 @@ describe('codexFramework', () => {
     })
   })
 
-  it('maps the legacy shared subscription to the app-owned subscription home', () => {
-    const framework = createCodexFramework({ platform: 'darwin' })
-    const config = framework.prepareModelConfig(
-      { type: 'codex-shared', apiEndpoints: ['responses'] },
-      { storageRoot: '/data', executablePath: '/runtime/codex-acp' }
-    )
-
-    expect(config).toEqual({
-      env: {
-        HOME: join('/data', 'codex-subscription'),
-        CODEX_HOME: join('/data', 'codex-subscription'),
-        CODEX_CONFIG: JSON.stringify({
-          agents: { enabled: false },
-          features: {
-            apps: false,
-            memories: false,
-            multi_agent: false,
-            multi_agent_v2: false,
-            plugins: false,
-            remote_plugin: false,
-            code_mode: { direct_only_tool_namespaces: ['mcp__skills'] },
-            shell_tool: false
-          },
-          memories: { generate_memories: false, use_memories: false }
-        })
-      }
-    })
-  })
-
-  it('uses persistent app-owned storage for an isolated Codex subscription', () => {
-    const framework = createCodexFramework({ platform: 'darwin' })
-    const config = framework.prepareModelConfig(
-      { type: 'codex-isolated', apiEndpoints: ['responses'] },
-      { storageRoot: '/data', executablePath: '/runtime/codex-acp' }
-    )
-
-    expect(config).toEqual({
-      env: {
-        HOME: join('/data', 'codex-subscription'),
-        CODEX_HOME: join('/data', 'codex-subscription'),
-        CODEX_CONFIG: JSON.stringify({
-          agents: { enabled: false },
-          features: {
-            apps: false,
-            memories: false,
-            multi_agent: false,
-            multi_agent_v2: false,
-            plugins: false,
-            remote_plugin: false,
-            code_mode: { direct_only_tool_namespaces: ['mcp__skills'] },
-            shell_tool: false
-          },
-          memories: { generate_memories: false, use_memories: false }
-        })
-      }
-    })
-  })
-
-  it('isolates the native Windows home used for user-installed Skills', () => {
-    const framework = createCodexFramework({ platform: 'win32' })
-    const config = framework.prepareModelConfig(
-      { type: 'codex-isolated', apiEndpoints: ['responses'] },
-      { storageRoot: 'C:\\OpenScience', executablePath: 'C:\\runtime\\codex-acp.exe' }
-    )
-
-    expect(config.env).toMatchObject({
-      HOME: join('C:\\OpenScience', 'codex-subscription'),
-      USERPROFILE: join('C:\\OpenScience', 'codex-subscription'),
-      CODEX_HOME: join('C:\\OpenScience', 'codex-subscription')
-    })
-  })
-
-  it('seeds the selected model into CODEX_CONFIG for an isolated Codex subscription', () => {
-    // Without a model here, codex-acp falls back to its account default and we have to switch the
-    // model via session/set_config_option after session creation. The late switch makes the first
-    // prompt of every new session wait ~2 min for the new model to come online (issue #277).
-    const framework = createCodexFramework()
-    const config = framework.prepareModelConfig(
-      {
-        type: 'codex-isolated',
-        apiEndpoints: ['responses'],
-        model: 'gpt-5.6-terra'
-      },
-      { storageRoot: '/data', executablePath: '/runtime/codex-acp' }
-    )
-
-    expect(config.env?.CODEX_HOME).toBe(join('/data', 'codex-subscription'))
-    expect(JSON.parse(config.env?.CODEX_CONFIG ?? '')).toMatchObject({ model: 'gpt-5.6-terra' })
-  })
-
-  it('seeds reasoning effort alongside the model for an isolated Codex subscription', () => {
-    const framework = createCodexFramework()
-    const config = framework.prepareModelConfig(
-      {
-        type: 'codex-isolated',
-        apiEndpoints: ['responses'],
-        model: 'gpt-5.6-terra'
-      },
-      {
-        storageRoot: '/data',
-        executablePath: '/runtime/codex-acp',
-        reasoningEffort: 'high'
-      }
-    )
-
-    expect(JSON.parse(config.env?.CODEX_CONFIG ?? '')).toMatchObject({
-      model: 'gpt-5.6-terra',
-      model_reasoning_effort: 'high'
-    })
-  })
-
-  it('seeds reasoning effort without a model for an isolated Codex subscription', () => {
-    // No model picked but the user set an effort: still worth seeding so codex-acp does not have
-    // to apply it via session/set_config_option (issue #277, same root cause as the model case).
-    const framework = createCodexFramework()
-    const config = framework.prepareModelConfig(
-      { type: 'codex-isolated', apiEndpoints: ['responses'] },
-      {
-        storageRoot: '/data',
-        executablePath: '/runtime/codex-acp',
-        reasoningEffort: 'high'
-      }
-    )
-
-    expect(JSON.parse(config.env?.CODEX_CONFIG ?? '')).toMatchObject({
-      model_reasoning_effort: 'high'
-    })
-  })
-
-  it('does not add a custom model_provider for an isolated Codex subscription', () => {
-    // The ChatGPT subscription is codex-acp's default provider; layering an open-science custom
-    // provider on top would route the request through a gateway the user did not configure.
-    const framework = createCodexFramework()
-    const config = framework.prepareModelConfig(
-      {
-        type: 'codex-isolated',
-        apiEndpoints: ['responses'],
-        model: 'gpt-5.6-terra'
-      },
-      { storageRoot: '/data', executablePath: '/runtime/codex-acp' }
-    )
-
-    const parsed = JSON.parse(config.env?.CODEX_CONFIG ?? '{}')
-    expect(parsed).not.toHaveProperty('model_provider')
-    expect(parsed).not.toHaveProperty('model_providers')
-  })
+  it.each(['codex-shared', 'codex-isolated'] as const)(
+    'refuses direct %s configuration without a checked projection',
+    (type) => {
+      const framework = createCodexFramework()
+      expect(() =>
+        framework.prepareModelConfig(
+          { type, apiEndpoints: ['responses'], model: 'gpt-5.6-terra' },
+          { storageRoot: '/data', executablePath: '/runtime/codex-acp' }
+        )
+      ).toThrow(/checked connection/)
+    }
+  )
 
   it.each([
     // Bare origins gain the `/v1` version segment Codex needs before `/responses`.
@@ -1202,7 +1073,13 @@ describe('codexFramework', () => {
   it('persists app guidance for a subscription backend', () => {
     const framework = createCodexFramework()
     const config = framework.prepareModelConfig(
-      { type: 'codex-isolated', apiEndpoints: ['responses'], model: 'gpt-5.6-terra' },
+      {
+        type: 'custom',
+        baseUrl: 'http://127.0.0.1:41000/v1',
+        key: 'loopback-token',
+        apiEndpoints: ['responses'],
+        model: 'gpt-5.6-terra'
+      },
       {
         storageRoot: '/data',
         executablePath: '/runtime/codex-acp',
@@ -1238,7 +1115,13 @@ describe('codexFramework', () => {
       }
     )
     const subscriptionConfig = framework.prepareModelConfig(
-      { type: 'codex-isolated', apiEndpoints: ['responses'], model: 'gpt-5.6-terra' },
+      {
+        type: 'custom',
+        baseUrl: 'http://127.0.0.1:41000/v1',
+        key: 'loopback-token',
+        apiEndpoints: ['responses'],
+        model: 'gpt-5.6-terra'
+      },
       {
         storageRoot: '/data',
         executablePath: '/runtime/codex-acp',

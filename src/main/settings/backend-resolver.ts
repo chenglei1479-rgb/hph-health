@@ -10,7 +10,6 @@ import {
   CODEX_BRIDGE_UNSUPPORTED_MESSAGE,
   NO_ACTIVE_PROVIDER_MESSAGE
 } from '../../shared/run-error-classification'
-import type { CodexSubscriptionTransport } from '../../shared/settings'
 import {
   DEFAULT_CONVERSATION_SKILL_IMPORT_ENABLED,
   DEFAULT_REASONING_EFFORT,
@@ -26,12 +25,12 @@ import {
   type ResolvedAgentBackend
 } from '../agent-framework'
 import { codeBuddyStorageDir } from '../agent-framework/codebuddy'
-import { codexStorageDir, codexSubscriptionStorageDir } from '../agent-framework/codex'
+import { codexStorageDir } from '../agent-framework/codex'
 import { opencodeConfigDir } from '../agent-framework/opencode'
 import { renderConnectorInstructions } from '../connectors/skill-document-renderer'
 import { OPEN_SCIENCE_SKILL_RUNTIME_SESSION_OPTION } from '../skills/runtime-mcp-server'
 import type { AgentRuntimeManager } from './agent-runtime-manager'
-import { BackendRoutePlanner } from './backend-route-planner'
+import { BackendRoutePlanner, type BackendRoutePlan } from './backend-route-planner'
 import {
   BackendSelectionOwner,
   type AgentBackendSelection,
@@ -39,7 +38,7 @@ import {
   type ExplicitAgentBackendTarget
 } from './backend-selection-owner'
 import type { ClaudeRuntimeModelConfig } from './claude-config-provision'
-import { ensureCodexAuthHome, resolveEffectiveCodexSubscriptionTransport } from './codex-auth'
+import { readCodexSubscriptionHeaders } from './codex-auth'
 import type { ConnectorSettingsModule } from './connector-settings'
 import {
   CLAUDE_SHARED_DISCONNECTED_MESSAGE,
@@ -119,7 +118,6 @@ export type AgentBackendResolverOptions = ProviderTransportOwnerOptions & {
   userClaudeDir: string
   skillRuntimeMcpEntryPath: string
   readFrameworkOverride?: () => string | undefined
-  ensureCodexSubscriptionHome?: (transport: CodexSubscriptionTransport) => Promise<void>
 }
 
 // Coordinates stable backend decisions while ProviderTransportOwner owns every live generation.
@@ -135,9 +133,6 @@ export class AgentBackendResolver {
   private readonly selection: BackendSelectionOwner
   private readonly planner: BackendRoutePlanner
   private readonly transports: ProviderTransportOwner
-  private readonly ensureCodexSubscriptionHome: (
-    transport: CodexSubscriptionTransport
-  ) => Promise<void>
 
   constructor(options: AgentBackendResolverOptions) {
     this.readSettings = options.readSettings
@@ -155,10 +150,12 @@ export class AgentBackendResolver {
         this.providers.resolveRuntimeReasoningEffortProfile(provider, model)
     })
     this.planner = new BackendRoutePlanner({ providers: this.providers })
-    this.transports = new ProviderTransportOwner(options)
-    this.ensureCodexSubscriptionHome =
-      options.ensureCodexSubscriptionHome ??
-      ((transport) => ensureCodexAuthHome('isolated', this.storageRoot, transport))
+    this.transports = new ProviderTransportOwner({
+      ...options,
+      getCodexSubscriptionHeaders:
+        options.getCodexSubscriptionHeaders ??
+        (() => readCodexSubscriptionHeaders(this.storageRoot))
+    })
   }
 
   async resolveActiveSpawnConfig(
@@ -332,7 +329,9 @@ export class AgentBackendResolver {
       : undefined
     if (!storedProvider) throw new Error(NO_ACTIVE_PROVIDER_MESSAGE)
 
-    assertPhiCheckedAgentProvider(storedProvider.type)
+    if (!isCodexSubscriptionProvider(storedProvider.type) || frameworkId !== 'codex') {
+      assertPhiCheckedAgentProvider(storedProvider.type)
+    }
     const target = this.providers.resolveRuntimeTarget(storedProvider, modelSelection, framework)
     if (!target.frameworkCompatible) {
       throw new Error(buildActiveModelIncompatibleMessage(framework.displayName))
@@ -350,12 +349,32 @@ export class AgentBackendResolver {
         'Artifact code reconstruction is unavailable with Codex subscription authentication.'
       )
     }
+    const planBackend = (): BackendRoutePlan =>
+      this.planner.planBackend({
+        settings,
+        frameworkId,
+        target,
+        effortIntent,
+        resolvedEffort,
+        conversationSkillImportEnabled:
+          settings.conversationSkillImportEnabled ?? DEFAULT_CONVERSATION_SKILL_IMPORT_ENABLED,
+        forceNativeResponsesCompatibility
+      })
+    // Subscription admission must prove its route before preparing any runtime. Keep the
+    // established executable/probe error priority for already-checked API providers.
+    const checkedSubscriptionPlan = isCodexSubscriptionProvider(storedProvider.type)
+      ? planBackend()
+      : undefined
+    assertPhiCheckedAgentProvider(
+      storedProvider.type,
+      checkedSubscriptionPlan?.transport.kind === 'codex-subscription'
+        ? 'codex-subscription-bridge'
+        : undefined
+    )
     const forcedSkillIds = new Set(context.forcedSkillIds ?? [])
     const includeSkillAndConnectorContext = context.includeSkillAndConnectorContext !== false
     const codeBuddySkillRuntimeRoot = join(codeBuddyStorageDir(this.storageRoot), 'skill-runtime')
-    const codexSkillRuntimeRoot = isCodexSubscriptionProvider(target.provider.type)
-      ? codexSubscriptionStorageDir(this.storageRoot)
-      : codexStorageDir(this.storageRoot)
+    const codexSkillRuntimeRoot = codexStorageDir(this.storageRoot)
     const userSkillDirectoryGuidance =
       includeSkillAndConnectorContext && framework.supportsSkills
         ? userSkillDirectorySystemPromptAppend(this.storageRoot)
@@ -386,16 +405,7 @@ export class AgentBackendResolver {
     ) {
       throw new Error(CLAUDE_SHARED_DISCONNECTED_MESSAGE)
     }
-    const plan = this.planner.planBackend({
-      settings,
-      frameworkId,
-      target,
-      effortIntent,
-      resolvedEffort,
-      conversationSkillImportEnabled:
-        settings.conversationSkillImportEnabled ?? DEFAULT_CONVERSATION_SKILL_IMPORT_ENABLED,
-      forceNativeResponsesCompatibility
-    })
+    const plan = checkedSubscriptionPlan ?? planBackend()
     const modelRoute = plan.modelRoute
     const sessionEffort = plan.sessionEffort
     const supportedReasoningEfforts = plan.supportedReasoningEfforts
@@ -438,11 +448,10 @@ export class AgentBackendResolver {
 
     const codexSubscriptionTransport =
       framework.id === 'codex' && isCodexSubscriptionProvider(target.provider.type)
-        ? resolveEffectiveCodexSubscriptionTransport(target.provider)
+        ? ('https' as const)
         : undefined
-    if (codexSubscriptionTransport) {
-      await this.ensureCodexSubscriptionHome(codexSubscriptionTransport)
-    }
+    // The checked route reads credentials in main. Never prepare a native subscription home.
+
     const backendProviderId = plan.backendProviderId
     if (framework.supportsSkills || framework.id === 'codebuddy') {
       const skillsRoot =
@@ -542,7 +551,9 @@ export class AgentBackendResolver {
           ? { proxyEnvironmentMode: proxyEnv === undefined ? 'inherit' : 'replace' }
           : {}),
         sessionModel,
-        ...(framework.id === 'codex' && isCodexSubscriptionProvider(provider.type) && sessionModel
+        ...(framework.id === 'codex' &&
+        isCodexSubscriptionProvider(target.provider.type) &&
+        sessionModel
           ? { sessionModelRequired: true }
           : {}),
         sessionEffort,

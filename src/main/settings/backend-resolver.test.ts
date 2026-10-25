@@ -1,3 +1,4 @@
+import { BackendRoutePlanner } from './backend-route-planner'
 import { join } from 'node:path'
 
 import { describe, expect, it, vi } from 'vitest'
@@ -176,7 +177,6 @@ const makeHarness = (options: HarnessOptions = {}) => {
   let currentSettings = options.settings ?? makeSettings()
   const readSettings = vi.fn(async () => currentSettings)
   const readFrameworkOverride = vi.fn(() => options.frameworkOverride)
-  const ensureCodexSubscriptionHome = vi.fn(async () => undefined)
   const nextGenerationId = vi.fn(options.nextGenerationId ?? (() => 'generation'))
 
   const resolveRuntimeTarget = vi.fn(
@@ -320,7 +320,6 @@ const makeHarness = (options: HarnessOptions = {}) => {
     createNativeResponsesProxy,
     createAnthropicProviderBridge,
     createOpenAiProviderBridge,
-    ensureCodexSubscriptionHome,
     nextGenerationId,
     ...(options.getXaiOAuthAccessToken
       ? { getXaiOAuthAccessToken: options.getXaiOAuthAccessToken }
@@ -331,7 +330,6 @@ const makeHarness = (options: HarnessOptions = {}) => {
     resolver,
     readSettings,
     readFrameworkOverride,
-    ensureCodexSubscriptionHome,
     nextGenerationId,
     resolveRuntimeTarget,
     resolveRuntimeModelCatalog,
@@ -379,7 +377,6 @@ describe('AgentBackendResolver construction and selection', () => {
     expect(harness.createResponsesBridge).not.toHaveBeenCalled()
     expect(harness.createNativeResponsesProxy).not.toHaveBeenCalled()
     expect(harness.createAnthropicProviderBridge).not.toHaveBeenCalled()
-    expect(harness.ensureCodexSubscriptionHome).not.toHaveBeenCalled()
     expect(harness.nextGenerationId).not.toHaveBeenCalled()
     expectRuntimeNotStarted(harness.runtime)
 
@@ -481,7 +478,7 @@ describe('AgentBackendResolver configured and explicit targets', () => {
   })
 
   it.each(['start', 'resume'] as const)(
-    'blocks %s Side chat with an unchecked Codex subscription before runtime startup',
+    'resolves %s Side chat through the credential-free Codex subscription bridge',
     async () => {
       const provider: StoredProvider = {
         id: 'builtin-codex-subscription',
@@ -497,13 +494,43 @@ describe('AgentBackendResolver configured and explicit targets', () => {
         })
       })
       const target = await harness.resolver.captureExplicitTarget()
-      await expect(harness.resolver.resolveExplicitTarget(target)).rejects.toThrow(
-        /unavailable in beta/
-      )
-      expect(harness.ensureCodexSubscriptionHome).not.toHaveBeenCalled()
-      expectRuntimeNotStarted(harness.runtime)
+      const backend = await harness.resolver.resolveExplicitTarget(target)
+      expect(backend.authentication?.methodId).toBe('api-key')
+      expect(backend.env.CODEX_HOME).toBe('/storage/codex')
+      expect(backend.providerTransportLease).toBeDefined()
+      expect(harness.createOpenAiProviderBridge).toHaveBeenCalledOnce()
+      await backend.providerTransportLease?.release()
     }
   )
+
+  it('refuses an unchecked subscription plan before runtime or home preparation', async () => {
+    const provider: StoredProvider = {
+      id: 'builtin-codex-subscription',
+      type: 'codex-isolated',
+      name: 'Codex',
+      model: 'gpt-5.4'
+    }
+    const harness = makeHarness({
+      settings: makeSettings({
+        providers: [provider],
+        activeProviderId: provider.id,
+        agentFrameworkId: 'codex'
+      })
+    })
+    const original = BackendRoutePlanner.prototype.planBackend
+    const planning = vi
+      .spyOn(BackendRoutePlanner.prototype, 'planBackend')
+      .mockImplementation(function (this: BackendRoutePlanner, input) {
+        return { ...original.call(this, input), transport: { kind: 'direct' } }
+      })
+    try {
+      await expect(harness.resolver.resolveActiveBackend()).rejects.toThrow(/unavailable in beta/)
+      expectRuntimeNotStarted(harness.runtime)
+      expect(harness.createOpenAiProviderBridge).not.toHaveBeenCalled()
+    } finally {
+      planning.mockRestore()
+    }
+  })
 
   it('fails closed for Codex subscription reconstruction before starting a runtime', async () => {
     const provider: StoredProvider = {
@@ -536,13 +563,13 @@ describe('AgentBackendResolver configured and explicit targets', () => {
         },
         { forceCodexNativeResponsesCompatibility: true }
       )
-    ).rejects.toThrow(/unavailable in beta/)
+    ).rejects.toThrow(/Artifact code reconstruction is unavailable/)
     expect(harness.createNativeResponsesProxy).not.toHaveBeenCalled()
     expectRuntimeNotStarted(harness.runtime)
   })
 
   it.each(['auto', 'https', 'websocket'] as const)(
-    'blocks the unchecked Codex %s transport before preparing a home',
+    'overrides the legacy %s preference with the checked HTTPS bridge',
     async (codexTransport) => {
       const provider: StoredProvider = {
         id: 'builtin-codex-subscription',
@@ -560,16 +587,16 @@ describe('AgentBackendResolver configured and explicit targets', () => {
           agentFrameworkId: 'codex'
         })
       })
-      await expect(
-        harness.resolver.resolveExplicitTarget({
-          frameworkId: 'codex',
-          providerId: provider.id,
-          model: { kind: 'required', id: 'gpt-5.4' },
-          reasoningEffort: 'high'
-        })
-      ).rejects.toThrow(/unavailable in beta/)
-      expect(harness.ensureCodexSubscriptionHome).not.toHaveBeenCalled()
-      expectRuntimeNotStarted(harness.runtime)
+      const backend = await harness.resolver.resolveExplicitTarget({
+        frameworkId: 'codex',
+        providerId: provider.id,
+        model: { kind: 'required', id: 'gpt-5.4' },
+        reasoningEffort: 'high'
+      })
+      expect(backend.codexSubscriptionTransport).toBe('https')
+      expect(backend.env.CODEX_HOME).toBe('/storage/codex')
+      expect(JSON.stringify(backend)).not.toContain('backend-api/codex')
+      await backend.providerTransportLease?.release()
     }
   )
 

@@ -308,3 +308,17 @@ it('sends nothing when machine-approval lookup throws, including for clean text'
   ).rejects.toThrow(MODEL_RELEASE_RETRY_MESSAGE)
   expect(send).not.toHaveBeenCalled()
 })
+
+// A checked route authorizes only runtime resolution; its complete HTTP body is still gated.
+it.each(['codex-shared', 'codex-isolated'] as const)(
+  'admits %s only with the checked transport',
+  (type) => {
+    expect(() => assertPhiCheckedAgentProvider(type, 'codex-subscription-bridge')).not.toThrow()
+  }
+)
+it.each(['claude-shared', 'claude-isolated'] as const)(
+  'never admits %s with a Codex boundary',
+  (type) => {
+    expect(() => assertPhiCheckedAgentProvider(type, 'codex-subscription-bridge')).toThrow(/beta/)
+  }
+)

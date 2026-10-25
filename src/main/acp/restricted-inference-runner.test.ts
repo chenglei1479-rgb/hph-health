@@ -154,7 +154,7 @@ const runInput = (
 })
 
 describe('RestrictedInferenceRunner', () => {
-  it('builds a disposable tool-less profile from app-owned Codex subscription auth', async () => {
+  it('keeps subscription auth and imported routes out of a disposable tool-less profile', async () => {
     temporaryRoot = await mkdtemp(join(tmpdir(), 'open-science-restricted-codex-subscription-'))
     const sourceHome = join(temporaryRoot, 'subscription-home')
     await mkdir(sourceHome)
@@ -200,11 +200,13 @@ describe('RestrictedInferenceRunner', () => {
       }
     )
 
-    expect(await readFile(join(prepared.env.CODEX_HOME!, 'auth.json'), 'utf8')).toContain('secret')
+    await expect(
+      readFile(join(prepared.env.CODEX_HOME!, 'auth.json'), 'utf8')
+    ).rejects.toMatchObject({ code: 'ENOENT' })
     const configToml = await readFile(join(prepared.env.CODEX_HOME!, 'config.toml'), 'utf8')
-    expect(configToml).toContain('cli_auth_credentials_store = "file"')
-    expect(configToml).toContain('model_provider = "subscription-route"')
-    expect(configToml).toContain('base_url = "http://127.0.0.1:43123/v1"')
+    expect(configToml).toContain('cli_auth_credentials_store = "ephemeral"')
+    expect(configToml).not.toContain('subscription-route')
+    expect(configToml).not.toContain('base_url')
     expect(configToml).not.toContain('mcp_servers')
     expect(configToml).not.toContain('unsafe-tool')
     expect(prepared.env.HOME).toBe(prepared.env.CODEX_HOME)

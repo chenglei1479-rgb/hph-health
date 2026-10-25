@@ -3,7 +3,6 @@ import { join } from 'node:path'
 
 import type { ResolvedAgentBackend } from '../agent-framework'
 import { isolateCodeBuddyEnvironment } from '../agent-framework/codebuddy'
-import { CODEX_SUBSCRIPTION_PROVIDER_ID } from '../../shared/settings'
 import { prepareCodexRuntimeHomeAuthentication } from '../settings/codex-auth'
 import { OPEN_SCIENCE_SKILL_RUNTIME_SESSION_OPTION } from '../skills/runtime-mcp-server'
 
@@ -133,7 +132,7 @@ const prepareCodexBackend = async (
   await prepareCodexRuntimeHomeAuthentication({
     sourceHome: backend.env.CODEX_HOME,
     runtimeHome: codexHome,
-    useSubscriptionAuthentication: backend.providerId === CODEX_SUBSCRIPTION_PROVIDER_ID,
+    useSubscriptionAuthentication: false,
     subscriptionTransport: backend.codexSubscriptionTransport
   })
   const codexConfig = record(JSON.parse(backend.env.CODEX_CONFIG ?? '{}'))

@@ -98,7 +98,7 @@ export const MODEL_RELEASE_RETRY_MESSAGE =
 export const UNSCANNABLE_MODEL_CONTENT_MESSAGE =
   'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
 export const UNGUARDED_AGENT_MESSAGE =
-  'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.'
+  'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.'
 
 export function modelReleaseError(key = MODEL_RELEASE_RETRY_MESSAGE): PhiGateError {
   const translate = blockTranslator
@@ -111,7 +111,7 @@ export function modelReleaseError(key = MODEL_RELEASE_RETRY_MESSAGE): PhiGateErr
           )
         : key === UNGUARDED_AGENT_MESSAGE
           ? translate(
-              'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.'
+              'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.'
             )
           : translate('The privacy check could not finish. Nothing was sent. Please try again.')
   return new PhiGateError(message)

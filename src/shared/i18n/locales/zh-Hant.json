@@ -164,7 +164,7 @@
     "Approved. Opening Baselio…": "已核准。正在開啟 Baselio…",
     "The privacy check could not finish. Nothing was sent. Please try again.": "隱私檢查未能完成，未傳送任何內容。請重試。",
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "無法檢查此附件中的患者資訊，未傳送任何內容。請使用可檢查的文字。",
-    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "此智能體連線無法檢查每次模型請求中的患者資訊，因此在測試版中無法使用。請選擇使用受檢查連線的 API 服務商。",
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.": "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.",
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "隱私檢查更改了檢索詞，未傳送檢索請求。請移除患者資訊後重試。"
   },
   "renderer": {

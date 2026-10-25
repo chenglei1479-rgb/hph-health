@@ -1,3 +1,4 @@
+import { modelReleaseError, UNGUARDED_AGENT_MESSAGE } from '../phi/gate'
 import { nodeRuntimeEnvironment } from '../node-process-host'
 import {
   spawn,
@@ -31,7 +32,7 @@ import {
   type SessionSetupContext
 } from './types'
 import { isProductionDelegatedWorkFramework } from '../delegation/production-readiness'
-import { CODEX_SUBSCRIPTION_PROVIDER_ID, isCodexSubscriptionProvider } from '../../shared/settings'
+import { isCodexSubscriptionProvider } from '../../shared/settings'
 import { prepareCodexRuntimeHomeAuthentication } from '../settings/codex-auth'
 import { codexStorageDir, codexSubscriptionStorageDir } from '../settings/codex-paths'
 import { CODEX_VERSION, spawnCodexWithInstallAdmission } from '../settings/managed-codex'
@@ -219,10 +220,8 @@ const isOfficialOpenAiResponsesBase = (value: string | undefined): boolean => {
   }
 }
 
-// Just the model + reasoning-effort fields a Codex config can carry, with no provider plumbing.
-// The bridge path layers the open-science custom provider on top of this; the codex-isolated path
-// uses it on its own so codex-acp can drive the ChatGPT subscription with the user's selected
-// model from session start (issue #277).
+// Seed model and reasoning effort before session creation. Every provider, including the
+// checked subscription projection, layers the app-owned provider route over these options.
 const buildCodexModelOptions = (input: {
   model?: string
   reasoningEffort?: ModelReasoningEffort
@@ -285,6 +284,7 @@ const buildCodexConfig = (provider: {
       [CODEX_PROVIDER_ID]: {
         name: PRODUCT_DISPLAY_NAME,
         wire_api: 'responses',
+        supports_websockets: false,
         ...(baseUrl ? { base_url: baseUrl } : {}),
         ...(provider.key ? { requires_openai_auth: true } : {})
       }
@@ -541,7 +541,7 @@ export const createCodexFramework = ({
     await prepareCodexRuntimeHomeAuthentication({
       sourceHome: backend.env.CODEX_HOME,
       runtimeHome,
-      useSubscriptionAuthentication: backend.providerId === CODEX_SUBSCRIPTION_PROVIDER_ID,
+      useSubscriptionAuthentication: false,
       subscriptionTransport: backend.codexSubscriptionTransport
     })
     return {
@@ -561,34 +561,9 @@ export const createCodexFramework = ({
     const persistentSystemPrompt =
       ctx.systemPromptAppends?.filter(Boolean).join('\n\n') || undefined
     if (isCodexSubscriptionProvider(provider.type)) {
-      // Every DRA subscription session uses the same app-owned home. `codex-shared` is
-      // accepted only as a legacy Provider discriminator; it must never select the user's global
-      // Codex profile at runtime. Seed the model before session creation to avoid the slow late
-      // session/set_config_option switch (issue #277).
-      const modelOptions = buildCodexModelOptions({
-        model: provider.model,
-        reasoningEffort: ctx.reasoningEffort
-      })
-      const codexConfig = {
-        ...modelOptions,
-        // Model metadata can enable native delegation even when both feature flags are off.
-        // Codex 0.157.1 config::multi_agent_version_override requires agents.enabled=false.
-        agents: { enabled: false },
-        features: CODEX_DISABLED_NATIVE_FEATURES,
-        memories: CODEX_DISABLED_NATIVE_MEMORY,
-        ...codexSandboxWriteConfig(ctx.grantedLocalRoots),
-        ...(persistentSystemPrompt ? { developer_instructions: persistentSystemPrompt } : {})
-      }
-      const codexConfigJson =
-        Object.keys(codexConfig).length > 0 ? JSON.stringify(codexConfig) : undefined
-      const codexHome = codexSubscriptionStorageDir(ctx.storageRoot)
-      return {
-        env: {
-          ...isolatedCodexHomeEnv(codexHome, platform),
-          ...(codexConfigJson ? { CODEX_CONFIG: codexConfigJson } : {})
-        },
-        ...(persistentSystemPrompt ? { persistentSystemPrompt } : {})
-      }
+      // Only ProviderTransportOwner may project a subscription into the API runtime.
+      // A direct caller must never revive the independently authenticated CLI route.
+      throw modelReleaseError(UNGUARDED_AGENT_MESSAGE)
     }
 
     const bridge = ctx.responsesBridge

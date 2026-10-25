@@ -166,7 +166,7 @@
     "Approved. Opening Baselio…": "Approuvé. Ouverture de Baselio…",
     "The privacy check could not finish. Nothing was sent. Please try again.": "La vérification de confidentialité n’a pas pu aboutir. Rien n’a été envoyé. Veuillez réessayer.",
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "Cette pièce jointe ne permet pas de vérifier les informations sur les patients. Rien n’a été envoyé. Utilisez du texte vérifiable.",
-    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "Cette connexion d’agent ne peut pas vérifier les informations sur les patients dans chaque requête au modèle et n’est pas disponible en bêta. Choisissez un fournisseur d’API avec une connexion vérifiée.",
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.": "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.",
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "Les termes de recherche ont été modifiés lors de la vérification de confidentialité. La recherche n’a pas été envoyée. Retirez les informations sur les patients et réessayez."
   },
   "renderer": {
