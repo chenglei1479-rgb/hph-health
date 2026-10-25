@@ -7639,6 +7639,7 @@
     "Details_privacy": "詳細",
     "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "患者資料在您的電腦上分析。請求會傳送到您設定的 AI 服務（如果是 OpenAI，則傳送到美國）。預設向 AI 服務傳送欄名、資料類型、行數、合成樣例、您選定的欄的分類值，以及分析的匯總結果。姓名、病歷號等直接識別符不會傳送。",
     "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "僅使用虛構資料。請求會傳送到您設定的 AI 服務（如果是 OpenAI，則傳送到美國）。使用費用由您自己的服務商收取。",
-    "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "測試版不提供自動更新。新版本由發佈方公布。"
+    "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "測試版不提供自動更新。新版本由發佈方公布。",
+    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "無法在此電腦上啟動受保護的執行。請在「設定 > 網路」中完成 Notebook 保護的設定，然後重試。（{{code}}）"
   }
 }

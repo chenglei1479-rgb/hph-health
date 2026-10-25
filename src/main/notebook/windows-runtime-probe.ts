@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import type { NotebookProcessSandbox, NotebookSandboxedSpawn } from './process-sandbox'
 import { buildNotebookKernelEnvironment } from '@aipoch/environment'
+import { PROTECTED_EXECUTION_UNAVAILABLE_CODE } from '../../shared/protected-execution-diagnostics'
 import {
   WindowsRuntimeIncompatibleError,
   type WindowsRuntimeComponentSelection
@@ -181,7 +182,7 @@ export const probeWindowsRuntimeComponent = async (
         : detail
     onDiagnostic?.(`windows runtime probe (${selection.release.component}) failed: ${bounded}`)
     throw new WindowsRuntimeIncompatibleError(
-      'Windows runtime is incompatible with protected execution.',
+      `Windows runtime is incompatible with protected execution. (${PROTECTED_EXECUTION_UNAVAILABLE_CODE})`,
       { cause: failure }
     )
   }

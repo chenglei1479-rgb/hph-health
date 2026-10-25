@@ -139,7 +139,14 @@ export async function composeSettingsBootstrap({
       },
       process.platform
     )
-    if (binding.kind !== 'powershell' || !(await notebookNetworkSandbox.windowsProtectionReady()))
+    // Capability assembly must not run the protected-runtime probe: a probe failure there aborted
+    // session creation (and therefore every first prompt) before any execution was requested. The
+    // binding is advertised from configuration only; the probe still gates the first real shell or
+    // Notebook execution through resolveWindowsRuntime, so a broken runtime stays fail-closed.
+    if (
+      binding.kind !== 'powershell' ||
+      !(await notebookNetworkSandbox.windowsProtectionConfigured())
+    )
       return binding
     return Object.freeze({ kind: 'powershell', version: '7.6' })
   }
