@@ -8,7 +8,7 @@ import {
 } from '../skills/runtime-mcp-server'
 import { describe, expect, it, vi } from 'vitest'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import {
   chmod,
   lstat,
@@ -567,7 +567,7 @@ describe('production delegated framework runtime bridge', () => {
     }
   })
 
-  it('copies app-owned Codex subscription authentication before spawning a delegated Attempt', async () => {
+  it('excludes subscription authentication and imported routes before spawning a delegated Attempt', async () => {
     const dataRoot = await mkdtemp(join(tmpdir(), 'delegated-codex-auth-'))
     const workspaceCwd = await mkdtemp(join(tmpdir(), 'delegated-codex-workspace-'))
     const sourceHome = join(dataRoot, 'codex-subscription')
@@ -614,7 +614,9 @@ describe('production delegated framework runtime bridge', () => {
     let child: ChildProcessWithoutNullStreams | undefined
     const spawnSpy = vi.spyOn(codexFramework, 'spawn').mockImplementation((input) => {
       spawnedInput = input
-      spawnedAuthJson = readFileSync(join(input.env.CODEX_HOME!, 'auth.json'), 'utf8')
+      spawnedAuthJson = existsSync(join(input.env.CODEX_HOME!, 'auth.json'))
+        ? readFileSync(join(input.env.CODEX_HOME!, 'auth.json'), 'utf8')
+        : undefined
       spawnedConfigToml = readFileSync(join(input.env.CODEX_HOME!, 'config.toml'), 'utf8')
       child = spawn(process.execPath, ['-e', 'process.stdin.resume()'], {
         stdio: 'pipe'
@@ -658,10 +660,10 @@ describe('production delegated framework runtime bridge', () => {
       await vi.waitFor(() => expect(spawnedInput).toBeDefined())
       const childHome = spawnedInput!.env.CODEX_HOME!
       expect(childHome).not.toBe(sourceHome)
-      expect(spawnedAuthJson).toContain('secret')
-      expect(spawnedConfigToml).toContain('cli_auth_credentials_store = "file"')
-      expect(spawnedConfigToml).toContain('model_provider = "subscription-route"')
-      expect(spawnedConfigToml).toContain('base_url = "http://127.0.0.1:43123/v1"')
+      expect(spawnedAuthJson).toBeUndefined()
+      expect(spawnedConfigToml).toContain('cli_auth_credentials_store = "ephemeral"')
+      expect(spawnedConfigToml).not.toContain('subscription-route')
+      expect(spawnedConfigToml).not.toContain('base_url')
       expect(spawnedConfigToml).not.toContain('mcp_servers')
       expect(spawnedConfigToml).not.toContain('unsafe-tool')
 

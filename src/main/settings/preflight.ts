@@ -1,3 +1,4 @@
+import { assertPhiCheckedAgentProvider } from '../phi/agent-policy'
 import {
   providerValidationFailed,
   providerValidationSucceeded,
@@ -90,6 +91,17 @@ const computePreflight = ({
         ? undefined
         : validationFailureCategory
   const activeProviderKeyUsable = Boolean(activeProvider && isProviderKeyUsable(activeProvider))
+  let connectionAllowed = true
+  if (activeProvider) {
+    try {
+      assertPhiCheckedAgentProvider(
+        activeProvider.type,
+        agentFrameworkId === 'codex' ? 'codex-subscription-bridge' : undefined
+      )
+    } catch {
+      connectionAllowed = false
+    }
+  }
   const activeProviderReady = Boolean(
     activeProvider &&
     (activeValidationTarget
@@ -98,7 +110,8 @@ const computePreflight = ({
         !providerValidationFailed(activeProvider)) &&
     activeProviderKeyUsable &&
     activeProviderModelAvailable &&
-    activeProviderCompatible
+    activeProviderCompatible &&
+    connectionAllowed
   )
   const providerReason =
     activeProvider && (validationFailureReason === 'credential_invalid' || !activeProviderKeyUsable)
@@ -107,7 +120,7 @@ const computePreflight = ({
         ? validationFailureReason
         : activeProvider && !activeProviderModelAvailable
           ? ('model-not-found' as const)
-          : activeProvider && !activeProviderCompatible
+          : activeProvider && (!activeProviderCompatible || !connectionAllowed)
             ? ('incompatible' as const)
             : undefined
   const providerReadiness = activeProviderReady

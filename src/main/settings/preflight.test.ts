@@ -171,3 +171,25 @@ describe('computePreflight', () => {
     expect(run({ activeProviderCompatible: false }).activeProviderReady).toBe(false)
   })
 })
+
+it.each(['claude-shared', 'claude-isolated', 'codex-shared', 'codex-isolated'] as const)(
+  'does not report configured %s as send-ready on an unchecked framework',
+  (type) => {
+    const provider = { ...customProvider, type }
+    expect(run({ settings: baseSettings({ providers: [provider] }) })).toMatchObject({
+      activeProviderReady: false,
+      providerReadiness: { status: 'not_ready', reason: 'incompatible' }
+    })
+  }
+)
+it.each(['codex-shared', 'codex-isolated'] as const)(
+  'permits %s readiness through the checked Codex route',
+  (type) => {
+    expect(
+      run({
+        agentFrameworkId: 'codex',
+        settings: baseSettings({ providers: [{ ...customProvider, type }] })
+      }).providerReadiness
+    ).toEqual({ status: 'ready' })
+  }
+)

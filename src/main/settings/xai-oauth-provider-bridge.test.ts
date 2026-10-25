@@ -198,7 +198,7 @@ describe('xAI OAuth provider bridge', () => {
     const upstream = vi.fn<typeof fetch>().mockResolvedValue(Response.json(responsesPayload))
     const adaptOpenAiRequest = vi.fn((request: Record<string, unknown>) => ({
       ...request,
-      messages: [{ role: 'user', content: 'Adapted input' }]
+      messages: [{ role: 'user', content: 'Hello' }]
     }))
     const bridge = createXaiOAuthProviderBridge(
       [{ id: 'active', model: 'grok-4.6' }],
@@ -224,7 +224,7 @@ describe('xAI OAuth provider bridge', () => {
     )
     expect(JSON.parse(String(upstream.mock.calls[0]?.[1]?.body))).toMatchObject({
       model: 'grok-4.6',
-      input: [{ role: 'user', content: 'Adapted input' }]
+      input: [{ role: 'user', content: 'Hello' }]
     })
   })
 })

@@ -1,9 +1,11 @@
+import { modelReleaseError, UNGUARDED_AGENT_MESSAGE } from '../phi/gate'
 import { randomUUID } from 'node:crypto'
 import type {
   ProviderFailureObservation,
   ProviderFailureObserver
 } from './provider-failure-observation'
 
+import { isCodexSubscriptionProvider } from '../../shared/settings'
 import { usesVendorAnthropicApiKeyHeader } from '../../shared/provider-registry'
 import type { ModelReasoningEffort } from '../../shared/reasoning-effort'
 import {
@@ -129,6 +131,7 @@ type ProviderTransportOwnerOptions = {
     target: ProviderRuntimeTarget,
     failure: ProviderFailureObservation
   ) => Promise<void>
+  getCodexSubscriptionHeaders?: () => Promise<Record<string, string>>
   getXaiOAuthAccessToken?: (forceRefresh?: boolean) => Promise<string>
   createResponsesBridge?: (
     target: ResponsesBridgeTarget,
@@ -172,6 +175,7 @@ class ProviderTransportOwner {
   ) => ChatProviderCompatibilityBridgePort
   private readonly createXaiOAuthProviderBridge: CreateXaiOAuthProviderBridge
   private readonly nextGenerationId: () => string
+  private readonly getCodexSubscriptionHeaders?: () => Promise<Record<string, string>>
   private readonly getXaiOAuthAccessToken?: (forceRefresh?: boolean) => Promise<string>
   private readonly responsesBridges = new Map<string, ResponsesBridgeEntry>()
   private readonly nativeResponsesCompatibilityProxies = new Map<
@@ -180,6 +184,7 @@ class ProviderTransportOwner {
   >()
 
   constructor(options: ProviderTransportOwnerOptions = {}) {
+    this.getCodexSubscriptionHeaders = options.getCodexSubscriptionHeaders
     this.onProviderFailure = options.onProviderFailure
     this.createResponsesBridge =
       options.createResponsesBridge ??
@@ -205,6 +210,12 @@ class ProviderTransportOwner {
   }
 
   async acquire(input: ProviderTransportRequest): Promise<ProviderTransportGeneration> {
+    if (
+      isCodexSubscriptionProvider(input.activeTarget.provider.type) &&
+      (input.plan.transport.kind !== 'codex-subscription' || !this.getCodexSubscriptionHeaders)
+    ) {
+      throw modelReleaseError(UNGUARDED_AGENT_MESSAGE)
+    }
     if (input.plan.modelRoute === 'codebuddy-openai') {
       return this.startCodeBuddyTransport(input)
     }
@@ -217,7 +228,10 @@ class ProviderTransportOwner {
     ) {
       return this.startOpenCodeTransport(input)
     }
-    if (input.plan.transport.kind === 'codex-native-responses') {
+    if (
+      input.plan.transport.kind === 'codex-native-responses' ||
+      input.plan.transport.kind === 'codex-subscription'
+    ) {
       return this.startNativeCodexTransport(input)
     }
     if (input.plan.transport.kind === 'codex-responses-compatibility') {
@@ -355,20 +369,35 @@ class ProviderTransportOwner {
     input: ProviderTransportRequest
   ): Promise<ProviderTransportGeneration> {
     const transport = input.plan.transport
-    if (transport.kind !== 'codex-native-responses') {
+    if (transport.kind !== 'codex-native-responses' && transport.kind !== 'codex-subscription') {
       throw new Error('Native Codex provider transport is unavailable.')
     }
+    const subscription = transport.kind === 'codex-subscription'
     const targets = transport.targets.map((planned): OpenAiProviderBridgeTarget => {
       const candidate = planned.target
       const model = candidate.effectiveModel ?? candidate.provider.model
-      const baseUrl = resolveResponsesBaseUrl(candidate.provider)
+      const baseUrl = subscription
+        ? 'https://chatgpt.com/backend-api/codex'
+        : resolveResponsesBaseUrl(candidate.provider)
       if (!model || !baseUrl) throw new Error('The native Responses provider target is incomplete.')
       return Object.freeze({
         ...this.healthObservation(candidate),
         id: planned.id,
         wire: 'responses',
         endpoint: `${baseUrl}/responses`,
-        ...(candidate.provider.key ? { key: candidate.provider.key } : {}),
+        ...(subscription
+          ? {
+              resolveHeaders: this.getCodexSubscriptionHeaders!,
+              // The subscription Responses endpoint requires non-persistent streaming requests.
+              adaptRequest: (body: Record<string, unknown>) => ({
+                ...body,
+                store: false,
+                stream: true
+              })
+            }
+          : candidate.provider.key
+            ? { key: candidate.provider.key }
+            : {}),
         model
       })
     })
@@ -388,6 +417,12 @@ class ProviderTransportOwner {
       return Object.freeze({
         provider: Object.freeze({
           ...input.activeTarget.provider,
+          ...(subscription
+            ? {
+                type: 'custom' as const,
+                responsesBaseUrl: `${connection.baseUrl}/v1`
+              }
+            : {}),
           baseUrl: connection.baseUrl,
           openaiBaseUrl: `${connection.baseUrl}/v1`,
           model: activeModel,

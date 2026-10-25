@@ -173,7 +173,7 @@ describe('BackendRoutePlanner route matrix', () => {
     expect(plan.transport.kind).toBe(kind)
   })
 
-  it('keeps Codex subscription authentication on its direct transport', () => {
+  it('requires the app-owned subscription transport', () => {
     const provider = makeStoredProvider({
       id: 'builtin-codex-subscription',
       type: 'codex-isolated',
@@ -189,7 +189,10 @@ describe('BackendRoutePlanner route matrix', () => {
       conversationSkillImportEnabled: true
     })
 
-    expect(plan.transport).toEqual({ kind: 'direct' })
+    expect(plan.transport).toMatchObject({
+      kind: 'codex-subscription',
+      targets: [{ target: { providerId: provider.id } }]
+    })
   })
 
   it.each([

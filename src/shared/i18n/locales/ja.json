@@ -164,7 +164,7 @@
     "Approved. Opening Baselio…": "承認されました。Baselio を開いています…",
     "The privacy check could not finish. Nothing was sent. Please try again.": "プライバシーチェックを完了できませんでした。何も送信していません。もう一度お試しください。",
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "この添付ファイルは患者情報のチェックに対応していません。何も送信していません。チェック可能なテキストを使用してください。",
-    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose an API provider with a checked connection.": "このエージェント接続では、モデルへのすべてのリクエストについて患者情報をチェックできないため、ベータ版では利用できません。チェックに対応した接続を使用する API プロバイダーを選択してください。",
+    "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.": "このエージェント接続では、モデルへのすべてのリクエストについて患者情報をチェックできないため、ベータ版では利用できません。チェックに対応した接続を使用するプロバイダーを選択してください。",
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "プライバシーチェックで検索語が変更されたため、検索は送信していません。患者情報を除いて、もう一度お試しください。"
   },
   "renderer": {

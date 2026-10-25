@@ -52,6 +52,7 @@ export type OpenAiProviderBridgeTarget = Readonly<{
   endpoint: string
   key?: string
   model: string
+  resolveHeaders?: () => Promise<Record<string, string>>
   adaptRequest?: (request: Record<string, unknown>) => Record<string, unknown>
 }>
 
@@ -186,6 +187,11 @@ export class OpenAiProviderBridge {
     }
     const body = JSON.stringify({ ...adapted, model: target.model })
     const headersToForward = requestHeaders(request, target.key)
+    if (target.resolveHeaders) {
+      // Subscription identity belongs to main, never the child or its forwarded headers.
+      const resolved = await target.resolveHeaders()
+      for (const [name, value] of Object.entries(resolved)) headersToForward.set(name, value)
+    }
     const replayKey = providerRequestFingerprint(
       target.id,
       requestUrl.pathname,

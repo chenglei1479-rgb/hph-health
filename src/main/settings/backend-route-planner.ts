@@ -84,6 +84,7 @@ type BackendTransportPlan =
         | 'codex-chat'
         | 'codex-responses-compatibility'
         | 'codex-native-responses'
+        | 'codex-subscription'
       targets: readonly PlannedProviderTarget[]
       initialTargetId?: string
     }>
@@ -228,7 +229,9 @@ class BackendRoutePlanner {
     const route = modelRouteFor(input.frameworkId, input.target)
     const candidates = this.routeCandidates(input.settings, input.target, input.frameworkId, route)
     const retargetable = new Set(candidates.map(({ providerId }) => providerId)).size >= 2
-    const customTarget = usesAppProviderTransport(input.target.provider.type)
+    const customTarget =
+      usesAppProviderTransport(input.target.provider.type) ||
+      isCodexSubscriptionProvider(input.target.provider.type)
     const hasClaudeTransport =
       input.frameworkId === 'claude-code' && customTarget && candidates.includes(input.target)
     const hasProviderTransport =
@@ -342,6 +345,21 @@ class BackendRoutePlanner {
         wire: active.apiEndpoints.includes('responses') ? 'responses' : 'anthropic'
       })
     }
+    if (isCodexSubscriptionProvider(active.provider.type)) {
+      return Object.freeze({
+        kind: 'codex-subscription',
+        targets: this.plannedTargets(
+          candidates.length ? candidates : [active],
+          frameworkId,
+          effortIntent
+        ),
+        initialTargetId: transportTargetId(
+          frameworkId,
+          active.providerId,
+          active.effectiveModel ?? active.provider.model ?? ''
+        )
+      })
+    }
     if (route === 'codex-bridge' || route === 'codex-responses-compatibility') {
       return Object.freeze({
         kind: route === 'codex-bridge' ? 'codex-chat' : 'codex-responses-compatibility',
@@ -394,8 +412,9 @@ class BackendRoutePlanner {
     return this.enumerateCandidates(settings, active, frameworkId).filter((candidate) => {
       const model = candidate.effectiveModel ?? candidate.provider.model
       if (!shareProviderTransportFamily(active.provider.type, candidate.provider.type)) return false
-      const endpoint =
-        frameworkId === 'claude-code'
+      const endpoint = isCodexSubscriptionProvider(candidate.provider.type)
+        ? 'https://chatgpt.com/backend-api/codex'
+        : frameworkId === 'claude-code'
           ? normalizeAnthropicBaseUrl(candidate.provider.baseUrl ?? '')
           : frameworkId === 'opencode'
             ? route === 'opencode-openai'

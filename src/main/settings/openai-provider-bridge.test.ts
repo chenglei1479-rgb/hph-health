@@ -513,7 +513,7 @@ describe('OpenAiProviderBridge', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2)
   })
 
-  it('preserves the captured OpenCode MCP image fixture at the final Chat boundary', async () => {
+  it('refuses the opaque OpenCode MCP image fixture at the final Chat boundary', async () => {
     const upstream = createUpstream()
     servers.push(upstream.server)
     const target: OpenAiProviderBridgeTarget = {
@@ -526,7 +526,7 @@ describe('OpenAiProviderBridge', () => {
     const bridge = new OpenAiProviderBridge([target], target.id)
     bridges.push(bridge)
     const connection = await bridge.start()
-    await fetch(`${connection.baseUrl}/v1/chat/completions`, {
+    const response = await fetch(`${connection.baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: { authorization: `Bearer ${connection.token}`, 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -535,13 +535,11 @@ describe('OpenAiProviderBridge', () => {
       })
     })
 
-    expect(upstream.requests[0].body).toMatchObject({
-      model: 'model-a',
-      messages: OPENCODE_TOOL_IMAGE_REQUEST_FIXTURE.messages
-    })
+    expect(response.ok).toBe(false)
+    expect(upstream.requests).toEqual([])
   })
 
-  it('applies a target-scoped CodeBuddy request adapter before forwarding', async () => {
+  it('still refuses opaque media after a CodeBuddy request adapter', async () => {
     const upstream = createUpstream()
     servers.push(upstream.server)
     const target: OpenAiProviderBridgeTarget = {
@@ -555,7 +553,7 @@ describe('OpenAiProviderBridge', () => {
     const bridge = new OpenAiProviderBridge([target], target.id)
     bridges.push(bridge)
     const connection = await bridge.start()
-    await fetch(`${connection.baseUrl}/v1/chat/completions`, {
+    const response = await fetch(`${connection.baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: { authorization: `Bearer ${connection.token}`, 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -580,16 +578,8 @@ describe('OpenAiProviderBridge', () => {
       })
     })
 
-    expect(upstream.requests[0].body).toEqual({
-      model: 'model-a',
-      messages: [
-        { role: 'user', content: 'Earlier image.' },
-        {
-          role: 'user',
-          content: [{ type: 'image_url', image_url: { url: 'data:image/png;base64,AQID' } }]
-        }
-      ]
-    })
+    expect(response.ok).toBe(false)
+    expect(upstream.requests).toEqual([])
   })
 })
 
