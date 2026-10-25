@@ -234,4 +234,25 @@ describe('beta.15 aggregate false positive', () => {
       notebookOutputContainsPatientRows('{"患者ID": "0083341", "年齢": 72, "性別": "男性"}')
     ).toBe(true)
   })
+
+  it('refuses a single patient dict whose keys the identifier list cannot know', () => {
+    // df.iloc[0].to_dict(): no identifier key, no identifier-looking names, and no statistic key.
+    expect(notebookOutputContainsPatientRows("{'stage': 'II', 'size_cm': 3.1, 'nodes': 4}")).toBe(
+      true
+    )
+    // Accepted conservative cost: a label-only dict with no statistic key is refused too.
+    expect(notebookOutputContainsPatientRows("{'synthetic_only': true, 'mode': 'beta'}")).toBe(true)
+  })
+
+  it('refuses an id column next to a lone events column', () => {
+    expect(
+      notebookOutputContainsPatientRows(['id,events', '0083341,3', '0083342,1'].join('\n'))
+    ).toBe(true)
+    expect(
+      notebookOutputContainsPatientRows(['patient_id,events', '0083341,3', '0083342,1'].join('\n'))
+    ).toBe(true)
+    expect(
+      notebookOutputContainsPatientRows(['mrn,events', '0083341,3', '0083342,1'].join('\n'))
+    ).toBe(true)
+  })
 })
