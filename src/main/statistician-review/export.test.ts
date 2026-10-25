@@ -55,7 +55,12 @@ describe('statistician review beta export', () => {
     expect(redact).toContain('detectPhi')
     expect(redact).toContain("from '../../shared/writing-safeguards/export-deidentify'")
     expect(exporter).toContain('releaseExportSet')
-    expect(review).toContain('buildConfirmInstaller')
+    // The confirmation travels the cross-process privacy bridge; a module-level BrowserWindow
+    // constructor in the backend was what turned every export into an instant dismissal.
+    expect(review).toContain('desktopFileInteraction')
+    expect(review).toContain('reviewPhi')
+    expect(review).not.toContain('ConfirmBrowserWindowCtor')
+    expect(review).not.toContain('configureStatisticianConfirmWindow')
     expect(BETA_STATISTICIAN_EXPORT_KINDS).toEqual([
       'statistical-report',
       'result-tables',
