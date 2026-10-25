@@ -101,6 +101,13 @@ describe('§34 T3 research-plan four questions', () => {
     expect(normalizeResearchPlanChecklistDraft('nope')).toEqual(emptyResearchPlanChecklistDraft())
   })
 
+  it('truncates an over-long memo to the stored limit', () => {
+    const overLong = 'あ'.repeat(600)
+    const draft = normalizeResearchPlanChecklistDraft({ memos: { design: overLong } })
+    expect(draft.memos.design).toHaveLength(500)
+    expect(draft.memos.design).toBe(overLong.slice(0, 500))
+  })
+
   it('exposes every seed item id exactly once', () => {
     const ids = researchPlanChecklistItemIds()
     expect(new Set(ids).size).toBe(ids.length)

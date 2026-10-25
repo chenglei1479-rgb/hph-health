@@ -112,3 +112,22 @@ it('renders nothing without a project', async () => {
   await renderPanel(undefined)
   expect(host?.querySelector('[data-testid="s34-research-plan-checklist"]')).toBeNull()
 })
+
+it('falls back to an empty draft when the stored draft is corrupted', async () => {
+  // The panel's beforeEach clears storage, so seed the damage explicitly.
+  localStorage.setItem('dra.research-plan-checklist.v1.project-1', '{"checks": ')
+
+  await renderPanel('project-1')
+
+  expect(host?.querySelector('[data-testid="s34-research-plan-checklist"]')).not.toBeNull()
+  expect(
+    host?.querySelector<HTMLSelectElement>(
+      '[data-testid="s34-plan-item-design:retro-cohort"] select'
+    )?.value
+  ).toBe('未定')
+  expect(host?.querySelector<HTMLInputElement>('[data-testid="s34-plan-memo-design"]')?.value).toBe(
+    ''
+  )
+  // A failed read must not erase or rewrite the stored value behind the user's back.
+  expect(localStorage.getItem('dra.research-plan-checklist.v1.project-1')).toBe('{"checks": ')
+})
