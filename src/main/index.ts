@@ -63,7 +63,6 @@ import { configureRuntimeMetadata } from './runtime-metadata'
 import { configureIpcHandlerRegistry, ipcMainHandle } from './ipc-handler-registry'
 import { configureAccountElectronHost } from './account/runtime'
 import { configureUserDataPath } from './user-data-path'
-import { configureStatisticianConfirmWindow } from './statistician-review/confirm-window'
 import { configureAccountProfile } from './account/profile-bootstrap'
 import { installMainPrereleaseLockdown } from './prerelease/lockdown'
 import { ensureMachineApprovalDeclaration } from './phi/approval-window'
@@ -217,7 +216,6 @@ async function startDesktop(): Promise<void> {
     openExternal: (url) => shell.openExternal(url)
   })
   configureUserDataPath(() => app.getPath('userData'))
-  configureStatisticianConfirmWindow(BrowserWindow)
   configureAccountProfile(process.argv, app.getPath('appData'))
   installMainPrereleaseLockdown(net)
   configureIpcHandlerRegistry(ipcMain)

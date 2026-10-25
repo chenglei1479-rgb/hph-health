@@ -190,7 +190,10 @@ export const exportStatisticianReviewPackage = async (
   let decision
   try {
     decision = await options.confirm(bundled.preview)
-  } catch {
+  } catch (error) {
+    // A throwing confirmer is a missing or failing native review bridge, not the doctor cancelling.
+    // The response contract stays `not-confirmed`; this log is what keeps the two distinguishable.
+    console.error('[statistician-export] confirmation failed', error)
     return { ok: false, code: 'not-confirmed' }
   }
   if (!decision?.confirmed) return { ok: false, code: 'not-confirmed' }
