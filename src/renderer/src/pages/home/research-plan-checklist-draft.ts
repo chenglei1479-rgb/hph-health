@@ -5,8 +5,14 @@ import {
 } from '../../../../shared/s34-research-plan-checklist'
 
 // On-device trial draft, one entry per project: switching projects never mixes answers, and the
-// checklist never leaves the machine. Mirrors the local-only ledger in pack-delivery-ledger.ts.
-const KEY_PREFIX = 'dra.research-plan-checklist.'
+// checklist never leaves the machine — this module never calls the network, and no dialog, pack, or
+// export path reads the draft. Mirrors the local-only ledger in pack-delivery-ledger.ts.
+//
+// The key carries an explicit schema version so an incompatible shape change later costs no
+// migration: bump the segment, keep normalizeResearchPlanChecklistDraft as the only reader, and drop
+// stale keys. Moving the draft into the project store is a load/save swap only — normalize and the
+// panel's props stay as they are.
+const KEY_PREFIX = 'dra.research-plan-checklist.v1.'
 
 const keyFor = (projectId: string): string => `${KEY_PREFIX}${projectId}`
 
