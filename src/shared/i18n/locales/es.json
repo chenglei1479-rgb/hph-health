@@ -7895,7 +7895,7 @@
     "Fictitious or de-identified data only": "Fictitious or de-identified data only",
     "Use only fictitious data or data from which identifying information has already been removed.": "Use only fictitious data or data from which identifying information has already been removed.",
     "Where your input is sent": "Where your input is sent",
-    "Your input is sent to the AI service you configure. The AI service provider bills you directly for usage. Your API key is stored on this computer.": "Sus datos de entrada se envían al servicio de IA que usted configure. El proveedor del servicio de IA le factura directamente el uso. Su clave API se guarda en este equipo.",
+    "Your input is sent to the destination shown for the active key mode: the AI contracted by the operator for a seed invite, or the provider you registered for BYOK. Your API key is stored on this computer.": "Sus datos se envían según el modo de clave activo: a la IA contratada por el operador para una invitación seed o al proveedor que usted registró para BYOK. Su clave API se guarda en este equipo.",
     "Beta defects": "Beta defects",
     "During the beta, defects and changes to behavior may occur. Do not rely on this build for critical work.": "During the beta, defects and changes to behavior may occur. Do not rely on this build for critical work.",
     "I agree to the terms above.": "I agree to the terms above.",

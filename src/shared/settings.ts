@@ -25,6 +25,7 @@ import type { PackageMirror } from './mirror'
 import type { NetworkProxySettings } from './network-proxy'
 import type { NotebookNetworkSettings } from './notebook-network-settings'
 import type { PermissionProfileId } from './permission-profiles'
+import { createDefaultSeedInviteStatus, type SeedInviteStatus } from './seed-invite'
 import { customProviderRequiresKey } from './provider-base-url'
 import type { OfficialVendorId } from './provider-registry'
 import type {
@@ -597,6 +598,7 @@ export type SettingsSnapshot = {
   // for official providers it's the chosen catalog entry. Undefined until a provider exists.
   activeModel?: string
   providers: ProviderView[]
+  seedInvite?: SeedInviteStatus
   // The selected agent backend, and the frameworks available to choose from.
   agentFrameworkId: AgentFrameworkId
   // True only when agentFrameworkId was persisted. Absent means the value is still the document
@@ -1806,5 +1808,9 @@ export const parseSettingsSnapshot = (snapshot: unknown): SettingsSnapshot => {
         snapshot.revision < 0))
   )
     throw new ApplicationCommandError('invalid-command-result', 'Invalid settings snapshot.')
-  return snapshot as SettingsSnapshot
+  if (snapshot.seedInvite != null) return snapshot as SettingsSnapshot
+  return {
+    ...snapshot,
+    seedInvite: snapshot.seedInvite ?? createDefaultSeedInviteStatus()
+  } as SettingsSnapshot
 }

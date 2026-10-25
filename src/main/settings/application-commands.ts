@@ -122,6 +122,8 @@ type CoreSettingsCommandStore = Pick<
   | 'stopSkillMarketplaceBatch'
   | 'markOnboardingComplete'
   | 'acceptBetaTerms'
+  | 'redeemSeedInvite'
+  | 'consumeSeedPackage'
   | 'reopenOnboarding'
   | 'createWslSupportHandoff'
   | 'openWslTerminal'
@@ -369,6 +371,16 @@ const settingsCoreApplicationCommands = Object.freeze({
     readonly [],
     StoreResult<'acceptBetaTerms'>
   >('settings:accept-beta-terms'),
+  redeemSeedInvite: defineApplicationCommand<
+    'settings:redeem-seed-invite',
+    readonly [code: string],
+    StoreResult<'redeemSeedInvite'>
+  >('settings:redeem-seed-invite'),
+  consumeSeedPackage: defineApplicationCommand<
+    'settings:consume-seed-package',
+    readonly [],
+    StoreResult<'consumeSeedPackage'>
+  >('settings:consume-seed-package'),
   reopenOnboarding: defineApplicationCommand<
     'settings:reopen-onboarding',
     readonly [],
@@ -582,6 +594,8 @@ const settingsCoreApplicationCommandGroup = defineApplicationCommandGroup('setti
   settingsCoreApplicationCommands.getSkillMarketplaceDetail,
   settingsCoreApplicationCommands.markOnboardingComplete,
   settingsCoreApplicationCommands.acceptBetaTerms,
+  settingsCoreApplicationCommands.redeemSeedInvite,
+  settingsCoreApplicationCommands.consumeSeedPackage,
   settingsCoreApplicationCommands.reopenOnboarding,
   settingsCoreApplicationCommands.previewAgentHomeSkill,
   settingsCoreApplicationCommands.previewGitHubSkill,
@@ -762,6 +776,14 @@ const registerCoreSettingsApplicationCommands = (
         ),
       'settings:accept-beta-terms': () =>
         dependencies.snapshotCommits.currentSnapshotAfter(dependencies.service.acceptBetaTerms()),
+      'settings:redeem-seed-invite': ({ args }) =>
+        dependencies.snapshotCommits.currentSnapshotAfter(
+          dependencies.service.redeemSeedInvite(args[0])
+        ),
+      'settings:consume-seed-package': () =>
+        dependencies.snapshotCommits.currentSnapshotAfter(
+          dependencies.service.consumeSeedPackage()
+        ),
       'settings:reopen-onboarding': () =>
         dependencies.snapshotCommits.currentSnapshotAfter(dependencies.service.reopenOnboarding()),
       'settings:preview-agent-home-skill': ({ args }) =>

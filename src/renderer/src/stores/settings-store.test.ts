@@ -2825,3 +2825,29 @@ it.each([
     }
   }
 )
+
+describe('settings store: seed invite defaults', () => {
+  it('has no active key before hydration', () => {
+    expect(createInitialSettingsState().seedInvite).toEqual({
+      mode: 'none',
+      redeemed: false,
+      packagesUsed: 0,
+      packagesRemaining: 2,
+      exhausted: false
+    })
+  })
+
+  it('clears an active company status when a legacy snapshot omits seedInvite', () => {
+    useSettingsStore.setState({
+      seedInvite: {
+        mode: 'company',
+        redeemed: true,
+        packagesUsed: 1,
+        packagesRemaining: 1,
+        exhausted: false
+      }
+    })
+    useSettingsStore.getState().acceptCommittedSnapshot(snapshot([]))
+    expect(useSettingsStore.getState().seedInvite).toEqual(createInitialSettingsState().seedInvite)
+  })
+})

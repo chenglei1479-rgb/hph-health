@@ -1,6 +1,7 @@
 import { SkillReleaseInstallConflict as MarketplaceInstallConflict } from '@aipoch/skills'
 import { readFile, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { join } from 'node:path'
 import { z } from 'zod'
 import {
@@ -177,7 +178,8 @@ import type {
 } from './connector-settings'
 import { ConnectorSettingsModule, type CustomServerSecurityChangeGuard } from './connector-settings'
 import { getCredentialStore } from './credential-store-mode'
-import { isCredentialStorageAvailable, isEncryptionAvailable } from './crypto'
+import { encryptKey, isCredentialStorageAvailable, isEncryptionAvailable, maskKey } from './crypto'
+import { SEED_COMPANY_MODEL, SEED_COMPANY_PROVIDER_ID } from '../../shared/seed-invite'
 import { DeviceCredentialStore, type ResolvedOAuthDeviceCredential } from './device-credentials'
 import { createSettingsIdSequence } from './id-sequence'
 import type { LocalShellRuntimeMutation } from './local-shell-runtime-mutation'
@@ -1537,6 +1539,52 @@ class SettingsService {
   // Records the local acknowledgement of the current beta terms. No network or telemetry write.
   async acceptBetaTerms(): Promise<SettingsSnapshot> {
     await this.preferences.acceptBetaTerms()
+    return this.getSettingsView()
+  }
+
+  async redeemSeedInvite(code: string): Promise<SettingsSnapshot> {
+    if (getCredentialStore() !== 'os' || !isEncryptionAvailable()) {
+      throw new Error('Unlock or authorize the system keychain before redeeming an invite.')
+    }
+    const normalized = code.trim()
+    if (normalized.length < 6 || normalized.length > 128) throw new Error('Invalid invite code.')
+    let allowlist: Record<string, string>
+    try {
+      const parsed: unknown = JSON.parse(process.env.BASELIO_SEED_INVITES_JSON ?? '{}')
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error()
+      allowlist = parsed as Record<string, string>
+    } catch {
+      throw new Error('Seed invites are not configured in this build.')
+    }
+    const candidateHash = createHash('sha256').update(normalized).digest()
+    const match = Object.entries(allowlist).find(([candidate]) => {
+      const hash = createHash('sha256').update(candidate).digest()
+      return timingSafeEqual(hash, candidateHash)
+    })
+    const companyKey = match?.[1]?.trim()
+    if (!companyKey) throw new Error('Invalid or expired invite code.')
+    const companyKeyRef = encryptKey(companyKey)
+    const companyKeyMask = maskKey(companyKey)
+    await this.repository.redeemSeedInvite({
+      redeemedAt: Date.now(),
+      redeemedCodeHash: candidateHash.toString('hex'),
+      companyKeyRef,
+      companyKeyMask,
+      provider: {
+        id: SEED_COMPANY_PROVIDER_ID,
+        type: 'official',
+        vendorId: 'openai',
+        name: 'シード招待枠',
+        model: SEED_COMPANY_MODEL,
+        keyRef: companyKeyRef,
+        keyMask: companyKeyMask
+      }
+    })
+    return this.getSettingsView()
+  }
+
+  async consumeSeedPackage(): Promise<SettingsSnapshot> {
+    await this.repository.consumeSeedPackage()
     return this.getSettingsView()
   }
 

@@ -3,6 +3,7 @@ import { act, type ComponentProps } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, expect, it, vi } from 'vitest'
 import { initI18n } from '../../i18n'
+import { useSettingsStore } from '../../stores/settings-store'
 import { CATEGORICAL_RELEASE_LIMIT } from '../../../../main/notebook/schema-only/categorical-release'
 import { LOCALES } from '../../../../shared/locale'
 import { S34_2_RESEARCH_DESIGN_CHECKLIST } from '../../../../shared/s34-disclaimers'
@@ -401,5 +402,20 @@ it('shows the §34.2 ① research-design checklist verbatim on the mentor-prep c
     } finally {
       await act(async () => root.unmount())
     }
+  }
+})
+
+it('renders Home when a legacy preset has no seed invite status', async () => {
+  const previous = useSettingsStore.getState().seedInvite
+  // Simulate an untyped preset from before seed invites existed.
+  useSettingsStore.setState({ seedInvite: undefined as unknown as typeof previous })
+  let rendered: Awaited<ReturnType<typeof renderLaunchpad>> | undefined
+  try {
+    rendered = await renderLaunchpad()
+    expect(rendered.host.querySelector('[data-testid="entry-step-1"]')).not.toBeNull()
+    expect(rendered.host.textContent).not.toContain('先生が登録した事業者')
+  } finally {
+    if (rendered) await act(async () => rendered!.root.unmount())
+    useSettingsStore.setState({ seedInvite: previous })
   }
 })

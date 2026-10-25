@@ -15,6 +15,7 @@ import {
 } from '../agent-framework'
 import { toSettingsPreferencesSnapshot } from './preferences'
 import type { StoredProvider, StoredSettings } from './types'
+import { SEED_COMPANY_PROVIDER_ID, seedStatus } from '../../shared/seed-invite'
 
 type ManagedRuntimeProjection = {
   isManagedCodexNativePath: (path: string) => boolean
@@ -65,6 +66,15 @@ export const buildSettingsSnapshot = (
         provider.id === settings.activeProviderId ? settings.activeModel : undefined
       )
     ),
+    seedInvite: seedStatus({
+      redeemedAt: settings.seedInvite?.redeemedAt,
+      packagesUsed: settings.seedInvite?.packagesUsed,
+      companyProviderActive: settings.activeProviderId === SEED_COMPANY_PROVIDER_ID,
+      byokProviderActive:
+        settings.activeProviderId !== undefined &&
+        settings.activeProviderId !== SEED_COMPANY_PROVIDER_ID,
+      maskedKey: settings.seedInvite?.companyKeyMask
+    }),
     onboardingCompletedAt: preferences.onboardingCompletedAt,
     betaTermsAcceptance: preferences.betaTermsAcceptance,
     packageMirror: settings.packageMirror,

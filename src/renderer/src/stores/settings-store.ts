@@ -27,6 +27,8 @@ import {
   type PermissionProfileId
 } from '../../../shared/permission-profiles'
 import type { OfficialVendorId } from '../../../shared/provider-registry'
+import type { SeedInviteStatus } from '../../../shared/seed-invite'
+import { createDefaultSeedInviteStatus } from '../../../shared/seed-invite'
 import type {
   AgentFrameworkId,
   AgentFrameworkView,
@@ -117,6 +119,7 @@ type SettingsStoreData = RuntimeSetupState &
     // Active model within the active provider; undefined means the provider's own default.
     activeModel: string | undefined
     providers: ProviderView[]
+    seedInvite: SeedInviteStatus
     // Selected agent backend and the frameworks available to choose from.
     agentFrameworkId: AgentFrameworkId
     // True only when the backend choice was persisted; false means the document fallback is in use.
@@ -178,6 +181,8 @@ type SettingsStoreActions = {
   load: (options?: { force?: boolean }) => Promise<boolean>
   acceptCommittedSnapshot: (snapshot: SettingsSnapshot) => void
   clearSettingsWriteError: () => void
+  redeemSeedInvite: (code: string) => Promise<void>
+  consumeSeedPackage: () => Promise<void>
 }
 
 type SettingsStore = SettingsStoreCore & RuntimeSetupActions
@@ -199,6 +204,7 @@ export const createInitialSettingsState = (): SettingsStoreData => ({
   claudeSubscriptionProviderId: undefined,
   activeModel: undefined,
   providers: [],
+  seedInvite: createDefaultSeedInviteStatus(),
   agentFrameworkId: 'claude-code',
   agentFrameworkSelected: false,
   agentFrameworks: [],
@@ -241,6 +247,7 @@ const applySnapshot = (snapshot: SettingsSnapshot): Partial<SettingsStoreData> =
   claudeSubscriptionProviderId: snapshot.claudeSubscriptionProviderId,
   activeModel: snapshot.activeModel,
   providers: snapshot.providers,
+  seedInvite: snapshot.seedInvite ?? createDefaultSeedInviteStatus(),
   onboardingCompletedAt: snapshot.onboardingCompletedAt,
   betaTermsAcceptance: snapshot.betaTermsAcceptance,
   packageMirror: isMirrorConfigured(snapshot.packageMirror) ? snapshot.packageMirror : undefined,
@@ -639,6 +646,14 @@ const createSettingsStoreState = (
     return loadPromise
   },
 
+  redeemSeedInvite: async (code) => {
+    const snapshot = await window.api.settings.redeemSeedInvite(code)
+    set((state) => mergeSnapshot(state, snapshot, writeCoordinator))
+  },
+  consumeSeedPackage: async () => {
+    const snapshot = await window.api.settings.consumeSeedPackage()
+    set((state) => mergeSnapshot(state, snapshot, writeCoordinator))
+  },
   clearSettingsWriteError: () => writeCoordinator.clearFailures(),
   acceptCommittedSnapshot: (snapshot) =>
     set((state) => mergeSnapshot(state, snapshot, writeCoordinator))
