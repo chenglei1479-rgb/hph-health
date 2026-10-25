@@ -458,3 +458,49 @@ test('exports separate Desktop and Runtime diagnostic evidence through real IPC'
   )
   await page.screenshot({ path: testInfo.outputPath('diagnostic-source-desktop.png') })
 })
+
+// The shared dialog footer used to opt every button into whitespace-normal + overflow-wrap:anywhere,
+// which lets a short label collapse to its one-character min-content width. jsdom has no layout, so
+// this is asserted here with a real narrow window instead of a className check.
+//
+// Gate note: this spec carries no `@pr-mainline-*` tag, so it runs in the scheduled/manual E2E lane
+// only, not on pull requests (scripts/ci/windows-e2e-mainline.mjs selects by tag, and adding a
+// mainline tag needs CI-policy review). The per-dialog opt-ins are the PR-time guard; do not report
+// this test as a PR gate.
+test('keeps the diagnostics footer Close button on one line in a narrow window', async ({
+  app
+}) => {
+  test.setTimeout(180_000)
+  await app.completeOnboarding()
+  const page = await app.configureFakeAgent()
+  await createProjectViaUi(page, 'Narrow diagnostics')
+  const prompt = 'Summarize the narrow window fixture.'
+  await submitPromptViaUi(page, prompt)
+  await expect(page.getByText(`Deterministic reply: ${prompt}`, { exact: true })).toBeVisible()
+
+  const application = (app as unknown as { application: ElectronApplication }).application
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(360, 800)
+  })
+  await expect.poll(() => page.evaluate(() => window.innerWidth)).toBeLessThan(420)
+
+  await page
+    .getByTestId('conversation-header')
+    .getByRole('button', { name: /Export diagnostics/ })
+    .click()
+  const dialog = page.getByRole('dialog', { name: 'Export diagnostics', exact: true })
+  // The header also has an icon-only Close button; the footer's text label is what used to stack.
+  const close = dialog.getByText('Close', { exact: true }).locator('xpath=ancestor::button[1]')
+  await expect(close).toBeVisible()
+
+  const metrics = await close.evaluate((element) => {
+    const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight)
+    return {
+      height: element.getBoundingClientRect().height,
+      lineHeight: Number.isFinite(lineHeight) && lineHeight > 0 ? lineHeight : 0
+    }
+  })
+  // Height is the reliable signal: a footer button is height:auto, so a wrapped label grows it to
+  // two lines while scrollHeight and clientHeight stay equal either way.
+  expect(metrics.height).toBeLessThan(metrics.lineHeight > 0 ? metrics.lineHeight * 2 : 44)
+})

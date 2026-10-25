@@ -1298,7 +1298,9 @@ const RuntimesPanel = ({
               </AlertDialog.Description>
             </div>
 
-            <div className={dialogFooterClassName}>
+            <div
+              className={`${dialogFooterClassName} [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere]`}
+            >
               <AlertDialog.Cancel asChild>
                 <Button type="button" variant="ghost" className={dialogCancelButtonClassName}>
                   {t('Cancel')}
@@ -1371,7 +1373,9 @@ const RuntimesPanel = ({
               </AlertDialog.Description>
             </div>
 
-            <div className={dialogFooterClassName}>
+            <div
+              className={`${dialogFooterClassName} [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere]`}
+            >
               <AlertDialog.Cancel asChild>
                 <Button type="button" variant="ghost" className={dialogCancelButtonClassName}>
                   {t('Cancel')}

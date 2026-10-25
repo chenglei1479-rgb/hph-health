@@ -327,7 +327,12 @@ const LegacyUpdateDialog = ({ active = true }: { active?: boolean }): React.JSX.
                 />
               </div>
             ) : null}
-            <div className={cn(dialogFooterClassName, 'shrink-0 flex-wrap')}>
+            <div
+              className={cn(
+                dialogFooterClassName,
+                'shrink-0 flex-wrap [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere]'
+              )}
+            >
               <button
                 type="button"
                 onClick={() => closeDialog()}

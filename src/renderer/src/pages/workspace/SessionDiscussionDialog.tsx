@@ -164,7 +164,9 @@ export const SessionDiscussionDialog = ({
             />
             {error ? <ErrorNotice inline tone="amber" description={error} /> : null}
           </div>
-          <div className={dialogFooterClassName}>
+          <div
+            className={`${dialogFooterClassName} [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere]`}
+          >
             <Button variant="ghost" className={dialogCancelButtonClassName} onClick={onClose}>
               {t('Cancel')}
             </Button>

@@ -239,7 +239,12 @@ const LegacyDataMoveDialog = ({
             ) : null}
           </div>
 
-          <div className={cn(dialogFooterClassName, 'flex-col items-stretch')}>
+          <div
+            className={cn(
+              dialogFooterClassName,
+              'flex-col items-stretch [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere]'
+            )}
+          >
             <Button
               type="button"
               disabled={

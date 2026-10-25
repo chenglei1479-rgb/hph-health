@@ -1118,7 +1118,9 @@ export function ConnectorsPanel({
               ) : null}
             </div>
 
-            <div className={dialogFooterClassName}>
+            <div
+              className={`${dialogFooterClassName} [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere]`}
+            >
               <AlertDialog.Cancel asChild>
                 <Button
                   type="button"

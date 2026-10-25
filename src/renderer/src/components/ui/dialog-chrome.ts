@@ -14,8 +14,12 @@ const dialogHeaderClassName =
 const dialogBodyClassName = 'min-w-0 p-5 [overflow-wrap:anywhere]'
 const dialogTitleClassName = 'min-w-0 text-lg font-semibold text-text-000 [overflow-wrap:anywhere]'
 const dialogDescriptionClassName = 'mt-1 text-sm leading-relaxed text-muted-foreground'
+// Footer buttons keep the shared Button defaults (single line, no shrink). Long labels that must wrap
+// on narrow screens opt in at the call site with `[&_button]:whitespace-normal
+// [&_button]:[overflow-wrap:anywhere]`; a blanket rule here let every short label — including a
+// two-character Close — collapse to its one-character min-content width and stack vertically.
 const dialogFooterClassName =
-  'flex shrink-0 flex-wrap justify-end gap-3 [&_button]:h-auto [&_button]:min-h-8 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:[overflow-wrap:anywhere] border-t border-border-300/90 px-5 py-3.5 [&_button:enabled]:cursor-pointer'
+  'flex shrink-0 flex-wrap justify-end gap-3 [&_button]:h-auto [&_button]:min-h-8 [&_button]:max-w-full border-t border-border-300/90 px-5 py-3.5 [&_button:enabled]:cursor-pointer'
 const dialogCloseButtonClassName = 'cursor-pointer rounded-lg text-muted-foreground'
 const dialogFormLabelClassName = 'block text-sm font-medium text-foreground mb-1'
 const dialogFormHelpClassName = 'text-xs leading-relaxed text-foreground/90 mb-2'
