@@ -3,7 +3,10 @@ import { act, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, expect, it, vi } from 'vitest'
 
-import { PRERELEASE_DATA_DESTINATION_NOTICE } from '../../../shared/prerelease'
+import {
+  PRERELEASE_DATA_DESTINATION_NOTICE,
+  PRERELEASE_DATA_USE_NOTICE
+} from '../../../shared/prerelease'
 import { i18next, initI18n } from '../i18n'
 import { createEmptyProviderFormValue } from '../pages/settings/provider-form-value'
 import { ProviderForm } from '../pages/settings/ProviderForm'
@@ -43,7 +46,9 @@ it('keeps the fictional-data sentence next to the provider API key on a beta bui
   const key = host?.querySelector<HTMLInputElement>('[aria-label="API key"]')
   const notice = host?.querySelector('[data-testid="prerelease-provider-key-notice"]')
   expect(key).not.toBeNull()
-  expect(notice?.textContent).toBe(PRERELEASE_DATA_DESTINATION_NOTICE)
+  expect(notice?.textContent).toBe(
+    `${PRERELEASE_DATA_DESTINATION_NOTICE} ${PRERELEASE_DATA_USE_NOTICE}`
+  )
   expect(key?.getAttribute('aria-describedby')).toBe('prerelease-provider-key-notice')
   expect(notice?.parentElement).toBe(key?.parentElement?.parentElement)
 })
@@ -73,7 +78,7 @@ it('shows the canonical destination sentence in the active locale, not a fixed J
       />
     )
     expect(host?.querySelector('[data-testid="prerelease-provider-key-notice"]')?.textContent).toBe(
-      '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
+      '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。 β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
     )
   } finally {
     initI18n('en')
@@ -98,6 +103,7 @@ it('shows the same sentence on the first model call and lets that call continue'
   })
   const dialog = host?.querySelector('[data-testid="prerelease-first-model-call"]')
   expect(dialog?.textContent).toContain(PRERELEASE_DATA_DESTINATION_NOTICE)
+  expect(dialog?.textContent).toContain(PRERELEASE_DATA_USE_NOTICE)
   expect(send).not.toHaveBeenCalled()
 
   await act(async () => {

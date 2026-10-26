@@ -17,7 +17,10 @@ import ko from '../../../shared/i18n/locales/ko.json'
 import ru from '../../../shared/i18n/locales/ru.json'
 import zhHans from '../../../shared/i18n/locales/zh-Hans.json'
 import zhHant from '../../../shared/i18n/locales/zh-Hant.json'
-import { PRERELEASE_DATA_DESTINATION_NOTICE } from '../../../shared/prerelease'
+import {
+  PRERELEASE_DATA_DESTINATION_NOTICE,
+  PRERELEASE_DATA_USE_NOTICE
+} from '../../../shared/prerelease'
 
 const CATALOGS = { ja, ko, fr, ru, de, es, 'zh-Hans': zhHans, 'zh-Hant': zhHant } as const
 type Locale = keyof typeof CATALOGS
@@ -29,13 +32,18 @@ const releaseNotes = readFileSync(
 )
 
 const canonicalJapanese =
-  '架空データのみ。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
+  '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。'
 const canonicalChinese =
-  '仅使用虚构数据。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。'
+  '为防止发送姓名、患者ID等直接标识符，设有发送前检查和限制。这并非绝对保证。'
 
 // Blanket zero-outbound promises. Scoped claims such as "never sent to PDF hosts", "nothing is
 // uploaded" for a local export, or the turn-level PHI "not sent" messages are accurate and must stay.
 const BANNED = [
+  /直接識別子(?:は|の列は).*(?:送りません|送信しません|渡しません)/,
+  /保証で送りません/,
+  /絶対に外に出ない/,
+  /direct identifiers[^.]*are not sent/i,
+  /直接(?:标识符|識別符)(?:不会发送|不會傳送)/,
   /外部に送信されることはありません/,
   /外部に送信されません/,
   /外部に送信することはありません/,
@@ -72,7 +80,7 @@ const catalogEntries = (locale: Locale): Array<[string, string]> => {
 }
 
 const rendersSentence = (text: string): boolean =>
-  /送信|發送|发送|傳送|전송|gesendet|envoy|envían|отправ|sent/i.test(text)
+  /送信|發送|发送|傳送|전송|[sS]enden|gesendet|envoi|envoy|envío|envían|отправ|sent/i.test(text)
 
 describe('outbound-promise copy', () => {
   it('never makes a blanket zero-outbound claim in any translated key or value', () => {
@@ -114,6 +122,28 @@ describe('outbound-promise copy', () => {
           PRERELEASE_DATA_DESTINATION_NOTICE
         ] ?? ''
       ).startsWith(canonicalChinese)
+    ).toBe(true)
+  })
+
+  it('keeps the beta/seed scope and provider destination in every locale', () => {
+    expect(releaseNotes).toContain(
+      'β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。'
+    )
+    expect(releaseNotes).toContain(
+      'β／种子阶段请仅使用虚构数据。医院正式运行及真实数据不在适用范围内。'
+    )
+    expect(releaseNotes).toContain(
+      'For beta/seed use, please use fictional data only. Formal hospital operations and real data are out of scope.'
+    )
+    for (const locale of LOCALES) {
+      const renderer = CATALOGS[locale].renderer
+      expect(renderer[PRERELEASE_DATA_USE_NOTICE]).toBeTruthy()
+      expect(renderer[PRERELEASE_DATA_USE_NOTICE]).toContain('OpenAI')
+    }
+    expect(
+      ja.renderer[PRERELEASE_DATA_USE_NOTICE].startsWith(
+        'β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。'
+      )
     ).toBe(true)
   })
 

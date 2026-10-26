@@ -1,6 +1,10 @@
 import { useTranslation } from 'react-i18next'
 
-import { isDraPrerelease, PRERELEASE_DATA_DESTINATION_NOTICE } from '../../../shared/prerelease'
+import {
+  isDraPrerelease,
+  PRERELEASE_DATA_DESTINATION_NOTICE,
+  PRERELEASE_DATA_USE_NOTICE
+} from '../../../shared/prerelease'
 
 type Props = {
   id?: string
@@ -22,7 +26,7 @@ export const PrereleaseDataDestinationNotice = ({
       data-testid={testId}
       className="text-xs leading-5 text-status-warning-foreground dark:text-status-warning-dark-foreground"
     >
-      {t(PRERELEASE_DATA_DESTINATION_NOTICE)}
+      {t(PRERELEASE_DATA_DESTINATION_NOTICE)} {t(PRERELEASE_DATA_USE_NOTICE)}
     </p>
   )
 }

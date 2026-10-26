@@ -7517,7 +7517,7 @@
     "Reason it does not apply": "Reason it does not apply",
     "Enter a reason.": "Enter a reason.",
     "Draft": "Draft",
-    "Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results; direct identifiers such as names or medical record numbers are not sent. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "분석은 이 PC에서 실행됩니다. 보내는 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. 해당 서비스는 열 이름, 데이터 유형, 합성 샘플, 선택한 범주 값, 집계 결과를 받을 수 있습니다. 이름이나 진료 기록 번호 같은 직접 식별자는 전송하지 않습니다. 위탁에 해당하는지는 소속 기관의 규정 또는 윤리심사위원회에 확인하세요.",
+    "Analysis runs on this computer. Requests you send go to the AI service you configure (for OpenAI, the United States). The service may receive column names, data types, synthetic samples, selected category values, and aggregate results. Pre-send checks and restrictions help prevent direct identifiers such as names and patient IDs from being sent. This is not an absolute guarantee. Check your institution’s rules or ask the ethics committee whether this constitutes outsourcing.": "분석은 이 PC에서 실행됩니다. 보내는 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. 해당 서비스는 열 이름, 데이터 유형, 합성 샘플, 선택한 범주 값, 집계 결과를 받을 수 있습니다. 이름·환자 ID 등 직접 식별자의 전송을 방지하기 위한 전송 전 검사와 제한이 있습니다. 절대적인 보장은 아닙니다. 위탁에 해당하는지는 소속 기관의 규정 또는 윤리심사위원회에 확인하세요.",
     "Research title": "Research title",
     "Research organization": "Research organization",
     "Purpose and significance": "Purpose and significance",
@@ -7635,8 +7635,9 @@
     "For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.": "선택한 열의 범주 값은 많은 순으로 최대 {{limit}}개만 보냅니다. 나머지는 {{omission}}으로 표시합니다.",
     "Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.": "분석 결과는 보내기 전에 마스킹 검사를 하며, 개별 행이 포함된 출력은 보내지 않습니다.",
     "Details_privacy": "자세히",
-    "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.": "환자 데이터 분석은 이 PC에서 수행됩니다. 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. AI 서비스에는 기본적으로 열 이름, 데이터 유형, 행 수, 합성 샘플, 선택한 열의 범주 값, 분석 집계 결과가 전송됩니다. 이름이나 진료 기록 번호 같은 직접 식별자는 전송하지 않습니다.",
-    "Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "가상 데이터만 사용합니다. 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. 사용 요금은 사용자의 모델 제공업체에서 청구됩니다.",
+    "Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results.": "환자 데이터 분석은 이 PC에서 수행됩니다. 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. AI 서비스에는 기본적으로 열 이름, 데이터 유형, 행 수, 합성 샘플, 선택한 열의 범주 값, 분석 집계 결과가 전송됩니다.",
+    "Pre-send checks and restrictions help prevent direct identifiers such as names and patient IDs from being sent. This is not an absolute guarantee.": "이름·환자 ID 등 직접 식별자의 전송을 방지하기 위한 전송 전 검사와 제한이 있습니다. 절대적인 보장은 아닙니다.",
+    "For beta/seed use, please use fictional data only. Formal hospital operations and real data are out of scope. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.": "베타/시드 단계에서는 가상 데이터만 사용하세요. 병원의 정식 운영과 실제 데이터는 대상이 아닙니다. 요청은 설정한 AI 서비스(OpenAI의 경우 미국)로 전송됩니다. 사용 요금은 사용자의 모델 제공업체에서 청구됩니다.",
     "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "테스트 버전에서는 자동 업데이트가 비활성화됩니다. 새 버전은 배포처에서 안내합니다.",
     "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "이 PC에서 보호된 실행을 시작할 수 없습니다. 설정 > 네트워크에서 Notebook 보호 설정을 완료한 후 다시 시도하세요. ({{code}})",
     "The app could not finish that action. Retry. If it keeps failing, reload the app. (Code: {{code}})": "앱이 해당 작업을 완료하지 못했습니다. 다시 시도하세요. 계속 실패하면 앱을 다시 로드하세요. (코드: {{code}})",
@@ -7647,7 +7648,6 @@
     "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "이 세션이 다른 창에서 변경되었습니다. 다시 연 후 재시도하세요. (코드: {{code}})",
     "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "인용 스타일 파일을 가져오지 못했습니다. 유효한 독립형 CSL 1.0 스타일인지 확인한 후 다시 시도하세요. (코드: {{code}})",
     "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "앱이 해당 작업을 완료하지 못했습니다. 다시 시도하세요. 계속 발생하면 도움을 요청할 때 이 코드를 알려 주세요. (코드: {{code}})",
-    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "자료 패키지를 저장하지 못했습니다. 저장 폴더를 확인한 후 다시 시도하세요. 계속 실패하면 이 진단 번호를 알려 주세요: {{code}}",
     "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "자료 패키지를 저장하지 못했습니다. 저장 폴더를 확인한 후 다시 시도하세요. 계속 실패하면 이 진단 번호를 알려 주세요: {{code}}",
     "A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}": "앱에 포함된 내보내기 리소스가 없습니다. 한 번 다시 시도하고, 계속 실패하면 이 진단 번호를 알려 주세요: {{code}}"
   }
