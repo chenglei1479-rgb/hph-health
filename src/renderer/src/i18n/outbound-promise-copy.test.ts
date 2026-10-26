@@ -36,6 +36,10 @@ const canonicalChinese =
 // Blanket zero-outbound promises. Scoped claims such as "never sent to PDF hosts", "nothing is
 // uploaded" for a local export, or the turn-level PHI "not sent" messages are accurate and must stay.
 const BANNED = [
+  /直接識別子は送りません/,
+  /保証で送りません/,
+  /直接識別子は送信しません/,
+  /direct identifiers such as names or medical record numbers are not sent/i,
   /外部に送信されることはありません/,
   /外部に送信されません/,
   /外部に送信することはありません/,
@@ -107,7 +111,10 @@ describe('outbound-promise copy', () => {
       (ja as unknown as Record<string, Record<string, string>>).renderer[
         PRERELEASE_DATA_DESTINATION_NOTICE
       ]
-    ).toBe(canonicalJapanese)
+    ).toBe(
+      canonicalJapanese +
+        ' 氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。 β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。'
+    )
     expect(
       (
         (zhHans as unknown as Record<string, Record<string, string>>).renderer[
