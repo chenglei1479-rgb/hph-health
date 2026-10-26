@@ -282,7 +282,7 @@ const MedicalResearchLaunchpad = ({
           <p className="w-full min-w-0">
             <span data-testid="home-patient-data-note-text">
               {t(
-                'Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results. Direct identifiers such as names or medical record numbers are not sent.'
+                'Pre-send checks and restrictions help prevent direct identifiers such as names and patient IDs from being sent. This is not an absolute guarantee.'
               )}
             </span>
             {SHOW_HOME_PATIENT_DATA_MASKING_NOTE ? (
@@ -308,6 +308,11 @@ const MedicalResearchLaunchpad = ({
                 data-testid="home-patient-data-details-panel"
                 className="w-[min(36rem,calc(100vw-2rem))] rounded-2xl bg-bg-000 p-4 text-left text-xs font-normal leading-5 text-text-300 shadow-card"
               >
+                <p className="mb-2">
+                  {t(
+                    'Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results.'
+                  )}
+                </p>
                 {t(
                   'For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.',
                   {

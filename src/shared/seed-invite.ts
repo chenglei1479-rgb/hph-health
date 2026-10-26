@@ -3,7 +3,7 @@ export const SEED_COMPANY_MODEL = 'gpt-5.4-mini'
 export const SEED_PACKAGE_LIMIT = 2
 
 export const SEED_EXHAUSTED_COPY =
-  'シード招待の AI 利用枠を使い切りました。続けるには、ご自身の OpenAI API キーを登録するか、将来の有料プランをご検討ください。デモ（架空データ）と文献検索は引き続き使えます。なお招待枠・会社キー利用中も架空データのみとし、実データは取り込みません。'
+  'シード招待の AI 利用枠を使い切りました。続けるには、ご自身の OpenAI API キーを登録するか、将来の有料プランをご検討ください。デモ（架空データ）と文献検索は引き続き使えます。β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。'
 export const SEED_UI_COPY = {
   title: 'シード招待枠',
   description:

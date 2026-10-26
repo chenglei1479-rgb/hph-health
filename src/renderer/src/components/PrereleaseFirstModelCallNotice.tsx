@@ -7,7 +7,10 @@ import {
   prereleaseModelCallNoticePending,
   subscribePrereleaseModelCallNotice
 } from '@/lib/prerelease-model-call-notice'
-import { PRERELEASE_DATA_DESTINATION_NOTICE } from '../../../shared/prerelease'
+import {
+  PRERELEASE_DATA_DESTINATION_NOTICE,
+  PRERELEASE_DATA_USE_NOTICE
+} from '../../../shared/prerelease'
 
 const Dialog = ({ onContinue }: { onContinue: () => void }): React.JSX.Element => {
   const { t } = useTranslation()
@@ -27,6 +30,7 @@ const Dialog = ({ onContinue }: { onContinue: () => void }): React.JSX.Element =
         }}
       >
         <p id="prerelease-first-model-call-notice">{t(PRERELEASE_DATA_DESTINATION_NOTICE)}</p>
+        <p className="mt-2">{t(PRERELEASE_DATA_USE_NOTICE)}</p>
         <Button type="button" className="mt-3" autoFocus onClick={onContinue}>
           {t('Continue')}
         </Button>

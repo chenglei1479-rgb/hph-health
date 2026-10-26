@@ -65,15 +65,23 @@ const ja: SchemaNotebookCopy = {
   blocked: 'この端末は病院の承認を受けていないため、個人情報を含むファイルは取り込めません。',
   tagged: 'このプロジェクトは患者データを含むため、印を外すことはできません。',
   language: '言語',
-  identifierWarnings: '直接識別子の列はモデルに渡しません',
+  identifierWarnings:
+    '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。',
   restoreNotice:
     '前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。'
 }
 
 const catalogs: Record<string, SchemaNotebookCopy> = {
   ja,
+  en: {
+    ...ja,
+    identifierWarnings:
+      'Pre-send checks and restrictions help prevent direct identifiers such as names and patient IDs from being sent. This is not an absolute guarantee.'
+  },
   de: {
     ...ja,
+    identifierWarnings:
+      'Um das Senden direkter Identifikatoren wie Namen und Patienten-IDs zu verhindern, gibt es Prüfungen vor dem Senden und Einschränkungen. Dies ist keine absolute Garantie.',
     badge: 'Enthält Patientendaten',
     badgeNote:
       'Dieses Kennzeichen kann nicht entfernt werden. Legen Sie ein neues Projekt an, um ohne Patientendaten zu arbeiten.',
@@ -101,6 +109,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
   },
   es: {
     ...ja,
+    identifierWarnings:
+      'Para ayudar a evitar el envío de identificadores directos, como nombres e identificadores de pacientes, hay comprobaciones previas al envío y restricciones. Esto no es una garantía absoluta.',
     badge: 'Contiene datos de pacientes',
     badgeNote:
       'Esta marca no se puede quitar. Para trabajar sin datos de pacientes, cree un proyecto nuevo.',
@@ -128,6 +138,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
   },
   fr: {
     ...ja,
+    identifierWarnings:
+      'Des contrôles avant envoi et des restrictions visent à empêcher l’envoi d’identifiants directs tels que les noms et les identifiants de patients. Il ne s’agit pas d’une garantie absolue.',
     badge: 'Contient des données patients',
     badgeNote:
       'Ce badge ne peut pas être retiré. Créez un nouveau projet pour travailler sans données patients.',
@@ -155,6 +167,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
   },
   'zh-Hans': {
     ...ja,
+    identifierWarnings:
+      '为防止发送姓名、患者ID等直接标识符，设有发送前检查和限制。这并非绝对保证。',
     badge: '含有患者数据',
     badgeNote: '此标记无法去除。若要处理不含患者数据的工作，请新建项目。',
     open: '分析患者表',
@@ -180,6 +194,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
   },
   'zh-Hant': {
     ...ja,
+    identifierWarnings:
+      '為防止傳送姓名、患者ID等直接識別符，設有傳送前檢查和限制。這並非絕對保證。',
     badge: '含有患者資料',
     badgeNote: '此標記無法移除。若要處理不含患者資料的工作，請新建專案。',
     open: '分析患者表',
@@ -205,6 +221,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
   },
   ko: {
     ...ja,
+    identifierWarnings:
+      '이름·환자 ID 등 직접 식별자의 전송을 방지하기 위한 전송 전 검사와 제한이 있습니다. 절대적인 보장은 아닙니다.',
     badge: '환자 데이터 포함',
     badgeNote:
       '이 표시는 제거할 수 없습니다. 환자 데이터 없이 작업하려면 새 프로젝트가 필요합니다.',
@@ -232,6 +250,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
   },
   ru: {
     ...ja,
+    identifierWarnings:
+      'Для предотвращения отправки прямых идентификаторов, таких как имена и идентификаторы пациентов, предусмотрены проверки перед отправкой и ограничения. Это не является абсолютной гарантией.',
     badge: 'Содержит данные пациентов',
     badgeNote: 'Эту метку нельзя снять. Для работы без данных пациентов создайте новый проект.',
     open: 'Анализ таблицы пациентов',

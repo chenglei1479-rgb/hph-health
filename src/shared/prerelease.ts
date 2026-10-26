@@ -1,10 +1,13 @@
 declare const __DRA_PRERELEASE__: boolean | undefined
 
-// Shown beside the provider key and before the first model call. The English source text is the
-// renderer catalog key: every translated locale carries the founder-locked wording from
-// build/prerelease-release-notes.md, so the notice is never hard-coded Japanese on other locales.
+// Brief 28 copy A, shown beside the provider key and before the first model call.
+// English source text is the renderer catalog key; every locale carries the approved meaning.
 export const PRERELEASE_DATA_DESTINATION_NOTICE =
-  'Fictional data only. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.'
+  'Pre-send checks and restrictions help prevent direct identifiers such as names and patient IDs from being sent. This is not an absolute guarantee.'
+
+// Beta/seed scope and configured provider destination remain visible beside the checks notice.
+export const PRERELEASE_DATA_USE_NOTICE =
+  'For beta/seed use, please use fictional data only. Formal hospital operations and real data are out of scope. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.'
 
 // Settings → About. Same scheme as the data-destination notice: the English source text is the
 // renderer catalog key, so a beta build states its update policy in the active language.

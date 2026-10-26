@@ -96,7 +96,7 @@ The schema-only generator does not read cell values, and does not derive samples
 
 Read the actual Japanese locale from `origin/cursor/home-patient-data-note-2c21`. It says:
 
-> 患者データの分析はお使いの PC 内で行います。AI サービスには既定で、列名・データ型・行数、合成サンプル、先生が選択した列の区分値、および解析の集計結果を送信します。氏名やカルテ番号などの直接識別子は送りません。
+> 氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。
 
 Its details say `選択した列の区分値は、多いものから最大 {{limit}} 種類だけ送ります。残りは {{omission}} と示します。` The hidden sentence is `解析結果は送信前にマスキングチェックを行い、個別の行を含む出力は送信しません。`
 

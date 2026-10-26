@@ -98,7 +98,9 @@ describe('BetaTermsConsent', () => {
     expect(container.textContent).toContain('unsigned internal test build')
     expect(container.textContent).toContain('personal computer')
     expect(container.textContent).toContain('fictitious data')
-    expect(container.textContent).toContain('AI service you configure')
+    expect(container.textContent).toContain(
+      'Your input is sent to the destination shown for the active key mode: the AI contracted by the operator for a seed invite, or the provider you registered for BYOK. Your API key is stored on this computer.'
+    )
     expect(container.textContent).toContain('defects and changes')
   })
 })
