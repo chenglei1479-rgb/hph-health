@@ -180,6 +180,124 @@ const copyFor = (locale, stats) => {
       ]
     }
   }
+  const localized = {
+    de: [
+      'Fiktives Beispiel: 30-Tage-Wiederaufnahme',
+      'Diese Demo verwendet fiktive Daten. Sie zeigt keine echten Patienten oder Studienergebnisse.',
+      'Ein fiktives Beispiel für die Ansicht eines Kongressabstracts. Die Eingabe ist eine synthetische Tabelle.',
+      `Methoden: ${stats.n} synthetische Zeilen wurden auf diesem Computer gezählt. Es wurde kein Modell aufgerufen. Der Wert 1 in der Wiederaufnahmespalte zählt als Wiederaufnahme.`,
+      `Ergebnisse: ${stats.events} von ${stats.n} synthetischen Zeilen (${stats.rate} %) sind als wiederaufgenommen markiert.`,
+      'Diese Zahlen sind keine Grundlage für Behandlung oder Begutachtung.',
+      'Häufigkeiten',
+      'Gruppierte Häufigkeiten ohne einzelne Datensätze.',
+      'Gruppe',
+      'Zeilen',
+      'Wiederaufgenommen',
+      'Umfang dieses Beispiels',
+      'Die Häufigkeiten wurden lokal berechnet. Es gab keine Netzwerkübertragung und keinen Modellaufruf.',
+      'Alle Zeilen sind als synthetisch gekennzeichnet. Es gibt keine Namen, Aktennummern oder Geburtsdaten.',
+      'Alle',
+      'Weiblich',
+      'Männlich',
+      'Baselio Demo'
+    ],
+    es: [
+      'Ejemplo ficticio: reingreso a los 30 días',
+      'Esta demostración utiliza datos ficticios. No representa pacientes reales ni resultados de un estudio.',
+      'Ejemplo ficticio de la pantalla de resumen de congreso. La entrada es una tabla sintética.',
+      `Métodos: se contaron ${stats.n} filas sintéticas en este equipo. No se llamó a ningún modelo. El valor 1 en la columna de reingreso cuenta como reingreso.`,
+      `Resultados: ${stats.events} de ${stats.n} filas sintéticas (${stats.rate} %) están marcadas como reingreso.`,
+      'Estas cifras no sirven para tomar decisiones asistenciales ni de revisión.',
+      'Recuentos',
+      'Recuentos por grupo sin filas individuales.',
+      'Grupo',
+      'Filas',
+      'Reingresos',
+      'Alcance del ejemplo',
+      'Los recuentos se calcularon localmente, sin transmisión por la red ni llamadas a modelos.',
+      'Todas las filas están marcadas como sintéticas. No hay nombres, números de historia ni fechas de nacimiento.',
+      'Todos',
+      'Mujeres',
+      'Hombres',
+      'Demostración de Baselio'
+    ],
+    fr: [
+      'Exemple fictif : réadmission à 30 jours',
+      'Cette démonstration utilise des données fictives. Elle ne représente ni patients réels ni résultats d’étude.',
+      'Exemple fictif de l’écran de résumé de congrès. Seul un tableau synthétique est utilisé.',
+      `Méthodes : ${stats.n} lignes synthétiques ont été comptées sur cet ordinateur. Aucun modèle n’a été appelé. La valeur 1 dans la colonne de réadmission compte comme une réadmission.`,
+      `Résultats : ${stats.events} lignes sur ${stats.n} (${stats.rate} %) sont marquées comme réadmises.`,
+      'Ces chiffres ne peuvent étayer une décision de soin ou d’évaluation.',
+      'Effectifs',
+      'Effectifs par groupe sans lignes individuelles.',
+      'Groupe',
+      'Lignes',
+      'Réadmissions',
+      'Portée de cet exemple',
+      'Les effectifs ont été calculés localement, sans transmission réseau ni appel à un modèle.',
+      'Toutes les lignes sont signalées comme synthétiques. Aucun nom, numéro de dossier ou date de naissance.',
+      'Tous',
+      'Femmes',
+      'Hommes',
+      'Démo Baselio'
+    ],
+    ko: [
+      '가상 샘플: 30일 이내 재입원',
+      '가상 데이터를 사용한 데모입니다. 실제 환자나 연구 결과가 아닙니다.',
+      '학회 초록 화면을 확인하기 위한 가상 샘플입니다. 합성 표만 입력으로 사용합니다.',
+      `방법: 이 컴퓨터에서 합성 행 ${stats.n}개를 집계했습니다. 모델을 호출하지 않았습니다. 재입원 열의 값이 1인 행을 재입원으로 집계합니다.`,
+      `결과: 합성 행 ${stats.n}개 중 ${stats.events}개(${stats.rate}%)가 재입원으로 표시되었습니다.`,
+      '이 수치는 진료나 심사 판단의 근거로 사용할 수 없습니다.',
+      '집계',
+      '개별 행을 제외한 그룹별 집계입니다.',
+      '그룹',
+      '행 수',
+      '재입원',
+      '샘플 범위',
+      '이 컴퓨터에서만 집계했으며 네트워크 전송이나 모델 호출은 없었습니다.',
+      '모든 행은 합성 데이터로 표시됩니다. 이름, 의무기록 번호, 생년월일은 없습니다.',
+      '전체',
+      '여성',
+      '남성',
+      '바젤리오 데모'
+    ],
+    ru: [
+      'Вымышленный пример: повторная госпитализация за 30 дней',
+      'Демонстрация использует вымышленные данные. Это не реальные пациенты и не результаты исследования.',
+      'Вымышленный пример экрана тезисов конференции. Входные данные — синтетическая таблица.',
+      `Методы: на этом компьютере подсчитано ${stats.n} синтетических строк. Модель не вызывалась. Значение 1 в столбце повторной госпитализации учитывается как повторная госпитализация.`,
+      `Результаты: ${stats.events} из ${stats.n} синтетических строк (${stats.rate} %) отмечены как повторные госпитализации.`,
+      'Эти числа нельзя использовать для лечебных решений или экспертизы.',
+      'Подсчёты',
+      'Подсчёты по группам без отдельных строк.',
+      'Группа',
+      'Строки',
+      'Повторные госпитализации',
+      'Область применения примера',
+      'Подсчёты выполнены локально, без передачи по сети и без вызова модели.',
+      'Все строки отмечены как синтетические. Имен, номеров историй болезни и дат рождения нет.',
+      'Все',
+      'Женщины',
+      'Мужчины',
+      'Демонстрация Baselio'
+    ]
+  }[locale]
+  if (localized) {
+    const c = localized
+    const labels = { All: c[14], F: c[15], M: c[16] }
+    const pages = [
+      page(c[0], c[1], [paragraph(c[2]), paragraph(c[3]), paragraph(c[4]), paragraph(c[5])]),
+      page(c[6], c[1], [
+        paragraph(c[7]),
+        table(
+          [c[8], c[9], c[10], '%'],
+          tableRows.map(([label, ...values]) => [labels[label] ?? label, ...values])
+        )
+      ]),
+      page(c[11], c[1], [paragraph(c[12]), paragraph(c[13])])
+    ]
+    return { htmlLang: locale, pages: pages.map((item) => ({ ...item, footerMark: c[17] })) }
+  }
   const disclaimer = 'This demo uses fictional data. It is not a real patient or a study result.'
   return {
     htmlLang: 'en',
@@ -234,10 +352,33 @@ export const renderSampleHtml = (document) => {
 export const buildDemoReadmission = () => {
   const rows = buildCohort()
   const stats = summarizeCohort(rows)
-  const locales = ['ja', 'zh-Hans', 'zh-Hant', 'en']
+  const locales = ['ja', 'zh-Hans', 'zh-Hant', 'en', 'de', 'es', 'fr', 'ko', 'ru']
   const documents = {}
   for (const locale of locales) {
     const document = copyFor(locale, stats)
+    const footerMarks = {
+      ja: FOOTER_MARK,
+      'zh-Hans': 'Baselio 虚构演示',
+      'zh-Hant': 'Baselio 虛構示範',
+      en: 'Baselio demo'
+    }
+    if (footerMarks[locale]) {
+      document.pages = document.pages.map((item) => ({ ...item, footerMark: footerMarks[locale] }))
+    }
+    const groupLabels = {
+      ja: ['全体', '女性', '男性'],
+      'zh-Hans': ['全部', '女性', '男性'],
+      'zh-Hant': ['全部', '女性', '男性']
+    }[locale]
+    if (groupLabels)
+      for (const item of document.pages)
+        for (const block of item.blocks) {
+          if (block.type === 'table')
+            block.rows = block.rows.map(([label, ...values]) => [
+              { All: groupLabels[0], F: groupLabels[1], M: groupLabels[2] }[label] ?? label,
+              ...values
+            ])
+        }
     documents[locale] = { ...document, html: renderSampleHtml(document) }
   }
   return { seed: SEED, rows, stats, documents }

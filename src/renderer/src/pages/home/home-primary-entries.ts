@@ -14,7 +14,6 @@ export type HomePrimaryEntry = {
   subtitle: string
   description: string
   hardRule?: string
-  inputNotice?: string
 }
 
 export const homePrimaryEntries = (t: Translate): HomePrimaryEntry[] => [
@@ -23,13 +22,8 @@ export const homePrimaryEntries = (t: Translate): HomePrimaryEntry[] => [
     workflow: 'mentor-pack',
     title: t('Prepare to consult your supervising doctor'),
     subtitle: t('A one-page brief for a mentor meeting, focused on study-design consultation.'),
-    description: t(
-      'For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from "Analyze your own data".'
-    ),
-    hardRule: t('This pack does not load patient data.'),
-    inputNotice: t(
-      'Do not paste individual patient data. Keep the consultation to the study design and a summary of aggregate results.'
-    )
+    description: t('Prepare your question and study design for a mentor meeting.'),
+    hardRule: t('This pack does not load patient data.')
   },
   {
     id: 'analyze-data',
@@ -38,17 +32,15 @@ export const homePrimaryEntries = (t: Translate): HomePrimaryEntry[] => [
     subtitle: t(
       'Upload an anonymized CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
     ),
-    description: t(
-      'Upload an anonymized CSV, review variables and missingness, approve a statistical plan, then create reproducible tables, figures, and code.'
-    )
+    description: t('Review a statistical plan, then create tables, figures, and code.'),
+    hardRule: t('Use fictional or de-identified tables only.')
   },
   {
     id: 'write-abstract',
     workflow: 'writing-pack',
     title: t('Prepare a conference abstract or paper'),
     subtitle: t('A short manuscript for a deadline, with checks for the ethics number and AI use.'),
-    description: t(
-      'This pack ends at a conference abstract or a short English draft. Continue a long paper from Manuscript writing or Academic English writing. Before writing, the ethics approval number is checked. A missing number is only a reminder and does not block writing.'
-    )
+    description: t('Draft a conference abstract or short paper for review.'),
+    hardRule: t('A missing ethics number is a reminder and does not block writing.')
   }
 ]

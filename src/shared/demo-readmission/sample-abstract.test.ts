@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 
 import { expect, it } from 'vitest'
+import { LOCALES } from '../locale'
 
 import { buildDemoReadmission } from '../../../scripts/demo-readmission/generate.mjs'
 import { sampleAbstracts } from './sample-abstracts'
@@ -29,7 +30,7 @@ it('ships the seeded fictional cohort and a static abstract with the required la
     built.documents.ja.html
   )
 
-  for (const locale of ['ja', 'zh-Hans', 'zh-Hant', 'en'] as const) {
+  for (const locale of LOCALES) {
     const html = built.documents[locale].html
     const pages = built.documents[locale].pages
     expect(pages).toHaveLength(3)
@@ -37,12 +38,14 @@ it('ships the seeded fictional cohort and a static abstract with the required la
     for (const item of pages) {
       expect(item.disclaimer.length).toBeGreaterThan(0)
       expect(item.footerDisclaimer).toBe(item.disclaimer)
-      expect(item.footerMark).toBe('ベースリオ デモ')
+      expect(item.footerMark.length).toBeGreaterThan(0)
       const titleAt = html.indexOf(`<h1>${item.title}</h1>`)
       const disclaimerAt = html.indexOf(`<p class="disclaimer">${item.disclaimer}</p>`, titleAt)
       expect(disclaimerAt).toBeGreaterThan(titleAt)
     }
-    expect(html.match(/ベースリオ デモ/g)).toHaveLength(3)
+    expect(sampleAbstracts.documents[locale].html).toBe(html)
+    expect(readFileSync(`resources/demo-readmission/abstract.${locale}.html`, 'utf8')).toBe(html)
+    if (locale !== 'ja') expect(html).not.toMatch(/[\u3040-\u30ff]/)
   }
 
   expect(built.documents.ja.html.split(JA_LINE).length - 1).toBe(6)
