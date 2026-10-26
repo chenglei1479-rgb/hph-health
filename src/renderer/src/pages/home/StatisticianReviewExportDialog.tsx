@@ -15,8 +15,16 @@ import {
 import { recordPackDelivery } from './pack-delivery-ledger'
 import {
   classifyStatisticianExportFailure,
-  STATISTICIAN_EXPORT_RESOURCE_CODE
+  STATISTICIAN_EXPORT_BUILD_CODE,
+  STATISTICIAN_EXPORT_RESOURCE_CODE,
+  STATISTICIAN_EXPORT_SAVE_CODE,
+  type StatisticianExportFailureCode
 } from '../../../../shared/statistician-export-diagnostics'
+import {
+  reportStatisticianExportFailure,
+  type StatisticianExportStage
+} from '@/lib/report-statistician-export-failure'
+import { isDraPrerelease } from '../../../../shared/prerelease'
 import {
   parseResultTableTsv,
   parseVariableDefinitionTsv,
@@ -105,6 +113,32 @@ const StatisticianReviewExportDialog = ({
     return t('Enter the aggregate outputs before export.')
   }
 
+  const failureCopy = (code: StatisticianExportFailureCode, error: unknown): string => {
+    const base =
+      code === STATISTICIAN_EXPORT_BUILD_CODE
+        ? t(
+            'The export package could not be prepared. Retry once; if it fails again, report this diagnostic: {{code}}',
+            { code }
+          )
+        : code === STATISTICIAN_EXPORT_SAVE_CODE
+          ? t(
+              'The package could not be handed to the save dialog. Retry once; if it fails again, report this diagnostic: {{code}}',
+              { code }
+            )
+          : code === STATISTICIAN_EXPORT_RESOURCE_CODE
+            ? t(
+                'A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}',
+                { code }
+              )
+            : t(
+                'The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}',
+                { code }
+              )
+    // Beta builds append the exception name so an acceptance report identifies the failing kind
+    // without exposing message text. Stable builds keep only the diagnostic number.
+    return isDraPrerelease() && error instanceof Error ? `${base} (${error.name})` : base
+  }
+
   const exportPackage = async (): Promise<void> => {
     const sheets = parseResultTableTsv(table)
     const rows = parseVariableDefinitionTsv(definition)
@@ -114,6 +148,9 @@ const StatisticianReviewExportDialog = ({
     }
     setPending(true)
     setStatus(undefined)
+    // Each stage reports its own code: beta.18 showed the generic write code while no Save As dialog
+    // had even opened, which could not distinguish a failed zip build from a failed bridge call.
+    let stage: StatisticianExportStage = 'package'
     try {
       const send = onExport ?? window.api.statisticianReview.exportPackage
       const result = await send({
@@ -128,12 +165,14 @@ const StatisticianReviewExportDialog = ({
         setStatus(messageFor(result.code))
         return
       }
+      stage = 'build'
       const generatedAt = new Date().toISOString()
       const archive = buildExportPackage(result.files, generatedAt)
       const data = archive.buffer.slice(
         archive.byteOffset,
         archive.byteOffset + archive.byteLength
       ) as ArrayBuffer
+      stage = 'save'
       const savePackage: NonNullable<StatisticianReviewExportDialogProps['onSavePackage']> =
         onSavePackage ??
         ((pkg) =>
@@ -156,18 +195,14 @@ const StatisticianReviewExportDialog = ({
       recordPackDelivery('statistician-export', `export:${crypto.randomUUID()}`)
       setStatus(t('Statistician package exported.'))
     } catch (error) {
-      const code = classifyStatisticianExportFailure(error)
-      setStatus(
-        code === STATISTICIAN_EXPORT_RESOURCE_CODE
-          ? t(
-              'A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}',
-              { code }
-            )
-          : t(
-              'The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}',
-              { code }
-            )
-      )
+      const code =
+        stage === 'build'
+          ? STATISTICIAN_EXPORT_BUILD_CODE
+          : stage === 'save'
+            ? STATISTICIAN_EXPORT_SAVE_CODE
+            : classifyStatisticianExportFailure(error)
+      reportStatisticianExportFailure(stage, error)
+      setStatus(failureCopy(code, error))
     } finally {
       setPending(false)
     }

@@ -164,6 +164,9 @@ type PreloadApi = {
     stageLocalFile: (file: File, request: unknown) => Promise<unknown>
     claimLocalFile: (request: unknown) => Promise<void>
   }
+  statisticianReview: {
+    exportPackage: (request: unknown) => Promise<unknown>
+  }
   window: {
     findInPage?: (request: unknown) => void
     clearFind?: () => void
@@ -1252,6 +1255,29 @@ describe('preload bridge — core renderer contract catalog', () => {
       )
     )
     expect(invokeMock).toHaveBeenCalledWith('sessions:edit-details', sampleEditSessionDetails)
+  })
+
+  // The export package channel is served by a direct main-process handler, so its response is the
+  // bare reply, not an application-command outcome. The renderer reads `files` off that reply; this
+  // pins the pairing so marking the contract runtime-validated without changing the handler fails here.
+  it('forwards the statistician export package request and returns the bare main-process reply', async () => {
+    const response = {
+      ok: true,
+      files: [
+        {
+          kind: 'statistical-report',
+          filename: 'statistical-report.docx',
+          mediaType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          text: 'report',
+          base64: 'cmVwb3J0'
+        }
+      ]
+    }
+    invokeMock.mockResolvedValueOnce(response)
+    const request = { projectId: 'project-1' }
+
+    await expect(api.statisticianReview.exportPackage(request)).resolves.toEqual(response)
+    expect(invokeMock).toHaveBeenCalledWith('statistician-review:export-package', request)
   })
 
   it('returns null without IPC when native upload path extraction fails', async () => {

@@ -4,9 +4,16 @@
 // renderer. These codes are stable, content-free and match the English line the main process logs.
 export const STATISTICIAN_EXPORT_RESOURCE_CODE = 'WIN-EXPORT-01'
 export const STATISTICIAN_EXPORT_WRITE_CODE = 'WIN-EXPORT-02'
+// The beta.18 refusal reported the generic write code without a Save As dialog ever appearing, so the
+// stages after the main-process package build now report themselves instead of sharing one code.
+export const STATISTICIAN_EXPORT_BUILD_CODE = 'WIN-EXPORT-03'
+export const STATISTICIAN_EXPORT_SAVE_CODE = 'WIN-EXPORT-04'
 
 export type StatisticianExportFailureCode =
-  typeof STATISTICIAN_EXPORT_RESOURCE_CODE | typeof STATISTICIAN_EXPORT_WRITE_CODE
+  | typeof STATISTICIAN_EXPORT_RESOURCE_CODE
+  | typeof STATISTICIAN_EXPORT_WRITE_CODE
+  | typeof STATISTICIAN_EXPORT_BUILD_CODE
+  | typeof STATISTICIAN_EXPORT_SAVE_CODE
 
 // Missing bundled resource: missing font, missing ESM entry, or a module that cannot be resolved.
 const RESOURCE_FAILURE =
