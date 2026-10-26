@@ -7640,6 +7640,7 @@
     "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "인용 스타일 파일을 가져오지 못했습니다. 유효한 독립형 CSL 1.0 스타일인지 확인한 후 다시 시도하세요. (코드: {{code}})",
     "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "앱이 해당 작업을 완료하지 못했습니다. 다시 시도하세요. 계속 발생하면 도움을 요청할 때 이 코드를 알려 주세요. (코드: {{code}})",
     "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "자료 패키지를 저장하지 못했습니다. 저장 폴더를 확인한 후 다시 시도하세요. 계속 실패하면 이 진단 번호를 알려 주세요: {{code}}",
+    "(Code: {{code}})": "(코드: {{code}})",
     "The export package could not be prepared. Retry once; if it fails again, report this diagnostic: {{code}}": "자료 패키지를 준비하지 못했습니다. 한 번 다시 시도하고, 계속 실패하면 이 진단 번호를 알려 주세요: {{code}}",
     "The package could not be handed to the save dialog. Retry once; if it fails again, report this diagnostic: {{code}}": "자료 패키지를 저장 위치 선택 창으로 넘기지 못했습니다. 한 번 다시 시도하고, 계속 실패하면 이 진단 번호를 알려 주세요: {{code}}",
     "A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}": "앱에 포함된 내보내기 리소스가 없습니다. 한 번 다시 시도하고, 계속 실패하면 이 진단 번호를 알려 주세요: {{code}}",

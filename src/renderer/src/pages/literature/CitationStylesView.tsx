@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 
 import {
   ApplicationCommandError,
+  isApplicationCommandErrorCode,
   parseApplicationCommandError
 } from '../../../../shared/application-command-contract'
 
@@ -232,38 +233,45 @@ const CitationStylesView = ({
 
   const errorMessage = (): string => {
     const code = error instanceof ApplicationCommandError ? error.code : error
-    switch (code) {
-      case 'file-extension':
-        return t('Choose a .csl file.')
-      case 'file-too-large':
-      case 'csl-file-too-large':
-        return t('The CSL file must be 1 MB or smaller.')
-      case 'csl-invalid-xml':
-        return t('The selected file is not valid CSL XML.')
-      case 'csl-unsupported-doctype':
-        return t('CSL files with a document type declaration are not supported.')
-      case 'csl-unsupported-style':
-        return t('The selected file must be an independent CSL 1.0 style.')
-      case 'csl-missing-metadata':
-        return t('The CSL style must include a title and an id.')
-      case 'csl-dependent-style':
-        return t('Dependent CSL styles are not supported yet. Import an independent style.')
-      case 'csl-missing-sections':
-        return t('DRA requires CSL styles with both citation and bibliography sections.')
-      case 'csl-undefined-macro':
-        if (error instanceof ApplicationCommandError && error.parameters) {
-          return t('The CSL style references an undefined macro: {{macro}}', {
-            macro: error.parameters.macro
-          })
-        }
-        return t('The CSL style could not be imported. Please try again.')
-      case 'load-failed':
-        return t('Citation styles could not be loaded. Please try again.')
-      case 'delete-failed':
-        return t('The CSL style could not be deleted. Please try again.')
-      default:
-        return t('The CSL style could not be imported. Please try again.')
+    const detail = (): string => {
+      switch (code) {
+        case 'file-extension':
+          return t('Choose a .csl file.')
+        case 'file-too-large':
+        case 'csl-file-too-large':
+          return t('The CSL file must be 1 MB or smaller.')
+        case 'csl-invalid-xml':
+          return t('The selected file is not valid CSL XML.')
+        case 'csl-unsupported-doctype':
+          return t('CSL files with a document type declaration are not supported.')
+        case 'csl-unsupported-style':
+          return t('The selected file must be an independent CSL 1.0 style.')
+        case 'csl-missing-metadata':
+          return t('The CSL style must include a title and an id.')
+        case 'csl-dependent-style':
+          return t('Dependent CSL styles are not supported yet. Import an independent style.')
+        case 'csl-missing-sections':
+          return t('DRA requires CSL styles with both citation and bibliography sections.')
+        case 'csl-undefined-macro':
+          if (error instanceof ApplicationCommandError && error.parameters) {
+            return t('The CSL style references an undefined macro: {{macro}}', {
+              macro: error.parameters.macro
+            })
+          }
+          return t('The CSL style could not be imported. Please try again.')
+        case 'load-failed':
+          return t('Citation styles could not be loaded. Please try again.')
+        case 'delete-failed':
+          return t('The CSL style could not be deleted. Please try again.')
+        default:
+          return t('The CSL style could not be imported. Please try again.')
+      }
     }
+    const detailText = detail()
+    // The detailed sentence stays per code; a published command code is appended so a report can name
+    // it. Local UI-only states (file-extension, load-failed, delete-failed) keep their own copy.
+    if (typeof code !== 'string' || !isApplicationCommandErrorCode(code)) return detailText
+    return `${detailText} ${t('(Code: {{code}})', { code })}`
   }
 
   const builtIn = styles?.filter(({ source }) => source === 'built-in') ?? []
@@ -332,9 +340,7 @@ const CitationStylesView = ({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{style.title}</p>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {style.source === 'built-in'
-                    ? t('Included with DRA')
-                    : t('Imported CSL')}
+                  {style.source === 'built-in' ? t('Included with DRA') : t('Imported CSL')}
                   {style.rights ? ` · ${style.rights}` : ''}
                 </p>
               </div>
