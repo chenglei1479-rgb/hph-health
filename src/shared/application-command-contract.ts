@@ -10,6 +10,7 @@ export const APPLICATION_COMMAND_ERROR_CODES = [
   'session-size-limit',
   'session-revision-conflict',
   'SESSION_RUNTIME_WRITER_LOST',
+  'schema-notebook-table-missing',
   'csl-file-too-large',
   'csl-invalid-xml',
   'csl-unsupported-doctype',

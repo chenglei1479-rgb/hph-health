@@ -1,18 +1,21 @@
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import Papa from 'papaparse'
+import { createLogger } from '@aipoch/diagnostics/node'
 
-import type {
-  CategoricalOptInRequest,
-  ExecuteAnalysisRequest,
-  ExecuteAnalysisResponse,
-  ImportTableRequest,
-  ImportTableResponse,
-  PatientDataTag,
-  SchemaModelContext
+import {
+  SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
+  type CategoricalOptInRequest,
+  type ExecuteAnalysisRequest,
+  type ExecuteAnalysisResponse,
+  type ImportTableRequest,
+  type ImportTableResponse,
+  type PatientDataTag,
+  type SchemaModelContext
 } from '../../../shared/schema-notebook'
+import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import { createCategoricalOptInLog } from './categorical-opt-in'
 import { releaseCategoricalValuesForModel } from './categorical-release'
 import { executeLocalAnalysis, type CommandRunner } from './local-execute'
@@ -86,13 +89,48 @@ export const createSchemaNotebookService = (options: {
     })
   }
 
+  const schemaNotebookLog = createLogger('schema-notebook')
+
+  const tableFile = (tableId: string, extension: 'csv' | 'json'): string =>
+    join(tableDir, `${tableId}.${extension}`)
+
+  const isMissingFileError = (error: unknown): boolean =>
+    Boolean(
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+    )
+
+  // A stored table is a metadata file plus a csv file. Restoring must notice either one disappearing,
+  // and running must fail with a stable code instead of surfacing ENOENT and a local absolute path.
+  // Only the relative shape is logged; the home directory never reaches the log.
+  const requireTableFile = (tableId: string, extension: 'csv' | 'json'): string => {
+    const path = tableFile(tableId, extension)
+    try {
+      statSync(path)
+    } catch (error) {
+      if (!isMissingFileError(error)) throw error
+      schemaNotebookLog.warn('stored table file missing', {
+        code: SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
+        tableId,
+        file: `tables/<tableId>.${extension}`
+      })
+      throw new ApplicationCommandError(
+        SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
+        'The imported table file is missing. Nothing was run.'
+      )
+    }
+    return path
+  }
+
   const readStored = (tableId: string): StoredTable => {
-    const parsed: unknown = JSON.parse(readFileSync(join(tableDir, `${tableId}.json`), 'utf8'))
+    const parsed: unknown = JSON.parse(readFileSync(requireTableFile(tableId, 'json'), 'utf8'))
     return parsed as StoredTable
   }
 
   const readCsv = (tableId: string): string =>
-    readFileSync(join(tableDir, `${tableId}.csv`), 'utf8')
+    readFileSync(requireTableFile(tableId, 'csv'), 'utf8')
 
   const contextFor = async (stored: StoredTable): Promise<SchemaModelContext> => {
     const withheld = new Set(stored.withheldColumns ?? [])
@@ -182,10 +220,14 @@ export const createSchemaNotebookService = (options: {
       return contextFor(stored)
     },
     async modelContext(projectId, tableId) {
-      const stored = readStored(requireId(tableId, 'tableId'))
+      const id = requireId(tableId, 'tableId')
+      const stored = readStored(id)
       if (stored.projectId !== requireId(projectId, 'projectId')) {
         throw new Error('Table does not belong to this project.')
       }
+      // The panel must not look restored when the csv is gone; the renderer shows its restore notice
+      // when this call fails.
+      requireTableFile(id, 'csv')
       return contextFor(stored)
     },
     async execute(request) {
@@ -198,6 +240,7 @@ export const createSchemaNotebookService = (options: {
       }
       const stored = readStored(tableId)
       if (stored.projectId !== projectId) throw new Error('Table does not belong to this project.')
+      requireTableFile(tableId, 'csv')
       const localRun = await executeLocalAnalysis({
         language: request.language,
         code,

@@ -16,6 +16,15 @@ import { deliverableCardCopy } from '../home/deliverable-packages'
 import { schemaNotebookCopy } from './copy'
 import { loadSchemaNotebookDraft, saveSchemaNotebookDraft } from './schema-notebook-draft'
 
+// A direct IPC rejection arrives as "Error invoking remote method '<channel>': Error: <text>".
+// The main process already renders the operable sentence with its stable code; show just that text so
+// the panel never repeats internal transport chrome.
+const failureText = (error: unknown): string =>
+  (error instanceof Error ? error.message : String(error)).replace(
+    /^Error invoking remote method '[^']*':\s*(?:[A-Za-z]*Error:\s*)?/u,
+    ''
+  )
+
 type SchemaNotebookApi = {
   importTable: (request: {
     projectId: string
@@ -245,7 +254,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
         })
       )
     } catch (error) {
-      setBlocked(error instanceof Error ? error.message : String(error))
+      setBlocked(failureText(error))
     } finally {
       setBusy(false)
     }

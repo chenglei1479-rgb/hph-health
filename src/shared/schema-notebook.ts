@@ -4,6 +4,10 @@
 
 export const SCHEMA_NOTEBOOK_LOCAL_FILENAME = 'table.csv'
 
+// Stable code for a stored table whose metadata or csv file disappeared. The main process reports it
+// instead of leaking ENOENT and an absolute local path to the panel.
+export const SCHEMA_NOTEBOOK_TABLE_MISSING_CODE = 'schema-notebook-table-missing' as const
+
 export const COLLECTION_SHEET_NAME = '収集'
 
 export type SchemaDtype = 'integer' | 'number' | 'binary' | 'categorical' | 'text' | 'date'

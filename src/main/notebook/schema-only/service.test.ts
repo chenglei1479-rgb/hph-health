@@ -1,8 +1,11 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
+
+import { ApplicationCommandError } from '../../../shared/application-command-contract'
+import { SCHEMA_NOTEBOOK_TABLE_MISSING_CODE } from '../../../shared/schema-notebook'
 
 import { installMachineApproval } from '../../phi/gate'
 import type { PythonCommand } from '../python-command'
@@ -517,5 +520,55 @@ describe('schema-only notebook', () => {
     expect(values).toContain('東病棟')
     expect(values).toContain('西病棟')
     expect(values.join('\n')).toMatch(/\[患者\d+\]/)
+  })
+
+  const importedTable = async (
+    root: string
+  ): Promise<{ service: SchemaNotebookService; tableId: string }> => {
+    const service = serviceAt(root, {
+      directory: root,
+      approvalLogPath: join(root, 'approved.jsonl'),
+      machineApproved: () => true
+    })
+    const imported = await service.importTable({
+      projectId: 'study-1',
+      filename: 'patients.csv',
+      csvText: csv,
+      patientData: true
+    })
+    if (!imported.ok) throw new Error('import failed')
+    return { service, tableId: imported.context.tableId }
+  }
+
+  it('reports a stable code when the imported csv file is missing', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-missing-csv-'))
+    const { service, tableId } = await importedTable(root)
+    rmSync(join(root, 'tables', `${tableId}.csv`))
+
+    for (const failure of [
+      await service.modelContext('study-1', tableId).catch((error: unknown) => error),
+      await service
+        .execute({ projectId: 'study-1', tableId, language: 'python', code: 'print(1)' })
+        .catch((error: unknown) => error)
+    ]) {
+      expect(failure).toBeInstanceOf(ApplicationCommandError)
+      expect((failure as ApplicationCommandError).code).toBe(SCHEMA_NOTEBOOK_TABLE_MISSING_CODE)
+      // The path and the Node error must never travel with the failure the panel renders.
+      expect((failure as Error).message).not.toContain('ENOENT')
+      expect((failure as Error).message).not.toContain(root)
+    }
+  })
+
+  it('reports the same code when the stored metadata file is missing', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-missing-json-'))
+    const { service, tableId } = await importedTable(root)
+    rmSync(join(root, 'tables', `${tableId}.json`))
+
+    await expect(service.modelContext('study-1', tableId)).rejects.toMatchObject({
+      code: SCHEMA_NOTEBOOK_TABLE_MISSING_CODE
+    })
+    await expect(
+      service.execute({ projectId: 'study-1', tableId, language: 'python', code: 'print(1)' })
+    ).rejects.toMatchObject({ code: SCHEMA_NOTEBOOK_TABLE_MISSING_CODE })
   })
 })

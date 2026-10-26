@@ -81,6 +81,11 @@ const clickText = async (label: string): Promise<void> => {
   })
 }
 
+const runButton = (host: HTMLDivElement | null): HTMLButtonElement | undefined =>
+  Array.from(host?.querySelectorAll('button') ?? []).find(
+    (candidate) => candidate.textContent === '手元で実行'
+  )
+
 const importCsv = async (): Promise<void> => {
   const input = container?.querySelector<HTMLInputElement>('input[type="file"]')
   const file = new File(['group,n\nA,4'], 'counts.csv', { type: 'text/csv' })
@@ -214,6 +219,32 @@ describe('schema notebook panel restore', () => {
     // The user's code stays; it simply is not attached to any table any more.
     expect(container?.querySelector('textarea')?.value).toBe('print(df.head())')
     expect(container?.textContent).not.toContain('行数: 3')
+    // A missing table disables Run and never repeats the internal file error.
+    expect(runButton(container)?.disabled).toBe(true)
+    expect(container?.textContent).not.toContain('ENOENT')
+    expect(container?.textContent).not.toMatch(/[A-Za-z]:\\/)
+  })
+
+  it('shows the operable table-missing sentence and code when a run hits a vanished table', async () => {
+    await mount('study-1')
+    await clickText('患者表を分析')
+    await importCsv()
+    await setCode('print(df.columns)')
+    execute.mockRejectedValueOnce(
+      new Error(
+        "Error invoking remote method 'schema-notebook:execute': Error: 前回取り込んだ表のファイルが見つからないため、解析を実行しませんでした。表のファイルを選び直してから実行してください。（コード: schema-notebook-table-missing）"
+      )
+    )
+
+    await clickText('手元で実行')
+
+    expect(container?.textContent).toContain(
+      '前回取り込んだ表のファイルが見つからないため、解析を実行しませんでした。'
+    )
+    expect(container?.textContent).toContain('schema-notebook-table-missing')
+    expect(container?.textContent).not.toContain('Error invoking remote method')
+    expect(container?.textContent).not.toContain('ENOENT')
+    expect(container?.textContent).not.toMatch(/[A-Za-z]:\\/)
   })
 
   it('does not write the previous project draft into the next project on a switch', async () => {
