@@ -9,6 +9,7 @@ import type {
   StatisticianResultCell,
   StatisticianResultSheet
 } from '../../shared/statistician-review-export'
+import { toUnpackedAsarPath } from '../skills/resource-path'
 
 const XML_ESCAPE: Record<string, string> = {
   '&': '&amp;',
@@ -40,7 +41,12 @@ const sheetTitle = (name: string, index: number): string => {
   return cleaned.length > 0 ? cleaned : `results${index + 1}`
 }
 
-const fontPath = join(pdfTranslationResourceDirectory(), 'NotoSansSC-Regular.otf')
+// Same resource as literature/pdf-translation, which resolves it through toUnpackedAsarPath so the
+// packaged app reads it from app.asar.unpacked instead of app.asar. Keep both call sites identical.
+const fontPath = join(
+  toUnpackedAsarPath(pdfTranslationResourceDirectory()),
+  'NotoSansSC-Regular.otf'
+)
 
 const zip = (files: Record<string, string>): Uint8Array =>
   zipSync(Object.fromEntries(Object.entries(files).map(([path, xml]) => [path, strToU8(xml)])))

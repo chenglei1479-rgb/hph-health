@@ -7648,6 +7648,9 @@
     "This Session has reached its size limit. Start a new Session or remove large attachments, then retry. (Code: {{code}})": "このセッションはサイズ上限に達しました。新しいセッションを開始するか、大きい添付ファイルを削除してから、もう一度お試しください。（コード: {{code}}）",
     "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "このセッションは別のウィンドウで変更されました。開き直してから、もう一度お試しください。（コード: {{code}}）",
     "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "引用スタイルファイルをインポートできませんでした。有効な独立した CSL 1.0 スタイルであることを確認してから、もう一度お試しください。（コード: {{code}}）",
-    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "アプリはこの操作を完了できませんでした。もう一度お試しください。解決しない場合は、サポートに連絡する際にこのコードをお知らせください。（コード: {{code}}）"
+    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "アプリはこの操作を完了できませんでした。もう一度お試しください。解決しない場合は、サポートに連絡する際にこのコードをお知らせください。（コード: {{code}}）",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "資料パッケージを書き出せませんでした。保存先を確認して再試行してください。繰り返す場合は、次の診断番号を報告してください：{{code}}",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "資料パッケージを書き出せませんでした。保存先を確認して再試行してください。繰り返す場合は、次の診断番号を報告してください：{{code}}",
+    "A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}": "同梱の書き出し用リソースが見つかりません。一度再試行し、それでも失敗する場合は次の診断番号を報告してください：{{code}}"
   }
 }

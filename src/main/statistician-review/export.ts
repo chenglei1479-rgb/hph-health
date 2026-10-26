@@ -13,6 +13,11 @@ import {
 } from '../../shared/statistician-review-export'
 import { releaseExportSet } from '../../shared/writing-safeguards/export-deidentify'
 import {
+  redactStatisticianExportFailureMessage,
+  STATISTICIAN_EXPORT_RESOURCE_CODE
+} from '../../shared/statistician-export-diagnostics'
+import { createLogger, diagnosticErrorFields } from '@aipoch/diagnostics/node'
+import {
   buildDocx,
   buildPdf,
   buildResultWorkbook,
@@ -20,6 +25,8 @@ import {
   sheetText
 } from './files'
 import { redactExportText } from './redact'
+
+const statisticianExportLog = createLogger('statistician-export')
 
 type Part = {
   kind: StatisticianReviewExportFile['kind']
@@ -207,15 +214,26 @@ export const exportStatisticianReviewPackage = async (
     if (stillIdentified(parts)) return { ok: false, code: 'deidentify-failed' }
   }
   const files: StatisticianReviewExportFile[] = []
-  for (const part of parts) {
-    const bytes = await bytesFor(part, parsed.request)
-    files.push({
-      kind: part.kind,
-      filename: part.filename,
-      mediaType: part.mediaType,
-      text: part.text,
-      base64: Buffer.from(bytes).toString('base64')
+  try {
+    for (const part of parts) {
+      const bytes = await bytesFor(part, parsed.request)
+      files.push({
+        kind: part.kind,
+        filename: part.filename,
+        mediaType: part.mediaType,
+        text: part.text,
+        base64: Buffer.from(bytes).toString('base64')
+      })
+    }
+  } catch (error) {
+    // English, bounded and path-redacted so main.log names the failing stage (font/src module) that
+    // the renderer can only summarise as a diagnostic code.
+    statisticianExportLog.error('package build failed', {
+      code: STATISTICIAN_EXPORT_RESOURCE_CODE,
+      failure: redactStatisticianExportFailureMessage(error),
+      ...diagnosticErrorFields(error)
     })
+    throw error
   }
   const filenames = files.map((file) => file.filename)
   if (

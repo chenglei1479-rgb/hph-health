@@ -7648,6 +7648,9 @@
     "This Session has reached its size limit. Start a new Session or remove large attachments, then retry. (Code: {{code}})": "此工作階段已達到大小上限。請開始新的工作階段或移除較大的附件，然後重試。（代碼：{{code}}）",
     "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "此工作階段已在另一個視窗中變更。請重新開啟後再試。（代碼：{{code}}）",
     "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "無法匯入引用樣式檔案。請確認它是有效且獨立的 CSL 1.0 樣式，然後重試。（代碼：{{code}}）",
-    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "應用程式未能完成該操作。請重試。若仍持續發生，請在尋求協助時提供此代碼。（代碼：{{code}}）"
+    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "應用程式未能完成該操作。請重試。若仍持續發生，請在尋求協助時提供此代碼。（代碼：{{code}}）",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "無法寫出資料包。請檢查儲存位置後重試；若仍然失敗，請回報此診斷編號：{{code}}",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "無法寫出資料包。請檢查儲存位置後重試；若仍然失敗，請回報此診斷編號：{{code}}",
+    "A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}": "缺少隨應用程式附帶的匯出資源。請重試一次；若仍然失敗，請回報此診斷編號：{{code}}"
   }
 }

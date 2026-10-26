@@ -14,6 +14,10 @@ import {
 } from '@/components/ui/dialog-chrome'
 import { recordPackDelivery } from './pack-delivery-ledger'
 import {
+  classifyStatisticianExportFailure,
+  STATISTICIAN_EXPORT_RESOURCE_CODE
+} from '../../../../shared/statistician-export-diagnostics'
+import {
   parseResultTableTsv,
   parseVariableDefinitionTsv,
   type StatisticianExportCode,
@@ -22,28 +26,57 @@ import {
   type StatisticianReviewExportResponse,
   type StatisticianScriptLanguage
 } from '../../../../shared/statistician-review-export'
+import { strToU8, zipSync } from 'fflate'
 
 type StatisticianReviewExportDialogProps = {
   open: boolean
   projectId: string
   onClose: () => void
   onExport?: (request: StatisticianReviewExportRequest) => Promise<StatisticianReviewExportResponse>
-  onSaveFile?: (file: { filename: string; mediaType: string; data: ArrayBuffer }) => Promise<void>
+  onSavePackage?: (pkg: {
+    filename: string
+    mediaType: string
+    data: ArrayBuffer
+  }) => Promise<{ saved: boolean }>
 }
 
-const bytesFromBase64 = (value: string): ArrayBuffer => {
+const EXPORT_MANIFEST_NAME = 'manifest.txt'
+
+const bytesFromBase64 = (value: string): Uint8Array => {
   const binary = atob(value)
   const bytes = new Uint8Array(binary.length)
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-  return bytes.buffer
+  return bytes
 }
+
+// One archive for one Save As. The five aggregate files keep their original names; the manifest lets
+// the doctor confirm what the package contains without opening every file.
+const buildExportPackage = (
+  files: ReadonlyArray<{ filename: string; mediaType: string; base64: string }>,
+  generatedAt: string
+): Uint8Array => {
+  const entries: Record<string, Uint8Array> = {}
+  for (const file of files) entries[file.filename] = bytesFromBase64(file.base64)
+  entries[EXPORT_MANIFEST_NAME] = strToU8(
+    [
+      'Statistician package',
+      `generated: ${generatedAt}`,
+      'files:',
+      ...files.map((file) => `- ${file.filename}\t${file.mediaType}`)
+    ].join('\n')
+  )
+  return zipSync(entries, { level: 6 })
+}
+
+const packageFilename = (generatedAt: string): string =>
+  `statistician-package-${generatedAt.replace(/[:.]/gu, '-').replace(/T/u, '_').slice(0, 19)}.zip`
 
 const StatisticianReviewExportDialog = ({
   open,
   projectId,
   onClose,
   onExport,
-  onSaveFile
+  onSavePackage
 }: StatisticianReviewExportDialogProps): React.JSX.Element => {
   const { t } = useTranslation()
   const [format, setFormat] = useState<StatisticianReportFormat>('docx')
@@ -95,26 +128,46 @@ const StatisticianReviewExportDialog = ({
         setStatus(messageFor(result.code))
         return
       }
-      const save =
-        onSaveFile ??
-        (async (file: { filename: string; mediaType: string; data: ArrayBuffer }) => {
-          await window.api.saveBlobFile({
-            suggestedName: file.filename,
-            mimeType: file.mediaType,
-            data: file.data
-          })
-        })
-      for (const file of result.files) {
-        await save({
-          filename: file.filename,
-          mediaType: file.mediaType,
-          data: bytesFromBase64(file.base64)
-        })
+      const generatedAt = new Date().toISOString()
+      const archive = buildExportPackage(result.files, generatedAt)
+      const data = archive.buffer.slice(
+        archive.byteOffset,
+        archive.byteOffset + archive.byteLength
+      ) as ArrayBuffer
+      const savePackage: NonNullable<StatisticianReviewExportDialogProps['onSavePackage']> =
+        onSavePackage ??
+        ((pkg) =>
+          window.api.saveBlobFile({
+            suggestedName: pkg.filename,
+            mimeType: pkg.mediaType,
+            data: pkg.data
+          }))
+      const saved = await savePackage({
+        filename: packageFilename(generatedAt),
+        mediaType: 'application/zip',
+        data
+      })
+      // Cancelling the single Save As dialog is a normal path: nothing was written, nothing is
+      // recorded, and the doctor gets no error.
+      if (saved?.saved !== true) {
+        setStatus(undefined)
+        return
       }
       recordPackDelivery('statistician-export', `export:${crypto.randomUUID()}`)
       setStatus(t('Statistician package exported.'))
-    } catch {
-      setStatus(t('Export failed.'))
+    } catch (error) {
+      const code = classifyStatisticianExportFailure(error)
+      setStatus(
+        code === STATISTICIAN_EXPORT_RESOURCE_CODE
+          ? t(
+              'A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}',
+              { code }
+            )
+          : t(
+              'The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}',
+              { code }
+            )
+      )
     } finally {
       setPending(false)
     }

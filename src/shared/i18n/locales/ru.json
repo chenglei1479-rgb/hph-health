@@ -8115,6 +8115,9 @@
     "This Session has reached its size limit. Start a new Session or remove large attachments, then retry. (Code: {{code}})": "Эта сессия достигла предельного размера. Создайте новую сессию или удалите большие вложения, затем повторите попытку. (Код: {{code}})",
     "This Session changed in another window. Reopen it, then retry. (Code: {{code}})": "Эта сессия была изменена в другом окне. Откройте её заново и повторите попытку. (Код: {{code}})",
     "The citation style file could not be imported. Check that it is a valid, independent CSL 1.0 style, then retry. (Code: {{code}})": "Не удалось импортировать файл стиля цитирования. Убедитесь, что это допустимый независимый стиль CSL 1.0, и повторите попытку. (Код: {{code}})",
-    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "Приложению не удалось выполнить это действие. Повторите попытку. Если проблема сохраняется, укажите этот код при обращении за помощью. (Код: {{code}})"
+    "The app could not complete that action. Retry. If it keeps happening, report this code when asking for help. (Code: {{code}})": "Приложению не удалось выполнить это действие. Повторите попытку. Если проблема сохраняется, укажите этот код при обращении за помощью. (Код: {{code}})",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "Не удалось записать пакет. Проверьте папку назначения и повторите попытку; если ошибка повторится, сообщите этот номер диагностики: {{code}}",
+    "The export package could not be written. Check the destination folder and retry; if it fails again, report this diagnostic: {{code}}": "Не удалось записать пакет. Проверьте папку назначения и повторите попытку; если ошибка повторится, сообщите этот номер диагностики: {{code}}",
+    "A bundled export resource is missing. Retry once; if it fails again, report this diagnostic: {{code}}": "Отсутствует встроенный ресурс для экспорта. Повторите попытку один раз; если ошибка повторится, сообщите этот номер диагностики: {{code}}"
   }
 }
