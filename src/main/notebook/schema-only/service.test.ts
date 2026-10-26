@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -570,5 +570,27 @@ describe('schema-only notebook', () => {
     await expect(
       service.execute({ projectId: 'study-1', tableId, language: 'python', code: 'print(1)' })
     ).rejects.toMatchObject({ code: SCHEMA_NOTEBOOK_TABLE_MISSING_CODE })
+  })
+
+  it('reports the same code when the stored csv path is not a readable file', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-unreadable-csv-'))
+    const { service, tableId } = await importedTable(root)
+    const csvPath = join(root, 'tables', `${tableId}.csv`)
+    // A directory passes a plain existence check and only fails when it is read (EISDIR on POSIX,
+    // EPERM/EACCES on some Windows paths); the panel must still see the stable code, never the errno.
+    rmSync(csvPath)
+    mkdirSync(csvPath)
+
+    for (const failure of [
+      await service.modelContext('study-1', tableId).catch((error: unknown) => error),
+      await service
+        .execute({ projectId: 'study-1', tableId, language: 'python', code: 'print(1)' })
+        .catch((error: unknown) => error)
+    ]) {
+      expect((failure as ApplicationCommandError).code).toBe(SCHEMA_NOTEBOOK_TABLE_MISSING_CODE)
+      expect((failure as Error).message).not.toContain('EISDIR')
+      expect((failure as Error).message).not.toContain('EACCES')
+      expect((failure as Error).message).not.toContain(root)
+    }
   })
 })

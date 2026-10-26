@@ -232,14 +232,14 @@ describe('schema notebook panel restore', () => {
     await setCode('print(df.columns)')
     execute.mockRejectedValueOnce(
       new Error(
-        "Error invoking remote method 'schema-notebook:execute': Error: 前回取り込んだ表のファイルが見つからないため、解析を実行しませんでした。表のファイルを選び直してから実行してください。（コード: schema-notebook-table-missing）"
+        "Error invoking remote method 'schema-notebook:execute': Error: 前回取り込んだ表のファイルが見つからないか、読み取れないため、解析を実行しませんでした。表のファイルを選び直してから実行してください。（コード: schema-notebook-table-missing）"
       )
     )
 
     await clickText('手元で実行')
 
     expect(container?.textContent).toContain(
-      '前回取り込んだ表のファイルが見つからないため、解析を実行しませんでした。'
+      '前回取り込んだ表のファイルが見つからないか、読み取れないため、解析を実行しませんでした。'
     )
     expect(container?.textContent).toContain('schema-notebook-table-missing')
     expect(container?.textContent).not.toContain('Error invoking remote method')

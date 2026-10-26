@@ -94,43 +94,57 @@ export const createSchemaNotebookService = (options: {
   const tableFile = (tableId: string, extension: 'csv' | 'json'): string =>
     join(tableDir, `${tableId}.${extension}`)
 
-  const isMissingFileError = (error: unknown): boolean =>
+  const isUnreadableTableFileError = (error: unknown): boolean =>
     Boolean(
       error &&
       typeof error === 'object' &&
       'code' in error &&
-      (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+      ['ENOENT', 'ENOTDIR', 'EACCES', 'EPERM', 'EISDIR'].includes(String(error.code))
     )
 
-  // A stored table is a metadata file plus a csv file. Restoring must notice either one disappearing,
-  // and running must fail with a stable code instead of surfacing ENOENT and a local absolute path.
-  // Only the relative shape is logged; the home directory never reaches the log.
+  // A stored table is a metadata file plus a csv file. Restoring must notice either one becoming
+  // unusable (deleted, locked by another process, or replaced by a directory), and running must fail
+  // with a stable code instead of surfacing a Node errno and a local absolute path. Only the relative
+  // file shape is logged; the home directory never reaches the log.
+  const unreadableTableFile = (tableId: string, extension: 'csv' | 'json'): never => {
+    schemaNotebookLog.warn('stored table file unreadable', {
+      code: SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
+      tableId,
+      file: `tables/<tableId>.${extension}`
+    })
+    throw new ApplicationCommandError(
+      SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
+      'The imported table file is missing or unreadable. Nothing was run.'
+    )
+  }
+
   const requireTableFile = (tableId: string, extension: 'csv' | 'json'): string => {
     const path = tableFile(tableId, extension)
     try {
-      statSync(path)
+      // A directory passes a plain existence check but cannot be read as a table.
+      if (!statSync(path).isFile()) unreadableTableFile(tableId, extension)
     } catch (error) {
-      if (!isMissingFileError(error)) throw error
-      schemaNotebookLog.warn('stored table file missing', {
-        code: SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
-        tableId,
-        file: `tables/<tableId>.${extension}`
-      })
-      throw new ApplicationCommandError(
-        SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
-        'The imported table file is missing. Nothing was run.'
-      )
+      if (!isUnreadableTableFileError(error)) throw error
+      unreadableTableFile(tableId, extension)
     }
     return path
   }
 
-  const readStored = (tableId: string): StoredTable => {
-    const parsed: unknown = JSON.parse(readFileSync(requireTableFile(tableId, 'json'), 'utf8'))
-    return parsed as StoredTable
+  const readTableFile = (tableId: string, extension: 'csv' | 'json'): string => {
+    const path = requireTableFile(tableId, extension)
+    try {
+      return readFileSync(path, 'utf8')
+    } catch (error) {
+      // stat can succeed and the read still fail (a lock, a permission change, a directory).
+      if (!isUnreadableTableFileError(error)) throw error
+      return unreadableTableFile(tableId, extension)
+    }
   }
 
-  const readCsv = (tableId: string): string =>
-    readFileSync(requireTableFile(tableId, 'csv'), 'utf8')
+  const readStored = (tableId: string): StoredTable =>
+    JSON.parse(readTableFile(tableId, 'json')) as StoredTable
+
+  const readCsv = (tableId: string): string => readTableFile(tableId, 'csv')
 
   const contextFor = async (stored: StoredTable): Promise<SchemaModelContext> => {
     const withheld = new Set(stored.withheldColumns ?? [])
