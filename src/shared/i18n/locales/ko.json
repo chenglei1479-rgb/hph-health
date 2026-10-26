@@ -130,7 +130,7 @@
     "Conversation PDF export timed out. Select fewer conversation turns.": "대화 PDF 내보내기 시간이 초과되었습니다. 더 적은 대화 턴을 선택하세요.",
     "Could not open the update installer: {{error}}": "업데이트 설치 프로그램을 열 수 없습니다: {{error}}",
     "Credential-like assignment": "인증 정보로 보이는 할당",
-    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "이 컴퓨터는 병원의 승인을 받지 않았습니다. 요청이 전송되지 않았습니다. 다음 부분을 편집한 뒤 다시 시도하십시오: {{spans}}",
+    "This machine is not approved by the hospital. Patient information was detected in the request, so it was not sent. Remove the patient information or confirm hospital approval, then retry. Diagnostic code: {{code}}": "이 컴퓨터는 병원의 승인을 받지 않았습니다. 요청에서 환자 정보가 감지되어 전송하지 않았습니다. 환자 정보를 삭제하거나 병원 승인을 확인한 뒤 다시 시도하십시오. 진단 번호: {{code}}",
     "Mark selection": "선택 영역 표시",
     "An excluded file also exists in retained research evidence. Include that file to export this Session.": "제외한 파일의 복사본이 보존되는 연구 증거에도 있습니다. 이 세션을 내보내려면 해당 파일을 포함하세요.",
     "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "강조된 텍스트는 전송 전에 바뀌었습니다. 다른 환자 정보가 있으면 선택하여 표시하십시오. 확인해야 전송됩니다. 이 창을 닫으면 아무것도 전송되지 않습니다.",

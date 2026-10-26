@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
 import type { NativeTranslator } from '../locale/main-process-messages'
+import { PHI_BLOCK_CODE } from '../../shared/phi-block'
 
 export interface MachineApprovalRecord {
   at: string
@@ -97,13 +98,12 @@ export function createMachineApprovalLog(
   }
 }
 
-export function formatUnapprovedBlock(
-  spans: readonly string[],
-  translate: NativeTranslator
-): string {
+export function formatUnapprovedBlock(translate: NativeTranslator): string {
+  // The matched spans are patient information and must not be echoed into the UI or the log. The
+  // doctor gets the stable number instead; main.log records categories and offsets without the text.
   return translate(
-    'This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}',
-    { spans: spans.join('\n') }
+    'This machine is not approved by the hospital. Patient information was detected in the request, so it was not sent. Remove the patient information or confirm hospital approval, then retry. Diagnostic code: {{code}}',
+    { code: PHI_BLOCK_CODE }
   )
 }
 

@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { AcpProviderPromptExecutor } from '../acp/provider-prompt-executor'
 import type { ProviderPromptExecutionInput } from '../acp/provider-prompt-executor'
+import { PHI_BLOCK_CODE } from '../../shared/phi-block'
 import { englishNativeTranslator } from '../locale/main-process-messages'
 import { fetchProviderRequest } from '../settings/provider-fetch'
 import { buildApprovalInstaller, createMachineApprovalLog, parseApprovalDecision } from './approval'
@@ -184,10 +185,11 @@ describe('unapproved machine PHI block', () => {
       expect(blocked?.message).toContain('not approved')
       const categories = blocked?.spans.map((span) => span.category).sort()
       expect(categories).toEqual(['FACILITY', 'FACILITY', 'KARTE_NO', 'PERSON_NAME'])
+      // The matched text is patient information: the doctor sees the stable number, never the values
+      // or offsets (the span property remains for the local review flow).
+      expect(blocked?.message).toContain(PHI_BLOCK_CODE)
       for (const span of blocked?.spans ?? []) {
-        expect(blocked?.message).toContain(span.category)
-        expect(blocked?.message).toContain(span.text)
-        expect(blocked?.message).toContain(`[${span.start}, ${span.end}]`)
+        expect(blocked?.message).not.toContain(span.text)
         expect(text.slice(span.start, span.end)).toBe(span.text)
       }
       expect(vault.readLog()).toEqual([])
@@ -196,7 +198,7 @@ describe('unapproved machine PHI block', () => {
           method: 'POST',
           body: JSON.stringify({ messages: [{ content: text }] })
         })
-      ).rejects.toThrow(/PERSON_NAME/)
+      ).rejects.toThrow(/PHI-BLOCK-01/)
       expect(fetchImpl).not.toHaveBeenCalled()
     } finally {
       installPhiConfirmer(null)

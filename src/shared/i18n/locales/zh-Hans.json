@@ -130,7 +130,7 @@
     "Conversation PDF export timed out. Select fewer conversation turns.": "对话 PDF 导出超时。请选择较少的对话轮次。",
     "Could not open the update installer: {{error}}": "无法打开更新安装程序：{{error}}",
     "Credential-like assignment": "疑似凭据的赋值",
-    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "这台计算机未获得医院批准。请求未发送。请编辑这些片段后重试：{{spans}}",
+    "This machine is not approved by the hospital. Patient information was detected in the request, so it was not sent. Remove the patient information or confirm hospital approval, then retry. Diagnostic code: {{code}}": "这台计算机未获得医院批准。请求中检测到患者信息，因此未发送。请删除患者信息或确认医院批准后重试。诊断编号：{{code}}",
     "Mark selection": "标记所选内容",
     "An excluded file also exists in retained research evidence. Include that file to export this Session.": "排除的文件在保留的研究证据中也存在副本。请包含该文件后再导出此会话。",
     "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "高亮文本已在发送前替换。请选择其他患者信息并标记。确认后才会发送。关闭此窗口不会发送任何内容。",
