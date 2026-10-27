@@ -5,6 +5,8 @@ import { afterEach, expect, it, vi } from 'vitest'
 
 import type { LiteratureCitationStyleView } from '@aipoch/literature-citations/contracts'
 
+import { ApplicationCommandError } from '../../../../shared/application-command-contract'
+import { initI18n } from '../../i18n'
 import { CitationStylesView } from './CitationStylesView'
 
 afterEach(cleanup)
@@ -268,6 +270,16 @@ const importFile = (): void => {
   fireEvent.change(screen.getByLabelText('Import CSL'), { target: { files: [file] } })
 }
 
+// The Japanese catalog translates the import control, so these tests address the file input directly.
+const importJapanese = (): void => {
+  const file = new File(['CSL'], 'journal.csl', { type: 'application/xml' })
+  Object.defineProperty(file, 'text', { value: async () => 'CSL' })
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]')
+  if (!input) throw new Error('import input missing')
+  Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+  input.dispatchEvent(new Event('change', { bubbles: true }))
+}
+
 it('CS-03 shows an imported style while the initial list is still pending and ignores its late result', async () => {
   const previousApi = window.api
   let finishList!: (value: unknown) => void
@@ -325,5 +337,50 @@ it('CS-04 prevents an import snapshot from restoring a deleted style', async () 
     expect(screen.getByRole('button', { name: 'Preview: Style B' })).not.toBeNull()
   } finally {
     window.api = previousApi
+  }
+})
+
+it('shows the detailed CSL sentence together with the stable command code', async () => {
+  initI18n('ja')
+  const previousApi = window.api
+  const citationStyles = vi
+    .fn()
+    .mockRejectedValue(new ApplicationCommandError('csl-unsupported-style', 'invalid'))
+  window.api = { literature: { citationStyles } } as unknown as Window['api']
+  try {
+    render(<CitationStylesView onBack={vi.fn()} onStylesChange={vi.fn()} styles={[]} />)
+    await act(async () => importJapanese())
+
+    const text = document.body.textContent ?? ''
+    expect(text).toContain('独立した CSL 1.0 スタイル')
+    expect(text).toContain('（コード: csl-unsupported-style）')
+    // The generic copy must not replace the per-code detail.
+    expect(text).not.toContain('CSL スタイルをインポートできませんでした')
+  } finally {
+    window.api = previousApi
+    initI18n('en')
+  }
+})
+
+it('keeps the undefined macro name next to the stable command code', async () => {
+  initI18n('ja')
+  const previousApi = window.api
+  const citationStyles = vi
+    .fn()
+    .mockRejectedValue(
+      new ApplicationCommandError('csl-undefined-macro', 'macro missing', { macro: 'author-原名' })
+    )
+  window.api = { literature: { citationStyles } } as unknown as Window['api']
+  try {
+    render(<CitationStylesView onBack={vi.fn()} onStylesChange={vi.fn()} styles={[]} />)
+    await act(async () => importJapanese())
+
+    const text = document.body.textContent ?? ''
+    expect(text).toContain('author-原名')
+    expect(text).toContain('csl-undefined-macro')
+    expect(text).toContain('（コード: csl-undefined-macro）')
+  } finally {
+    window.api = previousApi
+    initI18n('en')
   }
 })
