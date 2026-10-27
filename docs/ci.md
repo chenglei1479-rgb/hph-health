@@ -10,6 +10,10 @@ meet the [PR requirements](../CONTRIBUTING.md#pull-requests) and follow the
 
 PR commits retain policy/CI Integrity, CodeQL (GitHub default setup, not a repository
 workflow), AI review, static checks and selective portable tests on Ubuntu.
+The `i18n catalog guard` job runs `src/renderer/src/i18n/resources.test.ts` on every pull
+request and merge group without a path filter: translation copy moves between
+`src/shared/i18n` and `src/main/locale`, so filtering by path would skip the revisions
+where a key changes namespace.
 PRs and merge queue run affected host/package tests separately and skip unaffected packages.
 Failed selected checks block merging; full portable suites run in scheduled/manual Source
 Regression instead. See [Package workflows](package-workflows.md) for selection details.

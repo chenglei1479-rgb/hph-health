@@ -142,6 +142,7 @@ Use one of these standard type prefixes:
   changes before committing because it rewrites files across the repository.
 - Linting is enforced by ESLint; run `npm run lint`.
 - Wrap user-facing strings with the `t()` translation function from `react-i18next`. Add corresponding translations to the `renderer` namespace in `src/shared/i18n/locales/de.json` (German), `src/shared/i18n/locales/es.json` (Spanish), `src/shared/i18n/locales/fr.json` (French), `src/shared/i18n/locales/ja.json` (Japanese), `src/shared/i18n/locales/ko.json` (Korean), `src/shared/i18n/locales/ru.json` (Russian), `src/shared/i18n/locales/zh-Hans.json` (Simplified Chinese), and `src/shared/i18n/locales/zh-Hant.json` (Traditional Chinese). Use the English text as the translation key. Keep code comments and documentation in English.
+- Say in the pull request which catalog namespace each locale change lands in — `renderer`, `native` or `common`. A key put in the wrong namespace still passes typecheck and shows English at runtime, and resolving a rebase conflict is the usual way it happens. `npm test -- src/renderer/src/i18n/resources.test.ts` catches it.
 
 ## Verification Policy
 
