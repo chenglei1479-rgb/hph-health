@@ -755,7 +755,8 @@ export const createApplicationModules = async (
       registerSchemaNotebookIpc(
         {
           directory: schemaNotebookDirectory,
-          approvalLogPath: join(getUserDataPath(), 'phi-vault', 'machine-approval.jsonl')
+          approvalLogPath: join(getUserDataPath(), 'phi-vault', 'machine-approval.jsonl'),
+          translate
         },
         schemaNotebook
       )

@@ -1,18 +1,21 @@
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import Papa from 'papaparse'
+import { createLogger } from '@aipoch/diagnostics/node'
 
-import type {
-  CategoricalOptInRequest,
-  ExecuteAnalysisRequest,
-  ExecuteAnalysisResponse,
-  ImportTableRequest,
-  ImportTableResponse,
-  PatientDataTag,
-  SchemaModelContext
+import {
+  SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
+  type CategoricalOptInRequest,
+  type ExecuteAnalysisRequest,
+  type ExecuteAnalysisResponse,
+  type ImportTableRequest,
+  type ImportTableResponse,
+  type PatientDataTag,
+  type SchemaModelContext
 } from '../../../shared/schema-notebook'
+import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import { createCategoricalOptInLog } from './categorical-opt-in'
 import { releaseCategoricalValuesForModel } from './categorical-release'
 import { executeLocalAnalysis, type CommandRunner } from './local-execute'
@@ -86,13 +89,62 @@ export const createSchemaNotebookService = (options: {
     })
   }
 
-  const readStored = (tableId: string): StoredTable => {
-    const parsed: unknown = JSON.parse(readFileSync(join(tableDir, `${tableId}.json`), 'utf8'))
-    return parsed as StoredTable
+  const schemaNotebookLog = createLogger('schema-notebook')
+
+  const tableFile = (tableId: string, extension: 'csv' | 'json'): string =>
+    join(tableDir, `${tableId}.${extension}`)
+
+  const isUnreadableTableFileError = (error: unknown): boolean =>
+    Boolean(
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      ['ENOENT', 'ENOTDIR', 'EACCES', 'EPERM', 'EISDIR'].includes(String(error.code))
+    )
+
+  // A stored table is a metadata file plus a csv file. Restoring must notice either one becoming
+  // unusable (deleted, locked by another process, or replaced by a directory), and running must fail
+  // with a stable code instead of surfacing a Node errno and a local absolute path. Only the relative
+  // file shape is logged; the home directory never reaches the log.
+  const unreadableTableFile = (tableId: string, extension: 'csv' | 'json'): never => {
+    schemaNotebookLog.warn('stored table file unreadable', {
+      code: SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
+      tableId,
+      file: `tables/<tableId>.${extension}`
+    })
+    throw new ApplicationCommandError(
+      SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
+      'The imported table file is missing or unreadable. Nothing was run.'
+    )
   }
 
-  const readCsv = (tableId: string): string =>
-    readFileSync(join(tableDir, `${tableId}.csv`), 'utf8')
+  const requireTableFile = (tableId: string, extension: 'csv' | 'json'): string => {
+    const path = tableFile(tableId, extension)
+    try {
+      // A directory passes a plain existence check but cannot be read as a table.
+      if (!statSync(path).isFile()) unreadableTableFile(tableId, extension)
+    } catch (error) {
+      if (!isUnreadableTableFileError(error)) throw error
+      unreadableTableFile(tableId, extension)
+    }
+    return path
+  }
+
+  const readTableFile = (tableId: string, extension: 'csv' | 'json'): string => {
+    const path = requireTableFile(tableId, extension)
+    try {
+      return readFileSync(path, 'utf8')
+    } catch (error) {
+      // stat can succeed and the read still fail (a lock, a permission change, a directory).
+      if (!isUnreadableTableFileError(error)) throw error
+      return unreadableTableFile(tableId, extension)
+    }
+  }
+
+  const readStored = (tableId: string): StoredTable =>
+    JSON.parse(readTableFile(tableId, 'json')) as StoredTable
+
+  const readCsv = (tableId: string): string => readTableFile(tableId, 'csv')
 
   const contextFor = async (stored: StoredTable): Promise<SchemaModelContext> => {
     const withheld = new Set(stored.withheldColumns ?? [])
@@ -182,10 +234,14 @@ export const createSchemaNotebookService = (options: {
       return contextFor(stored)
     },
     async modelContext(projectId, tableId) {
-      const stored = readStored(requireId(tableId, 'tableId'))
+      const id = requireId(tableId, 'tableId')
+      const stored = readStored(id)
       if (stored.projectId !== requireId(projectId, 'projectId')) {
         throw new Error('Table does not belong to this project.')
       }
+      // The panel must not look restored when the csv is gone; the renderer shows its restore notice
+      // when this call fails.
+      requireTableFile(id, 'csv')
       return contextFor(stored)
     },
     async execute(request) {
@@ -198,6 +254,7 @@ export const createSchemaNotebookService = (options: {
       }
       const stored = readStored(tableId)
       if (stored.projectId !== projectId) throw new Error('Table does not belong to this project.')
+      requireTableFile(tableId, 'csv')
       const localRun = await executeLocalAnalysis({
         language: request.language,
         code,
