@@ -25,6 +25,12 @@ jobs:
           node-version: 22
       - name: Install
         run: npm install --ignore-scripts --no-audit --no-fund
+      # This job never runs `npm test`, so the `pretest` hook that builds workspace
+      # packages does not run here. Every workspace package the eval loads (directly or
+      # through a module import such as `@aipoch/diagnostics/node`) must be built first,
+      # otherwise resolution fails during the eval even when the source is correct.
+      - name: Build workspace packages the eval imports
+        run: npm run build:diagnostics
       - name: Score the fictional Japanese PHI dev set
         env:
           EVAL_DATE: 2026-10-13
