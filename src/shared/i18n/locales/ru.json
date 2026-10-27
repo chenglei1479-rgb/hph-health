@@ -132,7 +132,7 @@
     "Conversation PDF export timed out. Select fewer conversation turns.": "Время экспорта беседы в PDF истекло. Выберите меньше реплик беседы.",
     "Could not open the update installer: {{error}}": "Не удалось открыть установщик обновления: {{error}}",
     "Credential-like assignment": "Возможные учётные данные в присваивании",
-    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "Этот компьютер не утверждён больницей. Запрос не отправлен. Измените эти фрагменты и повторите попытку: {{spans}}",
+    "This machine is not approved by the hospital. Patient information was detected in the request, so it was not sent. Remove the patient information or confirm hospital approval, then retry. Diagnostic code: {{code}}": "Этот компьютер не утверждён больницей. В запросе обнаружены данные пациентов, поэтому он не был отправлен. Удалите эти данные или подтвердите утверждение больницей и повторите попытку. Номер диагностики: {{code}}",
     "Mark selection": "Отметить выделенное",
     "An excluded file also exists in retained research evidence. Include that file to export this Session.": "Копия исключённого файла есть в сохраняемых доказательствах. Включите этот файл для экспорта сеанса.",
     "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "Выделенный текст заменён перед отправкой. Отметьте другие сведения о пациенте. Подтвердите отправку. Если закрыть окно, ничего не будет отправлено.",

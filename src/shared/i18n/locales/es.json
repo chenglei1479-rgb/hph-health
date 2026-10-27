@@ -131,7 +131,7 @@
     "Conversation PDF export timed out. Select fewer conversation turns.": "Se agotó el tiempo de espera de la exportación de la conversación a PDF. Seleccione menos turnos de conversación.",
     "Could not open the update installer: {{error}}": "No se pudo abrir el instalador de actualización: {{error}}",
     "Credential-like assignment": "Asignación que podría contener credenciales",
-    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "Este equipo no está aprobado por el hospital. La solicitud no se envió. Edite estos fragmentos e inténtelo de nuevo: {{spans}}",
+    "This machine is not approved by the hospital. Patient information was detected in the request, so it was not sent. Remove the patient information or confirm hospital approval, then retry. Diagnostic code: {{code}}": "Este equipo no está aprobado por el hospital. Se detectaron datos de pacientes en la solicitud, por lo que no se envió. Elimine esos datos o confirme la aprobación del hospital y vuelva a intentarlo. Número de diagnóstico: {{code}}",
     "Mark selection": "Marcar la selección",
     "An excluded file also exists in retained research evidence. Include that file to export this Session.": "Un archivo excluido también existe en la evidencia conservada. Inclúyalo para exportar esta sesión.",
     "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "El texto resaltado se reemplazó antes del envío. Seleccione cualquier otra información del paciente y márquela. Confirme el envío. Si cierra esta ventana, no se envía nada.",

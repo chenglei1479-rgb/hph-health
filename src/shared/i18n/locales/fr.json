@@ -131,7 +131,7 @@
     "Conversation PDF export timed out. Select fewer conversation turns.": "L’exportation PDF de la conversation a expiré. Sélectionnez moins de tours de conversation.",
     "Could not open the update installer: {{error}}": "Impossible d'ouvrir le programme d'installation de la mise à jour: {{error}}",
     "Credential-like assignment": "Affectation pouvant contenir des identifiants",
-    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "Cet ordinateur n'est pas approuvé par l'hôpital. La requête n'a pas été envoyée. Modifiez ces passages et réessayez : {{spans}}",
+    "This machine is not approved by the hospital. Patient information was detected in the request, so it was not sent. Remove the patient information or confirm hospital approval, then retry. Diagnostic code: {{code}}": "Cet ordinateur n’est pas approuvé par l’hôpital. Des données de patient ont été détectées dans la requête, qui n’a donc pas été envoyée. Retirez ces données ou vérifiez l’approbation de l’hôpital, puis réessayez. Numéro de diagnostic {{code}}",
     "Mark selection": "Marquer la sélection",
     "An excluded file also exists in retained research evidence. Include that file to export this Session.": "Un fichier exclu existe aussi dans les preuves conservées. Incluez ce fichier pour exporter cette session.",
     "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "Le texte surligné a été remplacé avant l'envoi. Sélectionnez toute autre information sur le patient et marquez-la. Confirmez l'envoi. Fermer cette fenêtre n'envoie rien.",

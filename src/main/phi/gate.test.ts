@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { PHI_BLOCK_CODE } from '../../shared/phi-block'
 import { AcpProviderPromptExecutor } from '../acp/provider-prompt-executor'
 import type { ProviderPromptExecutionInput } from '../acp/provider-prompt-executor'
 import { fetchProviderRequest } from '../settings/provider-fetch'
-import { createClosedGate, installMachineApproval, installPhiGate, releaseModelText } from './gate'
+import {
+  createClosedGate,
+  installMachineApproval,
+  installPhiGate,
+  MODEL_RELEASE_RETRY_MESSAGE,
+  releaseModelText
+} from './gate'
 
 describe('PHI hard gate', () => {
   it('fails closed before a provider session prompt', async () => {
@@ -80,5 +87,180 @@ describe('PHI hard gate', () => {
       release: (text) => ({ text, replacements: [], warnings: [] }),
       restore: (text) => text
     })
+  })
+})
+
+describe('PHI gate scan scope', () => {
+  const installIdentityGate = (): void => {
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+  }
+
+  // Shape reported by the beta.18 acceptance run: the Codex bridge sends tool schemas, an instructions
+  // block that names today's date, and request ids next to the conversation input.
+  const codexBody = (input: unknown): string =>
+    JSON.stringify({
+      model: 'gpt-6.1-sol',
+      instructions:
+        'Today is 2026-10-26. MCP server name. Omit to list resources from every configured server.',
+      tools: [
+        {
+          type: 'function',
+          name: 'files.read',
+          description: 'MCP server name. Omit to list resources from every configured server.',
+          parameters: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Local filesystem path to an image file.' }
+            }
+          }
+        }
+      ],
+      prompt_cache_key: '1b1c-7352-92',
+      metadata: { user_id: '1b1c-7352-92' },
+      input
+    })
+
+  it('releases a greeting whose only PHI-shaped text is application scaffolding', async () => {
+    installMachineApproval(() => false)
+    installIdentityGate()
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = codexBody([
+      { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'こんにちは' }] }
+    ])
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+      const sent = JSON.parse((fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string)
+      expect(sent).toEqual(JSON.parse(body))
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+
+  it('still blocks patient information inside the conversation input', async () => {
+    installMachineApproval(() => false)
+    installIdentityGate()
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = codexBody([
+      {
+        type: 'message',
+        role: 'user',
+        content: [{ type: 'input_text', text: '患者：山田 太郎' }]
+      }
+    ])
+    try {
+      const error = await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      }).catch((cause: unknown) => cause)
+      expect(error).toBeInstanceOf(Error)
+      expect((error as Error).message).toContain(PHI_BLOCK_CODE)
+      expect((error as Error).message).not.toContain('山田')
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+
+  it('still blocks patient information inside a tool output', async () => {
+    installMachineApproval(() => false)
+    installIdentityGate()
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = codexBody([
+      {
+        type: 'function_call_output',
+        call_id: '1b1c-7352-92',
+        output: '患者：山田 太郎'
+      }
+    ])
+    try {
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body
+        })
+      ).rejects.toThrow(PHI_BLOCK_CODE)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+
+  it('passes tool schema, tool choice, metadata and identifier keys through untouched', async () => {
+    installMachineApproval(() => false)
+    // Marks the conversation text, so a field the release projection visited would show the mark.
+    installPhiGate({
+      release: (text) =>
+        text.includes('こんにちは')
+          ? { text: 'hello', replacements: [], warnings: [] }
+          : { text, replacements: [], warnings: [] },
+      restore: (text) => text
+    })
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    // Patient text parked in the scaffolding fields pins the documented boundary: those fields are
+    // neither blocked nor released, which is why the app must never write user or project text there.
+    const body = JSON.stringify({
+      model: 'gpt-6.1-sol',
+      instructions: 'Follow the hospital style guide.',
+      tools: [{ type: 'function', name: 'files.read', description: '患者：山田 太郎' }],
+      tool_choice: { type: 'function', name: 'files.read', note: '患者：山田 太郎' },
+      metadata: { user_id: '患者：山田 太郎' },
+      prompt_cache_key: '患者：山田 太郎',
+      input: [
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'こんにちは' }] }
+      ]
+    })
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      const sent = JSON.parse((fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string)
+      const original = JSON.parse(body)
+      expect(sent.tools).toEqual(original.tools)
+      expect(sent.tool_choice).toEqual(original.tool_choice)
+      expect(sent.metadata).toEqual(original.metadata)
+      expect(sent.prompt_cache_key).toBe('患者：山田 太郎')
+      // The content projection still released the conversation and the instructions block.
+      expect(sent.input[0].content[0].text).toBe('hello')
+      expect(sent.instructions).toBe('Follow the hospital style guide.')
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+
+  it('refuses to send when two keys de-identify to the same replacement', async () => {
+    installMachineApproval(() => false)
+    installPhiGate({
+      release: (text) =>
+        text.includes('山田')
+          ? { text: '[[患者]]', replacements: [], warnings: [] }
+          : { text, replacements: [], warnings: [] },
+      restore: (text) => text
+    })
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = JSON.stringify({ '患者A 山田 太郎': 1, '患者B 山田 太郎': 2 })
+    try {
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body
+        })
+      ).rejects.toThrow(MODEL_RELEASE_RETRY_MESSAGE)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
   })
 })

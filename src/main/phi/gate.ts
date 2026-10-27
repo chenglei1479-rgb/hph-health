@@ -1,5 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
+import { createLogger } from '@aipoch/diagnostics/node'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
+import { PHI_BLOCK_CODE } from '../../shared/phi-block'
 import { formatUnapprovedBlock } from './approval'
 import {
   applyManualSpans,
@@ -31,6 +33,8 @@ export class PhiGateError extends Error {
     this.spans = spans
   }
 }
+
+const phiBlockLog = createLogger('phi')
 
 const PATIENT_PHI = new Set<PhiCategory>([
   'PERSON_NAME',
@@ -266,31 +270,95 @@ function assertMachineMaySend(texts: readonly string[]): void {
   const grouped = texts.map((text) => patientSpans(text))
   const spans = grouped.flat()
   if (spans.length === 0) return
-  const lines = grouped.flatMap((found, index) =>
-    found.map((span) => {
-      const where = texts.length > 1 ? `#${index + 1} ` : ''
-      return `${where}${span.category} [${span.start}, ${span.end}]: ${span.text}`
-    })
-  )
   const translate = blockTranslator
-  throw new PhiGateError(formatUnapprovedBlock(lines, translate), spans)
+  // The blocked span text is patient information. Keep it out of the log: the stable number plus where
+  // and how long each hit was is enough to identify the false positive without persisting PHI to disk.
+  phiBlockLog.warn('model content blocked', {
+    code: PHI_BLOCK_CODE,
+    hits: spans.length,
+    spans: spans.map((span) => ({
+      category: span.category,
+      offset: span.start,
+      length: span.end - span.start
+    }))
+  })
+  throw new PhiGateError(formatUnapprovedBlock(translate), spans)
 }
 
-function collectStrings(value: unknown, out: string[]): void {
+// Provider bodies carry both content and application-generated scaffolding. Two different projections
+// are needed, and conflating them caused a leak:
+//
+// - Blocking scans values only, and skips scaffolding subtrees. `tools` descriptions were read as
+//   PERSON_NAME, the CLI system prompt date as DATE and request ids as INSURED_ID, which made every
+//   Codex request fail with a hospital-approval block. `instructions` is skipped here on purpose: the
+//   CLI writes the current date into it, so scanning it blocks every request.
+//   Known gap: PHI placed in `instructions` cannot trigger an approval block.
+// - Releasing still rewrites `instructions` (that gap is closed by de-identifying it) and skips only
+//   the schema/transport scaffolding and identifiers.
+//
+// `tools`, `tool_choice`, `metadata` and identifier keys pass through untouched in both directions.
+// That boundary is deliberate: rewriting a tool schema breaks the provider protocol. It is also the
+// one known exit for content: patient text written into those fields is neither blocked nor
+// de-identified. Nothing in the app does that today — `metadata` carries only generated ids and tool
+// descriptions are ours — but new code must not put user or project text there, and JSON keys
+// elsewhere are still released.
+//
+// Everything else stays in scope, including `system`, `messages`, `input` and `prompt`: providers
+// disagree about which field carries the conversation, and whitelisting content fields leaked PHI
+// through Anthropic's `system`.
+const BLOCKING_SKIP_FIELDS = new Set(['tools', 'tool_choice', 'instructions', 'metadata'])
+const RELEASE_SKIP_FIELDS = new Set(['tools', 'tool_choice', 'metadata'])
+const NON_CONTENT_KEYS = new Set([
+  'id',
+  'ids',
+  'call_id',
+  'tool_call_id',
+  'item_id',
+  'response_id',
+  'previous_response_id',
+  'prompt_cache_key',
+  'type',
+  'role',
+  'status'
+])
+
+const isIdentifierKey = (key: string): boolean =>
+  NON_CONTENT_KEYS.has(key) || /(?:^|_)(?:id|ids)$/iu.test(key)
+
+const isBlockingKey = (key: string): boolean =>
+  !BLOCKING_SKIP_FIELDS.has(key) && !isIdentifierKey(key)
+
+const isReleaseKey = (key: string): boolean =>
+  !RELEASE_SKIP_FIELDS.has(key) && !isIdentifierKey(key)
+
+function collectContentValue(
+  value: unknown,
+  out: string[],
+  include: (key: string) => boolean
+): void {
   if (typeof value === 'string') {
     out.push(value)
     return
   }
   if (Array.isArray(value)) {
-    for (const item of value) collectStrings(item, out)
+    for (const item of value) collectContentValue(item, out, include)
     return
   }
   if (value && typeof value === 'object') {
     for (const [key, child] of Object.entries(value)) {
-      out.push(key)
-      collectStrings(child, out)
+      if (include(key)) collectContentValue(child, out, include)
     }
   }
+}
+
+function collectModelContentStrings(body: unknown): string[] {
+  const out: string[] = []
+  if (typeof body === 'string') {
+    out.push(body)
+    return out
+  }
+  collectContentValue(body, out, isBlockingKey)
+  return out
 }
 
 async function releaseTextImpl(text: string, projectId: string): Promise<string> {
@@ -449,11 +517,10 @@ async function guardProviderBodyImpl(
   }
   try {
     assertScannableModelValue(parsed)
-    const texts: string[] = []
-    collectStrings(parsed, texts)
+    const texts = collectModelContentStrings(parsed)
     assertMachineMaySend(texts)
     if (texts.length === 0) await releaseThroughInstalledGate('', projectId)
-    const walked = await walkRelease(parsed, projectId, tokens)
+    const walked = await walkReleaseContent(parsed, projectId, tokens)
     const text = JSON.stringify(walked)
     return text
   } catch (error) {
@@ -490,8 +557,8 @@ export function sendPhiChecked<T>(
     const text = typeof released === 'string' ? released : ''
     // Vault provenance retains marks from earlier preparation and manual masking.
     // Restore only for the local approval check; the restored value is never sent.
-    const restoredTexts: string[] = []
-    if (typeof released === 'string') collectStrings(JSON.parse(text), restoredTexts)
+    const restoredTexts =
+      typeof released === 'string' ? collectModelContentStrings(JSON.parse(text)) : []
     assertMachineMaySend(restoredTexts.map((value) => installed.restore(value, projectId)))
     const prior = turn?.reviews.get(destination)
     const confirmed =
@@ -724,7 +791,44 @@ export function assertScannableModelValue(value: unknown): void {
   }
 }
 
-async function walkRelease(
+// Two keys can de-identify to the same replacement — the same name used as two keys. Sending the body
+// anyway would silently drop one of them, so the gate refuses instead: releasing must never change the
+// shape of what it sends. Defining the property keeps a released `__proto__` key a plain key.
+function defineReleasedKey(next: Record<string, unknown>, key: string, value: unknown): void {
+  if (Object.hasOwn(next, key)) throw modelReleaseError()
+  Object.defineProperty(next, key, { value, enumerable: true, configurable: true, writable: true })
+}
+
+// Releases every content field — including `instructions`, which is deliberately not part of the
+// blocking scan — and copies schema/transport scaffolding through untouched. Object keys are released
+// as well: arbitrary JSON carried in a body can put data in a key, and the de-identify pass must not
+// leave patient text there either.
+async function walkReleaseContent(
+  body: unknown,
+  projectId: string,
+  tokens: PhiReplacement[]
+): Promise<unknown> {
+  if (typeof body === 'string' || Array.isArray(body)) {
+    return releaseContentValue(body, projectId, tokens)
+  }
+  if (!body || typeof body !== 'object') return body
+  const next: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(body)) {
+    if (!isReleaseKey(key)) {
+      next[key] = value
+      continue
+    }
+    const releasedKey = await releaseContentValue(key, projectId, tokens)
+    defineReleasedKey(
+      next,
+      typeof releasedKey === 'string' ? releasedKey : key,
+      await releaseContentValue(value, projectId, tokens)
+    )
+  }
+  return next
+}
+
+async function releaseContentValue(
   value: unknown,
   projectId: string,
   tokens: PhiReplacement[]
@@ -737,20 +841,22 @@ async function walkRelease(
   }
   if (Array.isArray(value)) {
     const released: unknown[] = []
-    for (const item of value) released.push(await walkRelease(item, projectId, tokens))
+    for (const item of value) released.push(await releaseContentValue(item, projectId, tokens))
     return released
   }
   if (value && typeof value === 'object') {
     const next: Record<string, unknown> = {}
     for (const [key, child] of Object.entries(value)) {
-      const releasedKey = (await walkRelease(key, projectId, tokens)) as string
-      if (Object.hasOwn(next, releasedKey)) throw modelReleaseError()
-      Object.defineProperty(next, releasedKey, {
-        value: await walkRelease(child, projectId, tokens),
-        enumerable: true,
-        configurable: true,
-        writable: true
-      })
+      if (!isReleaseKey(key)) {
+        next[key] = child
+        continue
+      }
+      const releasedKey = await releaseContentValue(key, projectId, tokens)
+      defineReleasedKey(
+        next,
+        typeof releasedKey === 'string' ? releasedKey : key,
+        await releaseContentValue(child, projectId, tokens)
+      )
     }
     return next
   }

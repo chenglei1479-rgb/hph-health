@@ -595,8 +595,17 @@ function looksLikeName(text: string): boolean {
   if (!value || value.startsWith('/') || /[0-9]{3,}|保険|番号|カルテ|@|県|市/.test(value)) {
     return false
   }
-  if (/[\u4e00-\u9fff\u3040-\u30ff]/.test(value)) return true
-  return /^[A-Za-z][A-Za-z' .-]{0,40}[, ][A-Za-z][A-Za-z' .-]{0,40}$/.test(value)
+  // Hiragana-only text is a name only when it carries the 姓 名 two-part shape; a single greeting
+  // word ("こんにちは") is prose. Kanji/katakana still count as names.
+  if (/[\u4e00-\u9fff\u30a0-\u30ff]/u.test(value)) return true
+  if (/^[\u3040-\u309f\s\u3000]+$/u.test(value)) return /[\s\u3000]/u.test(value.trim())
+  // English names: two to four capitalized parts. A description sentence has lowercase words.
+  const parts = value.split(/\s*,\s*|\s+/u).filter(Boolean)
+  return (
+    parts.length >= 2 &&
+    parts.length <= 4 &&
+    parts.every((part) => /^[A-Z][A-Za-z'.-]*$/u.test(part))
+  )
 }
 
 function emitName(

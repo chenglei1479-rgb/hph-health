@@ -130,7 +130,7 @@
     "Conversation PDF export timed out. Select fewer conversation turns.": "会話の PDF エクスポートがタイムアウトしました。選択する会話ターンを減らしてください。",
     "Could not open the update installer: {{error}}": "更新インストーラーを開けませんでした：{{error}}",
     "Credential-like assignment": "認証情報のような代入",
-    "This machine is not approved by the hospital. The request was not sent. Edit these spans and try again: {{spans}}": "この端末は病院に承認されていません。リクエストは送信されませんでした。これらの箇所を編集して再送信してください：{{spans}}",
+    "This machine is not approved by the hospital. Patient information was detected in the request, so it was not sent. Remove the patient information or confirm hospital approval, then retry. Diagnostic code: {{code}}": "この端末は病院に承認されていません。リクエストに患者情報が含まれていたため、送信しませんでした。患者情報を削除するか、病院の承認を確認してから再試行してください。診断番号：{{code}}",
     "Mark selection": "選択範囲をマーク",
     "An excluded file also exists in retained research evidence. Include that file to export this Session.": "除外したファイルの複製が保持する研究証拠にも存在します。このセッションをエクスポートするにはそのファイルを含めてください。",
     "Highlighted text was replaced before sending. Select any other patient information and mark it. Confirm to send. Closing this window sends nothing.": "強調されたテキストは送信前に置き換えられています。ほかの患者情報があれば選択してマークしてください。確認すると送信します。このウィンドウを閉じると何も送信されません。",
