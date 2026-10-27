@@ -34,6 +34,11 @@ export type DemoReadmissionBuild = {
     'zh-Hans': DemoAbstractDocument
     'zh-Hant': DemoAbstractDocument
     en: DemoAbstractDocument
+    de: DemoAbstractDocument
+    es: DemoAbstractDocument
+    fr: DemoAbstractDocument
+    ko: DemoAbstractDocument
+    ru: DemoAbstractDocument
   }
 }
 

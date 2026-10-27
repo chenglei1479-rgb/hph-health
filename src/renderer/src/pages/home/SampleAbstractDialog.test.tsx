@@ -8,6 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import { initI18n } from '@/i18n'
 import { useLocaleStore } from '@/stores/locale-store'
+import { LOCALES } from '../../../../shared/locale'
 import { sampleAbstracts } from '../../../../shared/demo-readmission/sample-abstracts'
 import { SampleAbstractDialog } from './SampleAbstractDialog'
 
@@ -106,7 +107,7 @@ it('shows the fictional abstract without a model call and keeps the Japanese lin
     expect(title).toBeTruthy()
     expect(disclaimer?.textContent).toContain('并非真实患者或研究结果')
     expect(footer?.textContent).toContain('并非真实患者或研究结果')
-    expect(footer?.textContent).toContain('ベースリオ デモ')
+    expect(footer?.textContent).toContain('Baselio 虚构演示')
     expect(page.textContent).not.toContain(JA_LINE)
   }
 
@@ -125,4 +126,23 @@ it('shows the fictional abstract without a model call and keeps the Japanese lin
   expect(source).not.toMatch(/fetch\(|https?:\/\//)
   expect(source).toContain('saveBlobFile')
   expect(source).not.toContain('createObjectURL')
+})
+
+it('uses the selected language for every sample page and footer', async () => {
+  for (const locale of LOCALES) {
+    initI18n(locale)
+    useLocaleStore.setState({ preference: locale, locale })
+    await renderDialog()
+    const pages = [...(container?.querySelectorAll('[data-testid="sample-abstract-page"]') ?? [])]
+    expect(pages).toHaveLength(3)
+    pages.forEach((page, index) => {
+      expect(page.querySelector('h3')?.textContent).toBe(
+        sampleAbstracts.documents[locale].pages[index]?.title
+      )
+    })
+    if (locale !== 'ja') expect(container?.textContent).not.toMatch(/[\u3040-\u30ff]/)
+    await act(async () => root?.unmount())
+    root = null
+    container?.remove()
+  }
 })

@@ -29,22 +29,15 @@ import {
 } from './home-layout'
 import { homePrimaryEntries, type HomePrimaryEntryId } from './home-primary-entries'
 import { nextStepAfter } from '../../../../shared/deliverable-next-step'
-import { S34_2_RESEARCH_DESIGN_CHECKLIST } from '../../../../shared/s34-disclaimers'
 import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-delivery-ledger'
 import { PackNextStepCard } from './PackNextStepCard'
 import { SampleAbstractDialog } from './SampleAbstractDialog'
-import { homeExternalDestinationLines } from './external-destinations'
 import { useSettingsStore } from '@/stores/settings-store'
 import { SEED_EXHAUSTED_COPY } from '../../../../shared/seed-invite'
-
-// On since the PHI release gate merged (#39); the flag is the enable switch for the already
-// translated sentence, so a future rollback only has to flip it back.
-export const SHOW_HOME_PATIENT_DATA_MASKING_NOTE = true
 
 // Same cap as CATEGORICAL_RELEASE_LIMIT in the schema-only release path.
 // The renderer does not import that main-process module.
 export const HOME_CATEGORICAL_VALUE_LIMIT = 12
-export const HOME_CATEGORICAL_OMISSION = '他 N 種類は省略'
 
 export type MedicalResearchWorkflow =
   | 'mentor-pack'
@@ -151,25 +144,18 @@ const MedicalResearchLaunchpad = ({
 
   return (
     <section
-      className="mt-8 flex w-full min-w-0 flex-col gap-6"
+      className="mt-4 flex w-full min-w-0 flex-col gap-4"
       aria-label={t('Medical research workflows')}
     >
-      <div className={cn(homeCardClassName, 'flex flex-col gap-4 p-4')}>
+      <div className={cn(homeCardClassName, 'flex flex-col gap-3 p-4')}>
         <p data-testid="entry-step-1" className={homeMutedClassName}>
           <span>{t('Step 1')}</span>
           <span aria-hidden="true"> · </span>
           <span>{t('Project setup')}</span>
         </p>
         <div className="flex flex-col gap-2">
-          <p className={homeMutedClassName}>
-            <span>{t('Medical research workspace')}</span>
-            <span aria-hidden="true"> · </span>
-            <span>{t('Research use only')}</span>
-          </p>
           <h1 className={homeTitleClassName}>{t('Enter your research theme')}</h1>
-          <p className={homeBodyClassName}>
-            {t('Describe the clinical question, then choose where to begin.')}
-          </p>
+          <p className={homeBodyClassName}>{t('Research use only')}</p>
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="medical-research-theme" className={homeBodyClassName}>
@@ -181,8 +167,8 @@ const MedicalResearchLaunchpad = ({
             onChange={(event) => setResearchTheme(event.target.value)}
             placeholder={t('Type a clinical question or research topic…')}
             maxLength={2000}
-            rows={2}
-            className="min-h-24 resize-y rounded-xl border-border-200 bg-bg-000 px-4 py-3 text-sm font-normal leading-5 text-text-000 placeholder:text-text-300 focus-visible:border-ring"
+            rows={1}
+            className="min-h-12 resize-y rounded-xl border-border-200 bg-bg-000 px-4 py-3 text-sm font-normal leading-5 text-text-000 placeholder:text-text-300 focus-visible:border-ring"
           />
           <div className={cn(homeMutedClassName, 'flex flex-wrap items-baseline gap-x-2 gap-y-1')}>
             <span className="shrink-0">{t('Try this example:')}</span>
@@ -195,12 +181,7 @@ const MedicalResearchLaunchpad = ({
             </button>
           </div>
         </div>
-        <p className={homeMutedClassName}>{t('Local-first · Reviewable at every step')}</p>
-        <p className={homeMutedClassName}>
-          {t(
-            'Each project has its own Research Memory. With Memory on, DRA can recall confirmed study facts and decisions in later sessions; review them in Settings > Memory.'
-          )}
-        </p>
+        <p className={homeMutedClassName}>{t('Review project memory in Settings > Memory.')}</p>
       </div>
 
       <section
@@ -217,63 +198,51 @@ const MedicalResearchLaunchpad = ({
           <h2 className={homeTitleClassName}>{t('Choose where to begin')}</h2>
         </div>
         <div className={homePrimaryGridClassName} data-testid="home-primary-entries">
-          {entries.map(
-            ({ id, workflow, title, description, hardRule, inputNotice, icon: Icon }) => (
-              <div key={id} className={homePrimaryColumnClassName}>
-                <button
-                  type="button"
-                  data-testid={`home-entry-${id}`}
-                  data-home-entry={id}
-                  disabled={!themeReady}
-                  onClick={() => selectWorkflow(workflow, researchTheme.trim())}
-                  className={cn(homeCardInteractiveClassName, 'min-h-44')}
+          {entries.map(({ id, workflow, title, description, hardRule, icon: Icon }) => (
+            <div key={id} className={homePrimaryColumnClassName}>
+              <button
+                type="button"
+                data-testid={`home-entry-${id}`}
+                data-home-entry={id}
+                disabled={!themeReady}
+                onClick={() => selectWorkflow(workflow, researchTheme.trim())}
+                className={cn(homeCardInteractiveClassName, 'min-h-44')}
+              >
+                <span className="flex w-full items-start justify-between gap-4">
+                  <span className={homeIconTileClassName}>
+                    <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                  </span>
+                  <ArrowUpRight
+                    className="mt-1 size-4 text-primary/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                </span>
+                <span className={cn(homeBodyClassName, 'mt-4 min-w-0 [overflow-wrap:anywhere]')}>
+                  {title}
+                </span>
+                <span
+                  data-testid={`home-entry-description-${id}`}
+                  className={cn(homeMutedClassName, 'mt-2 min-w-0 [overflow-wrap:anywhere]')}
                 >
-                  <span className="flex w-full items-start justify-between gap-4">
-                    <span className={homeIconTileClassName}>
-                      <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
-                    </span>
-                    <ArrowUpRight
-                      className="mt-1 size-4 text-primary/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
-                      strokeWidth={1.8}
-                      aria-hidden="true"
-                    />
-                  </span>
-                  <span className={cn(homeBodyClassName, 'mt-4 min-w-0 [overflow-wrap:anywhere]')}>
-                    {title}
-                  </span>
+                  {description}
+                </span>
+                {hardRule ? (
                   <span
-                    data-testid={`home-entry-description-${id}`}
-                    className={cn(homeMutedClassName, 'mt-2 min-w-0 [overflow-wrap:anywhere]')}
+                    data-testid={
+                      id === 'mentor-prep' ? 'mentor-pack-hard-rule' : `home-entry-boundary-${id}`
+                    }
+                    className={cn(
+                      homeMutedClassName,
+                      'mt-auto min-h-[3.25rem] pt-3 min-w-0 [overflow-wrap:anywhere]'
+                    )}
                   >
-                    {description}
+                    {hardRule}
                   </span>
-                  {hardRule ? (
-                    <span
-                      data-testid="mentor-pack-hard-rule"
-                      className={cn(homeWarningClassName, 'mt-4 min-w-0 [overflow-wrap:anywhere]')}
-                    >
-                      {hardRule}
-                    </span>
-                  ) : null}
-                  {inputNotice ? (
-                    <span
-                      className={cn(homeWarningClassName, 'mt-2 min-w-0 [overflow-wrap:anywhere]')}
-                    >
-                      {inputNotice}
-                    </span>
-                  ) : null}
-                </button>
-                {id === 'mentor-prep' ? (
-                  <p
-                    data-testid="s34-disclaimer-research-design"
-                    className="min-w-0 rounded-xl border border-[#e4ded2] bg-[#faf8f2] px-3.5 py-3 text-xs leading-5 text-[#635f56] [overflow-wrap:anywhere]"
-                  >
-                    {S34_2_RESEARCH_DESIGN_CHECKLIST}
-                  </p>
                 ) : null}
-              </div>
-            )
-          )}
+              </button>
+            </div>
+          ))}
         </div>
         <div
           data-testid="home-patient-data-note"
@@ -282,17 +251,9 @@ const MedicalResearchLaunchpad = ({
           <p className="w-full min-w-0">
             <span data-testid="home-patient-data-note-text">
               {t(
-                'Pre-send checks and restrictions help prevent direct identifiers such as names and patient IDs from being sent. This is not an absolute guarantee.'
+                'Pre-send checks and restrictions help prevent sending direct identifiers such as names and patient IDs. This is not an absolute guarantee.'
               )}
-            </span>
-            {SHOW_HOME_PATIENT_DATA_MASKING_NOTE ? (
-              <span data-testid="home-patient-data-masking-note">
-                {' '}
-                {t(
-                  'Analysis results are masking-checked before sending, and outputs containing individual rows are not sent.'
-                )}
-              </span>
-            ) : null}{' '}
+            </span>{' '}
             <Popover open={patientDataDetailsOpen} onOpenChange={setPatientDataDetailsOpen}>
               <PopoverTrigger asChild>
                 <button
@@ -308,16 +269,15 @@ const MedicalResearchLaunchpad = ({
                 data-testid="home-patient-data-details-panel"
                 className="w-[min(36rem,calc(100vw-2rem))] rounded-2xl bg-bg-000 p-4 text-left text-xs font-normal leading-5 text-text-300 shadow-card"
               >
-                <p className="mb-2">
+                <p data-testid="s34-disclaimer-research-design">
                   {t(
-                    'Patient data is analyzed on your computer. Requests are sent to the AI service you configure (for OpenAI, the United States). By default, the AI service receives column names, data types, row count, synthetic samples, the category values of columns you select, and aggregate analysis results.'
+                    'This checklist supports study-design review; it does not guarantee journal acceptance. You and your mentor make the final decision.'
                   )}
                 </p>
                 {t(
-                  'For a column you select, at most {{limit}} category values are sent, most frequent first. Any remaining values are shown as {{omission}}.',
+                  'For a selected column, at most {{limit}} category values are sent, most frequent first; the rest are omitted.',
                   {
-                    limit: HOME_CATEGORICAL_VALUE_LIMIT,
-                    omission: HOME_CATEGORICAL_OMISSION
+                    limit: HOME_CATEGORICAL_VALUE_LIMIT
                   }
                 )}
               </PopoverContent>
@@ -400,8 +360,8 @@ const MedicalResearchLaunchpad = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {workflows.map(({ id, title, description, icon: Icon }) => (
+          <div className="flex flex-col divide-y divide-border-200">
+            {workflows.map(({ id, title, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
@@ -415,20 +375,10 @@ const MedicalResearchLaunchpad = ({
                     researchTheme.trim()
                   )
                 }
-                className={cn(homeCardInteractiveClassName, 'min-h-36')}
+                className="flex w-full min-w-0 items-center gap-3 rounded-lg px-2 py-3 text-left hover:bg-bg-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               >
-                <span className="flex w-full items-start justify-between gap-4">
-                  <span className={homeIconTileClassName}>
-                    <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
-                  </span>
-                  <ArrowUpRight
-                    className="mt-1 size-4 text-primary/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                  />
-                </span>
-                <span className={cn(homeBodyClassName, 'mt-4')}>{title}</span>
-                <span className={cn(homeMutedClassName, 'mt-1')}>{description}</span>
+                <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                <span className={homeBodyClassName}>{title}</span>
               </button>
             ))}
           </div>
@@ -450,20 +400,6 @@ const MedicalResearchLaunchpad = ({
           )}
         </p>
       </div>
-
-      <details
-        data-testid="home-external-endpoints"
-        className={cn(homeCardClassName, 'w-full min-w-0 p-4')}
-      >
-        <summary className={cn(homeBodyClassName, 'cursor-pointer font-medium text-primary')}>
-          {t('Network connections')}
-        </summary>
-        <ul className={cn(homeMutedClassName, 'mt-2 list-disc space-y-1 pl-5')}>
-          {homeExternalDestinationLines(t, seedMode).map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      </details>
     </section>
   )
 }

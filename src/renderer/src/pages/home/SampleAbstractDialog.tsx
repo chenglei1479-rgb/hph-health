@@ -2,16 +2,12 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useLocaleStore } from '@/stores/locale-store'
-import { copyLocale } from '../../../../shared/copy-locale'
+import { isLocale, type Locale } from '../../../../shared/locale'
 import { sampleAbstracts } from '../../../../shared/demo-readmission/sample-abstracts'
 
-type SampleLocale = 'ja' | 'zh-Hans' | 'zh-Hant' | 'en'
+type SampleLocale = Locale
 
-const sampleLocale = (language?: string): SampleLocale => {
-  const locale = copyLocale(language)
-  if (locale === 'ja' || locale === 'zh-Hans' || locale === 'zh-Hant') return locale
-  return 'en'
-}
+const sampleLocale = (language?: string): SampleLocale => (isLocale(language) ? language : 'en')
 
 const sampleFileName = (locale: SampleLocale): string => `dra-demo-abstract.${locale}.html`
 
