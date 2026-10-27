@@ -27,10 +27,13 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
-      # The guard resolves only npm dependencies (i18next, react, react-dom,
-      # react-i18next, typescript, vitest) and imports no workspace package, so the
-      # script-free install is enough and no workspace build step is required.
+      # The test itself resolves only npm dependencies, but vitest loads the shared setup
+      # files, and `test/setup-phi.ts` imports `src/main/phi/gate`, which imports
+      # `@aipoch/diagnostics/node`. `npm install --ignore-scripts` does not build workspace
+      # packages, so that one import has to be built before the suite can load.
       - name: Install
         run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Build the workspace package the phi setup imports
+        run: npm run build:diagnostics
       - name: Run the locale catalog guard
         run: node node_modules/vitest/vitest.mjs run src/renderer/src/i18n/resources.test.ts
