@@ -24,7 +24,10 @@ export const RENDERER_FAILURE_CONTEXTS = [
   'session-apply-durable',
   'session-manifest-save',
   'artifact-reconcile',
-  'session-persistence-unknown'
+  'session-persistence-unknown',
+  'statistician-export-package',
+  'statistician-export-build',
+  'statistician-export-save'
 ] as const
 export type RendererFailureContext = (typeof RENDERER_FAILURE_CONTEXTS)[number]
 

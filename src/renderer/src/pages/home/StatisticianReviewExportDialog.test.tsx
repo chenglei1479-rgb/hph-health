@@ -85,6 +85,7 @@ type Mounted = {
 const mountDialog = async (options?: {
   files?: StatisticianReviewExportFile[]
   save?: SavePackage
+  exportFailure?: unknown
 }): Promise<Mounted> => {
   const host = document.createElement('div')
   document.body.appendChild(host)
@@ -92,10 +93,10 @@ const mountDialog = async (options?: {
   const onExport = vi.fn(
     async (
       _request: StatisticianReviewExportRequest
-    ): Promise<StatisticianReviewExportResponse> => ({
-      ok: true as const,
-      files: options?.files ?? allFiveFiles()
-    })
+    ): Promise<StatisticianReviewExportResponse> => {
+      if (options?.exportFailure !== undefined) throw options.exportFailure
+      return { ok: true as const, files: options?.files ?? allFiveFiles() }
+    }
   )
   const onSavePackage = vi.fn(options?.save ?? (async () => ({ saved: true })))
   await act(async () => {
@@ -221,14 +222,12 @@ it('treats cancelling the single save dialog as a normal path and records nothin
   }
 })
 
-it('reports the resource diagnostic when a bundled export resource is missing', async () => {
+it('reports the resource diagnostic when the package build reports a missing resource', async () => {
   initI18n('en')
   const mounted = await mountDialog({
-    save: async () => {
-      throw Object.assign(new Error('ENOENT: no such file or directory, open font.otf'), {
-        name: 'Error'
-      })
-    }
+    exportFailure: Object.assign(new Error('ENOENT: no such file or directory, open font.otf'), {
+      name: 'Error'
+    })
   })
   try {
     fillForm()
@@ -243,14 +242,12 @@ it('reports the resource diagnostic when a bundled export resource is missing', 
   }
 })
 
-it('reports the write diagnostic when the package cannot be written to the destination', async () => {
+it('reports the write diagnostic when the main process cannot build the files', async () => {
   initI18n('en')
   const mounted = await mountDialog({
-    save: async () => {
-      throw Object.assign(new Error('EACCES: permission denied, open target'), {
-        name: 'Error'
-      })
-    }
+    exportFailure: Object.assign(new Error('EACCES: permission denied, open target'), {
+      name: 'Error'
+    })
   })
   try {
     fillForm()
@@ -261,5 +258,75 @@ it('reports the write diagnostic when the package cannot be written to the desti
     expect(getPackDeliveryLedger().totalCompleted).toBe(0)
   } finally {
     await mounted.unmount()
+  }
+})
+
+it('reports the package-build diagnostic when zipping the files throws', async () => {
+  initI18n('en')
+  const reportFailure = vi.fn()
+  ;(window as unknown as { api: unknown }).api = {
+    diagnostics: { reportRendererFailure: reportFailure }
+  }
+  const mounted = await mountDialog({
+    files: [{ ...allFiveFiles()[0]!, base64: '!!!!' }]
+  })
+  try {
+    fillForm()
+    await clickExport()
+
+    expect(statusText()).toContain('WIN-EXPORT-03')
+    expect(statusText()).toContain('could not be prepared')
+    expect(mounted.onSavePackage).not.toHaveBeenCalled()
+    expect(reportFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'handled-error', context: 'statistician-export-build' })
+    )
+    expect(getPackDeliveryLedger().totalCompleted).toBe(0)
+  } finally {
+    await mounted.unmount()
+    delete (window as unknown as { api?: unknown }).api
+  }
+})
+
+it('reports the save-bridge diagnostic when handing the package to the save dialog throws', async () => {
+  initI18n('en')
+  const mounted = await mountDialog({
+    save: async () => {
+      throw Object.assign(new Error('Desktop command window is no longer available.'), {
+        name: 'Error'
+      })
+    }
+  })
+  try {
+    fillForm()
+    await clickExport()
+
+    expect(statusText()).toContain('WIN-EXPORT-04')
+    expect(statusText()).toContain('handed to the save dialog')
+    expect(getPackDeliveryLedger().totalCompleted).toBe(0)
+  } finally {
+    await mounted.unmount()
+  }
+})
+
+it('appends only the exception name in a prerelease build', async () => {
+  initI18n('en')
+  const previous = process.env.DRA_PRERELEASE
+  process.env.DRA_PRERELEASE = '1'
+  const mounted = await mountDialog({
+    save: async () => {
+      throw Object.assign(new Error('bridge detail that must not be shown'), { name: 'TypeError' })
+    }
+  })
+  try {
+    fillForm()
+    await clickExport()
+
+    expect(statusText()).toContain('WIN-EXPORT-04')
+    expect(statusText()).toContain('(TypeError)')
+    expect(statusText()).not.toContain('bridge detail that must not be shown')
+  } finally {
+    await mounted.unmount()
+    if (previous === undefined) delete process.env.DRA_PRERELEASE
+    else process.env.DRA_PRERELEASE = previous
   }
 })
