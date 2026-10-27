@@ -1,10 +1,17 @@
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const reportPath = process.env.PHI_EVAL_REPORT ?? '/tmp/jp-phi-eval-report.json'
+// Delete whatever an earlier run left behind before starting this one. Without this
+// a run that never writes a report (vitest failing to resolve a module, for example,
+// reports "no tests") still prints the previous run's `ok=true` from the stale file,
+// which reads as a passing eval. The exit code was already correct; the summary was
+// not, so it could report a run that never happened as green.
+rmSync(reportPath, { force: true })
+
 const result = spawnSync(
   process.execPath,
   [join(root, 'node_modules/vitest/vitest.mjs'), 'run', 'src/main/phi/dev-eval.test.ts'],
@@ -18,6 +25,13 @@ const result = spawnSync(
     }
   }
 )
+
+if (!existsSync(reportPath)) {
+  process.stderr.write(
+    `no report was produced: the PHI dev set did not run (vitest exit ${result.status ?? 'unknown'})\n`
+  )
+  process.exit(result.status || 1)
+}
 
 try {
   const report = JSON.parse(readFileSync(reportPath, 'utf8'))
@@ -63,6 +77,7 @@ try {
   process.stdout.write(`misses ${JSON.stringify(report.categoryMisses, null, 2)}\n`)
 } catch (error) {
   process.stderr.write(`Could not read PHI eval report: ${error}\n`)
+  process.exit(result.status || 1)
 }
 
 process.exit(result.status ?? 1)
