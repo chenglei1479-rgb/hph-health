@@ -259,7 +259,58 @@ function patientSpans(text: string): PhiBlockedSpan[] {
     }))
 }
 
-function assertMachineMaySend(texts: readonly string[]): void {
+// A scanned string plus where it sits in the provider body (`input[2].content[0].text`, `system`).
+// The path describes structure only: object keys in a provider body come from provider schemas, and a
+// caller must never feed user-derived keys here (the blocking projection walks known content keys).
+type ScannedModelText = { text: string; field: string }
+
+/** One blocked hit, as written to the log: never the matched text. */
+export type BlockedSpanDiagnostic = {
+  category: string
+  offset: number
+  length: number
+  field: string
+}
+
+// Object keys are printed into the block log as part of the field path, so only ASCII-shaped keys
+// count as structure. `messages[i].content[j].input` holds model-generated JSON, and its key names can
+// be copied from the conversation ("<a name>" -> value); a CJK or otherwise odd key becomes `[key]`
+// and never reaches the log.
+const SAFE_FIELD_KEY = /^[A-Za-z_][A-Za-z0-9_-]{0,40}$/u
+
+const normalizeScanned = (
+  values: readonly (string | ScannedModelText)[]
+): ScannedModelText[] =>
+  values.map((value) => (typeof value === 'string' ? { text: value, field: 'body' } : value))
+
+const diagnosticFor = (
+  values: readonly ScannedModelText[]
+): { diagnostics: BlockedSpanDiagnostic[]; spans: PhiBlockedSpan[] } => {
+  const diagnostics: BlockedSpanDiagnostic[] = []
+  const spans: PhiBlockedSpan[] = []
+  for (const { text, field } of values) {
+    for (const span of patientSpans(text)) {
+      spans.push(span)
+      diagnostics.push({
+        category: span.category,
+        offset: span.start,
+        length: span.end - span.start,
+        field
+      })
+    }
+  }
+  return { diagnostics, spans }
+}
+
+/**
+ * The diagnostic payload for a provider body: category, offset, length and the structural field for
+ * every hit, and no matched text. Reading the field is what tells a `system` prompt hit apart from a
+ * conversation hit when a false positive has to be localized.
+ */
+export const blockedSpanDiagnostics = (body: unknown): BlockedSpanDiagnostic[] =>
+  diagnosticFor(collectModelContentStrings(body)).diagnostics
+
+function assertMachineMaySend(texts: readonly (string | ScannedModelText)[]): void {
   let approved = false
   try {
     approved = machineApproved()
@@ -267,8 +318,7 @@ function assertMachineMaySend(texts: readonly string[]): void {
     throw modelReleaseError()
   }
   if (approved) return
-  const grouped = texts.map((text) => patientSpans(text))
-  const spans = grouped.flat()
+  const { diagnostics, spans } = diagnosticFor(normalizeScanned(texts))
   if (spans.length === 0) return
   const translate = blockTranslator
   // The blocked span text is patient information. Keep it out of the log: the stable number plus where
@@ -276,11 +326,7 @@ function assertMachineMaySend(texts: readonly string[]): void {
   phiBlockLog.warn('model content blocked', {
     code: PHI_BLOCK_CODE,
     hits: spans.length,
-    spans: spans.map((span) => ({
-      category: span.category,
-      offset: span.start,
-      length: span.end - span.start
-    }))
+    spans: diagnostics
   })
   throw new PhiGateError(formatUnapprovedBlock(translate), spans)
 }
@@ -333,31 +379,37 @@ const isReleaseKey = (key: string): boolean =>
 
 function collectContentValue(
   value: unknown,
-  out: string[],
+  field: string,
+  out: ScannedModelText[],
   include: (key: string) => boolean
 ): void {
   if (typeof value === 'string') {
-    out.push(value)
+    out.push({ text: value, field: field || 'body' })
     return
   }
   if (Array.isArray(value)) {
-    for (const item of value) collectContentValue(item, out, include)
+    value.forEach((item, index) => collectContentValue(item, `${field}[${index}]`, out, include))
     return
   }
   if (value && typeof value === 'object') {
     for (const [key, child] of Object.entries(value)) {
-      if (include(key)) collectContentValue(child, out, include)
+      if (!include(key)) continue
+      // Provider keys are ASCII (`system`, `messages`, `content`, `text`, `input`, `arguments`,
+      // `properties`), which keeps the path readable. Anything else may be data-derived and collapses
+      // to `[key]`, because a key copied from model output must not be written to the log.
+      const label = SAFE_FIELD_KEY.test(key) ? key : '[key]'
+      collectContentValue(child, field ? `${field}.${label}` : label, out, include)
     }
   }
 }
 
-function collectModelContentStrings(body: unknown): string[] {
-  const out: string[] = []
+function collectModelContentStrings(body: unknown): ScannedModelText[] {
+  const out: ScannedModelText[] = []
   if (typeof body === 'string') {
-    out.push(body)
+    out.push({ text: body, field: 'body' })
     return out
   }
-  collectContentValue(body, out, isBlockingKey)
+  collectContentValue(body, '', out, isBlockingKey)
   return out
 }
 
@@ -426,7 +478,11 @@ export function releasePromptContent<T>(content: T, projectId: string): Promise<
     if (typeof content === 'string') return (await releaseModelText(content, projectId)) as T
     if (!Array.isArray(content)) throw modelReleaseError()
     assertMachineMaySend(
-      content.map((block) => blockText(block)).filter((text): text is string => text != null)
+      content.flatMap((block, index) => {
+        const text = blockText(block)
+        // Keep the block index: a hit inside a prompt array is otherwise reported as a bare `body`.
+        return text == null ? [] : [{ text, field: `content[${index}]` }]
+      })
     )
     if (content.length === 0) await releaseThroughInstalledGate('', projectId)
     const released: unknown[] = []
@@ -559,7 +615,12 @@ export function sendPhiChecked<T>(
     // Restore only for the local approval check; the restored value is never sent.
     const restoredTexts =
       typeof released === 'string' ? collectModelContentStrings(JSON.parse(text)) : []
-    assertMachineMaySend(restoredTexts.map((value) => installed.restore(value, projectId)))
+    assertMachineMaySend(
+      restoredTexts.map((value) => ({
+        text: installed.restore(value.text, projectId),
+        field: value.field
+      }))
+    )
     const prior = turn?.reviews.get(destination)
     const confirmed =
       prior?.revision === revision && prior.approved === approved ? prior.tokens : new Set<string>()

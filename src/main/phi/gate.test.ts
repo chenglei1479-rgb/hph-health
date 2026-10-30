@@ -5,6 +5,7 @@ import { AcpProviderPromptExecutor } from '../acp/provider-prompt-executor'
 import type { ProviderPromptExecutionInput } from '../acp/provider-prompt-executor'
 import { fetchProviderRequest } from '../settings/provider-fetch'
 import {
+  blockedSpanDiagnostics,
   createClosedGate,
   installMachineApproval,
   installPhiGate,
@@ -122,6 +123,78 @@ describe('PHI gate scan scope', () => {
       metadata: { user_id: '1b1c-7352-92' },
       input
     })
+
+  it('names the structural field of a blocked hit and never its text', () => {
+    const diagnostics = blockedSpanDiagnostics({
+      model: 'gpt-6.1-sol',
+      instructions: 'Today is 2026-10-26.',
+      tools: [{ type: 'function', name: 'files.read', parameters: { type: 'object' } }],
+      prompt_cache_key: '1b1c-7352-92',
+      metadata: { user_id: '1b1c-7352-92' },
+      system: 'Today is 2026-10-26.',
+      input: [
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'こんにちは' }] },
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Hello.' }] }
+      ]
+    })
+
+    // `instructions` and `tools` are not scanned for blocking, so only the system date is reported.
+    expect(diagnostics).toEqual([{ category: 'DATE', offset: 9, length: 10, field: 'system' }])
+    const serialized = JSON.stringify(diagnostics)
+    expect(serialized).not.toContain('2026-10-26')
+    expect(serialized).not.toContain('こんにちは')
+  })
+
+  it('points at the array element that carried the hit', () => {
+    const diagnostics = blockedSpanDiagnostics({
+      input: [
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'こんにちは' }] },
+        {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text: '受診日は 2026-10-26 です。' }]
+        }
+      ]
+    })
+
+    expect(
+      diagnostics.some(
+        (hit) => hit.category === 'DATE' && hit.field === 'input[1].content[0].text'
+      )
+    ).toBe(true)
+    expect(JSON.stringify(diagnostics)).not.toContain('2026-10-26')
+  })
+
+  it('never writes a data-derived key name into the diagnostic path', () => {
+    // `messages[i].content[j].input` is model-generated JSON: its keys can be copied from the
+    // conversation, so a hit under one of them must not put that key into the log.
+    const diagnostics = blockedSpanDiagnostics({
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              name: 'lookup',
+              input: {
+                '患者氏名別': { note: '受診日は 2026-10-26 です。' },
+                '<script>': '2026-10-26'
+              }
+            }
+          ]
+        }
+      ]
+    })
+
+    const hit = diagnostics.find((entry) => entry.category === 'DATE')
+    expect(hit?.field).toContain('[key]')
+    const serialized = JSON.stringify(diagnostics)
+    expect(serialized).not.toContain('患者氏名別')
+    expect(serialized).not.toContain('<script>')
+    expect(serialized).not.toContain('2026-10-26')
+    // ASCII provider keys still read as structure.
+    expect(serialized).toContain('messages[0].content[0].input')
+  })
 
   it('releases a greeting whose only PHI-shaped text is application scaffolding', async () => {
     installMachineApproval(() => false)
