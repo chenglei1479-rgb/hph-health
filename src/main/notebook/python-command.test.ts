@@ -193,10 +193,14 @@ describe('validateNotebookHelperExports', () => {
 describe('interpreter probe shell', () => {
   // An absolute path must never go through cmd.exe: the shell re-parses it and cuts it at the first
   // space, so a packaged interpreter under "...\installed app\..." failed its probe and the caller
-  // silently fell back to a Python on PATH.
-  it('runs an absolute interpreter path without a shell on Windows', () => {
-    expect(interpreterProbeShell('C:\\Program Files\\DRA\\python.exe', 'win32')).toBe(false)
-    expect(interpreterProbeShell('D:\\惠每资料\\medresearch-agent\\python.exe', 'win32')).toBe(false)
+  // silently fell back to a Python on PATH. The Windows-path check has to use win32 path rules even
+  // when this test runs on Linux or macOS.
+  it.each([
+    'C:\\Program Files\\DRA\\python.exe',
+    'D:\\惠每资料\\medresearch-agent\\python.exe',
+    '\\\\server\\share\\python.exe'
+  ])('runs the Windows absolute path %s without a shell', (command) => {
+    expect(interpreterProbeShell(command, 'win32')).toBe(false)
   })
 
   it('still lets a named Windows launcher resolve through the shell', () => {
@@ -205,8 +209,11 @@ describe('interpreter probe shell', () => {
     expect(interpreterProbeShell('python3', 'win32')).toBe(true)
   })
 
-  it('never uses a shell off Windows', () => {
+  it('never uses a shell off Windows, whatever the path looks like', () => {
     expect(interpreterProbeShell('/usr/bin/python3', 'linux')).toBe(false)
     expect(interpreterProbeShell('python3', 'darwin')).toBe(false)
+    // A Windows-shaped path on a non-Windows platform is still not a reason to spawn a shell.
+    expect(interpreterProbeShell('C:\\Program Files\\python.exe', 'linux')).toBe(false)
+    expect(interpreterProbeShell('C:\\Program Files\\python.exe', 'darwin')).toBe(false)
   })
 })

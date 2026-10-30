@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'node:child_process'
 import { constants } from 'node:fs'
 import { access, realpath } from 'node:fs/promises'
-import { delimiter, isAbsolute, join } from 'node:path'
+import { delimiter, join, win32 } from 'node:path'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
@@ -65,10 +65,14 @@ const defaultResolveExecutables = async (command: string): Promise<string[]> => 
 // absolute interpreter path must run without a shell: `cmd.exe` re-parses it, so any path segment
 // with a space — "...\installed app\...", "C:\Program Files\..." — is cut there, the probe fails,
 // and the caller silently falls back to whatever Python is on PATH.
+//
+// `win32.isAbsolute` rather than the host `isAbsolute`: this decision is about a Windows path even
+// when the tests (or a darwin host) ask about one, and the host implementation would call
+// `C:\Program Files\python.exe` relative off Windows.
 export const interpreterProbeShell = (
   command: string,
   platform: NodeJS.Platform = process.platform
-): boolean => platform === 'win32' && !isAbsolute(command)
+): boolean => platform === 'win32' && !win32.isAbsolute(command)
 
 // Real `<command> --version` probe. A shell is only needed for PATH lookups that resolve through a
 // shim (`py`, `python`); an absolute interpreter path must not go through `cmd.exe`, which re-parses
