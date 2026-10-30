@@ -29,10 +29,11 @@ export type SchemaNotebookCopy = {
   blocked: string
   tagged: string
   language: string
-  interpreterBundled: string
-  interpreterSystem: string
   identifierWarnings: string
   restoreNotice: string
+  // Shown after a failed import while an earlier table is still referenced. Deliberately not the
+  // restoreNotice wording: that one says the table could not be restored, this one says it can.
+  tableStillSaved: string
 }
 
 const ja: SchemaNotebookCopy = {
@@ -68,7 +69,10 @@ const ja: SchemaNotebookCopy = {
   tagged: 'このプロジェクトは患者データを含むため、印を外すことはできません。',
   language: '言語',
   interpreterBundled: '実行環境: 同梱の Python {{version}}（オフライン）',
-  interpreterSystem: '実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）',
+  interpreterSystem:
+    '実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）',
+  tableStillSaved:
+    '前回取り込んだ表は保存されています。別のプロジェクトに切り替えてから、このプロジェクトに戻ると復元できます。',
   identifierWarnings:
     '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。',
   restoreNotice:
@@ -112,7 +116,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     language: 'Sprache',
     interpreterBundled: 'Laufzeit: mitgeliefertes Python {{version}} (offline)',
     interpreterSystem:
-      'Laufzeit: System-Python {{version}} (die mitgelieferte Laufzeit konnte nicht gestartet werden)'
+      'Laufzeit: System-Python {{version}} (die mitgelieferte Laufzeit konnte nicht gestartet werden)',
+    tableStillSaved:
+      'Die zuvor importierte Tabelle ist weiterhin gespeichert. Wechseln Sie zu einem anderen Projekt und kehren Sie zurück, um sie wiederherzustellen.'
   },
   es: {
     ...ja,
@@ -144,7 +150,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     language: 'Idioma',
     interpreterBundled: 'Entorno: Python incluido {{version}} (sin conexión)',
     interpreterSystem:
-      'Entorno: Python del sistema {{version}} (no se pudo iniciar el entorno incluido)'
+      'Entorno: Python del sistema {{version}} (no se pudo iniciar el entorno incluido)',
+    tableStillSaved:
+      'La tabla importada anteriormente sigue guardada. Cambie a otro proyecto y vuelva para restaurarla.'
   },
   fr: {
     ...ja,
@@ -176,7 +184,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     language: 'Langue',
     interpreterBundled: 'Environnement : Python fourni {{version}} (hors ligne)',
     interpreterSystem:
-      'Environnement : Python du système {{version}} (l’environnement fourni n’a pas pu démarrer)'
+      'Environnement : Python du système {{version}} (l’environnement fourni n’a pas pu démarrer)',
+    tableStillSaved:
+      'La table importée précédemment est toujours enregistrée. Passez à un autre projet puis revenez pour la restaurer.'
   },
   'zh-Hans': {
     ...ja,
@@ -205,7 +215,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     tagged: '此项目含有患者数据，标记无法去除。',
     language: '语言',
     interpreterBundled: '运行环境：随附的 Python {{version}}（离线）',
-    interpreterSystem: '运行环境：系统 Python {{version}}（随附的运行环境无法使用）'
+    interpreterSystem: '运行环境：系统 Python {{version}}（随附的运行环境无法使用）',
+    tableStillSaved: '之前导入的表仍然保存着。切换到其他项目后再回来即可恢复。'
   },
   'zh-Hant': {
     ...ja,
@@ -234,7 +245,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     tagged: '此專案含有患者資料，標記無法移除。',
     language: '語言',
     interpreterBundled: '執行環境：隨附的 Python {{version}}（離線）',
-    interpreterSystem: '執行環境：系統 Python {{version}}（隨附的執行環境無法使用）'
+    interpreterSystem: '執行環境：系統 Python {{version}}（隨附的執行環境無法使用）',
+    tableStillSaved: '之前匯入的表仍然保存著。切換到其他專案後再回來即可恢復。'
   },
   ko: {
     ...ja,
@@ -265,7 +277,10 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     tagged: '이 프로젝트는 환자 데이터를 포함하므로 표시를 제거할 수 없습니다.',
     language: '언어',
     interpreterBundled: '실행 환경: 함께 제공되는 Python {{version}}(오프라인)',
-    interpreterSystem: '실행 환경: 시스템 Python {{version}}(함께 제공되는 런타임을 사용할 수 없음)'
+    interpreterSystem:
+      '실행 환경: 시스템 Python {{version}}(함께 제공되는 런타임을 사용할 수 없음)',
+    tableStillSaved:
+      '이전에 가져온 표가 계속 저장되어 있습니다. 다른 프로젝트로 전환했다가 돌아오면 복원됩니다.'
   },
   ru: {
     ...ja,
@@ -295,7 +310,10 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     tagged: 'Проект содержит данные пациентов. Метку снять нельзя.',
     language: 'Язык',
     interpreterBundled: 'Среда: встроенный Python {{version}} (автономно)',
-    interpreterSystem: 'Среда: системный Python {{version}} (встроенную среду не удалось запустить)'
+    interpreterSystem:
+      'Среда: системный Python {{version}} (встроенную среду не удалось запустить)',
+    tableStillSaved:
+      'Ранее импортированная таблица сохранена. Переключитесь на другой проект и вернитесь, чтобы восстановить её.'
   }
 }
 

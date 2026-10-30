@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { initI18n } from '../../i18n'
 import { createInitialProjectState, useProjectStore } from '@/stores/project-store'
-import type { ExecuteAnalysisResponse, ImportTableResponse } from '../../../../shared/schema-notebook'
+import type {
+  ExecuteAnalysisResponse,
+  ImportTableResponse
+} from '../../../../shared/schema-notebook'
 import { SchemaNotebookEntry } from './SchemaNotebookEntry'
 import { schemaNotebookCopy } from './copy'
 import { schemaNotebookDraftKey } from './schema-notebook-draft'
@@ -353,7 +356,7 @@ describe('SchemaNotebookEntry', () => {
     expect(container.querySelector('input[type="file"]')).toBeNull()
   })
 
-  it('drops the previous table when the next import fails', async () => {
+  it('hides the previous table preview when the next import fails', async () => {
     const copy = schemaNotebookCopy('ja')
     importTable.mockResolvedValueOnce({
       ok: true,
@@ -436,6 +439,8 @@ describe('SchemaNotebookEntry', () => {
     await selectFile('counts.csv', 'group\nA')
     await importCurrentFile()
     expect(container.textContent).toContain(`${copy.rows}: 40`)
+    // With a table on screen there is nothing to recover, so the recovery hint stays away.
+    expect(container.textContent).not.toContain(copy.tableStillSaved)
 
     // A failed import must never discard the user's code; that is the whole point of keeping the
     // editor usable without a table.
@@ -472,5 +477,92 @@ describe('SchemaNotebookEntry', () => {
     // The file that failed is not the table that was imported earlier, so its reference survives:
     // reopening the project can still restore it.
     expect(JSON.parse(stored as string).tableId).toBe('table-1')
+    // Both facts are on screen: why this file failed and what the earlier table can still do.
+    expect(container.textContent).toContain(copy.tableStillSaved)
+    // The restore notice says the opposite ("could not be restored") and must not appear here.
+    expect(container.textContent).not.toContain(copy.restoreNotice)
+  })
+
+  it('drops a stale restore notice when a later import fails', async () => {
+    const copy = schemaNotebookCopy('ja')
+    // Start from the "the stored table is gone" state: its notice is on screen.
+    localStorage.setItem(
+      schemaNotebookDraftKey('study-1'),
+      JSON.stringify({ tableId: 'table-gone', filename: 'table.csv', code: '', language: 'python' })
+    )
+    const modelContext = vi.fn(async () => {
+      throw new Error('table missing')
+    })
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute: vi.fn(),
+        modelContext
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(container.textContent).toContain(copy.restoreNotice)
+    // No import has failed here, so the hint must not claim the table is recoverable. This is the
+    // window a project switch opens (tableId set, context not back yet).
+    expect(container.textContent).not.toContain(copy.tableStillSaved)
+
+    importTable.mockRejectedValueOnce(
+      new Error(
+        "Error invoking remote method 'schema-notebook:import-table': ApplicationCommandError: Workbook has no worksheets."
+      )
+    )
+    class ImmediateReader {
+      result: string | ArrayBuffer | null = null
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+      readAsText(file: File): void {
+        void file.text().then((text) => {
+          this.result = text
+          this.onload?.()
+        })
+      }
+      readAsArrayBuffer(file: File): void {
+        void file.arrayBuffer().then((buffer) => {
+          this.result = buffer
+          this.onload?.()
+        })
+      }
+    }
+    vi.stubGlobal('FileReader', ImmediateReader)
+    const input = container.querySelector('input[type="file"]')
+    const file = new File(['not-an-xlsx'], 'broken.xlsx', { type: 'text/csv' })
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    const importButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.import
+    )
+    await act(async () => {
+      importButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(importTable.mock.results.at(-1)?.value).catch(() => undefined)
+    })
+
+    expect(container.textContent).toContain('Workbook has no worksheets.')
+    // The old "cannot be restored" notice is gone: the two failures are different.
+    expect(container.textContent).not.toContain(copy.restoreNotice)
   })
 })
