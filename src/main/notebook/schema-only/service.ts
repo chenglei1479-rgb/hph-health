@@ -284,7 +284,8 @@ export const createSchemaNotebookService = (options: {
           stderr: localRun.stderr,
           exitCode: localRun.exitCode
         },
-        forModel
+        forModel,
+        ...(localRun.interpreter === undefined ? {} : { interpreter: localRun.interpreter })
       }
     },
     patientDataTags() {

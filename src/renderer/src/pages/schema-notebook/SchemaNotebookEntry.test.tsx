@@ -125,7 +125,8 @@ describe('SchemaNotebookEntry', () => {
         stdout: 'group,n\nA,<10\nB,20',
         head: 'A,<10',
         table: 'group,n\nA,<10\nB,20'
-      }
+      },
+      interpreter: { source: 'system' as const, version: '3.13.15' }
     }))
     window.api = {
       schemaNotebook: {
@@ -196,6 +197,10 @@ describe('SchemaNotebookEntry', () => {
     expect(local?.textContent).not.toContain('<10')
     expect(masked?.textContent).toContain('A,<10')
     expect(masked?.textContent).toContain('n=<10')
+    // The panel says which interpreter ran the script, so a PATH fallback is visible.
+    expect(container.textContent).toContain(
+      schemaNotebookCopy('ja').interpreterSystem.replace('{{version}}', '3.13.15')
+    )
   })
 
   it('does not offer an opt-in control for a free-text column', async () => {

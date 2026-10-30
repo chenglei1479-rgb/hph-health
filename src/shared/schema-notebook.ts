@@ -12,6 +12,14 @@ export const COLLECTION_SHEET_NAME = '収集'
 
 export type SchemaDtype = 'integer' | 'number' | 'binary' | 'categorical' | 'text' | 'date'
 
+// Which interpreter ran a local script. `bundled` is the offline prefix shipped in the installer;
+// `system` means the app fell back to a Python on PATH, which may not carry the statistical
+// packages. The panel shows this so the fallback is never silent.
+export type SchemaNotebookPythonInterpreter = {
+  source: 'bundled' | 'system'
+  version: string
+}
+
 export type SchemaColumn = {
   name: string
   dtype: SchemaDtype
@@ -94,6 +102,7 @@ export type ExecuteAnalysisResponse = {
     exitCode: number | null
   }
   forModel: GatedNotebookOutput
+  interpreter?: SchemaNotebookPythonInterpreter
 }
 
 export type PatientDataTag = {

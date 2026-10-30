@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   findPythonCommand,
+  interpreterProbeShell,
   isPython3Version,
   resolvePythonCommand,
   validateNotebookHelperExports
@@ -186,5 +187,26 @@ describe('validateNotebookHelperExports', () => {
         }
       )
     ).resolves.toBeUndefined()
+  })
+})
+
+describe('interpreter probe shell', () => {
+  // An absolute path must never go through cmd.exe: the shell re-parses it and cuts it at the first
+  // space, so a packaged interpreter under "...\installed app\..." failed its probe and the caller
+  // silently fell back to a Python on PATH.
+  it('runs an absolute interpreter path without a shell on Windows', () => {
+    expect(interpreterProbeShell('C:\\Program Files\\DRA\\python.exe', 'win32')).toBe(false)
+    expect(interpreterProbeShell('D:\\惠每资料\\medresearch-agent\\python.exe', 'win32')).toBe(false)
+  })
+
+  it('still lets a named Windows launcher resolve through the shell', () => {
+    expect(interpreterProbeShell('py', 'win32')).toBe(true)
+    expect(interpreterProbeShell('python', 'win32')).toBe(true)
+    expect(interpreterProbeShell('python3', 'win32')).toBe(true)
+  })
+
+  it('never uses a shell off Windows', () => {
+    expect(interpreterProbeShell('/usr/bin/python3', 'linux')).toBe(false)
+    expect(interpreterProbeShell('python3', 'darwin')).toBe(false)
   })
 })

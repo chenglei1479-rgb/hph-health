@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { SCHEMA_NOTEBOOK_LOCAL_FILENAME } from '../../../shared/schema-notebook'
+import type { SchemaNotebookPythonInterpreter } from '../../../shared/schema-notebook'
 import type { PythonCommand } from '../python-command'
 import { resolveSchemaNotebookPython } from './bundled-python'
 
@@ -13,6 +14,13 @@ export type LocalRunResult = {
   exitCode: number | null
   head?: string
   table?: string
+  /** Which interpreter ran the script, so the panel can say so instead of guessing. */
+  interpreter?: SchemaNotebookPythonInterpreter
+}
+
+type ResolvedAnalysisCommand = {
+  command: PythonCommand
+  interpreter?: SchemaNotebookPythonInterpreter
 }
 
 export type CommandRunner = (
@@ -102,7 +110,7 @@ export const executeLocalAnalysis = async (input: {
     if ('message' in command) {
       return { stdout: '', stderr: command.message, exitCode: 127 }
     }
-    const result = await run(command, scriptPath, directory, {
+    const result = await run(command.command, scriptPath, directory, {
       ...process.env,
       DRA_SCHEMA_TABLE: tablePath
     })
@@ -113,6 +121,7 @@ export const executeLocalAnalysis = async (input: {
       stdout,
       stderr: clip(result.stderr),
       exitCode: result.code,
+      ...(command.interpreter === undefined ? {} : { interpreter: command.interpreter }),
       ...(head === undefined ? {} : { head }),
       ...(table === undefined ? {} : { table })
     }
@@ -123,15 +132,18 @@ export const executeLocalAnalysis = async (input: {
 
 const resolveAnalysisCommand = async (
   input: Pick<Parameters<typeof executeLocalAnalysis>[0], 'language' | 'resolvePython' | 'resolveR'>
-): Promise<PythonCommand | { message: string }> => {
+): Promise<ResolvedAnalysisCommand | { message: string }> => {
   if (input.language === 'python') {
-    if (input.resolvePython) return input.resolvePython()
+    if (input.resolvePython) return { command: await input.resolvePython() }
     const resolved = await resolveSchemaNotebookPython()
     if (!resolved.ok) return { message: resolved.message }
-    return resolved.command
+    return {
+      command: resolved.command,
+      interpreter: { source: resolved.source, version: resolved.version }
+    }
   }
   const r = await (input.resolveR ?? defaultResolveR)()
-  return r ?? { message: 'Rscript was not found in the local Notebook environment.' }
+  return r ? { command: r } : { message: 'Rscript was not found in the local Notebook environment.' }
 }
 
 const defaultResolveR = async (): Promise<PythonCommand | undefined> => {

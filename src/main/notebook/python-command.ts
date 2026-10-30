@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'node:child_process'
 import { constants } from 'node:fs'
 import { access, realpath } from 'node:fs/promises'
-import { delimiter, join } from 'node:path'
+import { delimiter, isAbsolute, join } from 'node:path'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
@@ -61,15 +61,25 @@ const defaultResolveExecutables = async (command: string): Promise<string[]> => 
   return matches
 }
 
-// Real `<command> --version` probe. On Windows the check runs through a shell so a shimmed launcher
-// still resolves; the `py`/`python` executables run fine without one.
+// A Windows shell is only needed to resolve a shimmed launcher found by name (`py`, `python`). An
+// absolute interpreter path must run without a shell: `cmd.exe` re-parses it, so any path segment
+// with a space — "...\installed app\...", "C:\Program Files\..." — is cut there, the probe fails,
+// and the caller silently falls back to whatever Python is on PATH.
+export const interpreterProbeShell = (
+  command: string,
+  platform: NodeJS.Platform = process.platform
+): boolean => platform === 'win32' && !isAbsolute(command)
+
+// Real `<command> --version` probe. A shell is only needed for PATH lookups that resolve through a
+// shim (`py`, `python`); an absolute interpreter path must not go through `cmd.exe`, which re-parses
+// it and cuts it at the first space ("...\installed app\..." or "C:\Program Files\...").
 const defaultProbe =
   (platform: NodeJS.Platform) =>
   async ({ command, baseArgs }: PythonCommand): Promise<boolean> => {
     try {
       const { stdout, stderr } = await execFileAsync(command, [...baseArgs, '--version'], {
         timeout: 10_000,
-        shell: platform === 'win32',
+        shell: interpreterProbeShell(command, platform),
         windowsHide: true
       })
 
@@ -112,13 +122,13 @@ export const findPythonCommand = async (
 export const probeInterpreterVersion = async (
   command: string,
   baseArgs: string[] = [],
-  deps: { platform?: NodeJS.Platform } = {}
+  deps: { platform?: NodeJS.Platform; shell?: boolean } = {}
 ): Promise<string | undefined> => {
   const platform = deps.platform ?? process.platform
   try {
     const { stdout, stderr } = await execFileAsync(command, [...baseArgs, '--version'], {
       timeout: 10_000,
-      shell: platform === 'win32',
+      shell: deps.shell ?? interpreterProbeShell(command, platform),
       windowsHide: true
     })
     const output = `${stdout}\n${stderr}`
