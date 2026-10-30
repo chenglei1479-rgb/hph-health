@@ -211,6 +211,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     setResult(null)
     setIdentifierWarnings([])
     setBlocked(message)
+    // A previous "the stored table is gone" notice belongs to a different failure: keeping it next to
+    // this error would say both "it cannot be restored" and "it can be restored".
+    setRestoreNotice(false)
   }
 
   const importFile = async (): Promise<void> => {
@@ -343,6 +346,15 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
           </button>
           {blocked ? (
             <pre className="whitespace-pre-wrap text-xs text-[#9a5046]">{blocked}</pre>
+          ) : null}
+          {/* The failed file is not the stored table, so say what the user can still do. The error
+              above stays first: this line explains recovery, it does not replace the reason. Gated on
+              `blocked` too: without it the line would flash while a project switch is still restoring
+              the table (tableId is set, the context has not arrived), which is not a failure at all. */}
+          {blocked && tableInfo.tableId && !context ? (
+            <p data-testid="schema-notebook-table-still-saved" className="text-xs text-[#5a6b6c]">
+              {copy.tableStillSaved}
+            </p>
           ) : null}
           {restoreNotice ? (
             <p data-testid="schema-notebook-restore-notice" className="text-xs text-[#9a5046]">
