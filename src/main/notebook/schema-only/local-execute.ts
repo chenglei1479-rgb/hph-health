@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { SCHEMA_NOTEBOOK_LOCAL_FILENAME } from '../../../shared/schema-notebook'
+import { SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE } from '../../../shared/schema-notebook'
 import type { SchemaNotebookPythonInterpreter } from '../../../shared/schema-notebook'
+import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import type { PythonCommand } from '../python-command'
 import { resolveSchemaNotebookPython } from './bundled-python'
 
@@ -136,6 +138,15 @@ const resolveAnalysisCommand = async (
   if (input.language === 'python') {
     if (input.resolvePython) return { command: await input.resolvePython() }
     const resolved = await resolveSchemaNotebookPython()
+    // A packaged runtime that exists but cannot start is a broken installation, not a script error.
+    // It gets a stable code so the panel can show an operable, localized sentence; the "not found"
+    // case keeps the in-panel message it always had.
+    if (!resolved.ok && resolved.reason === 'unusable') {
+      throw new ApplicationCommandError(
+        SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
+        resolved.message
+      )
+    }
     if (!resolved.ok) return { message: resolved.message }
     return {
       command: resolved.command,

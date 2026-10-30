@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next'
 
 import { useProjectStore } from '@/stores/project-store'
 import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
+import { parseApplicationCommandError } from '../../../../shared/application-command-contract'
 import {
   isConsultationPack,
   isMentorDiscussionPack
 } from '../../../../shared/deliverable-pack-policy'
+import { SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE } from '../../../../shared/schema-notebook'
 import type {
   ExecuteAnalysisResponse,
   ImportTableResponse,
@@ -269,7 +271,12 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
         })
       )
     } catch (error) {
-      setBlocked(failureText(error))
+      // A packaged runtime that cannot start carries its own code; show the panel's sentence rather
+      // than the main process's English original, so the panel stays in one language.
+      const code = parseApplicationCommandError(error)
+      setBlocked(
+        code === SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE ? copy.pythonUnavailable : failureText(error)
+      )
     } finally {
       setBusy(false)
     }

@@ -34,6 +34,9 @@ export type SchemaNotebookCopy = {
   // Shown after a failed import while an earlier table is still referenced. Deliberately not the
   // restoreNotice wording: that one says the table could not be restored, this one says it can.
   tableStillSaved: string
+  // The installer's own Python exists but cannot start. Distinct from "not found": the fix is to
+  // reinstall, not to look for a file, and the app does not fall back to a Python on PATH.
+  pythonUnavailable: string
 }
 
 const ja: SchemaNotebookCopy = {
@@ -76,7 +79,9 @@ const ja: SchemaNotebookCopy = {
   identifierWarnings:
     '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。',
   restoreNotice:
-    '前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。'
+    '前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。',
+  pythonUnavailable:
+    '同梱の実行環境（オフライン Python）を起動できませんでした。アプリを再インストールしてから、もう一度お試しください。'
 }
 
 const catalogs: Record<string, SchemaNotebookCopy> = {
@@ -118,7 +123,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     interpreterSystem:
       'Laufzeit: System-Python {{version}} (die mitgelieferte Laufzeit konnte nicht gestartet werden)',
     tableStillSaved:
-      'Die zuvor importierte Tabelle ist weiterhin gespeichert. Wechseln Sie zu einem anderen Projekt und kehren Sie zurück, um sie wiederherzustellen.'
+      'Die zuvor importierte Tabelle ist weiterhin gespeichert. Wechseln Sie zu einem anderen Projekt und kehren Sie zurück, um sie wiederherzustellen.',
+    pythonUnavailable:
+      'Die mitgelieferte Python-Laufzeit konnte nicht gestartet werden. Installieren Sie die App neu und versuchen Sie es erneut.'
   },
   es: {
     ...ja,
@@ -152,7 +159,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     interpreterSystem:
       'Entorno: Python del sistema {{version}} (no se pudo iniciar el entorno incluido)',
     tableStillSaved:
-      'La tabla importada anteriormente sigue guardada. Cambie a otro proyecto y vuelva para restaurarla.'
+      'La tabla importada anteriormente sigue guardada. Cambie a otro proyecto y vuelva para restaurarla.',
+    pythonUnavailable:
+      'No se pudo iniciar el entorno de Python incluido. Reinstale la aplicación y vuelva a intentarlo.'
   },
   fr: {
     ...ja,
@@ -186,7 +195,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     interpreterSystem:
       'Environnement : Python du système {{version}} (l’environnement fourni n’a pas pu démarrer)',
     tableStillSaved:
-      'La table importée précédemment est toujours enregistrée. Passez à un autre projet puis revenez pour la restaurer.'
+      'La table importée précédemment est toujours enregistrée. Passez à un autre projet puis revenez pour la restaurer.',
+    pythonUnavailable:
+      'L’environnement Python fourni n’a pas pu démarrer. Réinstallez l’application, puis réessayez.'
   },
   'zh-Hans': {
     ...ja,
@@ -216,7 +227,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     language: '语言',
     interpreterBundled: '运行环境：随附的 Python {{version}}（离线）',
     interpreterSystem: '运行环境：系统 Python {{version}}（随附的运行环境无法使用）',
-    tableStillSaved: '之前导入的表仍然保存着。切换到其他项目后再回来即可恢复。'
+    tableStillSaved: '之前导入的表仍然保存着。切换到其他项目后再回来即可恢复。',
+    pythonUnavailable: '随附的 Python 运行环境无法启动。请重新安装应用后再试。'
   },
   'zh-Hant': {
     ...ja,
@@ -246,7 +258,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     language: '語言',
     interpreterBundled: '執行環境：隨附的 Python {{version}}（離線）',
     interpreterSystem: '執行環境：系統 Python {{version}}（隨附的執行環境無法使用）',
-    tableStillSaved: '之前匯入的表仍然保存著。切換到其他專案後再回來即可恢復。'
+    tableStillSaved: '之前匯入的表仍然保存著。切換到其他專案後再回來即可恢復。',
+    pythonUnavailable: '隨附的 Python 執行環境無法啟動。請重新安裝應用程式後再試。'
   },
   ko: {
     ...ja,
@@ -280,7 +293,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     interpreterSystem:
       '실행 환경: 시스템 Python {{version}}(함께 제공되는 런타임을 사용할 수 없음)',
     tableStillSaved:
-      '이전에 가져온 표가 계속 저장되어 있습니다. 다른 프로젝트로 전환했다가 돌아오면 복원됩니다.'
+      '이전에 가져온 표가 계속 저장되어 있습니다. 다른 프로젝트로 전환했다가 돌아오면 복원됩니다.',
+    pythonUnavailable:
+      '함께 제공되는 Python 실행 환경을 시작할 수 없습니다. 앱을 다시 설치한 후 다시 시도하세요.'
   },
   ru: {
     ...ja,
@@ -313,7 +328,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     interpreterSystem:
       'Среда: системный Python {{version}} (встроенную среду не удалось запустить)',
     tableStillSaved:
-      'Ранее импортированная таблица сохранена. Переключитесь на другой проект и вернитесь, чтобы восстановить её.'
+      'Ранее импортированная таблица сохранена. Переключитесь на другой проект и вернитесь, чтобы восстановить её.',
+    pythonUnavailable:
+      'Встроенную среду Python не удалось запустить. Переустановите приложение и повторите попытку.'
   }
 }
 

@@ -121,6 +121,7 @@ describe('schema-notebook bundled Python', () => {
 
     expect(resolved.ok).toBe(false)
     if (resolved.ok) return
+    expect(resolved.reason).toBe('missing')
     expect(resolved.message).toContain(
       '/opt/dra/resources/schema-notebook-python/linux-x64/bin/python'
     )
@@ -202,9 +203,10 @@ describe('schema-notebook bundled Python', () => {
       '/Applications/DRA.app/Contents/Resources/schema-notebook-python/darwin-x64/bin/python'
     ]
   ] as const)(
-    'falls through when the %s %s prefix exists but cannot run',
+    'reports a broken packaged runtime for the %s %s prefix instead of using PATH',
     async (platform, arch, executable) => {
       const probed: string[] = []
+      const findSystemPython = vi.fn(async () => ({ command: 'python3', baseArgs: [] }))
       const resolved = await resolveSchemaNotebookPython({
         platform,
         arch,
@@ -215,18 +217,42 @@ describe('schema-notebook bundled Python', () => {
           probed.push(command.command)
           return undefined
         },
-        findSystemPython: async () => ({ command: 'python3', baseArgs: [] })
+        findSystemPython
       })
 
       expect(probed).toEqual([executable])
+      // A packaged prefix that exists but cannot start is a broken installation, not a reason to run
+      // the script with whatever Python is on PATH: that one usually lacks pandas and fails later
+      // with a message about the script instead of the runtime.
       expect(resolved).toEqual({
-        ok: true,
-        source: 'system',
-        command: { command: 'python3', baseArgs: [] },
-        version: 'unknown'
+        ok: false,
+        reason: 'unusable',
+        message: 'The bundled Python runtime could not start, so the analysis was not run. Reinstall the app.'
       })
+      expect(findSystemPython).not.toHaveBeenCalled()
     }
   )
+
+  it('still falls through to PATH when a developer checkout prefix cannot run', async () => {
+    const devRoot = '/repo/resources/schema-notebook-python'
+    const dev = bundledPythonExecutable(devRoot, 'darwin', 'arm64')
+    const resolved = await resolveSchemaNotebookPython({
+      platform: 'darwin',
+      arch: 'arm64',
+      resourcesPath: undefined,
+      devRoots: [devRoot],
+      exists: (path) => path === dev,
+      probe: async (command) => (command.command === dev ? undefined : '3.13.1'),
+      findSystemPython: async () => ({ command: 'python3', baseArgs: [] })
+    })
+
+    expect(resolved).toEqual({
+      ok: true,
+      source: 'system',
+      command: { command: 'python3', baseArgs: [] },
+      version: '3.13.1'
+    })
+  })
 
   it('lists the offline packages in the staged requirements file', () => {
     const requirements = readFileSync(
