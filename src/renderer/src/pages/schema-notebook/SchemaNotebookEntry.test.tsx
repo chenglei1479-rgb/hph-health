@@ -9,6 +9,7 @@ import { createInitialProjectState, useProjectStore } from '@/stores/project-sto
 import type { ImportTableResponse } from '../../../../shared/schema-notebook'
 import { SchemaNotebookEntry } from './SchemaNotebookEntry'
 import { schemaNotebookCopy } from './copy'
+import { schemaNotebookDraftKey } from './schema-notebook-draft'
 
 const tags = vi.fn(async () => [{ projectId: 'study-1' }])
 const importTable = vi.fn(async (): Promise<ImportTableResponse> => ({
@@ -44,6 +45,9 @@ describe('SchemaNotebookEntry', () => {
     root = null
     container = null
     useProjectStore.setState(createInitialProjectState())
+    // The draft is stored per project, so a case that imports a table would otherwise leak a
+    // stored draft into any later case that uses the same project id.
+    localStorage.clear()
     vi.unstubAllGlobals()
   })
 
@@ -435,5 +439,10 @@ describe('SchemaNotebookEntry', () => {
       (button) => button.textContent === copy.run
     ) as HTMLButtonElement | undefined
     expect(runButton?.disabled).toBe(true)
+    // Read the persisted draft too: the DOM value alone can stay correct while React's `code`
+    // state is still empty, and the save effect only writes what the state actually holds.
+    const stored = localStorage.getItem(schemaNotebookDraftKey('study-1'))
+    expect(stored).not.toBeNull()
+    expect(JSON.parse(stored as string).code).toBe(keepCode)
   })
 })
