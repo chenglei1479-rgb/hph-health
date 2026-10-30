@@ -68,9 +68,9 @@ export type SchemaNotebookPythonResolution =
       /** Reported by `--version`, e.g. `3.12.15`. `unknown` when the probe could not read it. */
       version: string
     }
-// `unusable`: the installer's prefix is there but its interpreter cannot start. `missing`: no usable
-// interpreter was found at all. The caller reports the first as a coded failure and keeps the second
-// as the in-panel message it already had.
+  // `unusable`: the installer's prefix is there but its interpreter cannot start. `missing`: no usable
+  // interpreter was found at all. The caller reports the first as a coded failure and keeps the second
+  // as the in-panel message it already had.
   | { ok: false; message: string; reason: 'unusable' | 'missing' }
 
 const missingRuntimeMessage = (expected: string): string =>

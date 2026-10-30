@@ -142,10 +142,7 @@ const resolveAnalysisCommand = async (
     // It gets a stable code so the panel can show an operable, localized sentence; the "not found"
     // case keeps the in-panel message it always had.
     if (!resolved.ok && resolved.reason === 'unusable') {
-      throw new ApplicationCommandError(
-        SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
-        resolved.message
-      )
+      throw new ApplicationCommandError(SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE, resolved.message)
     }
     if (!resolved.ok) return { message: resolved.message }
     return {
@@ -154,7 +151,9 @@ const resolveAnalysisCommand = async (
     }
   }
   const r = await (input.resolveR ?? defaultResolveR)()
-  return r ? { command: r } : { message: 'Rscript was not found in the local Notebook environment.' }
+  return r
+    ? { command: r }
+    : { message: 'Rscript was not found in the local Notebook environment.' }
 }
 
 const defaultResolveR = async (): Promise<PythonCommand | undefined> => {

@@ -275,7 +275,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       // than the main process's English original, so the panel stays in one language.
       const code = parseApplicationCommandError(error)
       setBlocked(
-        code === SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE ? copy.pythonUnavailable : failureText(error)
+        code === SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE
+          ? copy.pythonUnavailable
+          : failureText(error)
       )
     } finally {
       setBusy(false)

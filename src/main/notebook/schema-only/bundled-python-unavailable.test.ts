@@ -33,9 +33,7 @@ describe('schema-notebook interpreter failures', () => {
     }).catch((reason: unknown) => reason)
 
     expect(error).toBeInstanceOf(ApplicationCommandError)
-    expect((error as ApplicationCommandError).code).toBe(
-      SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE
-    )
+    expect((error as ApplicationCommandError).code).toBe(SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE)
   })
 
   it('keeps the in-panel message when no interpreter was found at all', async () => {

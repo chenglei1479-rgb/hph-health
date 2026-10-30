@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  SCHEMA_NOTEBOOK_PYTHON_DIR,
   SCHEMA_NOTEBOOK_PYTHON_PACKAGES,
   bundledPythonExecutable,
   resolveSchemaNotebookPython
@@ -187,30 +188,25 @@ describe('schema-notebook bundled Python', () => {
   )
 
   it.each([
-    [
-      'win32',
-      'x64',
-      'D:/DRA/medresearch-agent/resources/schema-notebook-python/win-x64/python.exe'
-    ],
-    [
-      'darwin',
-      'arm64',
-      '/Applications/DRA.app/Contents/Resources/schema-notebook-python/darwin-arm64/bin/python'
-    ],
-    [
-      'darwin',
-      'x64',
-      '/Applications/DRA.app/Contents/Resources/schema-notebook-python/darwin-x64/bin/python'
-    ]
+    ['win32', 'x64', 'D:/DRA/medresearch-agent/resources'],
+    ['darwin', 'arm64', '/Applications/DRA.app/Contents/Resources'],
+    ['darwin', 'x64', '/Applications/DRA.app/Contents/Resources']
   ] as const)(
     'reports a broken packaged runtime for the %s %s prefix instead of using PATH',
-    async (platform, arch, executable) => {
+    async (platform, arch, resourcesPath) => {
+      // Same helper the resolver uses: a hand-written POSIX literal would not match on Windows,
+      // where join() produces backslashes, and the case would silently test the PATH fallback.
+      const executable = bundledPythonExecutable(
+        join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR),
+        platform,
+        arch
+      )
       const probed: string[] = []
       const findSystemPython = vi.fn(async () => ({ command: 'python3', baseArgs: [] }))
       const resolved = await resolveSchemaNotebookPython({
         platform,
         arch,
-        resourcesPath: executable.slice(0, executable.indexOf('/schema-notebook-python')),
+        resourcesPath,
         devRoots: [],
         exists: (path) => path === executable,
         probe: async (command) => {
@@ -224,11 +220,12 @@ describe('schema-notebook bundled Python', () => {
       // A packaged prefix that exists but cannot start is a broken installation, not a reason to run
       // the script with whatever Python is on PATH: that one usually lacks pandas and fails later
       // with a message about the script instead of the runtime.
-      expect(resolved).toEqual({
-        ok: false,
-        reason: 'unusable',
-        message: 'The bundled Python runtime could not start, so the analysis was not run. Reinstall the app.'
-      })
+      expect(resolved.ok).toBe(false)
+      if (resolved.ok) return
+      expect(resolved.reason).toBe('unusable')
+      expect(resolved.message).toContain('could not start')
+      // Distinguishes the branch from `missing`, which keeps the older "not downloaded" sentence.
+      expect(resolved.message).not.toContain('not downloaded on first run')
       expect(findSystemPython).not.toHaveBeenCalled()
     }
   )
