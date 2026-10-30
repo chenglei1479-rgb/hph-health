@@ -272,10 +272,16 @@ export type BlockedSpanDiagnostic = {
   field: string
 }
 
+// Object keys are printed into the block log as part of the field path, so only ASCII-shaped keys
+// count as structure. `messages[i].content[j].input` holds model-generated JSON, and its key names can
+// be copied from the conversation ("<a name>" -> value); a CJK or otherwise odd key becomes `[key]`
+// and never reaches the log.
+const SAFE_FIELD_KEY = /^[A-Za-z_][A-Za-z0-9_-]{0,40}$/u
+
 const normalizeScanned = (
   values: readonly (string | ScannedModelText)[]
 ): ScannedModelText[] =>
-  values.map((value) => (typeof value === 'string' ? { text: value, field: 'text' } : value))
+  values.map((value) => (typeof value === 'string' ? { text: value, field: 'body' } : value))
 
 const diagnosticFor = (
   values: readonly ScannedModelText[]
@@ -388,8 +394,11 @@ function collectContentValue(
   if (value && typeof value === 'object') {
     for (const [key, child] of Object.entries(value)) {
       if (!include(key)) continue
-      // Structure only: the key names here come from the provider's own schema.
-      collectContentValue(child, field ? `${field}.${key}` : key, out, include)
+      // Provider keys are ASCII (`system`, `messages`, `content`, `text`, `input`, `arguments`,
+      // `properties`), which keeps the path readable. Anything else may be data-derived and collapses
+      // to `[key]`, because a key copied from model output must not be written to the log.
+      const label = SAFE_FIELD_KEY.test(key) ? key : '[key]'
+      collectContentValue(child, field ? `${field}.${label}` : label, out, include)
     }
   }
 }
@@ -469,7 +478,11 @@ export function releasePromptContent<T>(content: T, projectId: string): Promise<
     if (typeof content === 'string') return (await releaseModelText(content, projectId)) as T
     if (!Array.isArray(content)) throw modelReleaseError()
     assertMachineMaySend(
-      content.map((block) => blockText(block)).filter((text): text is string => text != null)
+      content.flatMap((block, index) => {
+        const text = blockText(block)
+        // Keep the block index: a hit inside a prompt array is otherwise reported as a bare `body`.
+        return text == null ? [] : [{ text, field: `content[${index}]` }]
+      })
     )
     if (content.length === 0) await releaseThroughInstalledGate('', projectId)
     const released: unknown[] = []

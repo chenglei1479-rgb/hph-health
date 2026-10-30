@@ -165,6 +165,37 @@ describe('PHI gate scan scope', () => {
     expect(JSON.stringify(diagnostics)).not.toContain('2026-10-26')
   })
 
+  it('never writes a data-derived key name into the diagnostic path', () => {
+    // `messages[i].content[j].input` is model-generated JSON: its keys can be copied from the
+    // conversation, so a hit under one of them must not put that key into the log.
+    const diagnostics = blockedSpanDiagnostics({
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              name: 'lookup',
+              input: {
+                '患者氏名別': { note: '受診日は 2026-10-26 です。' },
+                '<script>': '2026-10-26'
+              }
+            }
+          ]
+        }
+      ]
+    })
+
+    const hit = diagnostics.find((entry) => entry.category === 'DATE')
+    expect(hit?.field).toContain('[key]')
+    const serialized = JSON.stringify(diagnostics)
+    expect(serialized).not.toContain('患者氏名別')
+    expect(serialized).not.toContain('<script>')
+    expect(serialized).not.toContain('2026-10-26')
+    // ASCII provider keys still read as structure.
+    expect(serialized).toContain('messages[0].content[0].input')
+  })
+
   it('releases a greeting whose only PHI-shaped text is application scaffolding', async () => {
     installMachineApproval(() => false)
     installIdentityGate()
