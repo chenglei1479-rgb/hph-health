@@ -226,6 +226,100 @@ describe('SchemaNotebookEntry', () => {
     )
   })
 
+  it('shows the main-process sentence when the shipped interpreter cannot start', async () => {
+    importTable.mockResolvedValueOnce({
+      ok: true,
+      tagged: true,
+      containsPatientData: true,
+      identifierWarnings: [],
+      context: {
+        mode: 'schema-only',
+        tableId: 'table-1',
+        rowCount: 3,
+        columns: [{ name: 'age', dtype: 'integer' }],
+        syntheticSampleRows: [['900001']],
+        syntheticSampleNote: 'synthetic',
+        localFilename: 'table.csv'
+      }
+    })
+    // This channel is a direct ipcMainHandle, so the rejection carries no code: the main process
+    // localizes the sentence and throws a plain Error, which Electron wraps. The panel must show that
+    // sentence and nothing of the wrapper, or the user reads English chrome in a Japanese panel.
+    const localized =
+      '同梱の Python 実行環境を起動できませんでした。解析は実行していません。アプリを再インストールしてください。（コード: schema-notebook-python-unavailable）'
+    const execute = vi.fn(async (): Promise<ExecuteAnalysisResponse> => {
+      throw new Error(`Error invoking remote method 'schema-notebook:execute': Error: ${localized}`)
+    })
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute,
+        modelContext: vi.fn()
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === '患者表を分析'
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    class ImmediateReader {
+      result: string | ArrayBuffer | null = null
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+      readAsText(file: File): void {
+        void file.text().then((text) => {
+          this.result = text
+          this.onload?.()
+        })
+      }
+      readAsArrayBuffer(): void {
+        this.onerror?.()
+      }
+    }
+    vi.stubGlobal('FileReader', ImmediateReader)
+    const input = container.querySelector('input[type="file"]')
+    const file = new File(['age\n30'], 'ages.csv', { type: 'text/csv' })
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    const importButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'ファイルを取り込む'
+    )
+    await act(async () => {
+      importButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await importTable.mock.results.at(-1)?.value
+    })
+    const run = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === '手元で実行'
+    )
+    await act(async () => {
+      run?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(execute.mock.results.at(-1)?.value).catch(() => undefined)
+    })
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain(localized)
+    expect(container.textContent).not.toContain('Error invoking remote method')
+    expect(container.textContent).not.toContain('schema-notebook:execute')
+  })
+
   it('does not offer an opt-in control for a free-text column', async () => {
     importTable.mockResolvedValueOnce({
       ok: true,

@@ -166,7 +166,8 @@
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "无法检查此附件中的患者信息，未发送任何内容。请使用可检查的文本。",
     "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.": "此智能体连接无法检查每次模型请求中的患者信息，因此在测试版中不可用。请选择使用受检查连接的服务商。",
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "隐私检查更改了检索词，未发送检索请求。请移除患者信息后重试。",
-    "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "找不到上次导入的表格文件或无法读取，因此未执行分析。请重新选择表格文件后再运行。（代码：{{code}}）"
+    "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "找不到上次导入的表格文件或无法读取，因此未执行分析。请重新选择表格文件后再运行。（代码：{{code}}）",
+    "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "随附的 Python 运行环境无法启动，因此未执行分析。请重新安装应用。（代码：{{code}}）"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新对话可以无需询问直接运行命令、修改文件、执行 Notebook 代码和访问网络。已有对话不受影响。",
