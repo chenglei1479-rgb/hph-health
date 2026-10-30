@@ -202,13 +202,14 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
   }, [projectId])
 
   // A failed import must not leave the previous table on screen: its row count, columns and
-  // synthetic sample would read as the result of the file that just failed. Drop back to the
-  // choose-a-file state, the same way the restore path already handles a table that is gone.
+  // synthetic sample would read as the result of the file that just failed. The stored table
+  // reference is kept on purpose — the file that failed is a different one, so the table that was
+  // imported earlier is still there and reopening the project must be able to restore it. A table
+  // whose own file is gone takes the restore path below instead, which does clear the reference.
   const showImportFailure = (message: string): void => {
     setContext(null)
     setResult(null)
     setIdentifierWarnings([])
-    setTableInfo({})
     setBlocked(message)
   }
 

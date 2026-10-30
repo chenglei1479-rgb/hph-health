@@ -444,5 +444,8 @@ describe('SchemaNotebookEntry', () => {
     const stored = localStorage.getItem(schemaNotebookDraftKey('study-1'))
     expect(stored).not.toBeNull()
     expect(JSON.parse(stored as string).code).toBe(keepCode)
+    // The file that failed is not the table that was imported earlier, so its reference survives:
+    // reopening the project can still restore it.
+    expect(JSON.parse(stored as string).tableId).toBe('table-1')
   })
 })
