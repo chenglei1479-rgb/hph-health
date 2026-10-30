@@ -34,22 +34,37 @@ const readXml = (files: Record<string, Uint8Array>, path: string): string => {
   return strFromU8(bytes)
 }
 
+/** Attribute lookup that does not depend on order; the OOXML schema does not fix one. */
+const attributes = (source: string): Map<string, string> => {
+  const attrs = new Map<string, string>()
+  for (const match of source.matchAll(/([^\s=/]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    attrs.set(match[1], match[2] ?? match[3] ?? '')
+  }
+  return attrs
+}
+
+// Relationship elements are read in two steps: first the element, then each attribute by name.
+// A single order-sensitive pattern used to require `Id` before `Target`, so a valid workbook whose
+// producer writes `Type, Target, Id` produced an empty map and the caller reported "Workbook has no
+// worksheets." for a file Excel, LibreOffice and openpyxl all open fine.
 const sheetTargets = (
   workbookXml: string,
   relsXml: string
 ): Array<{ name: string; path: string }> => {
   const rels = new Map<string, string>()
-  for (const match of relsXml.matchAll(
-    /<Relationship\b[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"[^>]*\/?>/g
-  )) {
-    const target = match[2].replace(/^\//, '')
-    rels.set(match[1], target.startsWith('xl/') ? target : `xl/${target}`)
+  for (const match of relsXml.matchAll(/<Relationship\b([^>]*?)\/?>/g)) {
+    const attrs = attributes(match[1])
+    const id = attrs.get('Id')
+    const target = attrs.get('Target')
+    if (!id || !target) continue
+    const normalized = target.replace(/^\//, '')
+    rels.set(id, normalized.startsWith('xl/') ? normalized : `xl/${normalized}`)
   }
   const sheets: Array<{ name: string; path: string }> = []
-  for (const match of workbookXml.matchAll(/<sheet\b([^>]*)\/?>/g)) {
-    const attrs = match[1]
-    const name = /name="([^"]*)"/.exec(attrs)?.[1]
-    const id = /r:id="([^"]+)"/.exec(attrs)?.[1]
+  for (const match of workbookXml.matchAll(/<sheet\b([^>]*?)\/?>/g)) {
+    const attrs = attributes(match[1])
+    const name = attrs.get('name')
+    const id = attrs.get('r:id')
     if (!name || !id) continue
     const path = rels.get(id)
     if (path) sheets.push({ name: decodeXml(name), path })

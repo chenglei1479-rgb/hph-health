@@ -8,6 +8,7 @@ import { initI18n } from '../../i18n'
 import { createInitialProjectState, useProjectStore } from '@/stores/project-store'
 import type { ImportTableResponse } from '../../../../shared/schema-notebook'
 import { SchemaNotebookEntry } from './SchemaNotebookEntry'
+import { schemaNotebookCopy } from './copy'
 
 const tags = vi.fn(async () => [{ projectId: 'study-1' }])
 const importTable = vi.fn(async (): Promise<ImportTableResponse> => ({
@@ -321,5 +322,99 @@ describe('SchemaNotebookEntry', () => {
     )
     expect(container.textContent).not.toContain('患者表を分析')
     expect(container.querySelector('input[type="file"]')).toBeNull()
+  })
+
+  it('drops the previous table when the next import fails', async () => {
+    const copy = schemaNotebookCopy('ja')
+    importTable.mockResolvedValueOnce({
+      ok: true,
+      tagged: true,
+      containsPatientData: true,
+      identifierWarnings: [],
+      context: {
+        mode: 'schema-only',
+        tableId: 'table-1',
+        rowCount: 40,
+        columns: [{ name: 'group', dtype: 'categorical' }],
+        syntheticSampleRows: [['合成サンプル1']],
+        syntheticSampleNote: 'synthetic',
+        localFilename: 'table.csv'
+      }
+    })
+    importTable.mockRejectedValueOnce(
+      new Error(
+        "Error invoking remote method 'schema-notebook:import-table': ApplicationCommandError: Workbook has no worksheets."
+      )
+    )
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute: vi.fn(),
+        modelContext: vi.fn()
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    class ImmediateReader {
+      result: string | ArrayBuffer | null = null
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+      readAsText(file: File): void {
+        void file.text().then((text) => {
+          this.result = text
+          this.onload?.()
+        })
+      }
+      readAsArrayBuffer(file: File): void {
+        void file.arrayBuffer().then((buffer) => {
+          this.result = buffer
+          this.onload?.()
+        })
+      }
+    }
+    vi.stubGlobal('FileReader', ImmediateReader)
+    const selectFile = async (name: string, body: string): Promise<void> => {
+      const input = container!.querySelector('input[type="file"]')
+      const file = new File([body], name, { type: 'text/csv' })
+      Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+      await act(async () => {
+        input?.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+    }
+    const importCurrentFile = async (): Promise<void> => {
+      const importButton = Array.from(container!.querySelectorAll('button')).find(
+        (button) => button.textContent === copy.import
+      )
+      await act(async () => {
+        importButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      })
+      await act(async () => {
+        await Promise.resolve(importTable.mock.results.at(-1)?.value).catch(() => undefined)
+      })
+    }
+    await selectFile('counts.csv', 'group\nA')
+    await importCurrentFile()
+    expect(container.textContent).toContain(`${copy.rows}: 40`)
+
+    await selectFile('broken.xlsx', 'not-an-xlsx')
+    await importCurrentFile()
+    // The failed file must not leave the previous row count and columns looking current.
+    expect(container.textContent).not.toContain(`${copy.rows}: 40`)
+    expect(container.textContent).not.toContain('合成サンプル1')
+    expect(container.textContent).toContain('Workbook has no worksheets.')
+    // The panel shows the main process sentence, not the IPC transport chrome.
+    expect(container.textContent).not.toContain('Error invoking remote method')
   })
 })
