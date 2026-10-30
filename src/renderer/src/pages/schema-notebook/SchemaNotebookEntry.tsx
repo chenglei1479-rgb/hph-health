@@ -411,6 +411,16 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
               <pre className="overflow-auto text-xs">
                 {JSON.stringify(context.syntheticSampleRows)}
               </pre>
+              {result?.interpreter ? (
+                // Falling back to a Python on PATH is not silent: say which interpreter ran the
+                // script, so a missing bundled runtime reads as such instead of as a broken package.
+                <p data-testid="schema-notebook-interpreter" className="text-xs text-[#5a6b6c]">
+                  {(result.interpreter.source === 'bundled'
+                    ? copy.interpreterBundled
+                    : copy.interpreterSystem
+                  ).replace('{{version}}', result.interpreter.version)}
+                </p>
+              ) : null}
               {result ? (
                 <div className="grid gap-2">
                   <pre aria-label={copy.localResult}>{result.local.stdout}</pre>

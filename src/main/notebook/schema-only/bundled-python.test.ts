@@ -23,14 +23,15 @@ describe('schema-notebook bundled Python', () => {
       resourcesPath: '/Applications/DRA.app/Contents/Resources',
       devRoots: ['/repo/resources/schema-notebook-python'],
       exists: (path) => path === bundled,
-      probe: async () => true,
+      probe: async () => '3.12.15',
       findSystemPython
     })
 
     expect(resolved).toEqual({
       ok: true,
       source: 'bundled',
-      command: { command: bundled, baseArgs: [] }
+      command: { command: bundled, baseArgs: [] },
+      version: '3.12.15'
     })
     expect(bundled).toBe(
       '/Applications/DRA.app/Contents/Resources/schema-notebook-python/darwin-arm64/bin/python'
@@ -54,13 +55,40 @@ describe('schema-notebook bundled Python', () => {
       exists: (path) => path === packaged || path === dev,
       probe: async (command) => {
         probed.push(command.command)
-        return true
+        return '3.12.15'
       },
       findSystemPython: async () => undefined
     })
 
     expect(probed).toEqual([packaged])
     expect(resolved.ok && resolved.command.command).toBe(packaged)
+  })
+
+  it('finds the packaged prefix under a spaced, non-ASCII install path on another drive', async () => {
+    // Beta builds install to a user-chosen folder; the acceptance build used "D:\<CJK>\...".
+    const resourcesPath = 'D:/惠每资料/medresearch-agent/resources'
+    const bundled = bundledPythonExecutable(
+      `${resourcesPath}/schema-notebook-python`,
+      'win32',
+      'x64'
+    )
+    const repoDevRoot = 'C:/repo/resources/schema-notebook-python'
+    const resolved = await resolveSchemaNotebookPython({
+      platform: 'win32',
+      arch: 'x64',
+      resourcesPath,
+      devRoots: [repoDevRoot],
+      exists: (path) => path === bundled,
+      probe: async () => '3.12.15',
+      findSystemPython: async () => ({ command: 'py', baseArgs: ['-3'] })
+    })
+
+    expect(resolved).toEqual({
+      ok: true,
+      source: 'bundled',
+      command: { command: bundled, baseArgs: [] },
+      version: '3.12.15'
+    })
   })
 
   it('falls back to an already installed Python 3 and never reports a download', async () => {
@@ -76,7 +104,8 @@ describe('schema-notebook bundled Python', () => {
     expect(resolved).toEqual({
       ok: true,
       source: 'system',
-      command: { command: '/usr/local/bin/python3', baseArgs: [] }
+      command: { command: '/usr/local/bin/python3', baseArgs: [] },
+      version: 'unknown'
     })
   })
 
@@ -138,13 +167,14 @@ describe('schema-notebook bundled Python', () => {
           arch,
           devRoots: [asarDevRoot],
           exists: (path) => path === executable,
-          probe: async () => true,
+          probe: async () => '3.12.15',
           findSystemPython: async () => ({ command: 'python3', baseArgs: [] })
         })
         expect(resolved).toEqual({
           ok: true,
           source: 'bundled',
-          command: { command: executable, baseArgs: [] }
+          command: { command: executable, baseArgs: [] },
+          version: '3.12.15'
         })
       } finally {
         Object.defineProperty(process, 'resourcesPath', {
@@ -183,7 +213,7 @@ describe('schema-notebook bundled Python', () => {
         exists: (path) => path === executable,
         probe: async (command) => {
           probed.push(command.command)
-          return false
+          return undefined
         },
         findSystemPython: async () => ({ command: 'python3', baseArgs: [] })
       })
@@ -192,7 +222,8 @@ describe('schema-notebook bundled Python', () => {
       expect(resolved).toEqual({
         ok: true,
         source: 'system',
-        command: { command: 'python3', baseArgs: [] }
+        command: { command: 'python3', baseArgs: [] },
+        version: 'unknown'
       })
     }
   )

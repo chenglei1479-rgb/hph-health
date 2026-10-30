@@ -29,6 +29,8 @@ export type SchemaNotebookCopy = {
   blocked: string
   tagged: string
   language: string
+  interpreterBundled: string
+  interpreterSystem: string
   identifierWarnings: string
   restoreNotice: string
 }
@@ -65,6 +67,8 @@ const ja: SchemaNotebookCopy = {
   blocked: 'この端末は病院の承認を受けていないため、個人情報を含むファイルは取り込めません。',
   tagged: 'このプロジェクトは患者データを含むため、印を外すことはできません。',
   language: '言語',
+  interpreterBundled: '実行環境: 同梱の Python {{version}}（オフライン）',
+  interpreterSystem: '実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）',
   identifierWarnings:
     '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。',
   restoreNotice:
@@ -105,7 +109,10 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     blocked:
       'Dieser Rechner ist vom Krankenhaus nicht zugelassen. Eine Datei mit personenbezogenen Patientendaten kann nicht importiert werden.',
     tagged: 'Dieses Projekt enthält Patientendaten. Das Kennzeichen kann nicht entfernt werden.',
-    language: 'Sprache'
+    language: 'Sprache',
+    interpreterBundled: 'Laufzeit: mitgeliefertes Python {{version}} (offline)',
+    interpreterSystem:
+      'Laufzeit: System-Python {{version}} (die mitgelieferte Laufzeit konnte nicht gestartet werden)'
   },
   es: {
     ...ja,
@@ -134,7 +141,10 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     blocked:
       'Este equipo no está aprobado por el hospital. No se puede importar un archivo con datos identificables de pacientes.',
     tagged: 'Este proyecto contiene datos de pacientes. La marca no se puede quitar.',
-    language: 'Idioma'
+    language: 'Idioma',
+    interpreterBundled: 'Entorno: Python incluido {{version}} (sin conexión)',
+    interpreterSystem:
+      'Entorno: Python del sistema {{version}} (no se pudo iniciar el entorno incluido)'
   },
   fr: {
     ...ja,
@@ -163,7 +173,10 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     blocked:
       'Cette machine n’est pas approuvée par l’hôpital. Un fichier contenant des données patients identifiantes ne peut pas être importé.',
     tagged: 'Ce projet contient des données patients. Le badge ne peut pas être retiré.',
-    language: 'Langue'
+    language: 'Langue',
+    interpreterBundled: 'Environnement : Python fourni {{version}} (hors ligne)',
+    interpreterSystem:
+      'Environnement : Python du système {{version}} (l’environnement fourni n’a pas pu démarrer)'
   },
   'zh-Hans': {
     ...ja,
@@ -190,7 +203,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     modelView: '交给模型的内容',
     blocked: '此计算机未经医院批准。不能导入含有患者个人信息的文件。',
     tagged: '此项目含有患者数据，标记无法去除。',
-    language: '语言'
+    language: '语言',
+    interpreterBundled: '运行环境：随附的 Python {{version}}（离线）',
+    interpreterSystem: '运行环境：系统 Python {{version}}（随附的运行环境无法使用）'
   },
   'zh-Hant': {
     ...ja,
@@ -217,7 +232,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     modelView: '交給模型的內容',
     blocked: '此電腦未經醫院核准。不能匯入含有患者個人資訊的檔案。',
     tagged: '此專案含有患者資料，標記無法移除。',
-    language: '語言'
+    language: '語言',
+    interpreterBundled: '執行環境：隨附的 Python {{version}}（離線）',
+    interpreterSystem: '執行環境：系統 Python {{version}}（隨附的執行環境無法使用）'
   },
   ko: {
     ...ja,
@@ -246,7 +263,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     blocked:
       '이 컴퓨터는 병원 승인을 받지 않았습니다. 환자 개인정보가 있는 파일은 가져올 수 없습니다.',
     tagged: '이 프로젝트는 환자 데이터를 포함하므로 표시를 제거할 수 없습니다.',
-    language: '언어'
+    language: '언어',
+    interpreterBundled: '실행 환경: 함께 제공되는 Python {{version}}(오프라인)',
+    interpreterSystem: '실행 환경: 시스템 Python {{version}}(함께 제공되는 런타임을 사용할 수 없음)'
   },
   ru: {
     ...ja,
@@ -274,7 +293,9 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     blocked:
       'Этот компьютер не одобрен больницей. Файл с идентифицирующими данными пациента импортировать нельзя.',
     tagged: 'Проект содержит данные пациентов. Метку снять нельзя.',
-    language: 'Язык'
+    language: 'Язык',
+    interpreterBundled: 'Среда: встроенный Python {{version}} (автономно)',
+    interpreterSystem: 'Среда: системный Python {{version}} (встроенную среду не удалось запустить)'
   }
 }
 

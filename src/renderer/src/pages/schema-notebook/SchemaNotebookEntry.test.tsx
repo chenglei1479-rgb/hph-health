@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { initI18n } from '../../i18n'
 import { createInitialProjectState, useProjectStore } from '@/stores/project-store'
-import type { ImportTableResponse } from '../../../../shared/schema-notebook'
+import type { ExecuteAnalysisResponse, ImportTableResponse } from '../../../../shared/schema-notebook'
 import { SchemaNotebookEntry } from './SchemaNotebookEntry'
 import { schemaNotebookCopy } from './copy'
 import { schemaNotebookDraftKey } from './schema-notebook-draft'
@@ -118,14 +118,15 @@ describe('SchemaNotebookEntry', () => {
         localFilename: 'table.csv'
       }
     })
-    const execute = vi.fn(async () => ({
+    const execute = vi.fn(async (): Promise<ExecuteAnalysisResponse> => ({
       local: { stdout: 'group,n\nA,4\nB,20', stderr: 'ValueError: n=2', exitCode: 1 },
       forModel: {
         error: 'ValueError: n=<10',
         stdout: 'group,n\nA,<10\nB,20',
         head: 'A,<10',
         table: 'group,n\nA,<10\nB,20'
-      }
+      },
+      interpreter: { source: 'bundled' as const, version: '3.12.15' }
     }))
     window.api = {
       schemaNotebook: {
@@ -196,6 +197,30 @@ describe('SchemaNotebookEntry', () => {
     expect(local?.textContent).not.toContain('<10')
     expect(masked?.textContent).toContain('A,<10')
     expect(masked?.textContent).toContain('n=<10')
+    // The panel says which interpreter ran the script, so a PATH fallback is visible.
+    expect(container.textContent).toContain(
+      schemaNotebookCopy('ja').interpreterBundled.replace('{{version}}', '3.12.15')
+    )
+
+    // The fallback wording is the other half of the same contract: it must say the bundled runtime
+    // could not start, not that a file is missing.
+    execute.mockResolvedValueOnce({
+      local: { stdout: 'group,n\nA,4\nB,20', stderr: '', exitCode: 0 },
+      forModel: { stdout: 'group,n\nA,4\nB,20', table: 'group,n\nA,4\nB,20' },
+      interpreter: { source: 'system' as const, version: '3.13.15' }
+    })
+    const runAgain = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === schemaNotebookCopy('ja').run
+    )
+    await act(async () => {
+      runAgain?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(execute.mock.results.at(-1)?.value).catch(() => undefined)
+    })
+    expect(container.textContent).toContain(
+      schemaNotebookCopy('ja').interpreterSystem.replace('{{version}}', '3.13.15')
+    )
   })
 
   it('does not offer an opt-in control for a free-text column', async () => {
