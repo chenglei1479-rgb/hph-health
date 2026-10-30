@@ -408,6 +408,19 @@ describe('SchemaNotebookEntry', () => {
     await importCurrentFile()
     expect(container.textContent).toContain(`${copy.rows}: 40`)
 
+    // A failed import must never discard the user's code; that is the whole point of keeping the
+    // editor usable without a table.
+    const keepCode = 'print("keep this draft")'
+    await act(async () => {
+      const textarea = container!.querySelector('textarea') as HTMLTextAreaElement
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(
+        textarea,
+        keepCode
+      )
+      textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect((container.querySelector('textarea') as HTMLTextAreaElement).value).toBe(keepCode)
+
     await selectFile('broken.xlsx', 'not-an-xlsx')
     await importCurrentFile()
     // The failed file must not leave the previous row count and columns looking current.
@@ -416,5 +429,11 @@ describe('SchemaNotebookEntry', () => {
     expect(container.textContent).toContain('Workbook has no worksheets.')
     // The panel shows the main process sentence, not the IPC transport chrome.
     expect(container.textContent).not.toContain('Error invoking remote method')
+    // The draft survives the failure, and Run stays unavailable without a table.
+    expect((container.querySelector('textarea') as HTMLTextAreaElement).value).toBe(keepCode)
+    const runButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.run
+    ) as HTMLButtonElement | undefined
+    expect(runButton?.disabled).toBe(true)
   })
 })
