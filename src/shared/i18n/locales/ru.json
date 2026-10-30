@@ -8125,6 +8125,17 @@
     "A missing ethics number is a reminder and does not block writing.": "Отсутствие этического номера вызывает напоминание, но не блокирует написание.",
     "Review project memory in Settings > Memory.": "Просмотрите память проекта в разделе Настройки > Память.",
     "This checklist supports study-design review; it does not guarantee journal acceptance. You and your mentor make the final decision.": "Этот список помогает проверить дизайн исследования и не гарантирует принятие журналом. Окончательное решение принимаете вы и наставник.",
-    "For a selected column, at most {{limit}} category values are sent, most frequent first; the rest are omitted.": "Для выбранного столбца отправляется не более {{limit}} значений категорий по убыванию частоты; остальные опускаются."
+    "For a selected column, at most {{limit}} category values are sent, most frequent first; the rest are omitted.": "Для выбранного столбца отправляется не более {{limit}} значений категорий по убыванию частоты; остальные опускаются.",
+    "Seed invite slot": "Слот seed-приглашения",
+    "Redeem the invite code once on this device. The company key is never shown or exported, and registering your own key replaces it at any time.": "Код приглашения активируется на этом компьютере один раз. Ключ компании никогда не отображается и не экспортируется; вы можете в любой момент заменить его своим ключом.",
+    "Invite code": "Код приглашения",
+    "Redeem": "Активировать",
+    "Seed slot active": "Слот seed-приглашения активен",
+    "Abstract draft plus one revision — sets remaining: {{remaining}}": "Черновик тезиса и одна правка: осталось наборов — {{remaining}}",
+    "Using your own key": "Используется ваш API-ключ",
+    "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; hospital operations and real data are out of scope.": "Лимит ИИ по seed-приглашению исчерпан. Чтобы продолжить, зарегистрируйте свой API-ключ OpenAI или рассмотрите платный план, когда он появится. Демонстрация (вымышленные данные) и поиск по литературе продолжают работать. В бете используйте только вымышленные данные; официальная работа больницы и реальные данные вне области применения.",
+    "The AI contracted by the operator (OpenAI in the beta)": "ИИ-сервис, с которым оператор заключил договор (в бете OpenAI)",
+    "The provider you registered": "Зарегистрированный вами поставщик",
+    "No AI provider is configured": "Поставщик ИИ не настроен"
   }
 }
