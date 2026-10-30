@@ -8,6 +8,11 @@ export const SCHEMA_NOTEBOOK_LOCAL_FILENAME = 'table.csv'
 // instead of leaking ENOENT and an absolute local path to the panel.
 export const SCHEMA_NOTEBOOK_TABLE_MISSING_CODE = 'schema-notebook-table-missing' as const
 
+// The installer ships an offline Python for the Notebook. When that interpreter exists but cannot
+// start (blocked by antivirus, missing DLL, corrupt install) the analysis stops with this code
+// instead of falling back to a Python on PATH that usually lacks the statistical packages.
+export const SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE = 'schema-notebook-python-unavailable' as const
+
 export const COLLECTION_SHEET_NAME = '収集'
 
 export type SchemaDtype = 'integer' | 'number' | 'binary' | 'categorical' | 'text' | 'date'

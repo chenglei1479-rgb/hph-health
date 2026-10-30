@@ -68,12 +68,19 @@ export type SchemaNotebookPythonResolution =
       /** Reported by `--version`, e.g. `3.12.15`. `unknown` when the probe could not read it. */
       version: string
     }
-  | { ok: false; message: string }
+  // `unusable`: the installer's prefix is there but its interpreter cannot start. `missing`: no usable
+  // interpreter was found at all. The caller reports the first as a coded failure and keeps the second
+  // as the in-panel message it already had.
+  | { ok: false; message: string; reason: 'unusable' | 'missing' }
 
 const missingRuntimeMessage = (expected: string): string =>
   `The offline schema-notebook Python runtime was not found at ${expected}. ` +
   `It must be bundled in the installer with ${SCHEMA_NOTEBOOK_PYTHON_PACKAGES.join(', ')}. ` +
   'It is not downloaded on first run.'
+
+// Rendered through the panel's localized copy, so the sentence here is the English original.
+const unusableRuntimeMessage = (): string =>
+  'The bundled Python runtime could not start, so the analysis was not run. Reinstall the app.'
 
 /**
  * Prefers the installer prefix under resources/schema-notebook-python, then a
@@ -113,6 +120,12 @@ export const resolveSchemaNotebookPython = async (
     ...(resourcesPath ? [join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR)] : []),
     ...(deps.devRoots ?? schemaNotebookPythonDevRoots())
   ]
+  // A prefix under the packaged resources directory is the one the installer ships. If that
+  // interpreter cannot start, the installation is broken: falling back to whatever Python is on PATH
+  // hides the cause and usually yields a pandas error that blames the script instead of the runtime.
+  // A developer checkout is different — it legitimately has no packaged prefix, so it still falls
+  // through to PATH.
+  const packagedRoot = resourcesPath ? join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR) : undefined
   for (const root of roots) {
     const command = bundledPythonExecutable(root, platform, arch)
     if (!exists(command)) continue
@@ -122,9 +135,13 @@ export const resolveSchemaNotebookPython = async (
       pythonLog.info('interpreter resolved', { source: 'bundled', version })
       return { ok: true, command: candidate, source: 'bundled', version }
     }
-    // The prefix exists but could not be executed: say so, because the next step is the PATH
-    // fallback and that changes which packages are available.
     pythonLog.warn('bundled interpreter did not answer --version', { source: 'bundled' })
+    if (root === packagedRoot) {
+      pythonLog.warn('packaged interpreter could not start; not falling back to PATH', {
+        source: 'bundled'
+      })
+      return { ok: false, message: unusableRuntimeMessage(), reason: 'unusable' }
+    }
   }
   const system = await (deps.findSystemPython ?? (() => findPythonCommand({ platform })))()
   if (system) {
@@ -138,5 +155,5 @@ export const resolveSchemaNotebookPython = async (
     arch
   )
   pythonLog.warn('no interpreter resolved', { source: 'missing' })
-  return { ok: false, message: missingRuntimeMessage(expected) }
+  return { ok: false, message: missingRuntimeMessage(expected), reason: 'missing' }
 }

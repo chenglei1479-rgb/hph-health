@@ -269,6 +269,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
         })
       )
     } catch (error) {
+      // The main process localizes this failure: the execute channel is a direct IPC channel, so a code
+      // set on the thrown error never reaches the renderer. Showing the sentence as-is keeps the panel
+      // in one language.
       setBlocked(failureText(error))
     } finally {
       setBusy(false)

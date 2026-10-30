@@ -34,6 +34,9 @@ export type SchemaNotebookCopy = {
   // Shown after a failed import while an earlier table is still referenced. Deliberately not the
   // restoreNotice wording: that one says the table could not be restored, this one says it can.
   tableStillSaved: string
+  // Says which interpreter ran the script, so a PATH fallback and a bundled run are distinguishable.
+  interpreterBundled: string
+  interpreterSystem: string
 }
 
 const ja: SchemaNotebookCopy = {

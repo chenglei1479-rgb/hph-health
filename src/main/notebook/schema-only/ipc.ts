@@ -1,6 +1,7 @@
 import { ipcMainHandle } from '../../ipc-handler-registry'
 import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import {
+  SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
   SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
   type CategoricalOptInRequest,
   type ExecuteAnalysisRequest,
@@ -18,7 +19,7 @@ import { createSchemaNotebookService, type SchemaNotebookService } from './servi
 // envelope or through the preload's "[code] message" bridge, the mapper in
 // renderer/src/lib/application-command-error-message.ts must handle the code explicitly, otherwise its
 // default "the app could not complete that action" copy would hide the actionable sentence.
-const localizeTableMissing =
+const localizeSchemaNotebookFailure =
   (translate: NativeTranslator): ((error: unknown) => never) =>
   (error) => {
     if (
@@ -30,6 +31,19 @@ const localizeTableMissing =
       throw new Error(
         translate(
           'The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})',
+          { code: error.code }
+        )
+      )
+    }
+    if (
+      error instanceof ApplicationCommandError &&
+      error.code === SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE
+    ) {
+      // Same reasoning: the user's next step is to reinstall, not to edit the script. The sentence must
+      // not say "not found", and it must not name the interpreter path.
+      throw new Error(
+        translate(
+          'The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})',
           { code: error.code }
         )
       )
@@ -46,7 +60,7 @@ export const registerSchemaNotebookIpc = (
   service: SchemaNotebookService = createSchemaNotebookService(options)
 ): SchemaNotebookService => {
   const translate = options.translate ?? englishNativeTranslator
-  const missingTable = localizeTableMissing(translate)
+  const localizeFailure = localizeSchemaNotebookFailure(translate)
   ipcMainHandle('schema-notebook:import-table', (_event, request: ImportTableRequest) =>
     service.importTable(request)
   )
@@ -56,7 +70,7 @@ export const registerSchemaNotebookIpc = (
       try {
         return await service.optInCategorical(request)
       } catch (error) {
-        return missingTable(error)
+        return localizeFailure(error)
       }
     }
   )
@@ -66,7 +80,7 @@ export const registerSchemaNotebookIpc = (
       try {
         return await service.modelContext(request.projectId, request.tableId)
       } catch (error) {
-        return missingTable(error)
+        return localizeFailure(error)
       }
     }
   )
@@ -74,7 +88,7 @@ export const registerSchemaNotebookIpc = (
     try {
       return await service.execute(request)
     } catch (error) {
-      return missingTable(error)
+      return localizeFailure(error)
     }
   })
   ipcMainHandle('schema-notebook:patient-data-tags', () => service.patientDataTags())
