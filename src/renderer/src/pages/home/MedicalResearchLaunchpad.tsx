@@ -33,7 +33,6 @@ import { dismissPackDeliveryHomeCard, usePackDeliveryLedger } from './pack-deliv
 import { PackNextStepCard } from './PackNextStepCard'
 import { SampleAbstractDialog } from './SampleAbstractDialog'
 import { useSettingsStore } from '@/stores/settings-store'
-import { SEED_EXHAUSTED_COPY } from '../../../../shared/seed-invite'
 
 // Same cap as CATEGORICAL_RELEASE_LIMIT in the schema-only release path.
 // The renderer does not import that main-process module.
@@ -138,7 +137,13 @@ const MedicalResearchLaunchpad = ({
     setSeedUsageError(undefined)
     void consumeSeedPackage()
       .then(() => onSelectWorkflow(workflow, theme))
-      .catch(() => setSeedUsageError(SEED_EXHAUSTED_COPY))
+      .catch(() =>
+        setSeedUsageError(
+          t(
+            'You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; hospital operations and real data are out of scope.'
+          )
+        )
+      )
   }
   const themeReady = researchTheme.trim().length > 0
 

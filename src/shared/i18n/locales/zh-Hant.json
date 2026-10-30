@@ -7658,6 +7658,17 @@
     "A missing ethics number is a reminder and does not block writing.": "倫理編號缺漏僅作提醒，不阻止寫作。",
     "Review project memory in Settings > Memory.": "在「設定 > 記憶」中查看專案記憶。",
     "This checklist supports study-design review; it does not guarantee journal acceptance. You and your mentor make the final decision.": "此清單輔助核查研究設計，不保證期刊錄用。最終由您與指導醫師判斷。",
-    "For a selected column, at most {{limit}} category values are sent, most frequent first; the rest are omitted.": "對於您選定的欄，按頻率由高至低最多傳送 {{limit}} 個分類值，其餘省略。"
+    "For a selected column, at most {{limit}} category values are sent, most frequent first; the rest are omitted.": "對於您選定的欄，按頻率由高至低最多傳送 {{limit}} 個分類值，其餘省略。",
+    "Seed invite slot": "種子邀請名額",
+    "Redeem the invite code once on this device. The company key is never shown or exported, and registering your own key replaces it at any time.": "邀請碼只能在本機兌換一次。公司金鑰的全文不會被顯示或匯出；您隨時可以登錄自己的金鑰來覆蓋它。",
+    "Invite code": "邀請碼",
+    "Redeem": "兌換",
+    "Seed slot active": "正在使用種子邀請名額",
+    "Abstract draft plus one revision — sets remaining: {{remaining}}": "摘要初稿＋一次修改：剩餘 {{remaining}} 套",
+    "Using your own key": "正在使用您自己的 API 金鑰",
+    "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; hospital operations and real data are out of scope.": "種子邀請的 AI 額度已用完。若要繼續使用，請登錄您自己的 OpenAI API 金鑰，或待付費方案推出後再考慮。示範（虛構資料）與文獻檢索仍可繼續使用。測試版僅可使用虛構資料；醫院的正式營運與真實資料不在適用範圍內。",
+    "The AI contracted by the operator (OpenAI in the beta)": "營運方簽約的 AI（測試版為 OpenAI）",
+    "The provider you registered": "您登錄的服務商",
+    "No AI provider is configured": "未設定 AI 服務商"
   }
 }

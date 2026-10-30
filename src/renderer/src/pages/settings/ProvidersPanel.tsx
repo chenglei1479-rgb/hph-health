@@ -47,8 +47,6 @@ import {
 import { ClaudeIsolatedSignInModal } from './ClaudeIsolatedSignInModal'
 import { XaiOAuthSignInDialog } from './XaiOAuthSignInDialog'
 import { localizeProviderResourceMessage } from './validation-message'
-import { SEED_UI_COPY } from '../../../../shared/seed-invite'
-import { SEED_EXHAUSTED_COPY } from '../../../../shared/seed-invite'
 
 type ProvidersPanelProps = {
   // Navigation callbacks into the page-level history: the add/edit provider form is a breadcrumb
@@ -502,7 +500,12 @@ const ProvidersPanel = ({
 
   return (
     <div className="space-y-5 p-5">
-      <SettingsSection title={SEED_UI_COPY.title} description={SEED_UI_COPY.description}>
+      <SettingsSection
+        title={t('Seed invite slot')}
+        description={t(
+          'Redeem the invite code once on this device. The company key is never shown or exported, and registering your own key replaces it at any time.'
+        )}
+      >
         {seedInvite.redeemed ? (
           <div className="space-y-2">
             <Notice
@@ -510,19 +513,28 @@ const ProvidersPanel = ({
               level={seedInvite.exhausted ? 'warning' : 'success'}
               description={
                 seedInvite.mode === 'company'
-                  ? `${SEED_UI_COPY.active} · ${SEED_UI_COPY.remaining.replace('{{count}}', String(seedInvite.packagesRemaining))}`
-                  : SEED_UI_COPY.byok
+                  ? `${t('Seed slot active')} · ${t(
+                      'Abstract draft plus one revision — sets remaining: {{remaining}}',
+                      { remaining: seedInvite.packagesRemaining }
+                    )}`
+                  : t('Using your own key')
               }
             />
             {seedInvite.exhausted && seedInvite.mode === 'company' ? (
-              <Notice inline level="warning" description={SEED_EXHAUSTED_COPY} />
+              <Notice
+                inline
+                level="warning"
+                description={t(
+                  'You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; hospital operations and real data are out of scope.'
+                )}
+              />
             ) : null}
           </div>
         ) : (
           <div className="flex items-end gap-2">
-            <SettingsField label={SEED_UI_COPY.code} className="flex-1">
+            <SettingsField label={t('Invite code')} className="flex-1">
               <input
-                aria-label={SEED_UI_COPY.code}
+                aria-label={t('Invite code')}
                 type="password"
                 autoComplete="off"
                 value={inviteCode}
@@ -546,7 +558,7 @@ const ProvidersPanel = ({
               }}
             >
               {invitePending ? <Loader2 className="animate-spin" aria-hidden="true" /> : null}
-              {SEED_UI_COPY.redeem}
+              {t('Redeem')}
             </Button>
           </div>
         )}
