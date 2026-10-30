@@ -259,7 +259,52 @@ function patientSpans(text: string): PhiBlockedSpan[] {
     }))
 }
 
-function assertMachineMaySend(texts: readonly string[]): void {
+// A scanned string plus where it sits in the provider body (`input[2].content[0].text`, `system`).
+// The path describes structure only: object keys in a provider body come from provider schemas, and a
+// caller must never feed user-derived keys here (the blocking projection walks known content keys).
+type ScannedModelText = { text: string; field: string }
+
+/** One blocked hit, as written to the log: never the matched text. */
+export type BlockedSpanDiagnostic = {
+  category: string
+  offset: number
+  length: number
+  field: string
+}
+
+const normalizeScanned = (
+  values: readonly (string | ScannedModelText)[]
+): ScannedModelText[] =>
+  values.map((value) => (typeof value === 'string' ? { text: value, field: 'text' } : value))
+
+const diagnosticFor = (
+  values: readonly ScannedModelText[]
+): { diagnostics: BlockedSpanDiagnostic[]; spans: PhiBlockedSpan[] } => {
+  const diagnostics: BlockedSpanDiagnostic[] = []
+  const spans: PhiBlockedSpan[] = []
+  for (const { text, field } of values) {
+    for (const span of patientSpans(text)) {
+      spans.push(span)
+      diagnostics.push({
+        category: span.category,
+        offset: span.start,
+        length: span.end - span.start,
+        field
+      })
+    }
+  }
+  return { diagnostics, spans }
+}
+
+/**
+ * The diagnostic payload for a provider body: category, offset, length and the structural field for
+ * every hit, and no matched text. Reading the field is what tells a `system` prompt hit apart from a
+ * conversation hit when a false positive has to be localized.
+ */
+export const blockedSpanDiagnostics = (body: unknown): BlockedSpanDiagnostic[] =>
+  diagnosticFor(collectModelContentStrings(body)).diagnostics
+
+function assertMachineMaySend(texts: readonly (string | ScannedModelText)[]): void {
   let approved = false
   try {
     approved = machineApproved()
@@ -267,8 +312,7 @@ function assertMachineMaySend(texts: readonly string[]): void {
     throw modelReleaseError()
   }
   if (approved) return
-  const grouped = texts.map((text) => patientSpans(text))
-  const spans = grouped.flat()
+  const { diagnostics, spans } = diagnosticFor(normalizeScanned(texts))
   if (spans.length === 0) return
   const translate = blockTranslator
   // The blocked span text is patient information. Keep it out of the log: the stable number plus where
@@ -276,11 +320,7 @@ function assertMachineMaySend(texts: readonly string[]): void {
   phiBlockLog.warn('model content blocked', {
     code: PHI_BLOCK_CODE,
     hits: spans.length,
-    spans: spans.map((span) => ({
-      category: span.category,
-      offset: span.start,
-      length: span.end - span.start
-    }))
+    spans: diagnostics
   })
   throw new PhiGateError(formatUnapprovedBlock(translate), spans)
 }
@@ -333,31 +373,34 @@ const isReleaseKey = (key: string): boolean =>
 
 function collectContentValue(
   value: unknown,
-  out: string[],
+  field: string,
+  out: ScannedModelText[],
   include: (key: string) => boolean
 ): void {
   if (typeof value === 'string') {
-    out.push(value)
+    out.push({ text: value, field: field || 'body' })
     return
   }
   if (Array.isArray(value)) {
-    for (const item of value) collectContentValue(item, out, include)
+    value.forEach((item, index) => collectContentValue(item, `${field}[${index}]`, out, include))
     return
   }
   if (value && typeof value === 'object') {
     for (const [key, child] of Object.entries(value)) {
-      if (include(key)) collectContentValue(child, out, include)
+      if (!include(key)) continue
+      // Structure only: the key names here come from the provider's own schema.
+      collectContentValue(child, field ? `${field}.${key}` : key, out, include)
     }
   }
 }
 
-function collectModelContentStrings(body: unknown): string[] {
-  const out: string[] = []
+function collectModelContentStrings(body: unknown): ScannedModelText[] {
+  const out: ScannedModelText[] = []
   if (typeof body === 'string') {
-    out.push(body)
+    out.push({ text: body, field: 'body' })
     return out
   }
-  collectContentValue(body, out, isBlockingKey)
+  collectContentValue(body, '', out, isBlockingKey)
   return out
 }
 
@@ -559,7 +602,12 @@ export function sendPhiChecked<T>(
     // Restore only for the local approval check; the restored value is never sent.
     const restoredTexts =
       typeof released === 'string' ? collectModelContentStrings(JSON.parse(text)) : []
-    assertMachineMaySend(restoredTexts.map((value) => installed.restore(value, projectId)))
+    assertMachineMaySend(
+      restoredTexts.map((value) => ({
+        text: installed.restore(value.text, projectId),
+        field: value.field
+      }))
+    )
     const prior = turn?.reviews.get(destination)
     const confirmed =
       prior?.revision === revision && prior.approved === approved ? prior.tokens : new Set<string>()
