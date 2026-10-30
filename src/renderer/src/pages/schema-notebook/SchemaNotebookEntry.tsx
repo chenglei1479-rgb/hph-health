@@ -201,6 +201,18 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     }
   }, [projectId])
 
+  // A failed import must not leave the previous table on screen: its row count, columns and
+  // synthetic sample would read as the result of the file that just failed. The stored table
+  // reference is kept on purpose — the file that failed is a different one, so the table that was
+  // imported earlier is still there and reopening the project must be able to restore it. A table
+  // whose own file is gone takes the restore path below instead, which does clear the reference.
+  const showImportFailure = (message: string): void => {
+    setContext(null)
+    setResult(null)
+    setIdentifierWarnings([])
+    setBlocked(message)
+  }
+
   const importFile = async (): Promise<void> => {
     const notebook = api()
     if (!notebook || !file) return
@@ -215,9 +227,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
         ...body
       })
       if (!response.ok) {
-        setContext(null)
-        setIdentifierWarnings([])
-        setBlocked(response.message)
+        showImportFailure(response.message)
         return
       }
       setIdentifierWarnings(response.identifierWarnings.map((warning) => warning.message))
@@ -227,7 +237,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       setRestoreNotice(false)
       setTableInfo({ tableId: response.context.tableId, filename: file.name })
     } catch (error) {
-      setBlocked(error instanceof Error ? error.message : String(error))
+      // Strip the IPC transport chrome so the panel shows the main process sentence, not
+      // "Error invoking remote method 'schema-notebook:import-table': ...".
+      showImportFailure(failureText(error))
     } finally {
       setBusy(false)
     }

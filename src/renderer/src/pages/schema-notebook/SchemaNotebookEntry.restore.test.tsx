@@ -219,6 +219,8 @@ describe('schema notebook panel restore', () => {
     // The user's code stays; it simply is not attached to any table any more.
     expect(container?.querySelector('textarea')?.value).toBe('print(df.head())')
     expect(container?.textContent).not.toContain('行数: 3')
+    // The reference itself is cleared: keeping it would point at a table that is gone.
+    expect(loadSchemaNotebookDraft('study-1').tableId).toBeUndefined()
     // A missing table disables Run and never repeats the internal file error.
     expect(runButton(container)?.disabled).toBe(true)
     expect(container?.textContent).not.toContain('ENOENT')
@@ -277,5 +279,51 @@ describe('schema notebook panel restore', () => {
     expect(next.code).toBe(SCHEMA_NOTEBOOK_DEFAULT_CODE)
     expect(next.tableId).toBeUndefined()
     expect(container?.querySelector('textarea')?.value).toBe(SCHEMA_NOTEBOOK_DEFAULT_CODE)
+  })
+
+  it('keeps the previous table reference when a new file fails, and restores it on reopen', async () => {
+    await mount('study-1')
+    await clickText('患者表を分析')
+    await importCsv()
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(container?.textContent).toContain('行数: 3')
+
+    importTable.mockRejectedValueOnce(
+      new Error(
+        "Error invoking remote method 'schema-notebook:import-table': ApplicationCommandError: Workbook has no worksheets."
+      )
+    )
+    const input = container?.querySelector<HTMLInputElement>('input[type="file"]')
+    const broken = new File(['not-an-xlsx'], 'broken.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    Object.defineProperty(input!, 'files', { configurable: true, value: [broken] })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await clickText('ファイルを取り込む')
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    // The failed file is not the stored table: its preview goes away, its reference stays.
+    expect(container?.textContent).not.toContain('行数: 3')
+    expect(container?.textContent).toContain('Workbook has no worksheets.')
+    expect(runButton(container)?.disabled).toBe(true)
+    expect(loadSchemaNotebookDraft('study-1').tableId).toBe('table-1')
+
+    await unmount()
+    modelContext.mockClear()
+    await mount('study-1')
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(modelContext).toHaveBeenCalledWith({ projectId: 'study-1', tableId: 'table-1' })
+    await clickText('患者表を分析')
+    expect(container?.textContent).toContain('行数: 3')
+    expect(runButton(container)?.disabled).toBe(false)
   })
 })
