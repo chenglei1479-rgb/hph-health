@@ -4,8 +4,11 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { prepareCodexRuntimeHomeAuthentication, serializeCodexEgressPolicy } from './codex-auth'
-
+import {
+  prepareCodexRuntimeHomeAuthentication,
+  serializeCodexEgressPolicy,
+  serializeCodexEnvironmentContext
+} from './codex-auth'
 const createRoot = async (): Promise<string> => mkdtemp(join(tmpdir(), 'codex-egress-'))
 
 describe('serializeCodexEgressPolicy', () => {
@@ -53,6 +56,57 @@ describe('serializeCodexEgressPolicy', () => {
   })
 })
 
+describe('serializeCodexEnvironmentContext', () => {
+  it('turns the injected environment block off above the first table', () => {
+    const config = serializeCodexEnvironmentContext('cli_auth_credentials_store = "ephemeral"\n')
+
+    expect(config).toContain('include_environment_context = false')
+    expect(config.indexOf('include_environment_context')).toBeGreaterThan(
+      config.indexOf('cli_auth_credentials_store')
+    )
+  })
+
+  it('replaces a stale top-level assignment instead of appending a second one', () => {
+    const config = serializeCodexEnvironmentContext(
+      [
+        'include_environment_context = true',
+        'model = "gpt-5"',
+        '',
+        '[analytics]',
+        'enabled = false'
+      ].join('\n')
+    )
+
+    expect(config).not.toContain('include_environment_context = true')
+    expect(config.match(/include_environment_context/g)).toHaveLength(1)
+    expect(config).toContain('model = "gpt-5"')
+    expect(config).toContain('[analytics]')
+    // The assignment stays top-level: Codex only reads it there.
+    expect(config.indexOf('include_environment_context')).toBeLessThan(
+      config.indexOf('[analytics]')
+    )
+  })
+
+  it('leaves a same-named key inside a table alone', () => {
+    const config = serializeCodexEnvironmentContext(
+      ['[profiles.default]', 'include_environment_context = true'].join('\n')
+    )
+
+    expect(config).toContain('[profiles.default]')
+    expect(config).toContain('include_environment_context = true')
+    expect(config.match(/include_environment_context = false/g)).toHaveLength(1)
+    expect(config.indexOf('include_environment_context = false')).toBeLessThan(
+      config.indexOf('[profiles.default]')
+    )
+  })
+
+  it('is idempotent', () => {
+    const once = serializeCodexEnvironmentContext('model = "gpt-5"\n')
+    const twice = serializeCodexEnvironmentContext(once)
+    expect(twice).toBe(once)
+  })
+})
+
 describe('Codex runtime home', () => {
   it('writes the forced egress policy into every prepared runtime home', async () => {
     const root = await createRoot()
@@ -68,6 +122,9 @@ describe('Codex runtime home', () => {
     expect(config).toContain('[analytics]')
     expect(config).toContain('[feedback]')
     expect(config).toContain('enabled = false')
+    // Artifact code reconstruction runs on this restricted home and passes the same PHI gate, so it
+    // needs the environment-context switch too (WIN-MODEL-004).
+    expect(config).toContain('include_environment_context = false')
   })
 
   it('keeps the forced policy when an existing config has stale values', async () => {

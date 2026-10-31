@@ -205,6 +205,9 @@ describe('RestrictedInferenceRunner', () => {
     ).rejects.toMatchObject({ code: 'ENOENT' })
     const configToml = await readFile(join(prepared.env.CODEX_HOME!, 'config.toml'), 'utf8')
     expect(configToml).toContain('cli_auth_credentials_store = "ephemeral"')
+    // The restricted home carries the same environment-context switch as the main home, or the PHI
+    // gate blocks artifact code reconstruction on the injected date (WIN-MODEL-004).
+    expect(configToml).toContain('include_environment_context = false')
     expect(configToml).not.toContain('subscription-route')
     expect(configToml).not.toContain('base_url')
     expect(configToml).not.toContain('mcp_servers')

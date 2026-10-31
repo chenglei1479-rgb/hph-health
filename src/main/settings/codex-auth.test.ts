@@ -17,6 +17,7 @@ import {
   projectSafeCodexProviderRoute,
   resolveEffectiveCodexSubscriptionTransport,
   serializeCodexEgressPolicy,
+  serializeCodexEnvironmentContext,
   type CodexAuthSession
 } from './codex-auth'
 
@@ -35,7 +36,9 @@ const session = (overrides: Partial<CodexAuthSession> = {}): CodexAuthSession =>
 })
 
 const autoTransportConfig = (prefix: string[] = []): string =>
-  serializeCodexEgressPolicy([...prefix, 'cli_auth_credentials_store = "file"', ''].join('\n'))
+  serializeCodexEnvironmentContext(
+    serializeCodexEgressPolicy([...prefix, 'cli_auth_credentials_store = "file"', ''].join('\n'))
+  )
 
 const storedChatGptAuth = JSON.stringify({
   auth_mode: 'chatgpt',
