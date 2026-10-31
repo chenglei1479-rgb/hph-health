@@ -162,8 +162,11 @@ describe('SchemaNotebookEntry', () => {
           this.onload?.()
         })
       }
-      readAsArrayBuffer(): void {
-        this.onerror?.()
+      readAsArrayBuffer(file: File): void {
+        void file.arrayBuffer().then((buffer) => {
+          this.result = buffer
+          this.onload?.()
+        })
       }
     }
     vi.stubGlobal('FileReader', ImmediateReader)
@@ -284,8 +287,11 @@ describe('SchemaNotebookEntry', () => {
           this.onload?.()
         })
       }
-      readAsArrayBuffer(): void {
-        this.onerror?.()
+      readAsArrayBuffer(file: File): void {
+        void file.arrayBuffer().then((buffer) => {
+          this.result = buffer
+          this.onload?.()
+        })
       }
     }
     vi.stubGlobal('FileReader', ImmediateReader)
@@ -383,8 +389,11 @@ describe('SchemaNotebookEntry', () => {
           this.onload?.()
         })
       }
-      readAsArrayBuffer(): void {
-        this.onerror?.()
+      readAsArrayBuffer(file: File): void {
+        void file.arrayBuffer().then((buffer) => {
+          this.result = buffer
+          this.onload?.()
+        })
       }
     }
     vi.stubGlobal('FileReader', ImmediateReader)

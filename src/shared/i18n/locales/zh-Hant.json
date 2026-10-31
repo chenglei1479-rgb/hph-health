@@ -166,6 +166,7 @@
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "無法檢查此附件中的患者資訊，未傳送任何內容。請使用可檢查的文字。",
     "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.": "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.",
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "隱私檢查更改了檢索詞，未傳送檢索請求。請移除患者資訊後重試。",
+    "Choose a CSV file in UTF-8 or Shift-JIS.": "請選擇 UTF-8 或 Shift_JIS 編碼的 CSV 檔案。",
     "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "找不到上次匯入的表格檔案或無法讀取，因此未執行分析。請重新選擇表格檔案後再執行。（代碼：{{code}}）",
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "隨附的 Python 執行環境無法啟動，因此未執行分析。請重新安裝應用程式。（代碼：{{code}}）"
   },

@@ -168,6 +168,7 @@
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "No se puede comprobar si este adjunto contiene información de pacientes. No se ha enviado nada. Utilice texto que se pueda comprobar.",
     "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.": "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.",
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "Los términos de búsqueda se han modificado durante la comprobación de privacidad. La búsqueda no se ha enviado. Retire la información de pacientes y vuelva a intentarlo.",
+    "Choose a CSV file in UTF-8 or Shift-JIS.": "Elija un archivo CSV en UTF-8 o Shift_JIS.",
     "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "Falta el archivo de la tabla importada anteriormente o no se puede leer, por lo que el análisis no se ejecutó. Vuelva a elegir el archivo de la tabla y ejecútelo de nuevo. (Código: {{code}})",
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "No se pudo iniciar el entorno de Python incluido, por lo que el análisis no se ejecutó. Reinstale la aplicación. (Código: {{code}})"
   },

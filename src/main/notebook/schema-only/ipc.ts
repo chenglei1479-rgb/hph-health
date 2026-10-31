@@ -1,6 +1,7 @@
 import { ipcMainHandle } from '../../ipc-handler-registry'
 import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import {
+  SCHEMA_NOTEBOOK_CSV_ENCODING_CODE,
   SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
   SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
   type CategoricalOptInRequest,
@@ -48,6 +49,14 @@ const localizeSchemaNotebookFailure =
         )
       )
     }
+    if (
+      error instanceof ApplicationCommandError &&
+      error.code === SCHEMA_NOTEBOOK_CSV_ENCODING_CODE
+    ) {
+      // The file decoded as neither UTF-8 nor CP932. Naming the encodings is the usable next step;
+      // "save it as UTF-8" alone would push the conversion back onto the user.
+      throw new Error(translate('Choose a CSV file in UTF-8 or Shift-JIS.'))
+    }
     throw error
   }
 
@@ -61,9 +70,13 @@ export const registerSchemaNotebookIpc = (
 ): SchemaNotebookService => {
   const translate = options.translate ?? englishNativeTranslator
   const localizeFailure = localizeSchemaNotebookFailure(translate)
-  ipcMainHandle('schema-notebook:import-table', (_event, request: ImportTableRequest) =>
-    service.importTable(request)
-  )
+  ipcMainHandle('schema-notebook:import-table', async (_event, request: ImportTableRequest) => {
+    try {
+      return await service.importTable(request)
+    } catch (error) {
+      return localizeFailure(error)
+    }
+  })
   ipcMainHandle(
     'schema-notebook:opt-in-categorical',
     async (_event, request: CategoricalOptInRequest) => {

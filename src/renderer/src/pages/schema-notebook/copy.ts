@@ -29,6 +29,8 @@ export type SchemaNotebookCopy = {
   blocked: string
   tagged: string
   language: string
+  /** Says how the CSV was decoded, so the user can check for mojibake before trusting the columns. */
+  encodingNotice: string
   identifierWarnings: string
   restoreNotice: string
   // Shown after a failed import while an earlier table is still referenced. Deliberately not the
@@ -71,6 +73,8 @@ const ja: SchemaNotebookCopy = {
   blocked: 'この端末は病院の承認を受けていないため、個人情報を含むファイルは取り込めません。',
   tagged: 'このプロジェクトは患者データを含むため、印を外すことはできません。',
   language: '言語',
+  encodingNotice:
+    '{{encoding}} として読み込みました。文字化けがある場合は、Excel で「CSV UTF-8（コンマ区切り）」として保存し直してください。',
   interpreterBundled: '実行環境: 同梱の Python {{version}}（オフライン）',
   interpreterSystem:
     '実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）',
@@ -117,6 +121,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
       'Dieser Rechner ist vom Krankenhaus nicht zugelassen. Eine Datei mit personenbezogenen Patientendaten kann nicht importiert werden.',
     tagged: 'Dieses Projekt enthält Patientendaten. Das Kennzeichen kann nicht entfernt werden.',
     language: 'Sprache',
+    encodingNotice:
+      'Als {{encoding}} gelesen. Prüfen Sie, ob die Spaltennamen korrekt sind.',
     interpreterBundled: 'Laufzeit: mitgeliefertes Python {{version}} (offline)',
     interpreterSystem:
       'Laufzeit: System-Python {{version}} (die mitgelieferte Laufzeit konnte nicht gestartet werden)',
@@ -151,6 +157,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
       'Este equipo no está aprobado por el hospital. No se puede importar un archivo con datos identificables de pacientes.',
     tagged: 'Este proyecto contiene datos de pacientes. La marca no se puede quitar.',
     language: 'Idioma',
+    encodingNotice:
+      'Leído como {{encoding}}. Compruebe que los nombres de columna se ven bien.',
     interpreterBundled: 'Entorno: Python incluido {{version}} (sin conexión)',
     interpreterSystem:
       'Entorno: Python del sistema {{version}} (no se pudo iniciar el entorno incluido)',
@@ -185,6 +193,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
       'Cette machine n’est pas approuvée par l’hôpital. Un fichier contenant des données patients identifiantes ne peut pas être importé.',
     tagged: 'Ce projet contient des données patients. Le badge ne peut pas être retiré.',
     language: 'Langue',
+    encodingNotice:
+      'Lu en {{encoding}}. Vérifiez que les noms de colonne ne sont pas altérés.',
     interpreterBundled: 'Environnement : Python fourni {{version}} (hors ligne)',
     interpreterSystem:
       'Environnement : Python du système {{version}} (l’environnement fourni n’a pas pu démarrer)',
@@ -217,6 +227,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     blocked: '此计算机未经医院批准。不能导入含有患者个人信息的文件。',
     tagged: '此项目含有患者数据，标记无法去除。',
     language: '语言',
+    encodingNotice:
+      '已按 {{encoding}} 读取。请确认列名没有乱码。',
     interpreterBundled: '运行环境：随附的 Python {{version}}（离线）',
     interpreterSystem: '运行环境：系统 Python {{version}}（随附的运行环境无法使用）',
     tableStillSaved: '之前导入的表仍然保存着。切换到其他项目后再回来即可恢复。'
@@ -247,6 +259,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
     blocked: '此電腦未經醫院核准。不能匯入含有患者個人資訊的檔案。',
     tagged: '此專案含有患者資料，標記無法移除。',
     language: '語言',
+    encodingNotice:
+      '已按 {{encoding}} 讀取。請確認欄名沒有亂碼。',
     interpreterBundled: '執行環境：隨附的 Python {{version}}（離線）',
     interpreterSystem: '執行環境：系統 Python {{version}}（隨附的執行環境無法使用）',
     tableStillSaved: '之前匯入的表仍然保存著。切換到其他專案後再回來即可恢復。'
@@ -279,6 +293,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
       '이 컴퓨터는 병원 승인을 받지 않았습니다. 환자 개인정보가 있는 파일은 가져올 수 없습니다.',
     tagged: '이 프로젝트는 환자 데이터를 포함하므로 표시를 제거할 수 없습니다.',
     language: '언어',
+    encodingNotice:
+      '{{encoding}}(으)로 읽었습니다. 열 이름이 깨지지 않았는지 확인하세요.',
     interpreterBundled: '실행 환경: 함께 제공되는 Python {{version}}(오프라인)',
     interpreterSystem:
       '실행 환경: 시스템 Python {{version}}(함께 제공되는 런타임을 사용할 수 없음)',
@@ -312,6 +328,8 @@ const catalogs: Record<string, SchemaNotebookCopy> = {
       'Этот компьютер не одобрен больницей. Файл с идентифицирующими данными пациента импортировать нельзя.',
     tagged: 'Проект содержит данные пациентов. Метку снять нельзя.',
     language: 'Язык',
+    encodingNotice:
+      'Прочитано как {{encoding}}. Проверьте, что имена столбцов не искажены.',
     interpreterBundled: 'Среда: встроенный Python {{version}} (автономно)',
     interpreterSystem:
       'Среда: системный Python {{version}} (встроенную среду не удалось запустить)',
