@@ -39,6 +39,9 @@ export const decodeCsvBytes = (bytes: Uint8Array): DecodedCsv => {
     // Not valid UTF-8: fall through to the Japanese legacy encoding.
   }
   try {
+    // Known limitation: a Latin-1/CP1252 file also decodes as Shift_JIS for some byte sequences and can
+    // still pass without U+FFFD, so a European CSV may be labelled Shift_JIS. Detecting that reliably
+    // needs a language/byte-shape check; it is tracked as a follow-up, not handled here.
     const text = new TextDecoder('shift_jis').decode(body)
     // A real CP932 file never decodes to replacement characters; if it does, the encoding is unknown.
     if (text.includes('\uFFFD')) throw new Error('replacement characters')

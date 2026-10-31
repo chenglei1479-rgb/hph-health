@@ -166,7 +166,7 @@
     "This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.": "この添付ファイルは患者情報のチェックに対応していません。何も送信していません。チェック可能なテキストを使用してください。",
     "This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.": "このエージェント接続では、モデルへのすべてのリクエストについて患者情報をチェックできないため、ベータ版では利用できません。チェックに対応した接続を使用するプロバイダーを選択してください。",
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "プライバシーチェックで検索語が変更されたため、検索は送信していません。患者情報を除いて、もう一度お試しください。",
-    "Choose a CSV file in UTF-8 or Shift-JIS.": "UTF-8 または Shift_JIS の CSV を選んでください。",
+    "Choose a CSV file in UTF-8 or Shift-JIS.": "UTF-8 または Shift_JIS の CSV を選んでください。文字コードを判別できませんでした。",
     "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "前回取り込んだ表のファイルが見つからないか、読み取れないため、解析を実行しませんでした。表のファイルを選び直してから実行してください。（コード: {{code}}）",
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "同梱の Python 実行環境を起動できませんでした。解析は実行していません。アプリを再インストールしてください。（コード: {{code}}）"
   },

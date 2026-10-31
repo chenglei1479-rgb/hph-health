@@ -74,7 +74,7 @@ const ja: SchemaNotebookCopy = {
   tagged: 'このプロジェクトは患者データを含むため、印を外すことはできません。',
   language: '言語',
   encodingNotice:
-    '{{encoding}} として読み込みました。列名が化けていないか確認してください。',
+    '{{encoding}} として読み込みました。文字化けがある場合は、Excel で「CSV UTF-8（コンマ区切り）」として保存し直してください。',
   interpreterBundled: '実行環境: 同梱の Python {{version}}（オフライン）',
   interpreterSystem:
     '実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）',
