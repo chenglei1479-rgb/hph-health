@@ -8,6 +8,7 @@ import {
   isMentorDiscussionPack
 } from '../../../../shared/deliverable-pack-policy'
 import type {
+  CsvEncoding,
   ExecuteAnalysisResponse,
   ImportTableResponse,
   SchemaModelContext
@@ -54,20 +55,20 @@ const api = (): SchemaNotebookApi | null => {
   return candidate?.schemaNotebook ?? null
 }
 
-const readFile = (file: File): Promise<{ csvText?: string; xlsxBase64?: string }> =>
+// CSV bytes travel to the main process, which owns decoding. Excel on a Japanese Windows writes
+// CP932, and reading it as UTF-8 here turned every header into U+FFFD — including the headers the
+// identifier and PHI scans rely on.
+const readFile = (file: File): Promise<{ csvBase64?: string; xlsxBase64?: string }> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onerror = () => reject(reader.error ?? new Error('read failed'))
-    if (file.name.toLowerCase().endsWith('.csv')) {
-      reader.onload = () => resolve({ csvText: String(reader.result ?? '') })
-      reader.readAsText(file)
-      return
-    }
+    const isCsv = file.name.toLowerCase().endsWith('.csv')
     reader.onload = () => {
       const bytes = new Uint8Array(reader.result as ArrayBuffer)
       let binary = ''
       for (const byte of bytes) binary += String.fromCharCode(byte)
-      resolve({ xlsxBase64: btoa(binary) })
+      const base64 = btoa(binary)
+      resolve(isCsv ? { csvBase64: base64 } : { xlsxBase64: base64 })
     }
     reader.readAsArrayBuffer(file)
   })
@@ -109,6 +110,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     () => loadSchemaNotebookDraft(projectId).language
   )
   const [restoreNotice, setRestoreNotice] = useState(false)
+  const [csvEncoding, setCsvEncoding] = useState<CsvEncoding | undefined>(undefined)
   const [result, setResult] = useState<ExecuteAnalysisResponse | null>(null)
   const [busy, setBusy] = useState(false)
   // The imported table is referenced by its stored id, never by file contents. It can go missing
@@ -238,6 +240,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       setTagged(response.tagged)
       setResult(null)
       setRestoreNotice(false)
+      setCsvEncoding(response.encoding)
       setTableInfo({ tableId: response.context.tableId, filename: file.name })
     } catch (error) {
       // Strip the IPC transport chrome so the panel shows the main process sentence, not
@@ -398,6 +401,16 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
           </button>
           {context ? (
             <div className="space-y-2">
+              {csvEncoding ? (
+                // The user checks for mojibake before trusting the columns: showing the encoding is
+                // what makes a CP932 file verifiable instead of silently garbled.
+                <p data-testid="schema-notebook-csv-encoding" className="text-xs text-[#5a6b6c]">
+                  {copy.encodingNotice.replace(
+                    '{{encoding}}',
+                    csvEncoding === 'shift_jis' ? 'Shift_JIS' : 'UTF-8'
+                  )}
+                </p>
+              ) : null}
               <p>
                 {copy.rows}: {context.rowCount}
               </p>
