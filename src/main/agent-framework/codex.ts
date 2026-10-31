@@ -248,6 +248,13 @@ const codexSandboxWriteConfig = (
     : {}
 }
 
+// The app-owned Codex home carries two things: the in-memory credential store, and the switch that
+// stops Codex from prepending an environment block (working directory, shell, today's date) to the
+// conversation. The PHI gate scans that block as conversation text and blocks the whole request on
+// the date alone (WIN-MODEL-004), so the injection is off.
+const CODEX_RUNTIME_CONFIG =
+  'cli_auth_credentials_store = "ephemeral"\ninclude_environment_context = false\n'
+
 const buildCodexConfig = (provider: {
   baseUrl?: string
   preserveBaseUrl?: boolean
@@ -269,6 +276,10 @@ const buildCodexConfig = (provider: {
     // Codex 0.157.1 config::multi_agent_version_override requires agents.enabled=false.
     agents: { enabled: false },
     features: CODEX_DISABLED_NATIVE_FEATURES,
+    // Codex prepends a context block (working directory, shell, and today's date) to the conversation.
+    // The PHI gate scans that block as conversation text and blocks the whole request on the date alone
+    // (WIN-MODEL-004: a fictional arithmetic prompt failed with PHI-BLOCK-01), so the injection is off.
+    include_environment_context: false,
     memories: CODEX_DISABLED_NATIVE_MEMORY,
     ...(contextWindow
       ? {
@@ -639,7 +650,10 @@ export const createCodexFramework = ({
       configFiles: [
         {
           path: join(codexStorageDir(ctx.storageRoot), 'config.toml'),
-          content: 'cli_auth_credentials_store = "ephemeral"\n',
+          // Codex reads this file from CODEX_HOME, so the switch lands even on the paths that only
+          // forward the env (the adapter consumes model_catalog_json from CODEX_CONFIG and nothing
+          // else). Both carriers hold the same value on purpose.
+          content: CODEX_RUNTIME_CONFIG,
           mode: 0o600
         },
         ...(modelCatalogPath && modelCatalogContent

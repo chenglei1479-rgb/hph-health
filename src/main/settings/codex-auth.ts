@@ -397,6 +397,38 @@ export const serializeCodexEgressPolicy = (existingConfigToml: string): string =
   return result.join('\n')
 }
 
+const isCodexEnvironmentContextAssignment = (line: string): boolean =>
+  /^\s*(?:include_environment_context|"include_environment_context"|'include_environment_context')\s*=/.test(
+    line
+  )
+
+// Codex prepends an environment block (working directory, shell, and today's date) to the
+// conversation. The PHI gate scans that block as conversation text and blocks the whole request on the
+// date alone (WIN-MODEL-004), so every app-owned CODEX_HOME config carries this assignment — the main
+// home and the restricted inference home alike. Only the top-level assignment is rewritten: values
+// that live inside a table belong to that table and stay untouched.
+export const serializeCodexEnvironmentContext = (existingConfigToml: string): string => {
+  const result: string[] = []
+  let sawTable = false
+
+  for (const line of existingConfigToml.split(/\r?\n/)) {
+    if (/^\s*\[/.test(line)) sawTable = true
+    if (!sawTable && isCodexEnvironmentContextAssignment(line)) continue
+    result.push(line)
+  }
+
+  while (result[0] === '') result.shift()
+  while (result.at(-1) === '') result.pop()
+  const firstTableIndex = result.findIndex((line) => /^\s*\[/.test(line))
+  result.splice(
+    firstTableIndex < 0 ? result.length : firstTableIndex,
+    0,
+    'include_environment_context = false'
+  )
+  result.push('')
+  return result.join('\n')
+}
+
 // Persisted pre-brand markers remain technical compatibility identities. Match only complete
 // known marker lines; ordinary comments and user TOML values keep their original spelling.
 const legacyMarker = (marker: string): string => marker.replace('# DRA:', '# Open-Science:')
@@ -660,9 +692,11 @@ const ensureCodexAuthConfigHome = async (
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
   }
 
-  const nextConfigToml = serializeCodexEgressPolicy(
-    serializeCodexFileCredentialStore(
-      serializeCodexSubscriptionTransport(existingConfigToml, transport)
+  const nextConfigToml = serializeCodexEnvironmentContext(
+    serializeCodexEgressPolicy(
+      serializeCodexFileCredentialStore(
+        serializeCodexSubscriptionTransport(existingConfigToml, transport)
+      )
     )
   )
   if (nextConfigToml !== existingConfigToml) {
@@ -867,6 +901,7 @@ const writeCodexAuthenticationSnapshot = async (
     nextConfigToml = serializeCodexCredentialStore(nextConfigToml, credentialStore)
   }
   nextConfigToml = serializeCodexEgressPolicy(nextConfigToml)
+  nextConfigToml = serializeCodexEnvironmentContext(nextConfigToml)
 
   if (snapshot) await writePrivateFileAtomically(destinationPath, snapshot.content)
   else await rm(destinationPath, { force: true })
