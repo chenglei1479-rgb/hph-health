@@ -37,7 +37,10 @@ type Span = { start: number; end: number; replacement: string }
 //
 // This mirrors the connector and Notebook patches (gate.ts, notebook-phi-release.ts); converging all
 // of them is tracked separately as issue #92, and this file must not grow its own wider rule.
-const NAMED_VALUE = /(?:患者氏名|患者名|氏名)\s*[:：]\s*([^\t\n]{1,40})/gu
+//
+// The label must be followed by a colon: a tab is a cell boundary, not a separator. Otherwise a row
+// whose variable is itself named `氏名` would redact the definition in the next cell as a person.
+const NAMED_VALUE = /(?:患者氏名|患者名|氏名|患者|Pt|キーパーソン)\s*[:：]\s*([^\t\n]{1,40})/gu
 
 /** A row that carries its own name label holds exactly one patient name: the value after the label. */
 const labeledNameSpans = (text: string, store: PhiStore): Span[] => {

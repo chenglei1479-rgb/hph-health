@@ -39,7 +39,11 @@ describe('variable dictionary redaction', () => {
       row('readmitted_30d', '合成データの30日再入院フラグ', 'binary', '0=no; 1=yes'),
       row('sbp', '収縮期血圧（mmHg）', 'integer'),
       row('smoking', '喫煙歴（あり／なし）', 'binary'),
-      row('qol', '生活の質に関する自記式評価尺度の合計得点であり高いほど良好な状態を示す', 'integer')
+      row(
+        'qol',
+        '生活の質に関する自記式評価尺度の合計得点であり高いほど良好な状態を示す',
+        'integer'
+      )
     ]
     const text = join(rows)
     expect(text.length).toBeGreaterThan(80)
@@ -80,15 +84,52 @@ describe('variable dictionary redaction', () => {
   })
 
   it('still applies the structural detectors inside a row', () => {
-    const rows = [row('karte', 'カルテ番号：A1234'), row('contact', '連絡先（03-1234-5678）')]
+    const rows = [row('karte', 'カルテ番号：123456'), row('contact', '連絡先（03-1234-5678）')]
 
     const { text } = redactVariableDefinitionRows(rows, store())
 
     expect(text).toContain('[番号')
-    expect(text).not.toContain('A1234')
+    expect(text).not.toContain('123456')
     expect(text).not.toContain('03-1234-5678')
     expect(text).toContain('karte\tカルテ番号：')
     expect(text).toContain('contact\t連絡先（')
+  })
+
+  it('treats every name label the guessing layer used to accept as a labelled value', () => {
+    // With the guess dropped, these labels are the only thing left that can flag a name: a missing
+    // one is a silent miss, which is worse than the over-redaction this ticket fixes.
+    const labels = ['患者：山田太郎', 'Pt: 山田太郎', 'キーパーソン：山田太郎']
+
+    for (const label of labels) {
+      const { text } = redactVariableDefinitionRows([row('patient', label)], store())
+      expect(text).not.toContain('山田太郎')
+      expect(text).toContain('[患者')
+    }
+  })
+
+  it('does not read a tab as a label separator', () => {
+    // A row whose variable is itself named 氏名 must not redact the definition in the next cell.
+    const rows = [row('氏名', '患者データの有無', 'binary', '0=no; 1=yes')]
+
+    const { text } = redactVariableDefinitionRows(rows, store())
+
+    expect(text).toBe('氏名\t患者データの有無\tbinary\t0=no; 1=yes')
+  })
+
+  it('points each highlight at its placeholder in the joined document', () => {
+    const rows = [
+      row('age', '年齢（歳）', 'integer'),
+      row('sbp', '収縮期血圧（mmHg）', 'integer'),
+      row('patient_name', '氏名：山田太郎')
+    ]
+
+    const { text, highlights } = redactVariableDefinitionRows(rows, store())
+    const name = highlights.filter((highlight) => highlight.category === 'PERSON_NAME')
+
+    expect(name).toHaveLength(1)
+    // Offsets must survive the per-row redaction and the join: the third row starts well past zero.
+    expect(text.slice(name[0].start, name[0].end)).toMatch(/^\[患者\d+\]$/)
+    expect(name[0].start).toBeGreaterThan(30)
   })
 
   it('leaves the free-text parts on the original rule', () => {
