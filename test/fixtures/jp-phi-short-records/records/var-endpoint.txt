@@ -1,0 +1,1 @@
+primary_endpoint	主要評価項目：30日以内の再入院	text	

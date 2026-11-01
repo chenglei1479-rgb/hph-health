@@ -1,0 +1,1 @@
+smoking	喫煙歴（あり／なし）	binary	

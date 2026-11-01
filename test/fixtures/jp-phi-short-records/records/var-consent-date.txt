@@ -1,0 +1,1 @@
+consent	同意取得日（yyyy/mm/dd）	date	

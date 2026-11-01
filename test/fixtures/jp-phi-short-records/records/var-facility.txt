@@ -1,0 +1,1 @@
+facility	施設名	text	
