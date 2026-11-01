@@ -140,7 +140,7 @@ const MedicalResearchLaunchpad = ({
       .catch(() =>
         setSeedUsageError(
           t(
-            'You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; hospital operations and real data are out of scope.'
+            'You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; de-identified real data only in an approved pilot.'
           )
         )
       )
