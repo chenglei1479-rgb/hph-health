@@ -13,15 +13,15 @@ separately.
 Every record is one line of a synthetic variable dictionary or a reviewed label shape. No patient
 data: all names and values are invented.
 
-| Group                        | Records | Gold                                  | Expectation                                                                                                   |
-| ---------------------------- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `name-*`                     | 14      | `is_phi: true`, `PERSON_NAME`         | must be found; today overlap 1.0 and exact 1.0                                                                |
-| `var-*`, `label-*`, `term-*` | 19      | `is_phi: false`                       | must not be flagged; today none are                                                                           |
-| `mixed-*`                    | 3       | `is_phi: true` (date / karte / phone) | the row keeps its field name while its own span is redacted; today all 3 are detected and redacted            |
-| `insurer-*`                  | 3       | `is_phi: true`, `INSURER_NO`          | positive controls: a labelled, a bare and a branch-suffixed law code must keep hitting after the boundary fix |
-| `tool-*`                     | 3       | `is_phi: false`                       | machine payloads — artifact metadata, a UUID tail, a hex hash — must never be read as an insurer number       |
-| `known-*`                    | 7       | `is_phi: false`                       | pinned residual false positives; the set may shrink, never grow                                               |
-| `known-long-name-unmasked`   | 1       | `is_phi: true`, `PERSON_NAME`         | a pinned **miss**, not a false positive: past 80 characters the guess does not run                            |
+| Group                        | Records | Gold                                  | Expectation                                                                                                        |
+| ---------------------------- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `name-*`                     | 14      | `is_phi: true`, `PERSON_NAME`         | must be found; today overlap 1.0 and exact 1.0                                                                     |
+| `var-*`, `label-*`, `term-*` | 19      | `is_phi: false`                       | must not be flagged; today none are                                                                                |
+| `mixed-*`                    | 3       | `is_phi: true` (date / karte / phone) | the row keeps its field name while its own span is redacted; today all 3 are detected and redacted                 |
+| `insurer-*`                  | 3       | `is_phi: true`, `INSURER_NO`          | the labelled forms a sentence and a table use: 保険者番号：/ 保険者番号は / 保険者番号 \| all keep hitting         |
+| `tool-*`                     | 6       | `is_phi: false`                       | machine payloads — artifact metadata, a UUID tail, a hex hash, a PMID list, an id and an account number — released |
+| `known-*`                    | 8       | `is_phi: false`                       | pinned residual false positives and category gaps; the set may shrink, never grow                                  |
+| `known-long-name-unmasked`   | 1       | `is_phi: true`, `PERSON_NAME`         | a pinned **miss**, not a false positive: past 80 characters the guess does not run                                 |
 
 The `name-with-*` records are the ones the old whole-string guess dropped: it only fired when the text
 carried no other span at all, so `山田太郎 65歳` and `山田太郎 2026-10-01` lost the name entirely. Their
@@ -67,14 +67,25 @@ positive that exists today.
 
 The `flagged` set is therefore `known-hex-leading-zero` + `known-levofloxacin` today.
 
+`insurer-bare` (症例は 02123456 の通り) and `insurer-branch` (02123456-1) were downgraded from PHI to decoys
+when the unlabeled eight-digit law-code rule was removed (issue #105). An eight-digit run inside text is
+no longer an insurer number: it read PMIDs, UUID segments and record ids. What still counts is a
+labelled number and a whole-string number, and the fixture pins both.
+
+`known-insurance-card-unmasked` (保険証 02123456) is the third kind of known entry: a **category gap**,
+not a miss and not a false positive. 保険証 with a number is not classified today, and it may be a
+ten-digit 被保険者番号 rather than an 保険者番号; folding the two into one category just to make this
+record green would be the wrong fix. It is owned by the 保険証 / 被保険者番号 ticket.
+
 One shape stays open on purpose, inherited from the same window: a record longer than 80 characters is
 never guessed at, only the labelled rules run there.
 
-**Fifty files, forty-eight scored records.** The directory holds 50 `.txt` files; `shortRecords.records`
-reports 48 because `scoreFixture` only scores records inside the 80-character window, and
-`known-long-name-unmasked.txt` (84) and `tool-artifact-metadata.txt` (282) are deliberately outside it.
-Both still run through `detectPhi` in the aggregate numbers; neither is part of the short-record block.
-Subtract those two before comparing the two numbers, not after.
+**Fifty-six files, fifty-three scored records.** The directory holds 56 `.txt` files;
+`shortRecords.records` reports 53 because `scoreFixture` only scores records inside the
+80-character window, and `known-long-name-unmasked.txt` (84), `tool-artifact-metadata.txt` (282) and
+`tool-pubmed-description.txt` (9245) are deliberately outside it. All three still run through
+`detectPhi` in the aggregate numbers; none is part of the short-record block. Subtract those three
+before comparing the two numbers, not after.
 
 ## Running it
 
