@@ -75,7 +75,7 @@ labelled number and a whole-string number, and the fixture pins both.
 `known-insurance-card-unmasked` (保険証 02123456) is the third kind of known entry: a **category gap**,
 not a miss and not a false positive. 保険証 with a number is not classified today, and it may be a
 ten-digit 被保険者番号 rather than an 保険者番号; folding the two into one category just to make this
-record green would be the wrong fix. It is owned by the 保険証 / 被保険者番号 ticket.
+record green would be the wrong fix. It is owned by issue #115.
 
 One shape stays open on purpose, inherited from the same window: a record longer than 80 characters is
 never guessed at, only the labelled rules run there.
