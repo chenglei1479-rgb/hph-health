@@ -10,7 +10,7 @@ Notebook 用の Python（pandas、numpy、scipy、statsmodels、matplotlib、ope
 
 氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。
 
-β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。
+β／種期間中は架空データのみをご利用ください。匿名化または仮名化した実データは、機関が承認したパイロットに限り使用できます。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。
 
 ### 利用できる文献ソース（2026-11-01 時点）
 
@@ -40,7 +40,7 @@ Notebook 用的 Python（pandas、numpy、scipy、statsmodels、matplotlib、ope
 
 为防止发送姓名、患者ID等直接标识符，设有发送前检查和限制。这并非绝对保证。
 
-β／种子阶段请仅使用虚构数据。医院正式运行及真实数据不在适用范围内。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。
+β／种子期间仅使用虚构数据。已去标识的真实数据仅限机构批准的试点。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。
 
 ### 可检索的文献来源（截至 2026-11-01）
 
@@ -62,6 +62,6 @@ Notebook 用的 Python（pandas、numpy、scipy、statsmodels、matplotlib、ope
 
 Pre-send checks and restrictions help prevent direct identifiers such as names and patient IDs from being sent. This is not an absolute guarantee.
 
-For beta/seed use, please use fictional data only. Formal hospital operations and real data are out of scope.
+During the beta, use only fictional data. De-identified real data is allowed only in a pilot approved by the institution.
 
 Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.

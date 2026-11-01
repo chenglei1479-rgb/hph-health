@@ -169,7 +169,7 @@ it('writes the release body in Japanese and Chinese', () => {
   expect(notes).toContain('初回起動時にダウンロードしません')
   expect(notes).toContain('lifelines')
   expect(notes).toContain(
-    'β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
+    'β／種期間中は架空データのみをご利用ください。匿名化または仮名化した実データは、機関が承認したパイロットに限り使用できます。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
   )
   expect(notes).toContain('https://platform.openai.com/api-keys')
   expect(notes).toContain('Create new secret key')
@@ -182,7 +182,7 @@ it('writes the release body in Japanese and Chinese', () => {
   expect(notes).toContain('切勿使用真实患者数据')
   expect(notes).toContain('首次启动不会下载')
   expect(notes).toContain(
-    'β／种子阶段请仅使用虚构数据。医院正式运行及真实数据不在适用范围内。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。'
+    'β／种子期间仅使用虚构数据。已去标识的真实数据仅限机构批准的试点。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。'
   )
   expect(notes).toContain('右键')
   expect(notes).toContain('仍要打开')

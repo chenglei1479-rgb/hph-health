@@ -78,7 +78,7 @@ it('shows the canonical destination sentence in the active locale, not a fixed J
       />
     )
     expect(host?.querySelector('[data-testid="prerelease-provider-key-notice"]')?.textContent).toBe(
-      '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。 β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
+      '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。 β／種期間中は架空データのみをご利用ください。匿名化または仮名化した実データは、機関が承認したパイロットに限り使用できます。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。'
     )
   } finally {
     initI18n('en')

@@ -33,7 +33,9 @@ export const homePrimaryEntries = (t: Translate): HomePrimaryEntry[] => [
       'Upload a fictional CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
     ),
     description: t('Review a statistical plan, then create tables, figures, and code.'),
-    hardRule: t('Use fictional data only during the beta.')
+    hardRule: t(
+      'Use fictional data only during the beta; de-identified real data only in an approved pilot.'
+    )
   },
   {
     id: 'write-abstract',
