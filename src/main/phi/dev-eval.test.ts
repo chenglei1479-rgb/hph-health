@@ -52,7 +52,7 @@ const BASELINE_FLAGGED = [
 // The rest are cleared by structure, not by a list: tab cells, punctuation segments, and unit slots.
 // The six known limitations are the reviewed-vocabulary set too; レボフロキサシン is the one entry
 // still missing, so it stays pinned until someone adds it with a reason.
-const PINNED_FLAGGED = ['known-levofloxacin.txt']
+const PINNED_FLAGGED = ['known-hex-leading-zero.txt', 'known-levofloxacin.txt']
 
 type ShortReport = {
   records: number
@@ -91,20 +91,39 @@ describe('Japanese PHI dev set', () => {
     process.stderr.write(`${JSON.stringify(short, null, 2)}\n`)
 
     expect(short.covered).toBe(true)
-    expect(short.records).toBe(42)
+    // `ok` is deliberately NOT asserted for this fixture. It is false by design: the set pins the
+    // #103 miss (`known-long-name-unmasked`, 1 of 14 names), so `patientOverlapRecall` and
+    // `hardRecall` cannot reach their thresholds, and the set has no age/drug decoys (their rates are
+    // 0/0). Asserting `ok` here would turn main red for a fixture that is supposed to carry a
+    // documented miss. The main fixture's `ok` is asserted above; these are the thresholds that must
+    // hold here.
+    expect(report.thresholds).toMatchObject({
+      patientExactRecall: true,
+      decoyRate: true,
+      entityHardMisses: true,
+      calendarShift: true
+    })
+    expect(short.records).toBe(53)
     // Recall is the hard line: every name is found, and found exactly. The three name-with-* records
     // are the ones the old whole-string guess dropped whenever another span was present.
     expect(short.nameGold).toBe(14)
     expect(short.nameOverlapRecall).toBe(1)
     expect(short.nameExactRecall).toBe(1)
     expect(short.nameMisses).toEqual([])
-    // False positives: the 19 variable-dictionary and term rows are now clean. A rise here is a
-    // regression in the guess, not a threshold to adjust.
-    expect(short.mustCleanDecoys).toBe(19)
+    // False positives: the variable-dictionary and term rows are now clean, and the two hexadecimal
+    // tool records stay released. A rise here is a regression in a rule, not a threshold to adjust.
+    expect(short.mustCleanDecoys).toBe(25)
     expect(short.mustCleanRate).toBe(0)
-    // Monotonic decrease, executable: nothing outside the #95 baseline may ever be flagged, so a
-    // record can only leave the set. Keep this check even after the pinned set reaches zero.
-    expect(short.flagged.filter((item) => !BASELINE_FLAGGED.includes(item.record))).toEqual([])
+    // Monotonic decrease, executable, in two layers:
+    //   1. the exact flagged set is pinned below, so a record entering or leaving fails either way;
+    //   2. a must-clean record may never (re)enter it: the #95 baseline is that group's hard ceiling.
+    // `known-*` records are flagged by definition and are pinned by the exact set, so they are not
+    // measured against the must-clean ceiling.
+    expect(
+      short.flagged.filter(
+        (item) => !item.record.startsWith('known-') && !BASELINE_FLAGGED.includes(item.record)
+      )
+    ).toEqual([])
     // The full flagged set is asserted, not its size: one record leaving and another entering would
     // keep the counts equal and slip past a numeric check.
     expect(short.flagged.map((item) => item.record).sort()).toEqual(PINNED_FLAGGED)
@@ -154,7 +173,7 @@ describe('Japanese PHI dev set', () => {
   })
 
   // The name guess is bounded at 80 characters. Pinned as a miss, not as desired behaviour: the
-  // record exists so the gap is measured, and it is owned by the ticket that extends the window.
+  // record exists so the gap is measured, and it is owned by issue #103, which extends the window.
   it('pins the long-record gap: an unlabeled name past 80 characters stays unmasked', () => {
     const text = readFileSync(
       join(SHORT_FIXTURE, 'records', 'known-long-name-unmasked.txt'),
@@ -169,5 +188,72 @@ describe('Japanese PHI dev set', () => {
   // to survive a comma, which is otherwise a segment separator.
   it.each(['Smith, John', 'MISONO, KOTARO'])('keeps %s as one name', (text) => {
     expect(detectPhi(text).filter((span) => span.category === 'PERSON_NAME')).toHaveLength(1)
+  })
+
+  // The beta.20 incident: eight digits inside a hexadecimal identifier were read as an insurer number
+  // and blocked five sends before the sixth failed. The rule is not windowed at 80 characters, so the
+  // artifact record below is long on purpose.
+  it.each([
+    ['tool-artifact-metadata.txt', '02852897'],
+    ['tool-uuid-tail.txt', '02852897'],
+    ['tool-hex-hash.txt', '1234567890']
+  ])('%s is released although it contains %s', (record, digits) => {
+    const text = readFileSync(join(SHORT_FIXTURE, 'records', record), 'utf8')
+    expect(text).toContain(digits)
+    expect(detectPhi(text).filter((span) => span.category === 'INSURER_NO')).toEqual([])
+  })
+
+  // The same tight lookahead must not cost a real law code. The label is what carries the meaning:
+  // these three forms are the ones a sentence and a table actually use.
+  it.each([
+    ['insurer-labeled.txt', 6, 14],
+    ['insurer-label-particle.txt', 7, 15],
+    ['insurer-label-pipe.txt', 8, 16]
+  ])('%s still yields its insurer number', (record, start, end) => {
+    const text = readFileSync(join(SHORT_FIXTURE, 'records', record), 'utf8')
+    const spans = detectPhi(text).filter((span) => span.category === 'INSURER_NO')
+    expect(spans.map((span) => [span.start, span.end, span.text])).toEqual([
+      [start, end, '02123456']
+    ])
+  })
+
+  // The literature block this ticket starts from: the PubMed MCP tool description carries example
+  // PMIDs, and two of them sit in the law-code prefix table. The record is pinned at the offsets from
+  // the incident log, so the scan covers the same 9 KB of text.
+  it('releases the PubMed tool description whose example PMIDs are law-code shaped', () => {
+    const text = readFileSync(join(SHORT_FIXTURE, 'records', 'tool-pubmed-description.txt'), 'utf8')
+    expect(text.indexOf('33264437')).toBe(3721)
+    expect(text.indexOf('34375400')).toBe(9009)
+    expect(detectPhi(text).filter((span) => span.category === 'INSURER_NO')).toEqual([])
+  })
+
+  // The downgraded controls: a bare eight-digit run inside text is an id, not an insurer number.
+  it.each([
+    ['insurer-bare.txt', '症例は 02123456 の通り'],
+    ['insurer-branch.txt', '02123456-1'],
+    ['tool-id-decoy.txt', 'ID 33264437'],
+    ['tool-account-number.txt', '口座番号 32165498']
+  ])('%s carries no insurer number', (record, content) => {
+    const text = readFileSync(join(SHORT_FIXTURE, 'records', record), 'utf8')
+    expect(text).toBe(content)
+    expect(detectPhi(text).filter((span) => span.category === 'INSURER_NO')).toEqual([])
+  })
+
+  // Pinned category gap: 保険証 with a number is not classified. It may be a ten-digit 被保険者番号,
+  // and folding it into 保険者番号 would mix two categories just to make one record green.
+  it('pins the 保険証 gap without folding it into the insurer category', () => {
+    const text = readFileSync(
+      join(SHORT_FIXTURE, 'records', 'known-insurance-card-unmasked.txt'),
+      'utf8'
+    )
+    expect(detectPhi(text).filter((span) => span.category === 'INSURER_NO')).toEqual([])
+    expect(detectPhi(text).filter((span) => span.category === 'INSURED_ID')).toEqual([])
+  })
+
+  // A UUID's first segment is eight hexadecimal characters too, bounded by `"` and `-`, so the
+  // trailing-letter lookahead alone does not cover it.
+  it('rejects the first segment of a UUID', () => {
+    const text = '"version_id": "02852897-9f2b-4183-a8f3-1e2210368817"'
+    expect(detectPhi(text).filter((span) => span.category === 'INSURER_NO')).toEqual([])
   })
 })

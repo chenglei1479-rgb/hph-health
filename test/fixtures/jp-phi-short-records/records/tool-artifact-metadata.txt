@@ -1,0 +1,10 @@
+{
+  "artifact": {
+    "artifact_id": "ef6243b1-d622-47bd-9c2f-1e2210368817",
+    "version_id": "c622387f-9f2b-4183-a8f3-02852897ef80",
+    "version_number": 1,
+    "filename": "synthetic_study.csv",
+    "size_bytes": 1579,
+    "producer_run_id": "notebook-run-1793523973823-1"
+  }
+}
