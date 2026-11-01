@@ -67,10 +67,14 @@ positive that exists today.
 
 The `flagged` set is therefore `known-hex-leading-zero` + `known-levofloxacin` today.
 
-The `flagged` set is therefore `known-hex-leading-zero` + `known-levofloxacin` today.
-
 One shape stays open on purpose, inherited from the same window: a record longer than 80 characters is
 never guessed at, only the labelled rules run there.
+
+**Fifty files, forty-eight scored records.** The directory holds 50 `.txt` files; `shortRecords.records`
+reports 48 because `scoreFixture` only scores records inside the 80-character window, and
+`known-long-name-unmasked.txt` (84) and `tool-artifact-metadata.txt` (282) are deliberately outside it.
+Both still run through `detectPhi` in the aggregate numbers; neither is part of the short-record block.
+Subtract those two before comparing the two numbers, not after.
 
 ## Running it
 

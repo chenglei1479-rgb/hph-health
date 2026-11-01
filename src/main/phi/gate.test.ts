@@ -160,7 +160,8 @@ describe('PHI gate scan scope', () => {
       pass: 'blocked',
       textLength: 'Today is 2026-10-26.'.length
     })
-    // The date patterns carry a rule id, so the log names the pattern and not just the offset.\n    expect(hit.rule).toBe('date-bare-iso')
+    // The date patterns carry a rule id, so the log names the pattern and not just the offset.
+    expect(hit.rule).toBe('date-bare-iso')
     // A hash prefix, never the first characters of the scanned string.
     expect(hit.textDigest8).toMatch(/^[0-9a-f]{8}$/u)
     expect('Today is 2026-10-26.').not.toContain(hit.textDigest8)
@@ -172,7 +173,10 @@ describe('PHI gate scan scope', () => {
   it('names the rule that fired and hashes the scanned string, not the match', () => {
     const body = {
       input: [
-        { type: 'function_call_output', output: [{ type: 'input_text', text: '保険者番号 02123456' }] }
+        {
+          type: 'function_call_output',
+          output: [{ type: 'input_text', text: '保険者番号 02123456' }]
+        }
       ]
     }
     const [first] = blockedSpanDiagnostics(body)
@@ -192,7 +196,9 @@ describe('PHI gate scan scope', () => {
   it('labels the restore-before-send pass, whose offsets belong to the restored text', () => {
     // The two passes scan different strings: the released body carries a vault mark where the restored
     // text carries the name, so the same offset means different things and only `pass` tells them apart.
-    const body = { input: [{ type: 'message', content: [{ type: 'input_text', text: '[患者1]' }] }] }
+    const body = {
+      input: [{ type: 'message', content: [{ type: 'input_text', text: '[患者1]' }] }]
+    }
     expect(blockedSpanDiagnostics(body)).toEqual([])
     const [restored] = restoredBlockedSpanDiagnostics(body, () => '山田 太郎')
     expect(restored).toMatchObject({
@@ -218,9 +224,7 @@ describe('PHI gate scan scope', () => {
     })
 
     expect(
-      diagnostics.some(
-        (hit) => hit.category === 'DATE' && hit.field === 'input[1].content[0].text'
-      )
+      diagnostics.some((hit) => hit.category === 'DATE' && hit.field === 'input[1].content[0].text')
     ).toBe(true)
     expect(JSON.stringify(diagnostics)).not.toContain('2026-10-26')
   })
@@ -237,7 +241,7 @@ describe('PHI gate scan scope', () => {
               type: 'tool_use',
               name: 'lookup',
               input: {
-                '患者氏名別': { note: '受診日は 2026-10-26 です。' },
+                患者氏名別: { note: '受診日は 2026-10-26 です。' },
                 '<script>': '2026-10-26'
               }
             }
