@@ -35,7 +35,7 @@ export const WINDOWS_SMOKE_DATA_ROOT = 'D:\\DRA Test\\MedResearchAgent'
 // Keep in sync with BETA_TERMS_VERSION; the test suite asserts the two values match. The seeded
 // settings represent a completed user who has already accepted the current beta terms, so the smoke
 // reaches Home instead of the standalone consent gate.
-export const SMOKE_BETA_TERMS_VERSION = '2026-10-β1'
+export const SMOKE_BETA_TERMS_VERSION = '2026-11-β2'
 
 export const smokeSettingsJson = (dataRoot) =>
   `${JSON.stringify({

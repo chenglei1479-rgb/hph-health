@@ -33,6 +33,8 @@ type ApplicationStartupProjection = Readonly<{
     loadAttempt: number
     snapshotRevision: number
     startupView: StartupView | undefined
+    /** Version named by the stored acceptance, used to tell an update apart from a first run. */
+    betaTermsAcceptedVersion: string | undefined
     retry: () => Promise<void>
   }>
   sessions: SessionPersistenceState
@@ -152,6 +154,7 @@ const useApplicationStartup = (): ApplicationStartupProjection => {
             betaTermsAccepted: hasCurrentBetaTermsAcceptance(betaTermsAcceptance)
           })
         : undefined,
+      betaTermsAcceptedVersion: betaTermsAcceptance?.version,
       retry: retrySettings
     },
     sessions,

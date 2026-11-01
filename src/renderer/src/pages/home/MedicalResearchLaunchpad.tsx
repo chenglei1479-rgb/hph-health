@@ -110,7 +110,7 @@ const MedicalResearchLaunchpad = ({
       id: 'analysis',
       title: t('Data analysis'),
       description: t(
-        'Upload an anonymized CSV, review variables and missingness, approve a statistical plan, then create reproducible tables, figures, and code.'
+        'Upload a fictional CSV, review variables and missingness, approve a statistical plan, then create reproducible tables, figures, and code.'
       ),
       icon: ChartNoAxesCombined
     },

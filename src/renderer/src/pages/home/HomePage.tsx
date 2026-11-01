@@ -644,7 +644,7 @@ const HomePage = ({
       analysis: {
         name: t('Data analysis'),
         description: t(
-          'Upload an anonymized CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
+          'Upload a fictional CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
         )
       },
       manuscript: {

@@ -30,10 +30,10 @@ export const homePrimaryEntries = (t: Translate): HomePrimaryEntry[] => [
     workflow: 'analysis',
     title: t('Analyze your own data'),
     subtitle: t(
-      'Upload an anonymized CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
+      'Upload a fictional CSV, inspect variables and missingness, confirm a statistical plan, then run reproducible analysis.'
     ),
     description: t('Review a statistical plan, then create tables, figures, and code.'),
-    hardRule: t('Use fictional or de-identified tables only.')
+    hardRule: t('Use fictional data only during the beta.')
   },
   {
     id: 'write-abstract',
