@@ -19,9 +19,8 @@ vi.mock('../../phi/gate', async (original) => ({
   assertModelBoundTextReleased: async (text: string) => text
 }))
 
-const { installNotebookModelTextReleaser, releaseNotebookModelText } = await import(
-  './release-model-text'
-)
+const { installNotebookModelTextReleaser, releaseNotebookModelText } =
+  await import('./release-model-text')
 const { PATIENT_ROW_BLOCK_MESSAGE } = await import('./patient-row-output')
 
 const multiKeyAggregate = [

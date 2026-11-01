@@ -59,8 +59,9 @@ export type CsvEncoding = 'utf-8' | 'utf-8-bom' | 'shift_jis'
 export type ImportTableRequest = {
   projectId: string
   filename: string
-  csvText?: string
-  /** Raw CSV bytes, base64. Preferred over `csvText`: the main process decodes them. */
+  // Bytes only. A pre-decoded string would let a caller decode with the wrong encoding again, which is
+  // exactly how CP932 headers became U+FFFD and slipped past the identifier and PHI scans.
+  /** Raw CSV bytes, base64. The main process decodes them. */
   csvBase64?: string
   xlsxBase64?: string
   /** Defaults to true. A table with detected patient PHI is always patient data. */

@@ -15,15 +15,17 @@ vi.mock('electron', () => ({
 
 import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import {
+  SCHEMA_NOTEBOOK_CSV_ENCODING_CODE,
   SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
   SCHEMA_NOTEBOOK_TABLE_MISSING_CODE
 } from '../../../shared/schema-notebook'
 import { registerSchemaNotebookIpc } from './ipc'
 import type { SchemaNotebookService } from './service'
+import type { NativeTranslator } from '../../locale/main-process-messages'
 
 // Returns the English key with its code filled in, which is what an untranslated locale sees. The
 // assertions compare against that, not against the message the service threw.
-const translate = (key: string, options?: Record<string, string | number>): string =>
+const translate: NativeTranslator = (key, options) =>
   key.replace('{{code}}', String(options?.code ?? ''))
 
 const executeRequest = {
@@ -87,6 +89,24 @@ it('keeps the table-missing sentence for its own code', async () => {
   expect(message).toContain(SCHEMA_NOTEBOOK_TABLE_MISSING_CODE)
   // The path never reaches the panel.
   expect(message).not.toContain('/secret/table.csv')
+})
+
+it('keeps the encoding sentence for its own code and names the code on the panel', async () => {
+  // This failure used to reach the panel without its code, so a support report could not quote it.
+  register(() =>
+    Promise.reject(
+      new ApplicationCommandError(
+        SCHEMA_NOTEBOOK_CSV_ENCODING_CODE,
+        'Choose a UTF-8 or Shift_JIS CSV file.'
+      )
+    )
+  )
+
+  const error = await rejection()
+
+  const message = (error as Error).message
+  expect(message).toContain('Choose a CSV file in UTF-8 or Shift-JIS.')
+  expect(message).toContain(SCHEMA_NOTEBOOK_CSV_ENCODING_CODE)
 })
 
 it('lets an uncoded failure through unchanged', async () => {

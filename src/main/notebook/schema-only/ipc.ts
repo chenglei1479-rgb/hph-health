@@ -54,8 +54,13 @@ const localizeSchemaNotebookFailure =
       error.code === SCHEMA_NOTEBOOK_CSV_ENCODING_CODE
     ) {
       // The file decoded as neither UTF-8 nor CP932. Naming the encodings is the usable next step;
-      // "save it as UTF-8" alone would push the conversion back onto the user.
-      throw new Error(translate('Choose a CSV file in UTF-8 or Shift-JIS.'))
+      // "save it as UTF-8" alone would push the conversion back onto the user. The stable code rides
+      // along like the other two: without it this failure left no trace a support report could quote.
+      throw new Error(
+        translate('Choose a CSV file in UTF-8 or Shift-JIS. (Code: {{code}})', {
+          code: error.code
+        })
+      )
     }
     throw error
   }

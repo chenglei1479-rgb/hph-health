@@ -30,7 +30,8 @@ type SchemaNotebookApi = {
   importTable: (request: {
     projectId: string
     filename: string
-    csvText?: string
+    /** Bytes, never a decoded string: the main process owns CSV decoding. */
+    csvBase64?: string
     xlsxBase64?: string
     patientData?: boolean
   }) => Promise<ImportTableResponse>

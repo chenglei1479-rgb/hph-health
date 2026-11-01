@@ -4,6 +4,9 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
+// CSV crosses the boundary as bytes now, so the fixtures below are authored as text and encoded.
+const csvBytes = (value: string): string => Buffer.from(value, 'utf8').toString('base64')
+
 import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import { SCHEMA_NOTEBOOK_TABLE_MISSING_CODE } from '../../../shared/schema-notebook'
 
@@ -66,7 +69,7 @@ describe('schema-only notebook', () => {
     const blocked = await service.importTable({
       projectId: 'mentor-study',
       filename: 'patients.csv',
-      csvText: 'age\n40\n41\n'
+      csvBase64: csvBytes('age\n40\n41\n')
     })
     expect(blocked.ok).toBe(false)
     if (blocked.ok) return
@@ -84,7 +87,7 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: csv,
+      csvBase64: csvBytes(csv),
       patientData: true
     })
     expect(imported.ok).toBe(true)
@@ -118,7 +121,7 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: csv
+      csvBase64: csvBytes(csv)
     })
     if (!imported.ok) throw new Error('import failed')
     expect(imported.context.categoricalValues).toBeUndefined()
@@ -195,7 +198,7 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: csv
+      csvBase64: csvBytes(csv)
     })
     if (!imported.ok) throw new Error('import failed')
     const executed = await service.execute({
@@ -228,7 +231,7 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: 'group,value\nA,10\nB,12',
+      csvBase64: csvBytes('group,value\nA,10\nB,12'),
       patientData: true
     })
     expect(imported.ok && imported.tagged).toBe(true)
@@ -239,7 +242,7 @@ describe('schema-only notebook', () => {
     const clean = await service.importTable({
       projectId: 'study-2',
       filename: 'public.csv',
-      csvText: 'group,value\nA,10\nB,12',
+      csvBase64: csvBytes('group,value\nA,10\nB,12'),
       patientData: false
     })
     expect(clean.ok && clean.containsPatientData).toBe(false)
@@ -257,10 +260,12 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: [
-        '研究用ID,カルテ番号,氏名,生年月日,住所,電話番号,マイナンバー,保険者番号,在院日数,連絡先,note',
-        'S-1,A12345,山田太郎,1980-01-02,東京都港区,090-1111-2222,123456789012,12345678,12,090-9999-8888,経過は安定'
-      ].join('\n'),
+      csvBase64: csvBytes(
+        [
+          '研究用ID,カルテ番号,氏名,生年月日,住所,電話番号,マイナンバー,保険者番号,在院日数,連絡先,note',
+          'S-1,A12345,山田太郎,1980-01-02,東京都港区,090-1111-2222,123456789012,12345678,12,090-9999-8888,経過は安定'
+        ].join('\n')
+      ),
       patientData: true
     })
     expect(imported.ok).toBe(true)
@@ -313,6 +318,101 @@ describe('schema-only notebook', () => {
     ).rejects.toThrow(/not sent to the model/)
   })
 
+  it('blocks a CP932 file whose decoded headers and row carry patient data', async () => {
+    // The gate must read the decoded text, not the bytes: if CP932 had been decoded as UTF-8, every
+    // Japanese header would be U+FFFD and the scans would find nothing to block.
+    const root = mkdtempSync(join(tmpdir(), 'schema-notebook-block-cp932-'))
+    writeFileSync(
+      join(root, 'machine-approval.jsonl'),
+      `${JSON.stringify({ at: '2026-10-14T00:00:00.000Z', approved: false, approvalNumber: null })}\n`
+    )
+    const service = serviceAt(root, {
+      directory: root,
+      approvalLogPath: join(root, 'machine-approval.jsonl')
+    })
+    const cp932Header = [
+      0x8a,
+      0xb3,
+      0x8e,
+      0xd2,
+      0x8e,
+      0x81,
+      0x96,
+      0xbc,
+      0x2c, // 患者氏名,
+      0x8a,
+      0xb3,
+      0x8e,
+      0xd2,
+      0x49,
+      0x44,
+      0x2c, // 患者ID,
+      0x90,
+      0xb6,
+      0x94,
+      0x4e,
+      0x8c,
+      0x8e,
+      0x93,
+      0xfa,
+      0x2c, // 生年月日,
+      0x94,
+      0x4e,
+      0x97,
+      0xee,
+      0x0a // 年齢\n
+    ]
+    const cp932Row = [
+      0x8a,
+      0xb3,
+      0x8e,
+      0xd2,
+      0x8e,
+      0x81,
+      0x96,
+      0xbc,
+      0x3a,
+      0x8e,
+      0x52,
+      0x93,
+      0x63,
+      0x2c, // 患者氏名:山田,
+      0x31,
+      0x32,
+      0x33,
+      0x34,
+      0x2c, // 1234,
+      0x31,
+      0x39,
+      0x36,
+      0x30,
+      0x2d,
+      0x30,
+      0x31,
+      0x2d,
+      0x30,
+      0x32,
+      0x2c, // 1960-01-02,
+      0x36,
+      0x35,
+      0x0a // 65\n
+    ]
+    const blocked = await service.importTable({
+      projectId: 'study-1',
+      filename: 'patients.csv',
+      csvBase64: Buffer.from([...cp932Header, ...cp932Row]).toString('base64')
+    })
+
+    expect(blocked.ok).toBe(false)
+    if (blocked.ok) return
+    expect(blocked.blocked).toBe(true)
+    expect(blocked.message).toContain('病院の承認')
+    expect(blocked.spans.map((span) => span.category)).toEqual(['PERSON_NAME'])
+    expect(createPatientDataTagStore(join(root, 'patient-data-tags.jsonl')).has('study-1')).toBe(
+      false
+    )
+  })
+
   it('blocks PHI import on a machine that is not hospital-approved and reports spans', async () => {
     const root = mkdtempSync(join(tmpdir(), 'schema-notebook-block-'))
     writeFileSync(
@@ -326,7 +426,7 @@ describe('schema-only notebook', () => {
     const blocked = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: 'note,mail\n患者氏名：山田太郎,a@example.jp\nカルテ番号：A1234,none'
+      csvBase64: csvBytes('note,mail\n患者氏名：山田太郎,a@example.jp\nカルテ番号：A1234,none')
     })
     expect(blocked.ok).toBe(false)
     if (blocked.ok) return
@@ -394,7 +494,7 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: csv
+      csvBase64: csvBytes(csv)
     })
     if (!imported.ok) throw new Error('import failed')
     const executed = await service.execute({
@@ -433,7 +533,7 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: lines.join('\n')
+      csvBase64: csvBytes(lines.join('\n'))
     })
     if (!imported.ok) throw new Error('import failed')
     expect(imported.context.columns.find((column) => column.name === 'note')?.dtype).toBe('text')
@@ -492,18 +592,20 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'wards.csv',
-      csvText: [
-        'label,n',
-        '山田太郎さん,1',
-        '山田太郎さん,1',
-        '山田太郎さん,1',
-        '東病棟,1',
-        '東病棟,1',
-        '東病棟,1',
-        '西病棟,1',
-        '西病棟,1',
-        '西病棟,1'
-      ].join('\n')
+      csvBase64: csvBytes(
+        [
+          'label,n',
+          '山田太郎さん,1',
+          '山田太郎さん,1',
+          '山田太郎さん,1',
+          '東病棟,1',
+          '東病棟,1',
+          '東病棟,1',
+          '西病棟,1',
+          '西病棟,1',
+          '西病棟,1'
+        ].join('\n')
+      )
     })
     if (!imported.ok) throw new Error('import failed')
     expect(imported.context.columns.find((column) => column.name === 'label')?.dtype).toBe(
@@ -533,7 +635,7 @@ describe('schema-only notebook', () => {
     const imported = await service.importTable({
       projectId: 'study-1',
       filename: 'patients.csv',
-      csvText: csv,
+      csvBase64: csvBytes(csv),
       patientData: true
     })
     if (!imported.ok) throw new Error('import failed')
