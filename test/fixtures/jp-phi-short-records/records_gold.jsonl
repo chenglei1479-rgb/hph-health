@@ -28,7 +28,7 @@
 {"record":"term-postop-complication.txt","start":0,"end":8,"category":"DECOY","text":"術後合併症の頻度","is_phi":false,"note":"Outcome phrase."}
 {"record":"term-lung-cancer-study.txt","start":0,"end":16,"category":"DECOY","text":"肺癌のスクリーニングに関する研究","is_phi":false,"note":"Study title fragment."}
 {"record":"mixed-date-alongside.txt","start":10,"end":20,"category":"DATE","text":"2026-10-01","is_phi":true,"note":"A row with its own date: the label must survive while the date is redacted."}
-{"record":"mixed-karte-alongside.txt","start":12,"end":17,"category":"KARTE_NO","text":"A1234","is_phi":true,"note":"Identifier present: the cell is redacted, not the whole row."}
+{"record":"mixed-karte-alongside.txt","start":12,"end":18,"category":"KARTE_NO","text":"123456","is_phi":true,"note":"Identifier present (6-digit karte number, the shape the detector actually matches): the cell is redacted, not the whole row."}
 {"record":"mixed-phone-alongside.txt","start":12,"end":24,"category":"PHONE","text":"03-1234-5678","is_phi":true,"note":"Phone inside parentheses: redact the number, keep the definition."}
 {"record":"known-lung-cancer.txt","start":0,"end":2,"category":"DECOY","text":"肺癌","is_phi":false,"note":"Known limitation: identical in shape to 田中; needs the reviewed vocabulary, not a shape rule."}
 {"record":"known-internal-medicine.txt","start":0,"end":2,"category":"DECOY","text":"内科","is_phi":false,"note":"Department name, same shape limitation."}

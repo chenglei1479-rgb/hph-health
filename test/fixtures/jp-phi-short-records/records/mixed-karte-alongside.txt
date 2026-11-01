@@ -1,1 +1,1 @@
-karte	カルテ番号：A1234	text	
+karte	カルテ番号：123456	text	

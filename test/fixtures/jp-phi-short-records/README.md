@@ -15,13 +15,19 @@ data: all names and values are invented.
 
 | Group | Records | Gold | Expectation |
 | --- | --- | --- | --- |
-| `name-*` | 10 | `is_phi: true`, `PERSON_NAME` | must be found, span-exact |
-| `var-*`, `label-*`, `term-*` | 19 | `is_phi: false` | must not be flagged (`mustCleanRate === 0`) |
-| `mixed-*` | 3 | `is_phi: true` (date / karte / phone) | the row's own span is redacted, the label survives |
+| `name-*` | 10 | `is_phi: true`, `PERSON_NAME` | must be found; today overlap 1.0 and exact 0.9 (bare `氏名:` returns the whole cell) |
+| `var-*`, `label-*`, `term-*` | 19 | `is_phi: false` | must not be flagged; today all 19 are flagged |
+| `mixed-*` | 3 | `is_phi: true` (date / karte / phone) | carrying another span keeps the whole-string guess from firing; today all 3 spans are detected and redacted |
 | `known-*` | 6 | `is_phi: false` | still flagged today; the set may shrink, never grow |
+
+The numbers above are the **current** measurements, and `dev-eval.test.ts` pins them; the detector
+ticket flips them to `exact 1`, `mustCleanRate 0`, and "only the six known limitations are flagged".
 
 Each `records_gold.jsonl` line carries a `note` explaining why that row is a name, a label, or a known
 limitation. Read the note before changing a row.
+
+`entities.jsonl` is empty on purpose but must exist: `scoreFixture` loads it (`src/main/phi/score.ts`
+around line 286) for the entity-level checks that only the main fixture exercises.
 
 ## Known limitations (explicit, not "expected false positives")
 

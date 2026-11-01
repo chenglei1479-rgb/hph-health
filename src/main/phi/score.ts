@@ -112,6 +112,7 @@ export function scoreFixture(directory: string): Record<string, unknown> {
   let age90 = 0
   let age90Replaced = 0
   const texts = new Map<string, string>()
+  const redactions = new Map<string, Array<{ start: number; end: number; category: string }>>()
   const misses: Array<{ category: string; text: string; record: string }> = []
 
   for (const record of records) {
@@ -120,6 +121,14 @@ export function scoreFixture(directory: string): Record<string, unknown> {
     const detected = detectPhi(text)
     for (const span of detected) predictions.push({ ...span, record, is_phi: true })
     const redacted = deidentify(text, store)
+    redactions.set(
+      record,
+      redacted.replacements.map((item) => ({
+        start: item.start,
+        end: item.end,
+        category: item.category
+      }))
+    )
     for (const span of gold.filter(
       (item) => item.record === record && item.is_phi && item.category === 'DATE'
     )) {
@@ -236,7 +245,33 @@ export function scoreFixture(directory: string): Record<string, unknown> {
     mustCleanRate: ratio(mustCleanFlagged.length, mustClean.length),
     knownDecoys: knownLimitations.length,
     knownFlagged: knownLimitations.filter((span) => flaggedDecoys.includes(span)).length,
-    flagged: flaggedDecoys.map((span) => ({ record: span.record, text: span.text }))
+    flagged: flaggedDecoys.map((span) => ({ record: span.record, text: span.text })),
+    // Records that carry another PHI span: the whole-string guess never fires on them, so they show
+    // whether a candidate change reached into the labelled detectors.
+    mixed: (() => {
+      const rows = gold.filter((span) => span.is_phi && span.record.startsWith('mixed-'))
+      const detectedRows = rows.filter((span) =>
+        shortPredictions.some(
+          (pred) =>
+            pred.record === span.record &&
+            pred.category === span.category &&
+            pred.start < span.end &&
+            span.start < pred.end
+        )
+      )
+      const redactedRows = rows.filter((span) =>
+        (redactions.get(span.record) ?? []).some(
+          (item) =>
+            item.category === span.category && item.start < span.end && span.start < item.end
+        )
+      )
+      return {
+        gold: rows.length,
+        detected: detectedRows.length,
+        redacted: redactedRows.length,
+        records: [...new Set(rows.map((span) => span.record))].sort()
+      }
+    })()
   }
 
   const categoryMisses: Array<{
