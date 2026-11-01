@@ -19,7 +19,7 @@ import { ApplicationCommandError } from '../../../shared/application-command-con
 import { createCategoricalOptInLog } from './categorical-opt-in'
 import { releaseCategoricalValuesForModel } from './categorical-release'
 import { executeLocalAnalysis, type CommandRunner } from './local-execute'
-import { importTableFile, phiScanText } from './import-table'
+import { readTableInput } from './import-table'
 import { isHospitalApproved } from './machine-approval'
 import { buildSchemaModelContext } from './model-context'
 import { createPatientDataTagStore } from './patient-data-tag'
@@ -178,8 +178,11 @@ export const createSchemaNotebookService = (options: {
           spans: []
         }
       }
-      const table = importTableFile(request)
-      const spans = detectPatientPhiSpans(phiScanText(request))
+      // One decode feeds both the schema and the PHI scan, so an encoding mistake cannot silently
+      // change what the gate sees.
+      const imported = readTableInput(request)
+      const table = imported.table
+      const spans = detectPatientPhiSpans(imported.scanText)
       if (spans.length > 0 && !approved()) {
         return { ok: false, blocked: true, message: formatBlockedImport(spans), spans }
       }
@@ -206,7 +209,8 @@ export const createSchemaNotebookService = (options: {
         context: await contextFor(stored),
         containsPatientData: patient,
         tagged: tags.has(projectId),
-        identifierWarnings
+        identifierWarnings,
+        ...(imported.encoding === undefined ? {} : { encoding: imported.encoding })
       }
     },
     async optInCategorical(request) {

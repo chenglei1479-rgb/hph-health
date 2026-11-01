@@ -15,7 +15,7 @@ import { schemaNotebookCopy } from './copy'
 import { schemaNotebookDraftKey } from './schema-notebook-draft'
 
 const tags = vi.fn(async () => [{ projectId: 'study-1' }])
-const importTable = vi.fn(async (): Promise<ImportTableResponse> => ({
+const importTable = vi.fn(async (..._request: unknown[]): Promise<ImportTableResponse> => ({
   ok: true,
   tagged: true,
   containsPatientData: true,
@@ -162,8 +162,11 @@ describe('SchemaNotebookEntry', () => {
           this.onload?.()
         })
       }
-      readAsArrayBuffer(): void {
-        this.onerror?.()
+      readAsArrayBuffer(file: File): void {
+        void file.arrayBuffer().then((buffer) => {
+          this.result = buffer
+          this.onload?.()
+        })
       }
     }
     vi.stubGlobal('FileReader', ImmediateReader)
@@ -182,6 +185,11 @@ describe('SchemaNotebookEntry', () => {
     await act(async () => {
       await importTable.mock.results.at(-1)?.value
     })
+    // The panel hands the file over as bytes. Passing decoded text would move decoding back into the
+    // renderer, which reads every file as UTF-8 — the hole that hid CP932 headers from the scans.
+    const importedRequest = importTable.mock.calls.at(-1)?.[0] as Record<string, unknown>
+    expect(typeof importedRequest.csvBase64).toBe('string')
+    expect(importedRequest).not.toHaveProperty('csvText')
     const run = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent === '手元で実行'
     )
@@ -284,8 +292,11 @@ describe('SchemaNotebookEntry', () => {
           this.onload?.()
         })
       }
-      readAsArrayBuffer(): void {
-        this.onerror?.()
+      readAsArrayBuffer(file: File): void {
+        void file.arrayBuffer().then((buffer) => {
+          this.result = buffer
+          this.onload?.()
+        })
       }
     }
     vi.stubGlobal('FileReader', ImmediateReader)
@@ -383,8 +394,11 @@ describe('SchemaNotebookEntry', () => {
           this.onload?.()
         })
       }
-      readAsArrayBuffer(): void {
-        this.onerror?.()
+      readAsArrayBuffer(file: File): void {
+        void file.arrayBuffer().then((buffer) => {
+          this.result = buffer
+          this.onload?.()
+        })
       }
     }
     vi.stubGlobal('FileReader', ImmediateReader)

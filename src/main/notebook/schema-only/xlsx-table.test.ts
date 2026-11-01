@@ -6,10 +6,7 @@ import { buildXlsx, readXlsxTable } from './xlsx-table'
 type RelationshipAttribute = 'Id' | 'Type' | 'Target'
 
 /** Rewrite `xl/_rels/workbook.xml.rels` so the attributes appear in the requested order. */
-const withRelationshipOrder = (
-  bytes: Uint8Array,
-  order: RelationshipAttribute[]
-): Uint8Array => {
+const withRelationshipOrder = (bytes: Uint8Array, order: RelationshipAttribute[]): Uint8Array => {
   const files = unzipSync(bytes)
   const rels = strFromU8(files['xl/_rels/workbook.xml.rels'])
   const rewritten = rels.replace(/<Relationship\b([^>]*?)\/>/g, (_match, attrs: string) => {

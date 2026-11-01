@@ -49,10 +49,20 @@ export type PatientPhiSpan = {
   reason: string
 }
 
+// CSV bytes arrive from the renderer and are decoded in the main process: Excel on a Japanese Windows
+// install writes CP932, and decoding as UTF-8 turns every Japanese header into U+FFFD, which also
+// defeats the identifier-column and PHI scans that run on the decoded text.
+export const SCHEMA_NOTEBOOK_CSV_ENCODING_CODE = 'schema-notebook-csv-encoding' as const
+
+export type CsvEncoding = 'utf-8' | 'utf-8-bom' | 'shift_jis'
+
 export type ImportTableRequest = {
   projectId: string
   filename: string
-  csvText?: string
+  // Bytes only. A pre-decoded string would let a caller decode with the wrong encoding again, which is
+  // exactly how CP932 headers became U+FFFD and slipped past the identifier and PHI scans.
+  /** Raw CSV bytes, base64. The main process decodes them. */
+  csvBase64?: string
   xlsxBase64?: string
   /** Defaults to true. A table with detected patient PHI is always patient data. */
   patientData?: boolean
@@ -71,6 +81,8 @@ export type ImportTableResponse =
       containsPatientData: boolean
       tagged: boolean
       identifierWarnings: IdentifierColumnWarning[]
+      /** How a CSV was decoded, so the panel can show it before the user trusts the columns. */
+      encoding?: CsvEncoding
     }
   | {
       ok: false

@@ -11,6 +11,7 @@ export const APPLICATION_COMMAND_ERROR_CODES = [
   'session-revision-conflict',
   'SESSION_RUNTIME_WRITER_LOST',
   'schema-notebook-table-missing',
+  'schema-notebook-csv-encoding',
   'schema-notebook-python-unavailable',
   'csl-file-too-large',
   'csl-invalid-xml',
