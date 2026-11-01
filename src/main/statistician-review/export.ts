@@ -72,12 +72,16 @@ const partsFor = (request: StatisticianReviewExportRequest): Part[] => {
     store,
     scriptName
   )
+  // The variable dictionary is tab-separated cells, not prose: a cell that looks like a Japanese word
+  // is a label, and only a cell carrying a name label is a patient. Without this the exported PDF lost
+  // whole rows (variable name, definition, type, coding) to `[患者N]`.
   const definition = redactExportText(
     request.variableDefinition.rows
       .map((row) => [row.name, row.definition, row.type, row.coding].join('\t'))
       .join('\n'),
     store,
-    'variable-definition.pdf'
+    'variable-definition.pdf',
+    { structured: true }
   )
   const log = redactExportText(request.executionLog.text, store, 'execution-log.pdf')
   return [

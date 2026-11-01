@@ -26,6 +26,29 @@ export const BIRTH_DATE_MARK = '[生年月日]'
 
 type Span = { start: number; end: number; replacement: string }
 
+// A variable dictionary is a table, not free text: every cell is a column name, a definition, a type
+// or a coding. A whole cell that merely looks like a Japanese name — 肺癌, 内科, 年齢（歳） — is a
+// label, and replacing the line destroys the dictionary. Only a cell that carries a name label of its
+// own is treated as a patient name here.
+//
+// This mirrors the connector and Notebook patches (gate.ts, notebook-phi-release.ts); converging all
+// of them is tracked separately as issue #92, and this file must not grow its own wider rule.
+const NAME_LABEL = /患者|氏名|さん|Pt:|キーパーソン|長男|長女|娘の/
+
+const isWholeCellNameGuess = (
+  text: string,
+  span: { start: number; end: number; category: PhiCategory }
+): boolean => {
+  if (span.category !== 'PERSON_NAME' && span.category !== 'PHYSICIAN_NAME') return false
+  if (text.slice(span.start, span.end) !== text.trim()) return false
+  return !NAME_LABEL.test(text)
+}
+
+export type RedactOptions = {
+  /** Table cells: skip the whole-cell name guess instead of treating a label as a patient. */
+  structured?: boolean
+}
+
 const isBirth = (text: string, span: PhiSpan): boolean => {
   if (span.category !== 'DATE') return false
   if (/生$/.test(span.text)) return true
@@ -65,11 +88,14 @@ const sharedSpans = (text: string, name: string, store: PhiStore): Span[] =>
     replacement: replacementFor(match, text, store)
   }))
 
-const phiSpans = (text: string, store: PhiStore): Span[] => {
-  const detected = detectPhi(text)
+const phiSpans = (text: string, store: PhiStore, options: RedactOptions): Span[] => {
+  const keepName = (span: { start: number; end: number; category: PhiCategory }): boolean =>
+    !options.structured || !isWholeCellNameGuess(text, span)
+  const detected = detectPhi(text).filter(keepName)
   const released = deidentify(text, store)
   const spans: Span[] = []
   for (const replacement of released.replacements) {
+    if (!keepName(replacement)) continue
     if (IDENTIFIERS.has(replacement.category)) {
       spans.push(fromReplacement(replacement))
       continue
@@ -126,12 +152,13 @@ export const remainingExportFindings = (name: string, text: string): string[] =>
 export const redactExportText = (
   value: string,
   store: PhiStore,
-  name = 'export.txt'
+  name = 'export.txt',
+  options: RedactOptions = {}
 ): { text: string; highlights: PhiHighlight[] } => {
   const text = value.replace(/\r\n/g, '\n')
   const redacted = applySpans(
     text,
-    keepLarger([...phiSpans(text, store), ...sharedSpans(text, name, store)])
+    keepLarger([...phiSpans(text, store, options), ...sharedSpans(text, name, store)])
   )
   const second = applySpans(redacted, keepLarger(sharedSpans(redacted, name, store)))
   return { text: second, highlights: highlightsIn(second) }
