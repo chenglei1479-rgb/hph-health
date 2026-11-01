@@ -94,7 +94,7 @@ describe('Japanese PHI dev set', () => {
     // `ok` is deliberately NOT asserted for this fixture. It is false by design: the set pins the
     // #103 miss (`known-long-name-unmasked`, 1 of 14 names), so `patientOverlapRecall` and
     // `hardRecall` cannot reach their thresholds, and the set has no age/drug decoys (their rates are
-    // 0/0). Asserting `ok` here would turn main red for a fixture that is supposed to carry a
+    // 0/0, issue #118). Asserting `ok` here would turn main red for a fixture that is supposed to carry a
     // documented miss. The main fixture's `ok` is asserted above; these are the thresholds that must
     // hold here.
     expect(report.thresholds).toMatchObject({
@@ -255,5 +255,32 @@ describe('Japanese PHI dev set', () => {
   it('rejects the first segment of a UUID', () => {
     const text = '"version_id": "02852897-9f2b-4183-a8f3-1e2210368817"'
     expect(detectPhi(text).filter((span) => span.category === 'INSURER_NO')).toEqual([])
+  })
+
+  // Every gold line must point at the text it names. A span that covers a whole file and carries a
+  // descriptive `text` scores exactly the same as a real one, so nothing else catches it: the PubMed
+  // record was written that way and only a reader noticed. A gold entry that does not slice back to
+  // its record is a lie about the fixture, and it is the first thing an integrity check would break on.
+  it('points every gold line at the text in its record', () => {
+    const gold = readFileSync(join(SHORT_FIXTURE, 'records_gold.jsonl'), 'utf8')
+      .trim()
+      .split('\n')
+      .map(
+        (line) =>
+          JSON.parse(line) as {
+            record: string
+            start: number
+            end: number
+            text: string
+          }
+      )
+    expect(gold).toHaveLength(60)
+    for (const span of gold) {
+      const text = readFileSync(join(SHORT_FIXTURE, 'records', span.record), 'utf8')
+      expect({ record: span.record, slice: text.slice(span.start, span.end) }).toEqual({
+        record: span.record,
+        slice: span.text
+      })
+    }
   })
 })

@@ -13,15 +13,15 @@ separately.
 Every record is one line of a synthetic variable dictionary or a reviewed label shape. No patient
 data: all names and values are invented.
 
-| Group                        | Records | Gold                                  | Expectation                                                                                                        |
-| ---------------------------- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `name-*`                     | 14      | `is_phi: true`, `PERSON_NAME`         | must be found; today overlap 1.0 and exact 1.0                                                                     |
-| `var-*`, `label-*`, `term-*` | 19      | `is_phi: false`                       | must not be flagged; today none are                                                                                |
-| `mixed-*`                    | 3       | `is_phi: true` (date / karte / phone) | the row keeps its field name while its own span is redacted; today all 3 are detected and redacted                 |
-| `insurer-*`                  | 3       | `is_phi: true`, `INSURER_NO`          | the labelled forms a sentence and a table use: 保険者番号：/ 保険者番号は / 保険者番号 \| all keep hitting         |
-| `tool-*`                     | 6       | `is_phi: false`                       | machine payloads — artifact metadata, a UUID tail, a hex hash, a PMID list, an id and an account number — released |
-| `known-*`                    | 8       | `is_phi: false`                       | pinned residual false positives and category gaps; the set may shrink, never grow                                  |
-| `known-long-name-unmasked`   | 1       | `is_phi: true`, `PERSON_NAME`         | a pinned **miss**, not a false positive: past 80 characters the guess does not run                                 |
+| Group                        | Records | Gold                                                                                           | Expectation                                                                                                                            |
+| ---------------------------- | ------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `name-*`                     | 14      | `is_phi: true`, `PERSON_NAME`                                                                  | must be found; today overlap 1.0 and exact 1.0                                                                                         |
+| `var-*`, `label-*`, `term-*` | 19      | `is_phi: false`                                                                                | must not be flagged; today none are                                                                                                    |
+| `mixed-*`                    | 3       | `is_phi: true` (date / karte / phone)                                                          | the row keeps its field name while its own span is redacted; today all 3 are detected and redacted                                     |
+| `insurer-*`                  | 5       | 3 × `is_phi: true` (`insurer-labeled`, `-label-particle`, `-label-pipe`) + 2 downgraded decoys | the labelled forms a sentence and a table use keep hitting; a bare eight-digit run in text is no longer an insurer number (issue #105) |
+| `tool-*`                     | 6       | `is_phi: false`                                                                                | machine payloads — artifact metadata, a UUID tail, a hex hash, a PMID list, an id and an account number — released                     |
+| `known-*`                    | 8       | `is_phi: false`                                                                                | pinned residual false positives and category gaps; the set may shrink, never grow                                                      |
+| `known-long-name-unmasked`   | 1       | `is_phi: true`, `PERSON_NAME`                                                                  | a pinned **miss**, not a false positive: past 80 characters the guess does not run                                                     |
 
 The `name-with-*` records are the ones the old whole-string guess dropped: it only fired when the text
 carried no other span at all, so `山田太郎 65歳` and `山田太郎 2026-10-01` lost the name entirely. Their
