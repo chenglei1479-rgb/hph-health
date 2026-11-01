@@ -26,7 +26,7 @@ Ready for review only when all four outputs exist or a missing component is expl
 
 ## consultation-pack: data audit and statistical consultation pack
 
-Required: authorized anonymized CSV/TSV/XLSX, selected sheet, data dictionary (units/coding), cohort/endpoint definitions, and question for consultation. If there is no dataset, prepare only the input checklist and plan skeleton, labeled not audited.
+Required: authorized CSV/TSV/XLSX of fictional data (during the beta, fictional data only; de-identified real data requires an institution-approved pilot), selected sheet, data dictionary (units/coding), cohort/endpoint definitions, and question for consultation. If there is no dataset, prepare only the input checklist and plan skeleton, labeled not audited.
 
 Use clinical-data-audit for standard-library read-only inspection when available. Confirm variable meanings before interpreting event/time consistency. Do not alter source data, impute, or silently select cutoffs. Follow biomedical-discovery analysis readiness and recovery rules; inspect required packages and record permission/quota unknown states. Statistical execution follows explicit approval and actual verified runtime results.
 

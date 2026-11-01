@@ -1,7 +1,7 @@
 // Beta terms of use are a local, per-user acknowledgement. The version is a code constant: changing
 // the terms (or how they are presented) bumps it, and every completed install must acknowledge the
 // current version once at startup. Nothing here is uploaded or telemetered.
-export const BETA_TERMS_VERSION = '2026-10-β1'
+export const BETA_TERMS_VERSION = '2026-11-β2'
 
 export type BetaTermsAcceptance = {
   version: string
@@ -44,8 +44,8 @@ export const BETA_TERMS_COPY = {
       body: 'Install and use Baselio only on your personal computer. Do not install it on a hospital computer.'
     },
     {
-      title: 'Fictitious or de-identified data only',
-      body: 'Use only fictitious data or data from which identifying information has already been removed.'
+      title: 'Fictitious data only during the beta',
+      body: 'During the beta, use only fictional data. De-identified real data is allowed only in an institution-approved pilot under a separate written agreement. Do not upload identifiable patient information.'
     },
     {
       title: 'Where your input is sent',
@@ -58,6 +58,9 @@ export const BETA_TERMS_COPY = {
   ],
   acknowledgement: 'I agree to the terms above.',
   requiredHint: 'Select the checkbox above to continue.',
+  // Shown only when the stored acceptance names an older version: no notice on a fresh install, and
+  // none once the current version is acknowledged.
+  updatedNotice: 'The beta terms have been updated. Review them and agree again to continue.',
   agreeAndContinue: 'Agree and continue',
   openPrintable: 'Open the printable full version',
   print: 'Print',

@@ -4,19 +4,23 @@ import { useTranslation } from 'react-i18next'
 import { AppBrand } from '@/components/AppBrand'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { BETA_TERMS_COPY } from '../../../../shared/beta-terms'
+import { BETA_TERMS_COPY, BETA_TERMS_VERSION } from '../../../../shared/beta-terms'
 import { BetaTermsConsent, BetaTermsContent } from './BetaTerms'
 
 type BetaTermsGateProps = {
   // The gate is rendered only while the current version is unacknowledged. Accepting updates the
   // settings snapshot, which moves startup to the app without ever mutating onboardingCompletedAt.
   onAccepted: () => void
+  // Version the user acknowledged last time, if any. A fresh install has none and must not be told
+  // that anything was updated.
+  previousVersion?: string
 }
 
 // Lightweight startup gate for completed installs that have no record of the current terms (older
 // users or a version bump). It intentionally does not mount the onboarding wizard or its checks.
-const BetaTermsGate = ({ onAccepted }: BetaTermsGateProps): React.JSX.Element => {
+const BetaTermsGate = ({ onAccepted, previousVersion }: BetaTermsGateProps): React.JSX.Element => {
   const { t } = useTranslation()
+  const updated = Boolean(previousVersion) && previousVersion !== BETA_TERMS_VERSION
 
   // The packaged launch smoke accepts this mandatory first-run surface as "started". It is not a
   // bypass: the gate clears only after the consent action writes the local acceptance record.
@@ -42,6 +46,14 @@ const BetaTermsGate = ({ onAccepted }: BetaTermsGateProps): React.JSX.Element =>
             <CardDescription className="text-sm leading-6">
               {t('Please review and accept the terms before using this build.')}
             </CardDescription>
+            {updated ? (
+              <p
+                data-testid="beta-terms-updated-notice"
+                className="text-sm leading-6 text-text-000"
+              >
+                {t(BETA_TERMS_COPY.updatedNotice)}
+              </p>
+            ) : null}
           </CardHeader>
           <Separator className="bg-border-200" />
           <CardContent className="px-6 py-5">

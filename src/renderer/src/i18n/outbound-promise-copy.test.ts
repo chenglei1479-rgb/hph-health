@@ -127,13 +127,11 @@ describe('outbound-promise copy', () => {
 
   it('keeps the beta/seed scope and provider destination in every locale', () => {
     expect(releaseNotes).toContain(
-      'β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。'
+      'β／種期間中は架空データのみをご利用ください。匿名化または仮名化した実データは、機関が承認したパイロットに限り使用できます。'
     )
+    expect(releaseNotes).toContain('β／种子期间仅使用虚构数据。已去标识的真实数据仅限机构批准的试点。')
     expect(releaseNotes).toContain(
-      'β／种子阶段请仅使用虚构数据。医院正式运行及真实数据不在适用范围内。'
-    )
-    expect(releaseNotes).toContain(
-      'For beta/seed use, please use fictional data only. Formal hospital operations and real data are out of scope.'
+      'During the beta, use only fictional data. De-identified real data is allowed only in a pilot approved by the institution.'
     )
     for (const locale of LOCALES) {
       const renderer = CATALOGS[locale].renderer
@@ -142,7 +140,7 @@ describe('outbound-promise copy', () => {
     }
     expect(
       ja.renderer[PRERELEASE_DATA_USE_NOTICE].startsWith(
-        'β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。'
+        'β／種期間中は架空データのみをご利用ください。匿名化または仮名化した実データは、機関が承認したパイロットに限り使用できます。'
       )
     ).toBe(true)
   })

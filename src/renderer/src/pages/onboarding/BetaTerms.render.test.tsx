@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSettingsStore } from '@/stores/settings-store'
+import { BETA_TERMS_VERSION } from '../../../../shared/beta-terms'
 import { BetaTermsConsent, BetaTermsContent } from './BetaTerms'
 import { BetaTermsGate } from './BetaTermsGate'
 
@@ -97,7 +98,10 @@ describe('BetaTermsConsent', () => {
 
     expect(container.textContent).toContain('unsigned internal test build')
     expect(container.textContent).toContain('personal computer')
-    expect(container.textContent).toContain('fictitious data')
+    // The beta admits fictional data only; de-identified real data needs a written pilot agreement.
+    expect(container.textContent).toContain('Fictitious data only during the beta')
+    expect(container.textContent).toContain('use only fictional data')
+    expect(container.textContent).toContain('institution-approved pilot')
     expect(container.textContent).toContain(
       'Your input is sent to the destination shown for the active key mode: the AI contracted by the operator for a seed invite, or the provider you registered for BYOK. Your API key is stored on this computer.'
     )
@@ -113,5 +117,65 @@ describe('BetaTermsGate', () => {
     expect(checkbox().checked).toBe(false)
     expect(container.textContent).toContain('Beta terms of use')
     expect(container.textContent).toContain('Baselio')
+  })
+
+  // A version bump re-opens the gate for everyone. Only users who acknowledged an older version are
+  // told that the terms changed; a fresh install must not claim an update it never had.
+  it('tells a returning user that the terms changed', async () => {
+    await render(<BetaTermsGate onAccepted={vi.fn()} previousVersion="2026-10-β1" />)
+
+    expect(container.querySelector('[data-testid="beta-terms-updated-notice"]')?.textContent).toBe(
+      'The beta terms have been updated. Review them and agree again to continue.'
+    )
+  })
+
+  it('does not claim an update on a fresh install', async () => {
+    await render(<BetaTermsGate onAccepted={vi.fn()} />)
+
+    expect(container.querySelector('[data-testid="beta-terms-updated-notice"]')).toBeNull()
+    expect(container.textContent).not.toContain('have been updated')
+  })
+
+  it('does not claim an update when the stored acceptance already matches', async () => {
+    await render(<BetaTermsGate onAccepted={vi.fn()} previousVersion={BETA_TERMS_VERSION} />)
+
+    expect(container.querySelector('[data-testid="beta-terms-updated-notice"]')).toBeNull()
+  })
+})
+
+// The printable copy and the saved text are the same document the user acknowledged, so they must
+// carry the current wording and version rather than a stale snapshot.
+describe('printable beta terms', () => {
+  it('saves the current terms with the current version', async () => {
+    const saveBlobFile = vi.fn().mockResolvedValue(undefined)
+    ;(window as unknown as { api: Record<string, unknown> }).api = { saveBlobFile }
+    await render(<BetaTermsConsent onAccepted={vi.fn()} />)
+
+    const open = Array.from(container.querySelectorAll('button')).find((candidate) =>
+      /open the printable full version/i.test(candidate.textContent ?? '')
+    )
+    await act(async () => {
+      open?.click()
+      await Promise.resolve()
+    })
+    const save = Array.from(document.querySelectorAll('button')).find((candidate) =>
+      /save a copy/i.test(candidate.textContent ?? '')
+    )
+    await act(async () => {
+      save?.click()
+      await Promise.resolve()
+    })
+
+    expect(saveBlobFile).toHaveBeenCalledOnce()
+    const request = saveBlobFile.mock.calls[0][0] as {
+      suggestedName: string
+      data: ArrayBuffer
+    }
+    expect(request.suggestedName).toBe(`Baselio-beta-terms-${BETA_TERMS_VERSION}.txt`)
+    const text = new TextDecoder().decode(new Uint8Array(request.data))
+    expect(text).toContain(`β ${BETA_TERMS_VERSION}`)
+    expect(text).toContain('Fictitious data only during the beta')
+    expect(text).toContain('institution-approved pilot')
+    expect(text).not.toContain('Fictitious or de-identified data only')
   })
 })

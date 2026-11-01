@@ -209,7 +209,10 @@ const ApplicationPresentationContent = ({
           </main>
         }
       >
-        <BetaTermsGate onAccepted={() => undefined} />
+        <BetaTermsGate
+          onAccepted={() => undefined}
+          previousVersion={startup.settings.betaTermsAcceptedVersion}
+        />
       </Suspense>
     )
   }

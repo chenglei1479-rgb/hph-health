@@ -10,7 +10,13 @@ Notebook 用の Python（pandas、numpy、scipy、statsmodels、matplotlib、ope
 
 氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。
 
-β／種では架空データのみご利用ください。病院の正式運用・実データは対象外です。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。
+β／種期間中は架空データのみをご利用ください。匿名化または仮名化した実データは、機関が承認したパイロットに限り使用できます。リクエストは設定した AI サービス（OpenAI の場合は米国）へ送信されます。利用料金はご自身の契約先から請求されます。
+
+### 利用できる文献ソース（2026-11-01 時点）
+
+- PubMed、Crossref、OpenAlex、ClinicalTrials.gov、J-STAGE、CiNii Research、KAKEN、NBDC のメタデータを検索できます。各検索結果には使用したソース・クエリ・検索日を記録します。
+- jRCT / UMIN-CTR は、公式の公開エクスポートファイルを取り込んだ検索のみ可能です。これは上流が検索 API を公開していないためで、本製品の未実装ではありません。オンライン検索は提供しません。
+- 医中誌Web は未接続です。機関単位の API 契約（SRU 仕様）が必要なためで、製品内では公式ページへの入口のみを案内し、ページの自動取得は行いません。
 
 ### OpenAI の API キーを作る
 
@@ -34,7 +40,13 @@ Notebook 用的 Python（pandas、numpy、scipy、statsmodels、matplotlib、ope
 
 为防止发送姓名、患者ID等直接标识符，设有发送前检查和限制。这并非绝对保证。
 
-β／种子阶段请仅使用虚构数据。医院正式运行及真实数据不在适用范围内。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。
+β／种子期间仅使用虚构数据。已去标识的真实数据仅限机构批准的试点。请求会发送到您设置的 AI 服务（如果是 OpenAI，则发送到美国）。
+
+### 可检索的文献来源（截至 2026-11-01）
+
+- 可检索 PubMed、Crossref、OpenAlex、ClinicalTrials.gov、J-STAGE、CiNii Research、KAKEN、NBDC 的元数据；每条检索结果记录所用来源、检索式与检索日期。
+- jRCT / UMIN-CTR 仅支持导入官方公开导出文件后检索。这是上游未开放检索接口，不是本产品缺失；产品内不提供线上检索。
+- 医中誌Web 尚未接入，需要机构级 API 协议（SRU 规范）；产品内只提供官方入口，不自动抓取页面。
 
 ### 创建 OpenAI API 密钥
 
@@ -50,6 +62,6 @@ Notebook 用的 Python（pandas、numpy、scipy、statsmodels、matplotlib、ope
 
 Pre-send checks and restrictions help prevent direct identifiers such as names and patient IDs from being sent. This is not an absolute guarantee.
 
-For beta/seed use, please use fictional data only. Formal hospital operations and real data are out of scope.
+During the beta, use only fictional data. De-identified real data is allowed only in a pilot approved by the institution.
 
 Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.

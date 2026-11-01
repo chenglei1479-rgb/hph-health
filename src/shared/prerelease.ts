@@ -7,7 +7,7 @@ export const PRERELEASE_DATA_DESTINATION_NOTICE =
 
 // Beta/seed scope and configured provider destination remain visible beside the checks notice.
 export const PRERELEASE_DATA_USE_NOTICE =
-  'For beta/seed use, please use fictional data only. Formal hospital operations and real data are out of scope. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.'
+  'During the beta, use only fictional data. De-identified real data is allowed only in a pilot approved by the institution. Requests are sent to the AI service you configure (for OpenAI, the United States). Usage fees are billed by your own provider.'
 
 // Settings → About. Same scheme as the data-destination notice: the English source text is the
 // renderer catalog key, so a beta build states its update policy in the active language.
