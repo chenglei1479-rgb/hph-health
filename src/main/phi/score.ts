@@ -111,13 +111,24 @@ export function scoreFixture(directory: string): Record<string, unknown> {
   let documentKept = 0
   let age90 = 0
   let age90Replaced = 0
+  const texts = new Map<string, string>()
+  const redactions = new Map<string, Array<{ start: number; end: number; category: string }>>()
   const misses: Array<{ category: string; text: string; record: string }> = []
 
   for (const record of records) {
     const text = readFileSync(join(directory, 'records', record), 'utf8')
+    texts.set(record, text)
     const detected = detectPhi(text)
     for (const span of detected) predictions.push({ ...span, record, is_phi: true })
     const redacted = deidentify(text, store)
+    redactions.set(
+      record,
+      redacted.replacements.map((item) => ({
+        start: item.start,
+        end: item.end,
+        category: item.category
+      }))
+    )
     for (const span of gold.filter(
       (item) => item.record === record && item.is_phi && item.category === 'DATE'
     )) {
@@ -184,6 +195,83 @@ export function scoreFixture(directory: string): Record<string, unknown> {
       )
       if (!hit) misses.push({ category, text: span.text, record: span.record })
     }
+  }
+
+  // The whole-string name guess only fires on a record of at most 80 characters, and the main fixture
+  // has none: all 694 decoys and every PERSON_NAME gold there sit in records of 246+ characters. Short
+  // records are therefore scored separately — otherwise a change to that branch can neither be judged
+  // by the aggregate nor be hidden inside it.
+  const SHORT_RECORD_MAX_LENGTH = 80
+  const isShort = (record: string): boolean =>
+    (texts.get(record)?.length ?? Number.MAX_SAFE_INTEGER) <= SHORT_RECORD_MAX_LENGTH
+  const shortNames = gold.filter(
+    (span) => span.is_phi && span.category === 'PERSON_NAME' && isShort(span.record)
+  )
+  const shortPredictions = predictions.filter((span) => isShort(span.record))
+  const nameHits = (mode: 'overlap' | 'exact'): typeof shortNames =>
+    shortNames.filter((span) =>
+      shortPredictions.some(
+        (pred) =>
+          pred.record === span.record &&
+          pred.category === 'PERSON_NAME' &&
+          (mode === 'exact'
+            ? pred.start === span.start && pred.end === span.end
+            : pred.start < span.end && span.start < pred.end)
+      )
+    )
+  const shortDecoys = gold.filter((span) => span.is_phi === false && isShort(span.record))
+  const flaggedDecoys = shortDecoys.filter((span) =>
+    shortPredictions.some(
+      (pred) => pred.record === span.record && pred.start < span.end && span.start < pred.end
+    )
+  )
+  const mustClean = shortDecoys.filter((span) => !span.record.startsWith('known-'))
+  const knownLimitations = shortDecoys.filter((span) => span.record.startsWith('known-'))
+  const ratio = (hit: number, total: number): number => (total === 0 ? 1 : round(hit / total))
+  const mustCleanFlagged = mustClean.filter((span) => flaggedDecoys.includes(span))
+  const shortRecords = {
+    recordMaxLength: SHORT_RECORD_MAX_LENGTH,
+    records: [...texts.keys()].filter(isShort).length,
+    // false means this fixture cannot see the branch at all; never read it as "no false positives".
+    covered: shortNames.length > 0 || shortDecoys.length > 0,
+    nameGold: shortNames.length,
+    nameOverlapRecall: ratio(nameHits('overlap').length, shortNames.length),
+    nameExactRecall: ratio(nameHits('exact').length, shortNames.length),
+    nameMisses: shortNames
+      .filter((span) => !nameHits('overlap').includes(span))
+      .map((span) => ({ record: span.record, text: span.text })),
+    mustCleanDecoys: mustClean.length,
+    mustCleanFlagged: mustCleanFlagged.length,
+    mustCleanRate: ratio(mustCleanFlagged.length, mustClean.length),
+    knownDecoys: knownLimitations.length,
+    knownFlagged: knownLimitations.filter((span) => flaggedDecoys.includes(span)).length,
+    flagged: flaggedDecoys.map((span) => ({ record: span.record, text: span.text })),
+    // Records that carry another PHI span: the whole-string guess never fires on them, so they show
+    // whether a candidate change reached into the labelled detectors.
+    mixed: (() => {
+      const rows = gold.filter((span) => span.is_phi && span.record.startsWith('mixed-'))
+      const detectedRows = rows.filter((span) =>
+        shortPredictions.some(
+          (pred) =>
+            pred.record === span.record &&
+            pred.category === span.category &&
+            pred.start < span.end &&
+            span.start < pred.end
+        )
+      )
+      const redactedRows = rows.filter((span) =>
+        (redactions.get(span.record) ?? []).some(
+          (item) =>
+            item.category === span.category && item.start < span.end && span.start < item.end
+        )
+      )
+      return {
+        gold: rows.length,
+        detected: detectedRows.length,
+        redacted: redactedRows.length,
+        records: [...new Set(rows.map((span) => span.record))].sort()
+      }
+    })()
   }
 
   const categoryMisses: Array<{
@@ -271,6 +359,8 @@ export function scoreFixture(directory: string): Record<string, unknown> {
     thresholds,
     patient: report,
     hardRecall,
+    // Short-record subset: the only place the whole-string name guess is actually exercised.
+    shortRecords,
     ageRecall: round(ageRecall),
     ageN: ageGold.length,
     age90Replaced: age90 === 0 ? 1 : round(age90Replaced / age90),

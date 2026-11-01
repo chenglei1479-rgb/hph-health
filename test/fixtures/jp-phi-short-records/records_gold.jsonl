@@ -1,0 +1,38 @@
+{"record":"name-bare-kanji-space.txt","start":0,"end":5,"category":"PERSON_NAME","text":"山田 太郎","is_phi":true,"note":"姓 名 in kanji with a space. Today saved only by the whole-string guess; shape must keep it."}
+{"record":"name-bare-kanji-nospace.txt","start":0,"end":4,"category":"PERSON_NAME","text":"山田太郎","is_phi":true,"note":"The most common Japanese spelling, no separator. A shape rule that requires whitespace loses it."}
+{"record":"name-bare-kanji-space-two.txt","start":0,"end":5,"category":"PERSON_NAME","text":"佐藤 花子","is_phi":true,"note":"Second surname/given-name sample, so the rule cannot fit one name."}
+{"record":"name-bare-katakana.txt","start":0,"end":7,"category":"PERSON_NAME","text":"ヤマダ タロウ","is_phi":true,"note":"Katakana name. Today the kanji/katakana clause covers it."}
+{"record":"name-bare-ideographic-space.txt","start":0,"end":5,"category":"PERSON_NAME","text":"山田　太郎","is_phi":true,"note":"U+3000 as the separator: any segmentation rule must treat it as a space."}
+{"record":"name-single-surname.txt","start":0,"end":2,"category":"PERSON_NAME","text":"田中","is_phi":true,"note":"Two-kanji surname alone. The lower bound of name shape; a segment-count rule must not exclude it."}
+{"record":"name-with-honorific.txt","start":0,"end":7,"category":"PERSON_NAME","text":"田中 一郎 様","is_phi":true,"note":"Three parts with an honorific. A pure two-part rule would drop it."}
+{"record":"name-english.txt","start":0,"end":10,"category":"PERSON_NAME","text":"John Smith","is_phi":true,"note":"English name, two capitalized parts."}
+{"record":"name-labeled-patient.txt","start":5,"end":10,"category":"PERSON_NAME","text":"山田 太郎","is_phi":true,"note":"Explicit label rule already covers this; recall must not depend on the guess."}
+{"record":"name-labeled-bare-shiin.txt","start":3,"end":7,"category":"PERSON_NAME","text":"山田太郎","is_phi":true,"note":"The only bare 氏名 form. No explicit rule exists today, so it rides on the whole-string guess; narrowing the guess without adding a label rule drops this name."}
+{"record":"var-reported-tsv.txt","start":0,"end":49,"category":"DECOY","text":"readmitted_30d\t合成データの30日再入院フラグ\tbinary\t0=no; 1=yes","is_phi":false,"note":"The acceptance finding: whole row became [患者1] and the exported dictionary lost every field."}
+{"record":"var-age-unit.txt","start":0,"end":18,"category":"DECOY","text":"age\t年齢（歳）\tinteger\t","is_phi":false,"note":"Variable row with a parenthesised unit."}
+{"record":"var-sex-categorical.txt","start":0,"end":31,"category":"DECOY","text":"sex\t性別（男性／女性）\tbinary\t1=男性; 2=女性","is_phi":false,"note":"Coding with the full-width slash and equals sign."}
+{"record":"var-sbp.txt","start":0,"end":24,"category":"DECOY","text":"sbp\t収縮期血圧（mmHg）\tinteger\t","is_phi":false,"note":"Latin unit in full-width parentheses."}
+{"record":"var-smoking.txt","start":0,"end":26,"category":"DECOY","text":"smoking\t喫煙歴（あり／なし）\tbinary\t","is_phi":false,"note":"Categorical definition with a slash."}
+{"record":"var-endpoint.txt","start":0,"end":39,"category":"DECOY","text":"primary_endpoint\t主要評価項目：30日以内の再入院\ttext\t","is_phi":false,"note":"Full-width colon inside a free-text definition."}
+{"record":"var-facility.txt","start":0,"end":18,"category":"DECOY","text":"facility\t施設名\ttext\t","is_phi":false,"note":"Short kanji label cell."}
+{"record":"var-consent-date.txt","start":0,"end":31,"category":"DECOY","text":"consent\t同意取得日（yyyy/mm/dd）\tdate\t","is_phi":false,"note":"Date pattern inside parentheses; the dictionary must still be readable."}
+{"record":"var-drug.txt","start":0,"end":19,"category":"DECOY","text":"drug\t薬剤名（一般名）\ttext\t","is_phi":false,"note":"Parenthesised qualifier."}
+{"record":"var-dose.txt","start":0,"end":23,"category":"DECOY","text":"dose_mg\t投与量（mg）\tnumber\t","is_phi":false,"note":"Unit in parentheses, numeric type."}
+{"record":"var-ward.txt","start":0,"end":13,"category":"DECOY","text":"ward\t病棟\ttext\t","is_phi":false,"note":"Two-kanji label, the shape shared with 田中."}
+{"record":"var-long-definition.txt","start":0,"end":48,"category":"DECOY","text":"qol\t生活の質に関する自記式評価尺度の合計得点であり高いほど良好な状態を示す\tinteger\t","is_phi":false,"note":"68 characters: still under the 80-character whole-string window."}
+{"record":"label-age-only.txt","start":0,"end":5,"category":"DECOY","text":"年齢（歳）","is_phi":false,"note":"A single label cell without tab fields."}
+{"record":"label-sex-only.txt","start":0,"end":8,"category":"DECOY","text":"性別：男性／女性","is_phi":false,"note":"Single label with a full-width colon and slash."}
+{"record":"term-chi-square.txt","start":0,"end":7,"category":"DECOY","text":"統計学的有意差","is_phi":false,"note":"Statistics term, no punctuation."}
+{"record":"term-double-blind.txt","start":0,"end":8,"category":"DECOY","text":"二重盲検比較試験","is_phi":false,"note":"Study design term."}
+{"record":"term-colorectal-screening.txt","start":0,"end":11,"category":"DECOY","text":"大腸癌のスクリーニング","is_phi":false,"note":"Disease phrase containing の."}
+{"record":"term-postop-complication.txt","start":0,"end":8,"category":"DECOY","text":"術後合併症の頻度","is_phi":false,"note":"Outcome phrase."}
+{"record":"term-lung-cancer-study.txt","start":0,"end":16,"category":"DECOY","text":"肺癌のスクリーニングに関する研究","is_phi":false,"note":"Study title fragment."}
+{"record":"mixed-date-alongside.txt","start":10,"end":20,"category":"DATE","text":"2026-10-01","is_phi":true,"note":"A row with its own date: the label must survive while the date is redacted."}
+{"record":"mixed-karte-alongside.txt","start":12,"end":18,"category":"KARTE_NO","text":"123456","is_phi":true,"note":"Identifier present (6-digit karte number, the shape the detector actually matches): the cell is redacted, not the whole row."}
+{"record":"mixed-phone-alongside.txt","start":12,"end":24,"category":"PHONE","text":"03-1234-5678","is_phi":true,"note":"Phone inside parentheses: redact the number, keep the definition."}
+{"record":"known-lung-cancer.txt","start":0,"end":2,"category":"DECOY","text":"肺癌","is_phi":false,"note":"Known limitation: identical in shape to 田中; needs the reviewed vocabulary, not a shape rule."}
+{"record":"known-internal-medicine.txt","start":0,"end":2,"category":"DECOY","text":"内科","is_phi":false,"note":"Department name, same shape limitation."}
+{"record":"known-male.txt","start":0,"end":2,"category":"DECOY","text":"男性","is_phi":false,"note":"Category value, same shape limitation."}
+{"record":"known-levofloxacin.txt","start":0,"end":8,"category":"DECOY","text":"レボフロキサシン","is_phi":false,"note":"Drug name in katakana, same shape limitation."}
+{"record":"known-survival-rate.txt","start":0,"end":3,"category":"DECOY","text":"生存率","is_phi":false,"note":"Statistics label, same shape limitation."}
+{"record":"known-chemotherapy.txt","start":0,"end":4,"category":"DECOY","text":"化学療法","is_phi":false,"note":"Treatment label, same shape limitation."}

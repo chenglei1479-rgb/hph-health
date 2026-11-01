@@ -1,0 +1,1 @@
+readmitted_30d	合成データの30日再入院フラグ	binary	0=no; 1=yes
