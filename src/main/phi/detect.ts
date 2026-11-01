@@ -1,3 +1,5 @@
+import { isOrdinaryLabel } from './ordinary-label'
+
 export type PhiCategory =
   | 'PERSON_NAME'
   | 'PHYSICIAN_NAME'
@@ -30,6 +32,8 @@ export interface PhiSpan {
   labeled?: boolean
   shift?: boolean
   parsed?: ParsedDate
+  /** Stable id of the rule that produced the span. Never contains matched text. */
+  rule?: string
 }
 
 interface NormMap {
@@ -43,7 +47,9 @@ type IndexedMatch = RegExpExecArray & {
   indices: Array<[number, number] | undefined>
 }
 
-type SpanExtra = Partial<Pick<PhiSpan, 'ageGe90' | 'kind' | 'labeled' | 'shift' | 'parsed'>>
+type SpanExtra = Partial<
+  Pick<PhiSpan, 'ageGe90' | 'kind' | 'labeled' | 'shift' | 'parsed' | 'rule'>
+>
 type ExtraArg = SpanExtra | ((chunk: string, match: IndexedMatch) => SpanExtra | false)
 
 const EVAL_FALLBACK = '2026-10-13'
@@ -181,10 +187,15 @@ export function detectPhi(original: string): PhiSpan[] {
     'MY_NUMBER',
     1
   )
-  take('(?<!\\d)(\\d{4}[\\s\\-・]\\d{4}[\\s\\-・]\\d{4})(?!\\d)', 'MY_NUMBER', 1)
-  take('(?<!\\d)(\\d{4} \\d{4}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1)
-  take('(?<!\\d)(\\d{8}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1)
-  take('(?<!\\d)(\\d{12})(?!\\d)', 'MY_NUMBER', 1)
+  // Bare shapes: heuristics, so each carries a rule id for the block log.
+  take('(?<!\\d)(\\d{4}[\\s\\-・]\\d{4}[\\s\\-・]\\d{4})(?!\\d)', 'MY_NUMBER', 1, {
+    rule: 'my-number-bare-4x3'
+  })
+  take('(?<!\\d)(\\d{4} \\d{4}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1, {
+    rule: 'my-number-bare-wrapped-space'
+  })
+  take('(?<!\\d)(\\d{8}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1, { rule: 'my-number-bare-8-4' })
+  take('(?<!\\d)(\\d{12})(?!\\d)', 'MY_NUMBER', 1, { rule: 'my-number-bare-12' })
 
   // Insured identifiers. Labels 被保険者番号 / 受給者番号 stay outside.
   take('被保険者証記号\\s*\\S+\\s*番号\\s*\\S+(?:\\s*枝番\\s*\\S+)?', 'INSURED_ID')
@@ -239,8 +250,9 @@ export function detectPhi(original: string): PhiSpan[] {
     LAW.has(chunk.slice(0, 2)) ? {} : false
   )
 
-  // Chart numbers. Longer labels first.
-  const karte: ReadonlyArray<readonly [string, number]> = [
+  // Chart numbers. Longer labels first. The unlabeled patterns (No., ID, MRN, PID) carry a rule id:
+  // those are the ones that can fire on a bare identifier with no label to read at the offset.
+  const karte: ReadonlyArray<readonly [string, number, string?]> = [
     ['カルテ番号\\s*[:：]?\\s*(\\d+\\n\\d+|\\d{5,10})', 1],
     ['カルテNo\\.\\s*([A-Z]-\\d+)', 1],
     ['カルテ\\s+(\\d{5,10})', 1],
@@ -253,21 +265,24 @@ export function detectPhi(original: string): PhiSpan[] {
     ['受付番号\\s*(\\d{6,}-\\d{2,})', 1],
     ['検体ID\\s*(S\\d{2}-\\d+)', 1],
     ['画像ID\\s*(CT\\d{4}-\\d+)', 1],
-    ['MRN\\s+(\\d{5,})', 1],
-    ['PID=(\\d{5,})', 1],
-    ['No\\.\\s*(\\d{6,})', 1],
-    ['(?<![A-Za-z])ID\\s*[:：]\\s*(\\d{4}-\\d{3,}|\\d{6,})', 1],
-    ['(?<![A-Za-z])ID(\\d{6,})', 1],
+    ['MRN\\s+(\\d{5,})', 1, 'karte-mrn'],
+    ['PID=(\\d{5,})', 1, 'karte-pid'],
+    ['No\\.\\s*(\\d{6,})', 1, 'karte-no'],
+    ['(?<![A-Za-z])ID\\s*[:：]\\s*(\\d{4}-\\d{3,}|\\d{6,})', 1, 'karte-id-colon'],
+    ['(?<![A-Za-z])ID(\\d{6,})', 1, 'karte-id-prefix'],
     ['カルテ番号[^\\n|]{0,20}\\|(\\d{5,})', 1]
   ]
-  for (const [pattern, group] of karte) take(pattern, 'KARTE_NO', group)
+  for (const [pattern, group, rule] of karte)
+    take(pattern, 'KARTE_NO', group, rule ? { rule } : undefined)
 
   // Phone.
   take('内線\\s*\\d{3,5}', 'PHONE')
   take('(?:TEL|Tel)\\s*\\+?\\d[\\d\\-\\s]{8,}\\d', 'PHONE')
   take('\\+81[\\-\\s]?\\d{1,4}[\\-\\s]?\\d{3,4}[\\-\\s]?\\d{3,4}', 'PHONE')
-  take('(?<![\\d])0\\d{1,3}-\\d{2,4}-\\d{3,4}(?!\\d)', 'PHONE')
-  take('(?<![\\d])0\\d{9,10}(?!\\d)', 'PHONE')
+  take('(?<![\\d])0\\d{1,3}-\\d{2,4}-\\d{3,4}(?!\\d)', 'PHONE', 0, {
+    rule: 'phone-bare-hyphenated'
+  })
+  take('(?<![\\d])0\\d{9,10}(?!\\d)', 'PHONE', 0, { rule: 'phone-bare-digits' })
 
   // Address. A prefecture must be followed by a city and a street (丁目, 番地, 番+号,
   // or a hyphenated house number). A bare 番 or 号 is not enough: it also occurs in
@@ -336,18 +351,23 @@ function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void 
     }
   }
 
-  const datePatterns = [
-    '(?:令和|平成|昭和|大正|明治)(?:元|\\d{1,2})年(?:\\d{1,2}月(?:\\d{1,2}日)?)?生?',
-    '[MTS HR]\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}生?',
-    '\\d{4}年\\d{1,2}月\\d{1,2}日生?',
-    '\\d{4}[.\\-/]\\d{1,2}[.\\-/]\\d{1,2}',
-    '\\d{2}/\\d{2}/\\d{2}',
-    '\\d{4}年\\d{1,2}月',
-    '本年\\d{1,2}月',
-    '(?<![\\d/])(\\d{1,2}月\\d{1,2}日)(?!\\d)',
-    '(?<![\\d/])(\\d{1,2}/\\d{1,2})(?!\\d)'
+  // Date shapes carry no label, so each keeps a rule id: an offset alone does not say which pattern
+  // produced it, and these are the patterns most likely to fire on a machine-generated string.
+  const datePatterns: ReadonlyArray<readonly [string, string]> = [
+    [
+      '(?:令和|平成|昭和|大正|明治)(?:元|\\d{1,2})年(?:\\d{1,2}月(?:\\d{1,2}日)?)?生?',
+      'date-bare-era'
+    ],
+    ['[MTS HR]\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}生?', 'date-bare-abbrev'],
+    ['\\d{4}年\\d{1,2}月\\d{1,2}日生?', 'date-bare-western-day'],
+    ['\\d{4}[.\\-/]\\d{1,2}[.\\-/]\\d{1,2}', 'date-bare-iso'],
+    ['\\d{2}/\\d{2}/\\d{2}', 'date-bare-two-digit-year'],
+    ['\\d{4}年\\d{1,2}月', 'date-bare-western-month'],
+    ['本年\\d{1,2}月', 'date-bare-current-year'],
+    ['(?<![\\d/])(\\d{1,2}月\\d{1,2}日)(?!\\d)', 'date-bare-month-day'],
+    ['(?<![\\d/])(\\d{1,2}/\\d{1,2})(?!\\d)', 'date-bare-slash']
   ]
-  for (const pattern of datePatterns) {
+  for (const [pattern, rule] of datePatterns) {
     const regex = withIndices(pattern, 'g')
     let match: IndexedMatch | null
     while ((match = regex.exec(norm) as IndexedMatch | null)) {
@@ -373,7 +393,8 @@ function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void 
         kind: document ? 'document' : birth && ageGe90 ? 'age' : 'calendar',
         shift: !document,
         ageGe90,
-        parsed
+        parsed,
+        rule
       })
     }
   }
@@ -529,6 +550,15 @@ function detectNames(spans: PhiSpan[], map: NormMap, norm: string): void {
   while ((match = patient.exec(norm) as IndexedMatch | null)) {
     emitName(spans, map, match.indices[1][0], match.indices[1][1], 'PERSON_NAME')
   }
+  // A bare `氏名:` cell. The whole-string guess used to return the whole cell as one span, which hid
+  // the label and made exact recall depend on a heuristic; keep the label outside the span here.
+  const labeled = withIndices(
+    `(?:患者氏名|患者名|氏名)\\s*[:：]\\s*([^\\n\\t|]{1,40}?)(?=\\s*(?:${nextField})|\\s*$|[\\n\\u3000])`
+  )
+  while ((match = labeled.exec(norm) as IndexedMatch | null)) {
+    const bounds = match.indices[1]
+    if (bounds) emitName(spans, map, bounds[0], bounds[1], 'PERSON_NAME')
+  }
   const key = withIndices(
     'キーパーソン:\\s*(?:長女|長男|妻|夫|母|父|娘|息子)?\\s*([^\\n]+(?:\\n(?!担当|同居)[^\\n]+)?)'
   )
@@ -579,9 +609,7 @@ function detectNames(spans: PhiSpan[], map: NormMap, norm: string): void {
     addSpan(spans, map, match.index, match.index + match[0].length, 'PHYSICIAN_NAME')
   }
 
-  if (norm.length <= 80 && spans.length === 0 && looksLikeName(norm.trim())) {
-    addSpan(spans, map, 0, norm.length, rolePrefix(norm) ? 'PHYSICIAN_NAME' : 'PERSON_NAME')
-  }
+  detectUnlabeledNames(spans, map, norm)
 }
 
 function rolePrefix(text: string): boolean {
@@ -590,22 +618,374 @@ function rolePrefix(text: string): boolean {
   )
 }
 
-function looksLikeName(text: string): boolean {
+// ---------------------------------------------------------------------------
+// Unlabeled names in short text
+// ---------------------------------------------------------------------------
+
+// The guess is the only rule in this file without a label or a structured shape, so it is the only
+// one that can invent a patient. It keeps the 80-character window it always had, but two things
+// changed:
+//   * it runs per tab cell and per gap left by the spans the labelled rules already found, so a name
+//     that shares a row with an age or a date is seen (any other span used to suppress it entirely);
+//   * it masks only the segments that are name-shaped, so a dictionary row no longer loses its field
+//     names, units and codings to a single `[患者N]`.
+const GUESS_MAX_LENGTH = 80
+
+// Separators inside a cell, in the normalized forms NFKC leaves behind (（）／，：； fold to ()/,:;).
+// Never split on ・ (U+30FB), a space, a full-width space (U+3000), ～ or -, which all occur inside
+// names (ジョン・スミス, 山田 太郎, 山田-太郎).
+const SEGMENT_SEPARATOR = /[()/,:;、。=\n\r]/u
+
+// Field labels that the labelled rules above already understand, taken from the literals those rules
+// match. A label is never a name: its value is masked separately, so masking the label would delete
+// the exporter's field name while protecting nothing. Everything outside this list stays fail-closed.
+const LABEL_TOKEN = new RegExp(
+  `^(?:${[
+    '患者氏名',
+    '患者名',
+    '患者',
+    '氏名',
+    '患者イニシャル',
+    'キーパーソン',
+    '長男',
+    '長女',
+    '担当医',
+    '主治医',
+    '執刀医',
+    '助手',
+    '麻酔科医',
+    '指導医',
+    '研修医',
+    '看護師',
+    '薬剤師',
+    '検査技師',
+    '臨床検査技師',
+    '記載者',
+    '院長',
+    '研究責任者',
+    '署名',
+    'PI',
+    'Dr\\.',
+    '医師',
+    'CRC',
+    '年齢',
+    '享年',
+    'Age',
+    '生年月日',
+    '記載日',
+    '報告日',
+    '文書日付',
+    '作成日',
+    '研究期間',
+    '承認日',
+    '同意取得日',
+    '術後',
+    'カルテ番号',
+    'カルテNo\\.',
+    'カルテ',
+    '患者番号',
+    '患者ID',
+    '入院番号',
+    '外来ID',
+    '病歴番号',
+    '診察券番号',
+    '受付番号',
+    '検体ID',
+    '画像ID',
+    'MRN',
+    'PID',
+    'No\\.',
+    'ID',
+    '保険者番号',
+    '国保',
+    '公費負担者番号',
+    '負担者番号',
+    'Insurer No\\.',
+    '保険',
+    '被保険者証記号',
+    '記号',
+    '番号',
+    '枝番',
+    'Insured ID',
+    '被保険者番号',
+    '受給者番号',
+    'マイナンバー',
+    '個人番号',
+    'マイナンバーカード番号',
+    'My Number',
+    '住所',
+    'Address',
+    '病室番号',
+    '病室',
+    '内線',
+    'TEL',
+    'Tel',
+    '電話',
+    'メール',
+    'E-mail'
+  ].join('|')})$`,
+  'u'
+)
+
+// A parenthesised slot holding a unit, a bare number, a date or a phone is a value slot, not a name.
+const UNIT_SLOT = new Set([
+  '歳',
+  '才',
+  '年',
+  'ヶ月',
+  'か月',
+  '月',
+  '日',
+  '週',
+  '時間',
+  '分',
+  '秒',
+  'cm',
+  'mm',
+  'm',
+  'km',
+  'kg',
+  'g',
+  'mg',
+  'μg',
+  'mL',
+  'ml',
+  'L',
+  'dL',
+  '%',
+  '％',
+  'mmHg',
+  'bpm',
+  '回',
+  '名',
+  '例',
+  '件',
+  '点',
+  '個',
+  '本',
+  '人',
+  '倍',
+  '度',
+  '円',
+  '号',
+  '室'
+])
+
+const HONORIFIC_TAIL = /(?:様|さん|先生|氏|ちゃん)$/u
+// 々 (U+3005) and 〆 (U+3006) occur inside surnames, and so does a hyphen (山田-太郎), so all three
+// count as part of a name here. A hyphen is never a segment separator for the same reason.
+const KANJI_KATAKANA_PART = /^[\u4e00-\u9fff\u3005\u3006\u30a0-\u30ffー\u2010-]{1,16}$/u
+const HIRAGANA_PART = /^[\u3040-\u309f]{1,8}$/u
+const LATIN_PART = /^[A-Z][A-Za-z'.-]*$/u
+const LATIN_COMMA_PAIR =
+  /(?<![A-Za-z])([A-Z][A-Za-z'.-]{1,15}\s*,\s*[A-Z][A-Za-z'.-]{1,15})(?![A-Za-z])/u
+const SEGMENT_EDGE = /^[\s"'`{}[\]]+|[\s"'`{}[\]]+$/gu
+
+function isNameShaped(text: string): boolean {
   const value = text.trim()
-  if (!value || value.startsWith('/') || /[0-9]{3,}|保険|番号|カルテ|@|県|市/.test(value)) {
+  if (!value || value.startsWith('/') || /[0-9]{3,}|保険|番号|カルテ|@|県|市/u.test(value))
     return false
-  }
-  // Hiragana-only text is a name only when it carries the 姓 名 two-part shape; a single greeting
-  // word ("こんにちは") is prose. Kanji/katakana still count as names.
-  if (/[\u4e00-\u9fff\u30a0-\u30ff]/u.test(value)) return true
-  if (/^[\u3040-\u309f\s\u3000]+$/u.test(value)) return /[\s\u3000]/u.test(value.trim())
-  // English names: two to four capitalized parts. A description sentence has lowercase words.
-  const parts = value.split(/\s*,\s*|\s+/u).filter(Boolean)
-  return (
-    parts.length >= 2 &&
-    parts.length <= 4 &&
-    parts.every((part) => /^[A-Z][A-Za-z'.-]*$/u.test(part))
+  // A trailing honorific belongs to the span but not to the shape.
+  const parts = value
+    .replace(HONORIFIC_TAIL, '')
+    .trim()
+    .split(/[\s\u3000]+/u)
+    .filter(Boolean)
+  if (parts.length === 0 || parts.length > 4) return false
+  // A Japanese name may mix scripts across its parts: 小鳥遊 ゆかり, 柊 ハルル, やまだ たろう.
+  // A single part must carry kanji or katakana: one hiragana word is prose ("こんにちは").
+  if (
+    parts.every((part) => KANJI_KATAKANA_PART.test(part) || HIRAGANA_PART.test(part)) &&
+    parts.join('').length >= 2
   )
+    return parts.length >= 2 || KANJI_KATAKANA_PART.test(parts[0])
+  if (parts.length >= 2 && parts.every((part) => LATIN_PART.test(part))) return true
+  return false
+}
+
+// A parenthesised slot holding a bare number, a date format or a phone is a value: it is the value of
+// the cell, and its own detector (DATE, PHONE, KARTE) already covers it.
+function isValueSlot(slot: string): boolean {
+  const value = slot.trim()
+  if (!value || value.length > 24) return false
+  if (/^[0-9]+$/u.test(value)) return true
+  if (/^[0-9][0-9\s\-./:]*$/u.test(value)) return true
+  if (/^[ymdYMD][ymdYMD/\-.]*$/u.test(value)) return true
+  return false
+}
+
+// A cell whose parenthesised slots are all units is a measurement definition — 年齢（歳）,
+// 収縮期血圧（mmHg）, 投与量（mg） — and no part of it can be a name. That is a unit table, not a list of
+// people, so the whole cell is released.
+function isUnitCell(text: string): boolean {
+  const slots = [...text.matchAll(/\(([^()]*)\)/gu)]
+  return slots.length > 0 && slots.every((slot) => UNIT_SLOT.has(slot[1].trim()))
+}
+
+// The converse must not release the rest of the cell: "John Smith (MD)" and "連絡先（03-1234-5678）"
+// carry a value in the parentheses and a label or a name outside it. Those slots are treated as
+// occupied intervals and everything outside them is judged as usual — the same rule the spans use.
+function valueSlotRanges(text: string, offset: number): Array<{ start: number; end: number }> {
+  const ranges: Array<{ start: number; end: number }> = []
+  for (const slot of text.matchAll(/\(([^()]*)\)/gu)) {
+    if (UNIT_SLOT.has(slot[1].trim()) || !isValueSlot(slot[1])) continue
+    const start = offset + (slot.index ?? 0)
+    ranges.push({ start, end: start + slot[0].length })
+  }
+  return ranges
+}
+
+function splitRanges(
+  norm: string,
+  separator: RegExp,
+  start: number,
+  end: number
+): Array<{ start: number; end: number }> {
+  const ranges: Array<{ start: number; end: number }> = []
+  let cursor = start
+  for (let i = start; i < end; i++) {
+    separator.lastIndex = 0
+    if (!separator.test(norm[i])) continue
+    ranges.push({ start: cursor, end: i })
+    cursor = i + 1
+  }
+  ranges.push({ start: cursor, end })
+  return ranges
+}
+
+function normalizedRange(map: NormMap, span: PhiSpan): { start: number; end: number } | null {
+  let start = -1
+  let end = -1
+  for (let i = 0; i < map.startOrig.length; i++) {
+    if (map.startOrig[i] < span.start || map.endOrig[i] > span.end) continue
+    if (start < 0) start = i
+    end = i + 1
+  }
+  return start < 0 ? null : { start, end }
+}
+
+function freeRanges(
+  spans: PhiSpan[],
+  map: NormMap,
+  cell: { start: number; end: number },
+  extra: ReadonlyArray<{ start: number; end: number }> = []
+): Array<{ start: number; end: number }> {
+  let ranges = [cell]
+  const blocked: Array<{ start: number; end: number }> = [...extra]
+  for (const span of spans) {
+    const range = normalizedRange(map, span)
+    if (range) blocked.push(range)
+  }
+  for (const range of blocked) {
+    if (range.end <= cell.start || cell.end <= range.start) continue
+    const next: Array<{ start: number; end: number }> = []
+    for (const item of ranges) {
+      if (range.end <= item.start || item.end <= range.start) {
+        next.push(item)
+        continue
+      }
+      if (item.start < range.start) next.push({ start: item.start, end: range.start })
+      if (range.end < item.end) next.push({ start: range.end, end: item.end })
+    }
+    ranges = next
+  }
+  return ranges
+}
+
+// The name inside a segment. A cell may hold a reviewed label next to the name it describes
+// ("男性 John Smith"); the label is not a name, so it is peeled before the shape test and only the
+// remaining run is masked.
+function nameRun(core: string): { start: number; end: number } | null {
+  if (isNameShaped(core)) return { start: 0, end: core.length }
+  const parts = [...core.matchAll(/[^\s\u3000]+/gu)].map((match) => ({
+    text: match[0],
+    start: match.index,
+    end: match.index + match[0].length
+  }))
+  for (let first = 0; first < parts.length; first++) {
+    for (let last = first + 1; last <= parts.length; last++) {
+      const inner = parts.slice(first, last)
+      if (!isNameShaped(inner.map((part) => part.text).join(' '))) continue
+      const outside = [...parts.slice(0, first), ...parts.slice(last)]
+      if (!outside.every((part) => isOrdinaryLabel(part.text) || LABEL_TOKEN.test(part.text)))
+        continue
+      return { start: inner[0].start, end: inner[inner.length - 1].end }
+    }
+  }
+  return null
+}
+
+function guessSegment(
+  spans: PhiSpan[],
+  map: NormMap,
+  norm: string,
+  start: number,
+  end: number
+): void {
+  const raw = norm.slice(start, end)
+  const head = /^[\s"'`{}[\]]*/u.exec(raw)?.[0].length ?? 0
+  const core = raw.replace(SEGMENT_EDGE, '')
+  if (!core) return
+  if (LABEL_TOKEN.test(core)) return
+  const candidate = nameRun(core)
+  if (!candidate) return
+  const from = start + head + candidate.start
+  const to = start + head + candidate.end
+  if (to > norm.length) return
+  const text = norm.slice(from, to)
+  if (isOrdinaryLabel(text)) return
+  if (occupied(spans, map.startOrig[from], map.endOrig[to - 1])) return
+  addSpan(spans, map, from, to, rolePrefix(text) ? 'PHYSICIAN_NAME' : 'PERSON_NAME', {
+    rule: 'guess-segment'
+  })
+}
+
+function maskLatinCommaPair(
+  spans: PhiSpan[],
+  map: NormMap,
+  norm: string,
+  gap: { start: number; end: number }
+): void {
+  // ROMANIZED surnames are exported as SURNAME,GIVEN. A comma is a segment separator, so the pair
+  // would otherwise be judged as two one-word tokens and dropped.
+  const text = norm.slice(gap.start, gap.end)
+  const match = LATIN_COMMA_PAIR.exec(text)
+  if (!match) return
+  const from = gap.start + match.index
+  const to = from + match[1].length
+  if (occupied(spans, map.startOrig[from], map.endOrig[to - 1])) return
+  addSpan(spans, map, from, to, 'PERSON_NAME', { rule: 'latin-comma-pair' })
+}
+
+function detectUnlabeledNames(spans: PhiSpan[], map: NormMap, norm: string): void {
+  if (norm.length > GUESS_MAX_LENGTH) return
+  // The original rule, unchanged: a text that is nothing but a name is a name. Everything below only
+  // adds back the segments the labelled rules cannot reach.
+  const whole = norm.trim()
+  if (spans.length === 0 && whole && isNameShaped(whole) && !isOrdinaryLabel(whole)) {
+    const from = norm.indexOf(whole)
+    addSpan(
+      spans,
+      map,
+      from,
+      from + whole.length,
+      rolePrefix(whole) ? 'PHYSICIAN_NAME' : 'PERSON_NAME',
+      {
+        rule: 'guess-whole'
+      }
+    )
+  }
+  for (const cell of splitRanges(norm, /\t/u, 0, norm.length)) {
+    const text = norm.slice(cell.start, cell.end)
+    if (!text.trim()) continue
+    if (isUnitCell(text)) continue
+    for (const gap of freeRanges(spans, map, cell, valueSlotRanges(text, cell.start))) {
+      maskLatinCommaPair(spans, map, norm, gap)
+      for (const segment of splitRanges(norm, SEGMENT_SEPARATOR, gap.start, gap.end)) {
+        guessSegment(spans, map, norm, segment.start, segment.end)
+      }
+    }
+  }
 }
 
 function emitName(
@@ -622,7 +1002,9 @@ function emitName(
   const s = start + (at < 0 ? 0 : at)
   const e = s + text.length
   const reading = text.match(/^(.+?)[(（]([^)）]+)[)）]$/)
-  addIfFree(spans, map, s, e, category)
+  // A second rule finding the same name must not add the reading twice; the nested spans below are
+  // added without an occupancy check because they sit inside the outer one.
+  if (!addIfFree(spans, map, s, e, category)) return
   if (reading && category === 'PERSON_NAME') {
     const name = reading[1].trim()
     const yomi = reading[2].trim()
@@ -640,10 +1022,11 @@ function addIfFree(
   start: number,
   end: number,
   category: PhiCategory
-): void {
+): boolean {
   const orig = mapSpan(map, start, end)
-  if (!orig || occupied(spans, orig.start, orig.end)) return
+  if (!orig || occupied(spans, orig.start, orig.end)) return false
   addSpan(spans, map, start, end, category)
+  return true
 }
 
 function addNested(
