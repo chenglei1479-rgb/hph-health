@@ -214,26 +214,38 @@ export function detectPhi(original: string): PhiSpan[] {
     'INSURED_ID'
   )
 
-  // Insurer numbers. Keep the number, not the label.
-  take('(?:国保\\s*)?保険者番号\\s*[:：=]?\\s*(\\d{6,9})(?!\\d)', 'INSURER_NO', 1)
-  take('(?:国保\\s*)?保険者番号\\s*[:：=]?\\s*(\\d(?:[ \\u3000]\\d){5,8})(?!\\d)', 'INSURER_NO', 1)
+  // Insurer numbers. Keep the number, not the label. Every rule carries a stable `rule` id so a
+  // blocked hit can be traced to the pattern that produced it without logging any text.
+  take('(?:国保\\s*)?保険者番号\\s*[:：=]?\\s*(\\d{6,9})(?!\\d)', 'INSURER_NO', 1, {
+    rule: 'insurer-no-labeled-digits'
+  })
+  take(
+    '(?:国保\\s*)?保険者番号\\s*[:：=]?\\s*(\\d(?:[ \\u3000]\\d){5,8})(?!\\d)',
+    'INSURER_NO',
+    1,
+    {
+      rule: 'insurer-no-labeled-spaced'
+    }
+  )
   take(
     '(?:国保\\s*)?保険者番号\\s*[:：=]?\\s*(\\d{3,4}\\n\\d{3,4})(?!\\d)',
     'INSURER_NO',
     1,
     (chunk) => {
       const count = digitsOnly(chunk).length
-      return count >= 6 && count <= 9 ? {} : false
+      return count >= 6 && count <= 9 ? { rule: 'insurer-no-labeled-wrapped' } : false
     }
   )
-  take('(?<![\\d\\w])保険者\\s+(\\d{6,8})', 'INSURER_NO', 1)
-  take('公費負担者番号\\s*(\\d{8})', 'INSURER_NO', 1)
-  take('負担者番号\\s*(\\d{8})', 'INSURER_NO', 1)
-  take('Insurer No\\.\\s*(\\d{6,9})', 'INSURER_NO', 1)
+  take('(?<![\\d\\w])保険者\\s+(\\d{6,8})', 'INSURER_NO', 1, { rule: 'insurer-no-insurer-word' })
+  take('公費負担者番号\\s*(\\d{8})', 'INSURER_NO', 1, { rule: 'insurer-no-public-expense' })
+  take('負担者番号\\s*(\\d{8})', 'INSURER_NO', 1, { rule: 'insurer-no-bearer' })
+  take('Insurer No\\.\\s*(\\d{6,9})', 'INSURER_NO', 1, { rule: 'insurer-no-english' })
   take('(?<![\\d])(\\d{2}-\\d{4}-\\d{2})(?!\\d)', 'INSURER_NO', 1, (chunk) =>
-    LAW.has(chunk.slice(0, 2)) ? {} : false
+    LAW.has(chunk.slice(0, 2)) ? { rule: 'insurer-no-grouped' } : false
   )
-  take('保険\\s*[:：]\\s*(\\d{6,8})(?!\\d)', 'INSURER_NO', 1)
+  take('保険\\s*[:：]\\s*(\\d{6,8})(?!\\d)', 'INSURER_NO', 1, {
+    rule: 'insurer-no-insurance-colon'
+  })
   take(
     '(?<![\\w\\u4e00-\\u9fff])([\\u4e00-\\u9fff\\u3040-\\u30ffA-Za-z0-9]{1,12}-\\d{3,8}-\\d{2})(?!\\d)',
     'INSURED_ID',
@@ -242,12 +254,18 @@ export function detectPhi(original: string): PhiSpan[] {
       /^\d{4}-\d{1,2}-\d{1,2}$/.test(chunk) || /^\d{2}-\d{4}-\d{2}$/.test(chunk) ? false : {}
   )
   if (/^\d{8}$/.test(norm.trim()) && LAW.has(norm.trim().slice(0, 2))) {
-    addSpan(spans, map, 0, norm.length, 'INSURER_NO')
+    addSpan(spans, map, 0, norm.length, 'INSURER_NO', { rule: 'insurer-no-whole-8' })
   }
-  if (/^\d{6}$/.test(norm.trim())) addSpan(spans, map, 0, norm.length, 'INSURER_NO')
-  // Unlabeled law-code numbers that are the whole token.
-  take('(?<![\\dA-Za-z])(\\d{8})(?!\\d)', 'INSURER_NO', 1, (chunk) =>
-    LAW.has(chunk.slice(0, 2)) ? {} : false
+  if (/^\d{6}$/.test(norm.trim()))
+    addSpan(spans, map, 0, norm.length, 'INSURER_NO', { rule: 'insurer-no-whole-6' })
+  // Unlabeled law-code numbers that are the whole token. Two boundary conditions, both learned from
+  // real blocks: a trailing letter means the digits are part of a longer identifier (a UUID tail
+  // `02852897ef80`), and a `-xxxx-xxxx-` tail means they are the first segment of a UUID.
+  take(
+    '(?<![\\dA-Za-z])(\\d{8})(?![\\dA-Za-z])(?!-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-)',
+    'INSURER_NO',
+    1,
+    (chunk) => (LAW.has(chunk.slice(0, 2)) ? { rule: 'insurer-no-bare-8' } : false)
   )
 
   // Chart numbers. Longer labels first. The unlabeled patterns (No., ID, MRN, PID) carry a rule id:

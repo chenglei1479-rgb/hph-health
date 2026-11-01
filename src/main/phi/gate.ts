@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
+import { createHash } from 'node:crypto'
 import { createLogger } from '@aipoch/diagnostics/node'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
 import { PHI_BLOCK_CODE } from '../../shared/phi-block'
@@ -22,6 +23,8 @@ export interface PhiBlockedSpan {
   end: number
   category: PhiCategory
   text: string
+  /** Stable id of the rule that produced the span, when that rule carries one. */
+  rule?: string
 }
 
 export class PhiGateError extends Error {
@@ -255,7 +258,8 @@ function patientSpans(text: string): PhiBlockedSpan[] {
       start: span.start,
       end: span.end,
       category: span.category,
-      text: span.text
+      text: span.text,
+      rule: span.rule
     }))
 }
 
@@ -270,7 +274,20 @@ export type BlockedSpanDiagnostic = {
   offset: number
   length: number
   field: string
+  /** Which scan produced the hit. The pre-release scan and the restore-before-send scan see
+   * different strings, so an offset is only meaningful next to the pass that produced it. */
+  pass: 'blocked' | 'restored'
+  /** Length of the scanned string in UTF-16 code units, the same base as `offset`. */
+  textLength: number
+  /** First 8 hex characters of SHA-256(text): a hash, never the first characters of the text. It
+   * lets a candidate copy be matched to the scanned string without logging any content. */
+  textDigest8: string
+  /** Stable id of the rule that fired, e.g. `insurer-no-bare-8`. */
+  rule?: string
 }
+
+const textDigest8 = (text: string): string =>
+  createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 8)
 
 // Object keys are printed into the block log as part of the field path, so only ASCII-shaped keys
 // count as structure. `messages[i].content[j].input` holds model-generated JSON, and its key names can
@@ -278,24 +295,31 @@ export type BlockedSpanDiagnostic = {
 // and never reaches the log.
 const SAFE_FIELD_KEY = /^[A-Za-z_][A-Za-z0-9_-]{0,40}$/u
 
-const normalizeScanned = (
-  values: readonly (string | ScannedModelText)[]
-): ScannedModelText[] =>
+const normalizeScanned = (values: readonly (string | ScannedModelText)[]): ScannedModelText[] =>
   values.map((value) => (typeof value === 'string' ? { text: value, field: 'body' } : value))
 
 const diagnosticFor = (
-  values: readonly ScannedModelText[]
+  values: readonly ScannedModelText[],
+  pass: 'blocked' | 'restored'
 ): { diagnostics: BlockedSpanDiagnostic[]; spans: PhiBlockedSpan[] } => {
   const diagnostics: BlockedSpanDiagnostic[] = []
   const spans: PhiBlockedSpan[] = []
   for (const { text, field } of values) {
-    for (const span of patientSpans(text)) {
+    const found = patientSpans(text)
+    // Hash only when something was blocked: the gate runs on every outbound request, and a digest per
+    // scanned string would be paid by every send that never blocks.
+    const digest = found.length === 0 ? '' : textDigest8(text)
+    for (const span of found) {
       spans.push(span)
       diagnostics.push({
         category: span.category,
         offset: span.start,
         length: span.end - span.start,
-        field
+        field,
+        pass,
+        textLength: text.length,
+        textDigest8: digest,
+        rule: span.rule
       })
     }
   }
@@ -308,9 +332,27 @@ const diagnosticFor = (
  * conversation hit when a false positive has to be localized.
  */
 export const blockedSpanDiagnostics = (body: unknown): BlockedSpanDiagnostic[] =>
-  diagnosticFor(collectModelContentStrings(body)).diagnostics
+  diagnosticFor(collectModelContentStrings(body), 'blocked').diagnostics
 
-function assertMachineMaySend(texts: readonly (string | ScannedModelText)[]): void {
+// The restore-before-send pass scans strings that differ from the released body: vault marks are
+// swapped back for the original values, so an offset from this pass does not apply to the body anyone
+// can read. Both passes are reported with the same `field`, and `pass` is what tells them apart.
+const restoredScannedTexts = (
+  body: unknown,
+  restore: (text: string) => string
+): ScannedModelText[] =>
+  collectModelContentStrings(body).map((value) => ({ ...value, text: restore(value.text) }))
+
+export const restoredBlockedSpanDiagnostics = (
+  body: unknown,
+  restore: (text: string) => string
+): BlockedSpanDiagnostic[] =>
+  diagnosticFor(restoredScannedTexts(body, restore), 'restored').diagnostics
+
+function assertMachineMaySend(
+  texts: readonly (string | ScannedModelText)[],
+  pass: 'blocked' | 'restored' = 'blocked'
+): void {
   let approved = false
   try {
     approved = machineApproved()
@@ -318,7 +360,7 @@ function assertMachineMaySend(texts: readonly (string | ScannedModelText)[]): vo
     throw modelReleaseError()
   }
   if (approved) return
-  const { diagnostics, spans } = diagnosticFor(normalizeScanned(texts))
+  const { diagnostics, spans } = diagnosticFor(normalizeScanned(texts), pass)
   if (spans.length === 0) return
   const translate = blockTranslator
   // The blocked span text is patient information. Keep it out of the log: the stable number plus where
@@ -613,13 +655,11 @@ export function sendPhiChecked<T>(
     const text = typeof released === 'string' ? released : ''
     // Vault provenance retains marks from earlier preparation and manual masking.
     // Restore only for the local approval check; the restored value is never sent.
-    const restoredTexts =
-      typeof released === 'string' ? collectModelContentStrings(JSON.parse(text)) : []
     assertMachineMaySend(
-      restoredTexts.map((value) => ({
-        text: installed.restore(value.text, projectId),
-        field: value.field
-      }))
+      typeof released === 'string'
+        ? restoredScannedTexts(JSON.parse(text), (value) => installed.restore(value, projectId))
+        : [],
+      'restored'
     )
     const prior = turn?.reviews.get(destination)
     const confirmed =

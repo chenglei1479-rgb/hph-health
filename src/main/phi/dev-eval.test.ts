@@ -52,7 +52,7 @@ const BASELINE_FLAGGED = [
 // The rest are cleared by structure, not by a list: tab cells, punctuation segments, and unit slots.
 // The six known limitations are the reviewed-vocabulary set too; レボフロキサシン is the one entry
 // still missing, so it stays pinned until someone adds it with a reason.
-const PINNED_FLAGGED = ['known-levofloxacin.txt']
+const PINNED_FLAGGED = ['known-hex-leading-zero.txt', 'known-levofloxacin.txt']
 
 type ShortReport = {
   records: number
@@ -91,20 +91,27 @@ describe('Japanese PHI dev set', () => {
     process.stderr.write(`${JSON.stringify(short, null, 2)}\n`)
 
     expect(short.covered).toBe(true)
-    expect(short.records).toBe(42)
+    expect(short.records).toBe(48)
     // Recall is the hard line: every name is found, and found exactly. The three name-with-* records
     // are the ones the old whole-string guess dropped whenever another span was present.
     expect(short.nameGold).toBe(14)
     expect(short.nameOverlapRecall).toBe(1)
     expect(short.nameExactRecall).toBe(1)
     expect(short.nameMisses).toEqual([])
-    // False positives: the 19 variable-dictionary and term rows are now clean. A rise here is a
-    // regression in the guess, not a threshold to adjust.
-    expect(short.mustCleanDecoys).toBe(19)
+    // False positives: the variable-dictionary and term rows are now clean, and the two hexadecimal
+    // tool records stay released. A rise here is a regression in a rule, not a threshold to adjust.
+    expect(short.mustCleanDecoys).toBe(21)
     expect(short.mustCleanRate).toBe(0)
-    // Monotonic decrease, executable: nothing outside the #95 baseline may ever be flagged, so a
-    // record can only leave the set. Keep this check even after the pinned set reaches zero.
-    expect(short.flagged.filter((item) => !BASELINE_FLAGGED.includes(item.record))).toEqual([])
+    // Monotonic decrease, executable, in two layers:
+    //   1. the exact flagged set is pinned below, so a record entering or leaving fails either way;
+    //   2. a must-clean record may never (re)enter it: the #95 baseline is that group's hard ceiling.
+    // `known-*` records are flagged by definition and are pinned by the exact set, so they are not
+    // measured against the must-clean ceiling.
+    expect(
+      short.flagged.filter(
+        (item) => !item.record.startsWith('known-') && !BASELINE_FLAGGED.includes(item.record)
+      )
+    ).toEqual([])
     // The full flagged set is asserted, not its size: one record leaving and another entering would
     // keep the counts equal and slip past a numeric check.
     expect(short.flagged.map((item) => item.record).sort()).toEqual(PINNED_FLAGGED)
@@ -169,5 +176,39 @@ describe('Japanese PHI dev set', () => {
   // to survive a comma, which is otherwise a segment separator.
   it.each(['Smith, John', 'MISONO, KOTARO'])('keeps %s as one name', (text) => {
     expect(detectPhi(text).filter((span) => span.category === 'PERSON_NAME')).toHaveLength(1)
+  })
+
+  // The beta.20 incident: eight digits inside a hexadecimal identifier were read as an insurer number
+  // and blocked five sends before the sixth failed. The rule is not windowed at 80 characters, so the
+  // artifact record below is long on purpose.
+  it.each([
+    ['tool-artifact-metadata.txt', '02852897'],
+    ['tool-uuid-tail.txt', '02852897'],
+    ['tool-hex-hash.txt', '1234567890']
+  ])('%s is released although it contains %s', (record, digits) => {
+    const text = readFileSync(join(SHORT_FIXTURE, 'records', record), 'utf8')
+    expect(text).toContain(digits)
+    expect(detectPhi(text).filter((span) => span.category === 'INSURER_NO')).toEqual([])
+  })
+
+  // The same tight lookahead must not cost a real law code: labelled, bare inside a sentence, and with
+  // a branch suffix. `02123456` carries law-code prefix 02, so it is a valid insurer number.
+  it.each([
+    ['insurer-labeled.txt', 6, 14],
+    ['insurer-bare.txt', 4, 12],
+    ['insurer-branch.txt', 0, 8]
+  ])('%s still yields its insurer number', (record, start, end) => {
+    const text = readFileSync(join(SHORT_FIXTURE, 'records', record), 'utf8')
+    const spans = detectPhi(text).filter((span) => span.category === 'INSURER_NO')
+    expect(spans.map((span) => [span.start, span.end, span.text])).toEqual([
+      [start, end, '02123456']
+    ])
+  })
+
+  // A UUID's first segment is eight hexadecimal characters too, bounded by `"` and `-`, so the
+  // trailing-letter lookahead alone does not cover it.
+  it('rejects the first segment of a UUID', () => {
+    const text = '"version_id": "02852897-9f2b-4183-a8f3-1e2210368817"'
+    expect(detectPhi(text).filter((span) => span.category === 'INSURER_NO')).toEqual([])
   })
 })
