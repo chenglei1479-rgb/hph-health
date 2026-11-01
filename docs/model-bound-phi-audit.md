@@ -188,7 +188,7 @@ Three behaviours changed after the beta.20 acceptance round, each with a red/gre
 **Known gaps, tracked separately.**
 
 1. An eight-digit number that sits inside text and never appears next to insurance vocabulary is no longer detected at all. This is a deliberate trade-off in favour of the literature path, not an oversight: a number run inside prose is an id (a PMID, a UUID segment, a record id) far more often than it is an insurer number (issue #105).
-2. `insurer-no-whole-8` still fires when the scanned string is exactly eight digits, so a tool result whose whole value is a single PMID would be read as an insurer number. Shape cannot separate the two; the `rule` id in the block log is how the next report identifies it (issue #105).
+2. `insurer-no-whole-8` still fires when the scanned string is exactly eight digits, so a tool result whose whole value is a single PMID would be read as an insurer number. Shape cannot separate the two, so this residual is tracked as issue #116; the `rule` id in the block log is how the next report tells it apart from anything new.
 3. A numbers table written as a header line and a value line — `保険者番号` on one line, `02123456` on the next — is not paired. Each line is scanned on its own, so neither line carries a label and the value is not detected (issue #117).
 4. A record longer than 80 characters is never guessed at, so an unlabeled name there stays unmasked (`known-long-name-unmasked`, a pinned miss owned by issue #103, which extends the window).
 5. `保険証 02123456` is not classified: it may be a ten-digit 被保険者番号 rather than an 保険者番号, and folding the two categories together to make one record green would be the wrong fix (issue #115).
