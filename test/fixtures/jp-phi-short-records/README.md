@@ -55,7 +55,7 @@ drug name is masked until it is reviewed — that is the intended direction.
 
 `known-long-name-unmasked` is the other direction: a **miss**. The unlabeled-name guess stops at 80
 characters, so a longer note keeps the name. It is pinned so the gap is measured by the test set instead
-of described in a comment, and it is owned by the ticket that extends or removes that window.
+of described in a comment, and it is owned by issue #103, the ticket that extends or removes that window.
 
 `known-hex-leading-zero` (`"hash": "abcdef0123456789"`) is flagged by a **different** rule: the phone
 pattern `(?<!\d)0\d{9,10}` reads the ten-digit run `0123456789` as a phone number. It is the same

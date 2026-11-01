@@ -161,7 +161,7 @@ describe('Japanese PHI dev set', () => {
   })
 
   // The name guess is bounded at 80 characters. Pinned as a miss, not as desired behaviour: the
-  // record exists so the gap is measured, and it is owned by the ticket that extends the window.
+  // record exists so the gap is measured, and it is owned by issue #103, which extends the window.
   it('pins the long-record gap: an unlabeled name past 80 characters stays unmasked', () => {
     const text = readFileSync(
       join(SHORT_FIXTURE, 'records', 'known-long-name-unmasked.txt'),
