@@ -179,14 +179,20 @@ const wrap = (font: PDFFont, text: string, size: number, maxWidth: number): stri
 type FontkitFactory = { create: (data: Uint8Array) => unknown }
 
 export const buildPdf = async (title: string, body: string): Promise<Uint8Array> => {
-  // fontkit publishes no TypeScript declarations.
-  // @ts-expect-error TS7016 untyped module
-  const loaded = (await import('fontkit')) as FontkitFactory & { default?: FontkitFactory }
-  const create = loaded.create ?? loaded.default?.create
+  // @pdf-lib/fontkit is the fontkit 1.x line that pdf-lib expects. The bare `fontkit` 2.0.4 package
+  // exposes a different glyph API: layout() and glyphForCodePoint() disagree on glyph ids for digits
+  // that do not start a run, so the content stream and the ToUnicode CMap stopped matching and every
+  // number read back as an unrelated CJK glyph. Its subset stream is also missing, which is why every
+  // page carried the whole Noto Sans SC face.
+  // @pdf-lib/fontkit types its factory loosely, so narrow it once here.
+  const loaded = (await import('@pdf-lib/fontkit')) as { default?: FontkitFactory }
+  const create = loaded.default?.create ?? (loaded as unknown as FontkitFactory).create
   if (!create) throw new Error('The PDF font loader is unavailable. Nothing was exported.')
   const pdf = await PDFDocument.create()
   pdf.registerFontkit({ create } as Parameters<PDFDocument['registerFontkit']>[0])
-  const font = await pdf.embedFont(readFileSync(fontPath))
+  // Subsetting is required, not an optimisation: without it the whole face is embedded on every page
+  // (7.3 MB for a one-page report). It also goes through the same fontkit that fixes the ids above.
+  const font = await pdf.embedFont(readFileSync(fontPath), { subset: true })
   const size = 11
   const maxWidth = 500
   let page = pdf.addPage([595, 842])
