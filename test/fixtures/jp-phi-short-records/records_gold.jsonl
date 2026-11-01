@@ -14,6 +14,8 @@
 {"record":"name-with-date.txt","start":5,"end":15,"category":"DATE","text":"2026-10-01","is_phi":true,"note":"Calendar date that must be shifted while the name beside it is redacted."}
 {"record":"name-with-age-and-sex.txt","start":0,"end":4,"category":"PERSON_NAME","text":"山田太郎","is_phi":true,"note":"Name, age and sex in one row. 男性 is a reviewed label and is not PHI; the name is."}
 {"record":"name-with-age-and-sex.txt","start":5,"end":8,"category":"DATE","text":"65歳","is_phi":true,"age_ge_90":false,"note":"Age beside a name that must still be redacted."}
+{"record":"name-with-age-newline.txt","start":0,"end":4,"category":"PERSON_NAME","text":"山田太郎","is_phi":true,"note":"Name on one line, age on the next: the form a pasted progress note actually takes. The age span leaves the name alone on its line, which must not turn it into a heading."}
+{"record":"name-with-age-newline.txt","start":5,"end":8,"category":"DATE","text":"65歳","is_phi":true,"age_ge_90":false,"note":"The age on the second line."}
 {"record":"var-reported-tsv.txt","start":0,"end":49,"category":"DECOY","text":"readmitted_30d\t合成データの30日再入院フラグ\tbinary\t0=no; 1=yes","is_phi":false,"note":"The acceptance finding: whole row became [患者1] and the exported dictionary lost every field."}
 {"record":"var-age-unit.txt","start":0,"end":18,"category":"DECOY","text":"age\t年齢（歳）\tinteger\t","is_phi":false,"note":"Variable row with a parenthesised unit."}
 {"record":"var-sex-categorical.txt","start":0,"end":31,"category":"DECOY","text":"sex\t性別（男性／女性）\tbinary\t1=男性; 2=女性","is_phi":false,"note":"Coding with the full-width slash and equals sign."}
@@ -36,6 +38,7 @@
 {"record":"mixed-date-alongside.txt","start":10,"end":20,"category":"DATE","text":"2026-10-01","is_phi":true,"note":"A row with its own date: the label must survive while the date is redacted."}
 {"record":"mixed-karte-alongside.txt","start":12,"end":18,"category":"KARTE_NO","text":"123456","is_phi":true,"note":"Identifier present (6-digit karte number, the shape the detector actually matches): the cell is redacted, not the whole row."}
 {"record":"mixed-phone-alongside.txt","start":12,"end":24,"category":"PHONE","text":"03-1234-5678","is_phi":true,"note":"Phone inside parentheses: redact the number, keep the definition."}
+{"record":"known-long-name-unmasked.txt","start":0,"end":4,"category":"PERSON_NAME","text":"山田太郎","is_phi":true,"note":"Known miss, not a false positive: the unlabeled-name guess stops at 80 characters, so this 84-character note keeps the name. Owned by the ticket that extends or removes the window; the record exists so the gap is measured instead of described in a comment."}
 {"record":"known-lung-cancer.txt","start":0,"end":2,"category":"DECOY","text":"肺癌","is_phi":false,"note":"Known limitation: identical in shape to 田中; needs the reviewed vocabulary, not a shape rule."}
 {"record":"known-internal-medicine.txt","start":0,"end":2,"category":"DECOY","text":"内科","is_phi":false,"note":"Department name, same shape limitation."}
 {"record":"known-male.txt","start":0,"end":2,"category":"DECOY","text":"男性","is_phi":false,"note":"Category value, same shape limitation."}

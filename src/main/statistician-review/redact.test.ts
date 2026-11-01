@@ -141,4 +141,14 @@ describe('variable dictionary redaction', () => {
     expect(report.text).toContain('[患者')
     expect(log.text).toContain('[患者')
   })
+
+  it('masks a heading-shaped line when the whole report is inside the guess window', () => {
+    // Accepted over-masking: 統計報告 and a two-kanji surname have the same shape, and the name guess
+    // only runs on a text of at most 80 characters. A report long enough to leave that window keeps
+    // its title (export.test.ts asserts that shape); a two-line one loses it rather than leak a name.
+    const { text } = redactExportText('統計報告\n\n短い。', store(), 'statistical-report.pdf')
+
+    expect(text).toContain('[患者')
+    expect(text).not.toContain('統計報告')
+  })
 })

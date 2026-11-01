@@ -32,6 +32,8 @@ export interface PhiSpan {
   labeled?: boolean
   shift?: boolean
   parsed?: ParsedDate
+  /** Stable id of the rule that produced the span. Never contains matched text. */
+  rule?: string
 }
 
 interface NormMap {
@@ -45,7 +47,9 @@ type IndexedMatch = RegExpExecArray & {
   indices: Array<[number, number] | undefined>
 }
 
-type SpanExtra = Partial<Pick<PhiSpan, 'ageGe90' | 'kind' | 'labeled' | 'shift' | 'parsed'>>
+type SpanExtra = Partial<
+  Pick<PhiSpan, 'ageGe90' | 'kind' | 'labeled' | 'shift' | 'parsed' | 'rule'>
+>
 type ExtraArg = SpanExtra | ((chunk: string, match: IndexedMatch) => SpanExtra | false)
 
 const EVAL_FALLBACK = '2026-10-13'
@@ -183,10 +187,15 @@ export function detectPhi(original: string): PhiSpan[] {
     'MY_NUMBER',
     1
   )
-  take('(?<!\\d)(\\d{4}[\\s\\-・]\\d{4}[\\s\\-・]\\d{4})(?!\\d)', 'MY_NUMBER', 1)
-  take('(?<!\\d)(\\d{4} \\d{4}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1)
-  take('(?<!\\d)(\\d{8}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1)
-  take('(?<!\\d)(\\d{12})(?!\\d)', 'MY_NUMBER', 1)
+  // Bare shapes: heuristics, so each carries a rule id for the block log.
+  take('(?<!\\d)(\\d{4}[\\s\\-・]\\d{4}[\\s\\-・]\\d{4})(?!\\d)', 'MY_NUMBER', 1, {
+    rule: 'my-number-bare-4x3'
+  })
+  take('(?<!\\d)(\\d{4} \\d{4}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1, {
+    rule: 'my-number-bare-wrapped-space'
+  })
+  take('(?<!\\d)(\\d{8}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1, { rule: 'my-number-bare-8-4' })
+  take('(?<!\\d)(\\d{12})(?!\\d)', 'MY_NUMBER', 1, { rule: 'my-number-bare-12' })
 
   // Insured identifiers. Labels 被保険者番号 / 受給者番号 stay outside.
   take('被保険者証記号\\s*\\S+\\s*番号\\s*\\S+(?:\\s*枝番\\s*\\S+)?', 'INSURED_ID')
@@ -241,8 +250,9 @@ export function detectPhi(original: string): PhiSpan[] {
     LAW.has(chunk.slice(0, 2)) ? {} : false
   )
 
-  // Chart numbers. Longer labels first.
-  const karte: ReadonlyArray<readonly [string, number]> = [
+  // Chart numbers. Longer labels first. The unlabeled patterns (No., ID, MRN, PID) carry a rule id:
+  // those are the ones that can fire on a bare identifier with no label to read at the offset.
+  const karte: ReadonlyArray<readonly [string, number, string?]> = [
     ['カルテ番号\\s*[:：]?\\s*(\\d+\\n\\d+|\\d{5,10})', 1],
     ['カルテNo\\.\\s*([A-Z]-\\d+)', 1],
     ['カルテ\\s+(\\d{5,10})', 1],
@@ -255,21 +265,24 @@ export function detectPhi(original: string): PhiSpan[] {
     ['受付番号\\s*(\\d{6,}-\\d{2,})', 1],
     ['検体ID\\s*(S\\d{2}-\\d+)', 1],
     ['画像ID\\s*(CT\\d{4}-\\d+)', 1],
-    ['MRN\\s+(\\d{5,})', 1],
-    ['PID=(\\d{5,})', 1],
-    ['No\\.\\s*(\\d{6,})', 1],
-    ['(?<![A-Za-z])ID\\s*[:：]\\s*(\\d{4}-\\d{3,}|\\d{6,})', 1],
-    ['(?<![A-Za-z])ID(\\d{6,})', 1],
+    ['MRN\\s+(\\d{5,})', 1, 'karte-mrn'],
+    ['PID=(\\d{5,})', 1, 'karte-pid'],
+    ['No\\.\\s*(\\d{6,})', 1, 'karte-no'],
+    ['(?<![A-Za-z])ID\\s*[:：]\\s*(\\d{4}-\\d{3,}|\\d{6,})', 1, 'karte-id-colon'],
+    ['(?<![A-Za-z])ID(\\d{6,})', 1, 'karte-id-prefix'],
     ['カルテ番号[^\\n|]{0,20}\\|(\\d{5,})', 1]
   ]
-  for (const [pattern, group] of karte) take(pattern, 'KARTE_NO', group)
+  for (const [pattern, group, rule] of karte)
+    take(pattern, 'KARTE_NO', group, rule ? { rule } : undefined)
 
   // Phone.
   take('内線\\s*\\d{3,5}', 'PHONE')
   take('(?:TEL|Tel)\\s*\\+?\\d[\\d\\-\\s]{8,}\\d', 'PHONE')
   take('\\+81[\\-\\s]?\\d{1,4}[\\-\\s]?\\d{3,4}[\\-\\s]?\\d{3,4}', 'PHONE')
-  take('(?<![\\d])0\\d{1,3}-\\d{2,4}-\\d{3,4}(?!\\d)', 'PHONE')
-  take('(?<![\\d])0\\d{9,10}(?!\\d)', 'PHONE')
+  take('(?<![\\d])0\\d{1,3}-\\d{2,4}-\\d{3,4}(?!\\d)', 'PHONE', 0, {
+    rule: 'phone-bare-hyphenated'
+  })
+  take('(?<![\\d])0\\d{9,10}(?!\\d)', 'PHONE', 0, { rule: 'phone-bare-digits' })
 
   // Address. A prefecture must be followed by a city and a street (丁目, 番地, 番+号,
   // or a hyphenated house number). A bare 番 or 号 is not enough: it also occurs in
@@ -338,18 +351,23 @@ function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void 
     }
   }
 
-  const datePatterns = [
-    '(?:令和|平成|昭和|大正|明治)(?:元|\\d{1,2})年(?:\\d{1,2}月(?:\\d{1,2}日)?)?生?',
-    '[MTS HR]\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}生?',
-    '\\d{4}年\\d{1,2}月\\d{1,2}日生?',
-    '\\d{4}[.\\-/]\\d{1,2}[.\\-/]\\d{1,2}',
-    '\\d{2}/\\d{2}/\\d{2}',
-    '\\d{4}年\\d{1,2}月',
-    '本年\\d{1,2}月',
-    '(?<![\\d/])(\\d{1,2}月\\d{1,2}日)(?!\\d)',
-    '(?<![\\d/])(\\d{1,2}/\\d{1,2})(?!\\d)'
+  // Date shapes carry no label, so each keeps a rule id: an offset alone does not say which pattern
+  // produced it, and these are the patterns most likely to fire on a machine-generated string.
+  const datePatterns: ReadonlyArray<readonly [string, string]> = [
+    [
+      '(?:令和|平成|昭和|大正|明治)(?:元|\\d{1,2})年(?:\\d{1,2}月(?:\\d{1,2}日)?)?生?',
+      'date-bare-era'
+    ],
+    ['[MTS HR]\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}生?', 'date-bare-abbrev'],
+    ['\\d{4}年\\d{1,2}月\\d{1,2}日生?', 'date-bare-western-day'],
+    ['\\d{4}[.\\-/]\\d{1,2}[.\\-/]\\d{1,2}', 'date-bare-iso'],
+    ['\\d{2}/\\d{2}/\\d{2}', 'date-bare-two-digit-year'],
+    ['\\d{4}年\\d{1,2}月', 'date-bare-western-month'],
+    ['本年\\d{1,2}月', 'date-bare-current-year'],
+    ['(?<![\\d/])(\\d{1,2}月\\d{1,2}日)(?!\\d)', 'date-bare-month-day'],
+    ['(?<![\\d/])(\\d{1,2}/\\d{1,2})(?!\\d)', 'date-bare-slash']
   ]
-  for (const pattern of datePatterns) {
+  for (const [pattern, rule] of datePatterns) {
     const regex = withIndices(pattern, 'g')
     let match: IndexedMatch | null
     while ((match = regex.exec(norm) as IndexedMatch | null)) {
@@ -375,7 +393,8 @@ function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void 
         kind: document ? 'document' : birth && ageGe90 ? 'age' : 'calendar',
         shift: !document,
         ageGe90,
-        parsed
+        parsed,
+        rule
       })
     }
   }
@@ -784,19 +803,36 @@ function isNameShaped(text: string): boolean {
   return false
 }
 
-function isUnitOrValueSlot(slot: string): boolean {
+// A parenthesised slot holding a bare number, a date format or a phone is a value: it is the value of
+// the cell, and its own detector (DATE, PHONE, KARTE) already covers it.
+function isValueSlot(slot: string): boolean {
   const value = slot.trim()
   if (!value || value.length > 24) return false
-  if (UNIT_SLOT.has(value)) return true
   if (/^[0-9]+$/u.test(value)) return true
   if (/^[0-9][0-9\s\-./:]*$/u.test(value)) return true
   if (/^[ymdYMD][ymdYMD/\-.]*$/u.test(value)) return true
   return false
 }
 
-function isDefinitionCell(text: string): boolean {
-  const groups = [...text.matchAll(/\(([^()]*)\)/gu)]
-  return groups.length > 0 && groups.every((group) => isUnitOrValueSlot(group[1]))
+// A cell whose parenthesised slots are all units is a measurement definition — 年齢（歳）,
+// 収縮期血圧（mmHg）, 投与量（mg） — and no part of it can be a name. That is a unit table, not a list of
+// people, so the whole cell is released.
+function isUnitCell(text: string): boolean {
+  const slots = [...text.matchAll(/\(([^()]*)\)/gu)]
+  return slots.length > 0 && slots.every((slot) => UNIT_SLOT.has(slot[1].trim()))
+}
+
+// The converse must not release the rest of the cell: "John Smith (MD)" and "連絡先（03-1234-5678）"
+// carry a value in the parentheses and a label or a name outside it. Those slots are treated as
+// occupied intervals and everything outside them is judged as usual — the same rule the spans use.
+function valueSlotRanges(text: string, offset: number): Array<{ start: number; end: number }> {
+  const ranges: Array<{ start: number; end: number }> = []
+  for (const slot of text.matchAll(/\(([^()]*)\)/gu)) {
+    if (UNIT_SLOT.has(slot[1].trim()) || !isValueSlot(slot[1])) continue
+    const start = offset + (slot.index ?? 0)
+    ranges.push({ start, end: start + slot[0].length })
+  }
+  return ranges
 }
 
 function splitRanges(
@@ -831,20 +867,25 @@ function normalizedRange(map: NormMap, span: PhiSpan): { start: number; end: num
 function freeRanges(
   spans: PhiSpan[],
   map: NormMap,
-  cell: { start: number; end: number }
+  cell: { start: number; end: number },
+  extra: ReadonlyArray<{ start: number; end: number }> = []
 ): Array<{ start: number; end: number }> {
   let ranges = [cell]
+  const blocked: Array<{ start: number; end: number }> = [...extra]
   for (const span of spans) {
-    const blocked = normalizedRange(map, span)
-    if (!blocked || blocked.end <= cell.start || cell.end <= blocked.start) continue
+    const range = normalizedRange(map, span)
+    if (range) blocked.push(range)
+  }
+  for (const range of blocked) {
+    if (range.end <= cell.start || cell.end <= range.start) continue
     const next: Array<{ start: number; end: number }> = []
-    for (const range of ranges) {
-      if (blocked.end <= range.start || range.end <= blocked.start) {
-        next.push(range)
+    for (const item of ranges) {
+      if (range.end <= item.start || item.end <= range.start) {
+        next.push(item)
         continue
       }
-      if (range.start < blocked.start) next.push({ start: range.start, end: blocked.start })
-      if (blocked.end < range.end) next.push({ start: blocked.end, end: range.end })
+      if (item.start < range.start) next.push({ start: item.start, end: range.start })
+      if (range.end < item.end) next.push({ start: range.end, end: item.end })
     }
     ranges = next
   }
@@ -874,17 +915,6 @@ function nameRun(core: string): { start: number; end: number } | null {
   return null
 }
 
-// A line that holds exactly one token is a heading or a field label, not a patient row. The classic
-// short-record case (a text that is only a name) is decided by the whole-text rule before this, so a
-// name on its own line inside a longer text stays unmasked here — the same gap this branch always
-// had; see the ticket's known limitations.
-function isEntireLine(norm: string, start: number, end: number): boolean {
-  const lineStart = norm.lastIndexOf('\n', start - 1) + 1
-  const nextBreak = norm.indexOf('\n', end)
-  const lineEnd = nextBreak < 0 ? norm.length : nextBreak
-  return norm.slice(lineStart, lineEnd).trim() === norm.slice(start, end).trim()
-}
-
 function guessSegment(
   spans: PhiSpan[],
   map: NormMap,
@@ -896,7 +926,6 @@ function guessSegment(
   const head = /^[\s"'`{}[\]]*/u.exec(raw)?.[0].length ?? 0
   const core = raw.replace(SEGMENT_EDGE, '')
   if (!core) return
-  if (isEntireLine(norm, start, end)) return
   if (LABEL_TOKEN.test(core)) return
   const candidate = nameRun(core)
   if (!candidate) return
@@ -906,7 +935,9 @@ function guessSegment(
   const text = norm.slice(from, to)
   if (isOrdinaryLabel(text)) return
   if (occupied(spans, map.startOrig[from], map.endOrig[to - 1])) return
-  addSpan(spans, map, from, to, rolePrefix(text) ? 'PHYSICIAN_NAME' : 'PERSON_NAME')
+  addSpan(spans, map, from, to, rolePrefix(text) ? 'PHYSICIAN_NAME' : 'PERSON_NAME', {
+    rule: 'guess-segment'
+  })
 }
 
 function maskLatinCommaPair(
@@ -923,7 +954,7 @@ function maskLatinCommaPair(
   const from = gap.start + match.index
   const to = from + match[1].length
   if (occupied(spans, map.startOrig[from], map.endOrig[to - 1])) return
-  addSpan(spans, map, from, to, 'PERSON_NAME')
+  addSpan(spans, map, from, to, 'PERSON_NAME', { rule: 'latin-comma-pair' })
 }
 
 function detectUnlabeledNames(spans: PhiSpan[], map: NormMap, norm: string): void {
@@ -938,13 +969,17 @@ function detectUnlabeledNames(spans: PhiSpan[], map: NormMap, norm: string): voi
       map,
       from,
       from + whole.length,
-      rolePrefix(whole) ? 'PHYSICIAN_NAME' : 'PERSON_NAME'
+      rolePrefix(whole) ? 'PHYSICIAN_NAME' : 'PERSON_NAME',
+      {
+        rule: 'guess-whole'
+      }
     )
   }
   for (const cell of splitRanges(norm, /\t/u, 0, norm.length)) {
-    if (!norm.slice(cell.start, cell.end).trim()) continue
-    if (isDefinitionCell(norm.slice(cell.start, cell.end))) continue
-    for (const gap of freeRanges(spans, map, cell)) {
+    const text = norm.slice(cell.start, cell.end)
+    if (!text.trim()) continue
+    if (isUnitCell(text)) continue
+    for (const gap of freeRanges(spans, map, cell, valueSlotRanges(text, cell.start))) {
       maskLatinCommaPair(spans, map, norm, gap)
       for (const segment of splitRanges(norm, SEGMENT_SEPARATOR, gap.start, gap.end)) {
         guessSegment(spans, map, norm, segment.start, segment.end)

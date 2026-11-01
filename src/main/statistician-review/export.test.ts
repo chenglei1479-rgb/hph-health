@@ -21,8 +21,10 @@ const aggregate = (): StatisticianReviewExportRequest => ({
   projectId: 'consultation-pack',
   statisticalReport: {
     format: 'docx',
+    // Long enough to pass the detector's 80-character name-guess window, which is the shape a real
+    // report has; a heading alone inside that window is masked (see redact.test.ts).
     title: '統計報告',
-    body: 'Mean difference 1.4. 研究期間：2020-01-01 to 2024-12-31.'
+    body: 'Mean difference 1.4. 研究期間：2020-01-01 to 2024-12-31. 対象は240例、主要評価項目は再入院率であり、群間差は有意ではなかった。'
   },
   resultTables: {
     sheets: [

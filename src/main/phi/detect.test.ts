@@ -42,21 +42,30 @@ describe('unlabeled names in a short record', () => {
     expect(namesOf('カルテ番号：123456')).toEqual([])
   })
 
-  it('does not guess inside a cell whose parenthesised slot is a unit or a value', () => {
+  it('releases a cell whose every parenthesised slot is a unit', () => {
     for (const text of [
       '年齢（歳）',
       '投与量（mg）',
-      '連絡先（03-1234-5678）',
+      '収縮期血圧（mmHg）',
       '同意取得日（yyyy/mm/dd）'
     ]) {
       expect(namesOf(text)).toEqual([])
     }
   })
 
-  it('leaves a name inside a long record to the labelled rules, the same window as before', () => {
-    // 80 characters is the documented limit of this branch: past it only labelled rules run.
-    const long = `山田太郎 ${'経過観察'.repeat(20)}`
-    expect(long.length).toBeGreaterThan(80)
-    expect(namesOf(long)).toEqual([])
+  // A value slot protects the slot, not the rest of the cell: the part outside the parentheses is
+  // judged like any other segment. This is the failure mode that a whole-cell skip would open.
+  it('judges the part of a cell that sits outside a value slot', () => {
+    expect(namesOf('John Smith (MD)')).toEqual(['John Smith'])
+    expect(namesOf('山田 (37)')).toEqual(['山田'])
+    // 連絡先 is a reviewed field name, so the label survives while the number is masked.
+    expect(namesOf('連絡先（03-1234-5678）')).toEqual([])
+  })
+
+  // The 80-character limit is a known miss, not a rule of the product: it is pinned as a fixture
+  // record (`known-long-name-unmasked`) and owned by the ticket that extends the window, so the gap
+  // is measured by the dev set instead of asserted as intended behaviour here.
+  it('keeps a name on its own line inside a longer text', () => {
+    expect(namesOf('山田太郎\n65歳')).toEqual(['山田太郎'])
   })
 })

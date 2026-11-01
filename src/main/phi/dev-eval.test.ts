@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
@@ -91,10 +91,10 @@ describe('Japanese PHI dev set', () => {
     process.stderr.write(`${JSON.stringify(short, null, 2)}\n`)
 
     expect(short.covered).toBe(true)
-    expect(short.records).toBe(41)
+    expect(short.records).toBe(42)
     // Recall is the hard line: every name is found, and found exactly. The three name-with-* records
     // are the ones the old whole-string guess dropped whenever another span was present.
-    expect(short.nameGold).toBe(13)
+    expect(short.nameGold).toBe(14)
     expect(short.nameOverlapRecall).toBe(1)
     expect(short.nameExactRecall).toBe(1)
     expect(short.nameMisses).toEqual([])
@@ -139,5 +139,35 @@ describe('Japanese PHI dev set', () => {
     expect(result.text).not.toContain('山田太郎')
     expect(result.text).not.toContain('65歳')
     expect(result.text).not.toContain('2026-10-01')
+  })
+
+  // The same defect one line down: a pasted note puts the name on one line and the age on the next,
+  // and the name then sits alone on its line. It must not be read as a heading.
+  it('masks a name that shares a record with an age on the next line', () => {
+    const text = readFileSync(join(SHORT_FIXTURE, 'records', 'name-with-age-newline.txt'), 'utf8')
+    const spans = detectPhi(text)
+    const name = spans.find((span) => span.category === 'PERSON_NAME')
+    const date = spans.find((span) => span.category === 'DATE')
+    expect([name?.start, name?.end, name?.text]).toEqual([0, 4, '山田太郎'])
+    expect([date?.start, date?.end]).toEqual([5, 8])
+    expect(deidentify(text, createMemoryPhiVault().store('fiction')).text).not.toContain('山田太郎')
+  })
+
+  // The name guess is bounded at 80 characters. Pinned as a miss, not as desired behaviour: the
+  // record exists so the gap is measured, and it is owned by the ticket that extends the window.
+  it('pins the long-record gap: an unlabeled name past 80 characters stays unmasked', () => {
+    const text = readFileSync(
+      join(SHORT_FIXTURE, 'records', 'known-long-name-unmasked.txt'),
+      'utf8'
+    )
+    expect(text.length).toBeGreaterThan(80)
+    expect(text.startsWith('山田太郎')).toBe(true)
+    expect(detectPhi(text).filter((span) => span.category === 'PERSON_NAME')).toEqual([])
+  })
+
+  // A romanized name is exported as SURNAME, GIVEN. That is the only shape in this branch that has
+  // to survive a comma, which is otherwise a segment separator.
+  it.each(['Smith, John', 'MISONO, KOTARO'])('keeps %s as one name', (text) => {
+    expect(detectPhi(text).filter((span) => span.category === 'PERSON_NAME')).toHaveLength(1)
   })
 })

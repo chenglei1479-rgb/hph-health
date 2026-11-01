@@ -13,16 +13,18 @@ separately.
 Every record is one line of a synthetic variable dictionary or a reviewed label shape. No patient
 data: all names and values are invented.
 
-| Group | Records | Gold | Expectation |
-| --- | --- | --- | --- |
-| `name-*` | 13 | `is_phi: true`, `PERSON_NAME` | must be found; today overlap 1.0 and exact 1.0 |
-| `var-*`, `label-*`, `term-*` | 19 | `is_phi: false` | must not be flagged; today none are |
-| `mixed-*` | 3 | `is_phi: true` (date / karte / phone) | the row keeps its field name while its own span is redacted; today all 3 are detected and redacted |
-| `known-*` | 6 | `is_phi: false` | five are cleared by the reviewed vocabulary; `レボフロキサシン` is still flagged |
+| Group                        | Records | Gold                                  | Expectation                                                                                        |
+| ---------------------------- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `name-*`                     | 14      | `is_phi: true`, `PERSON_NAME`         | must be found; today overlap 1.0 and exact 1.0                                                     |
+| `var-*`, `label-*`, `term-*` | 19      | `is_phi: false`                       | must not be flagged; today none are                                                                |
+| `mixed-*`                    | 3       | `is_phi: true` (date / karte / phone) | the row keeps its field name while its own span is redacted; today all 3 are detected and redacted |
+| `known-*`                    | 6       | `is_phi: false`                       | five are cleared by the reviewed vocabulary; `レボフロキサシン` is still flagged                   |
+| `known-long-name-unmasked`   | 1       | `is_phi: true`, `PERSON_NAME`         | a pinned **miss**, not a false positive: past 80 characters the guess does not run                 |
 
-The three `name-with-*` records are the ones the old whole-string guess dropped: it only fired when the
-text carried no other span at all, so `山田太郎 65歳` and `山田太郎 2026-10-01` lost the name entirely.
-Their gold carries both the `PERSON_NAME` span and the `DATE` span of the same record.
+The `name-with-*` records are the ones the old whole-string guess dropped: it only fired when the text
+carried no other span at all, so `山田太郎 65歳` and `山田太郎 2026-10-01` lost the name entirely. Their
+gold carries both the `PERSON_NAME` span and the `DATE` span of the same record. `name-with-age-newline`
+is the same defect one line down — the name sits alone on its line, which must not read as a heading.
 
 The numbers above are the **current** measurements, and `dev-eval.test.ts` pins them. The `flagged`
 set may only ever shrink: the test keeps the #95 baseline as a hard ceiling, and every record that
@@ -42,11 +44,12 @@ vocabulary. `known-levofloxacin` (レボフロキサシン) is not: a katakana d
 name have the same shape, so it stays masked until someone adds it to that list with a reason. A new
 drug name is masked until it is reviewed — that is the intended direction.
 
-Two shapes stay open on purpose, both inherited from the detector's 80-character window:
+`known-long-name-unmasked` is the other direction: a **miss**. The unlabeled-name guess stops at 80
+characters, so a longer note keeps the name. It is pinned so the gap is measured by the test set instead
+of described in a comment, and it is owned by the ticket that extends or removes that window.
 
-- a name alone on its own line inside a longer text is read as a heading;
-- a record longer than 80 characters is never guessed at, only the labelled rules run there.
-
+One shape stays open on purpose, inherited from the same window: a record longer than 80 characters is
+never guessed at, only the labelled rules run there.
 
 ## Running it
 
