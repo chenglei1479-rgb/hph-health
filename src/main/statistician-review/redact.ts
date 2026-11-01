@@ -31,12 +31,10 @@ type Span = { start: number; end: number; replacement: string }
 // and replacing the row destroys the dictionary. Only a cell that carries a name label of its own
 // (`氏名：山田太郎`) holds a patient name, and then only the value is replaced.
 //
-// The guess is scoped to one row on purpose: `detectPhi` emits a single span over the whole string it
-// is given, so handing it a whole dictionary would turn "any label anywhere" into "the entire
-// dictionary becomes [患者N]".
-//
-// This mirrors the connector and Notebook patches (gate.ts, notebook-phi-release.ts); converging all
-// of them is tracked separately as issue #92, and this file must not grow its own wider rule.
+// `detectPhi` now guesses unlabeled names per cell and per segment, so the joined document no longer
+// collapses into one placeholder; the row remains the tighter unit and the `structured` flag keeps
+// the labelled-value rule local. Converging this file with the connector and Notebook patches is
+// tracked as issue #92 — this file must not grow its own wider rule.
 //
 // The label must be followed by a colon: a tab is a cell boundary, not a separator. Otherwise a row
 // whose variable is itself named `氏名` would redact the definition in the next cell as a person.

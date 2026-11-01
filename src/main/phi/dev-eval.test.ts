@@ -3,15 +3,17 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
+import { deidentify } from './deidentify'
+import { detectPhi } from './detect'
 import { scoreFixture } from './score'
+import { createMemoryPhiVault } from './store'
 
 const FIXTURE = join(__dirname, '../../../test/fixtures/jp-phi-testset')
 const SHORT_FIXTURE = join(__dirname, '../../../test/fixtures/jp-phi-short-records')
 
-// Current false positives and the one span-precision miss, pinned so main stays green and any drift
-// shows up. The detector ticket narrows the whole-string name guess and turns these into
-// nameExactRecall 1 / mustCleanRate 0 / flagged = the six known limitations only.
-const CURRENT_MUST_CLEAN_FLAGGED = [
+// The baseline pinned by #95, kept as the hard ceiling for every later detector change: a record may
+// leave this set, never enter it. A new false positive has to fail here, not in review.
+const BASELINE_FLAGGED = [
   'var-reported-tsv.txt',
   'var-age-unit.txt',
   'var-sex-categorical.txt',
@@ -30,9 +32,7 @@ const CURRENT_MUST_CLEAN_FLAGGED = [
   'term-double-blind.txt',
   'term-colorectal-screening.txt',
   'term-postop-complication.txt',
-  'term-lung-cancer-study.txt'
-]
-const KNOWN_LIMITATION_FLAGGED = [
+  'term-lung-cancer-study.txt',
   'known-lung-cancer.txt',
   'known-internal-medicine.txt',
   'known-male.txt',
@@ -40,6 +40,19 @@ const KNOWN_LIMITATION_FLAGGED = [
   'known-survival-rate.txt',
   'known-chemotherapy.txt'
 ]
+// Every removal above is one reviewed vocabulary entry in ordinary-label.ts:
+//   var-sex-categorical, label-sex-only  <- 性別
+//   var-smoking                          <- 喫煙歴
+//   var-facility                         <- 施設名
+//   var-drug                             <- 薬剤名 + 一般名
+//   var-ward                             <- 病棟
+//   var-endpoint                         <- 主要評価項目
+//   term-chi-square                      <- 統計学的有意差
+//   term-double-blind                    <- 二重盲検比較試験
+// The rest are cleared by structure, not by a list: tab cells, punctuation segments, and unit slots.
+// The six known limitations are the reviewed-vocabulary set too; レボフロキサシン is the one entry
+// still missing, so it stays pinned until someone adds it with a reason.
+const PINNED_FLAGGED = ['known-levofloxacin.txt']
 
 type ShortReport = {
   records: number
@@ -78,27 +91,26 @@ describe('Japanese PHI dev set', () => {
     process.stderr.write(`${JSON.stringify(short, null, 2)}\n`)
 
     expect(short.covered).toBe(true)
-    expect(short.records).toBe(38)
-    // Recall: every name is found (overlap 1); one bare 氏名: record is returned as the whole cell
-    // instead of the name, so exact recall is 0.9 until the label rule lands with the detector fix.
-    expect(short.nameGold).toBe(10)
+    expect(short.records).toBe(41)
+    // Recall is the hard line: every name is found, and found exactly. The three name-with-* records
+    // are the ones the old whole-string guess dropped whenever another span was present.
+    expect(short.nameGold).toBe(13)
     expect(short.nameOverlapRecall).toBe(1)
-    expect(short.nameExactRecall).toBe(0.9)
+    expect(short.nameExactRecall).toBe(1)
     expect(short.nameMisses).toEqual([])
-    // False positives, pinned as the current measured set: a variable dictionary cell that carries no
-    // name label must not be a patient, which is the target of the detector ticket.
+    // False positives: the 19 variable-dictionary and term rows are now clean. A rise here is a
+    // regression in the guess, not a threshold to adjust.
     expect(short.mustCleanDecoys).toBe(19)
-    expect(short.mustCleanRate).toBe(1)
-    // The full flagged set is asserted, not its size: one decoy leaving and another entering would
+    expect(short.mustCleanRate).toBe(0)
+    // Monotonic decrease, executable: nothing outside the #95 baseline may ever be flagged, so a
+    // record can only leave the set. Keep this check even after the pinned set reaches zero.
+    expect(short.flagged.filter((item) => !BASELINE_FLAGGED.includes(item.record))).toEqual([])
+    // The full flagged set is asserted, not its size: one record leaving and another entering would
     // keep the counts equal and slip past a numeric check.
-    expect(short.flagged.map((item) => item.record).sort()).toEqual(
-      [...CURRENT_MUST_CLEAN_FLAGGED, ...KNOWN_LIMITATION_FLAGGED].sort()
-    )
-    // The known limitations are the allowed set once the guess is narrowed; today they are part of the
-    // flagged set and must never grow.
-    expect(KNOWN_LIMITATION_FLAGGED).toHaveLength(6)
-    // Records carrying another PHI span: the guess never fires there, so they prove the labelled
-    // detectors still run while the dictionary rows stay readable.
+    expect(short.flagged.map((item) => item.record).sort()).toEqual(PINNED_FLAGGED)
+    expect(short.knownFlagged).toBe(PINNED_FLAGGED.length)
+    // Records carrying another PHI span: the labelled detectors still run there while the row stays
+    // readable.
     expect(short.mixed).toEqual({
       gold: 3,
       detected: 3,
@@ -109,5 +121,23 @@ describe('Japanese PHI dev set', () => {
         'mixed-phone-alongside.txt'
       ]
     })
+  })
+
+  // The defect this ticket closes: the guess used to require that the whole text carried no other
+  // span, so a name next to an age or a date was never masked at all.
+  it.each([
+    ['山田太郎 65歳', 0, 4, 5, 8],
+    ['山田太郎 2026-10-01', 0, 4, 5, 15],
+    ['山田太郎 65歳 男性', 0, 4, 5, 8]
+  ])('masks the name beside another span in %s', (text, nameStart, nameEnd, dateStart, dateEnd) => {
+    const spans = detectPhi(text)
+    const name = spans.find((span) => span.category === 'PERSON_NAME')
+    const date = spans.find((span) => span.category === 'DATE')
+    expect([name?.start, name?.end]).toEqual([nameStart, nameEnd])
+    expect([date?.start, date?.end]).toEqual([dateStart, dateEnd])
+    const result = deidentify(text, createMemoryPhiVault().store('fiction'))
+    expect(result.text).not.toContain('山田太郎')
+    expect(result.text).not.toContain('65歳')
+    expect(result.text).not.toContain('2026-10-01')
   })
 })

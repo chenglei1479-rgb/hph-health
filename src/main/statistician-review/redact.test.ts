@@ -71,16 +71,17 @@ describe('variable dictionary redaction', () => {
     expect(text).toContain('sbp\t収縮期血圧（mmHg）\tinteger')
   })
 
-  it('shows the same input without the structured path losing every field', () => {
-    // The red side of the pair: handed the joined document, the old path turns the whole dictionary
-    // into one placeholder, which is exactly what the acceptance report saw.
+  it('keeps the field names even without the structured path', () => {
+    // This was the red side of the pair before the detector learned to work per cell: handed the
+    // joined document, the guess turned the whole dictionary into one placeholder. It no longer does,
+    // so the document path keeps its field names as well; the row path stays the tighter unit.
     const document = join([row('patient_name', '氏名：山田太郎')])
 
     const { text } = redactExportText(document, store(), 'variable-definition.pdf')
 
     expect(text).toContain('[患者')
-    expect(text).not.toContain('patient_name')
-    expect(text).not.toContain('氏名')
+    expect(text).not.toContain('山田太郎')
+    expect(text).toContain('patient_name\t氏名：[患者')
   })
 
   it('still applies the structural detectors inside a row', () => {

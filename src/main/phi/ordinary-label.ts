@@ -58,8 +58,13 @@ export const ORDINARY_LABEL_VOCABULARY = {
     '放射線療法',
     '有害事象',
     '再発',
-    '予後'
-  ]
+    '予後',
+    '統計学的有意差',
+    '二重盲検比較試験'
+  ],
+  // Field labels of a variable dictionary or a data-entry sheet. They name a column, never a
+  // person; every one of them was reviewed one by one for the short-record fixture.
+  field: ['性別', '喫煙歴', '施設名', '薬剤名', '一般名', '病棟', '主要評価項目']
 } as const
 
 const ORDINARY_LABELS = new Set<string>(Object.values(ORDINARY_LABEL_VOCABULARY).flat())
