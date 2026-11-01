@@ -24,7 +24,7 @@ import {
   sheetsFromConfirmedText,
   sheetText
 } from './files'
-import { redactExportText } from './redact'
+import { redactExportText, redactVariableDefinitionRows } from './redact'
 
 const statisticianExportLog = createLogger('statistician-export')
 
@@ -72,16 +72,13 @@ const partsFor = (request: StatisticianReviewExportRequest): Part[] => {
     store,
     scriptName
   )
-  // The variable dictionary is tab-separated cells, not prose: a cell that looks like a Japanese word
-  // is a label, and only a cell carrying a name label is a patient. Without this the exported PDF lost
-  // whole rows (variable name, definition, type, coding) to `[患者N]`.
-  const definition = redactExportText(
-    request.variableDefinition.rows
-      .map((row) => [row.name, row.definition, row.type, row.coding].join('\t'))
-      .join('\n'),
+  // Row by row: a variable dictionary row is the unit that carries a name label, and only a labeled
+  // value is a patient. Redacting the joined document turned "a label anywhere" into "the whole
+  // dictionary becomes [患者N]", which is what the acceptance report saw.
+  const definition = redactVariableDefinitionRows(
+    request.variableDefinition.rows,
     store,
-    'variable-definition.pdf',
-    { structured: true }
+    'variable-definition.pdf'
   )
   const log = redactExportText(request.executionLog.text, store, 'execution-log.pdf')
   return [
