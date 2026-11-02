@@ -8042,6 +8042,11 @@
     "The previously imported table could not be restored. Choose the file again. Your local code is kept.": "La table importée précédemment n’a pas pu être restaurée. Sélectionnez à nouveau le fichier. Votre code local est conservé.",
     "The previously imported table is still saved. Switch to another project and come back to restore it.": "La table importée précédemment est toujours enregistrée. Passez à un autre projet puis revenez pour la restaurer.",
     "Runtime: bundled Python {{version}} (offline)": "Environnement : Python fourni {{version}} (hors ligne)",
-    "Runtime: system Python {{version}} (the bundled runtime could not start)": "Environnement : Python du système {{version}} (l’environnement fourni n’a pas pu démarrer)"
+    "Runtime: system Python {{version}} (the bundled runtime could not start)": "Environnement : Python du système {{version}} (l’environnement fourni n’a pas pu démarrer)",
+    "{{name}} was not created because the draft contains text this app treats as patient information. Remove or generalize it, then try again. (Code: {{code}})": "{{name}} n’a pas été créé, car le brouillon contient du texte que cette application traite comme des informations patient. Supprimez-le ou généralisez-le, puis réessayez. (Code : {{code}})",
+    "{{name}} was not created because no project is selected. (Code: {{code}})": "{{name}} n’a pas été créé, car aucun projet n’est sélectionné. (Code : {{code}})",
+    "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "{{name}} n’a pas pu être enregistré, car cette fenêtre ne peut pas joindre l’application de bureau. Redémarrez l’application, puis réessayez. (Code : {{code}})",
+    "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} n’a pas pu être créé. Réessayez. (Code : {{code}})",
+    "No file was saved.": "Aucun fichier n’a été enregistré."
   }
 }

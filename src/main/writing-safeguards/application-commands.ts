@@ -1,11 +1,15 @@
 import { normalizeEthicsApprovalNumber } from '../../shared/writing-safeguards/ethics-approval'
 import type { EthicsProtocolState } from '../../shared/ethics-protocol/state'
+import {
+  ETHICS_DRAFT_FILE_NAME,
+  type EthicsDraftExportResult
+} from '../../shared/ethics-protocol/draft-export'
 import { mapHeading, type HeadingCandidate } from '../../shared/ethics-protocol/heading-mapper'
 import { basename, join } from 'node:path'
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { buildEthicsDraftSections } from '../ethics-protocol/draft-sections'
 import { inspectPhiSafeDocxHeadings } from '../ethics-protocol/docx-import'
-import { exportDraftAfterPhiCheck } from '../ethics-protocol/export-phi-gate'
+import { EthicsExportPhiError, exportDraftAfterPhiCheck } from '../ethics-protocol/export-phi-gate'
 import {
   defineApplicationCommand,
   defineApplicationCommandGroup,
@@ -38,7 +42,7 @@ type WritingSafeguardsCommandOwner = Readonly<{
   ) => Promise<{ fileName: string; headingCandidates: HeadingCandidate[] }>
   exportEthicsDraft: (
     request: { projectId?: string } | undefined
-  ) => Promise<{ fileName: string; bytes: number[] }>
+  ) => Promise<EthicsDraftExportResult>
 }>
 
 const assertLocalCaller = (callerContext: CallerContext, commandName: string): void => {
@@ -76,7 +80,7 @@ const importDocxCommand = defineApplicationCommand<
 const exportDraftCommand = defineApplicationCommand<
   'writing-safeguards:export-ethics-draft',
   readonly [request: { projectId?: string }],
-  Promise<{ fileName: string; bytes: number[] }>
+  Promise<EthicsDraftExportResult>
 >('writing-safeguards:export-ethics-draft')
 
 const writingSafeguardsApplicationCommandGroup = defineApplicationCommandGroup(
@@ -136,19 +140,31 @@ const createWritingSafeguardsCommandOwner = (
       })
       return { fileName, headingCandidates }
     },
+    // #132: every way this can end is a value the panel can render — success with bytes, or a
+    // code that names the reason. A thrown rejection used to vanish in the renderer, so a refusal
+    // looked exactly like a dead button and the doctor clicked it repeatedly.
     exportEthicsDraft: async (request) => {
       const projectId = request?.projectId?.trim() ?? ''
-      if (!projectId) throw new Error('projectId is required.')
+      if (!projectId)
+        return { ok: false, code: 'ethics-draft-project-missing', fileName: ETHICS_DRAFT_FILE_NAME }
       const state = store.getProtocol(projectId)
       const { sections, missingItems } = buildEthicsDraftSections(state)
-      const bytes = await exportDraftAfterPhiCheck({
-        sections,
-        missingItems,
-        phiTexts: Object.values(state.notApplicableReasons).filter((reason): reason is string =>
-          Boolean(reason?.trim())
-        )
-      })
-      return { fileName: '研究計画書_草案.docx', bytes: [...bytes] }
+      try {
+        const bytes = await exportDraftAfterPhiCheck({
+          sections,
+          missingItems,
+          phiTexts: Object.values(state.notApplicableReasons).filter((reason): reason is string =>
+            Boolean(reason?.trim())
+          )
+        })
+        return { ok: true, fileName: ETHICS_DRAFT_FILE_NAME, bytes: [...bytes] }
+      } catch (error) {
+        // The refusal carries no matched text: the doctor sees that something was treated as
+        // patient information, never a list of the strings that were found.
+        const code =
+          error instanceof EthicsExportPhiError ? 'ethics-draft-blocked-phi' : 'ethics-draft-failed'
+        return { ok: false, code, fileName: ETHICS_DRAFT_FILE_NAME }
+      }
     }
   })
 

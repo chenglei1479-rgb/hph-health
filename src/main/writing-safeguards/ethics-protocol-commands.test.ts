@@ -38,6 +38,8 @@ describe('ethics protocol commands', () => {
       notApplicableReasons: { 3: 'none' }
     })
     const exported = await owner.exportEthicsDraft({ projectId: 'study-1' })
+    expect(exported.ok).toBe(true)
+    if (!exported.ok) throw new Error('unreachable')
     expect(exported.fileName).toBe('研究計画書_草案.docx')
     const document = new TextDecoder().decode(
       unzipSync(Uint8Array.from(exported.bytes))['word/document.xml']

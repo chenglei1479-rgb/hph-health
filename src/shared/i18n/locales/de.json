@@ -7874,6 +7874,11 @@
     "The previously imported table could not be restored. Choose the file again. Your local code is kept.": "Die zuvor importierte Tabelle konnte nicht wiederhergestellt werden. Wählen Sie die Datei erneut. Ihr lokaler Code bleibt erhalten.",
     "The previously imported table is still saved. Switch to another project and come back to restore it.": "Die zuvor importierte Tabelle ist weiterhin gespeichert. Wechseln Sie zu einem anderen Projekt und kehren Sie zurück, um sie wiederherzustellen.",
     "Runtime: bundled Python {{version}} (offline)": "Laufzeit: mitgeliefertes Python {{version}} (offline)",
-    "Runtime: system Python {{version}} (the bundled runtime could not start)": "Laufzeit: System-Python {{version}} (die mitgelieferte Laufzeit konnte nicht gestartet werden)"
+    "Runtime: system Python {{version}} (the bundled runtime could not start)": "Laufzeit: System-Python {{version}} (die mitgelieferte Laufzeit konnte nicht gestartet werden)",
+    "{{name}} was not created because the draft contains text this app treats as patient information. Remove or generalize it, then try again. (Code: {{code}})": "{{name}} wurde nicht erstellt, weil der Entwurf Text enthält, den diese App als Patienteninformation behandelt. Entfernen oder verallgemeinern Sie ihn, und versuchen Sie es erneut. (Code: {{code}})",
+    "{{name}} was not created because no project is selected. (Code: {{code}})": "{{name}} wurde nicht erstellt, weil kein Projekt ausgewählt ist. (Code: {{code}})",
+    "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "{{name}} konnte nicht gespeichert werden, weil dieses Fenster die Desktop-App nicht erreicht. Starten Sie die App neu, und versuchen Sie es erneut. (Code: {{code}})",
+    "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} konnte nicht erstellt werden. Versuchen Sie es erneut. (Code: {{code}})",
+    "No file was saved.": "Es wurde keine Datei gespeichert."
   }
 }

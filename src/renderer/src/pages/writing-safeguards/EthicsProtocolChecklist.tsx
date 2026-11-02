@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { R8_ITEMS, type R8ItemNumber } from '../../../../shared/ethics-protocol/r8-items'
 import type { EthicsProtocolState } from '../../../../shared/ethics-protocol/state'
+import {
+  ETHICS_DRAFT_FILE_NAME,
+  type EthicsDraftExportFailureCode
+} from '../../../../shared/ethics-protocol/draft-export'
+import { ErrorNotice } from '../../components/error-notice'
 import { confirmHeadingMapping } from '../../../../shared/ethics-protocol/heading-mapper'
 import {
   evaluateR8ItemCompleteness,
@@ -75,6 +80,34 @@ export const EthicsProtocolChecklist = ({
   >({ confirmedMappings: [] })
   const [mappingSelections, setMappingSelections] = useState<Record<string, string>>({})
   const [confirmingDoctor, setConfirmingDoctor] = useState('')
+  const [draftExporting, setDraftExporting] = useState(false)
+  const [draftNotice, setDraftNotice] = useState<
+    { level: 'error' | 'info'; message: string } | undefined
+  >(undefined)
+  const draftExportInFlight = useRef(false)
+  // One sentence per failure so the doctor reads a reason and a code in the same place; the key is
+  // the English sentence and the code is interpolated, matching the other export surfaces (#132).
+  const draftFailureMessage = (code: EthicsDraftExportFailureCode, name: string): string => {
+    switch (code) {
+      case 'ethics-draft-blocked-phi':
+        return t(
+          '{{name}} was not created because the draft contains text this app treats as patient information. Remove or generalize it, then try again. (Code: {{code}})',
+          { name, code }
+        )
+      case 'ethics-draft-project-missing':
+        return t('{{name}} was not created because no project is selected. (Code: {{code}})', {
+          name,
+          code
+        })
+      case 'ethics-draft-bridge-unavailable':
+        return t(
+          '{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})',
+          { name, code }
+        )
+      case 'ethics-draft-failed':
+        return t('{{name}} could not be created. Try again. (Code: {{code}})', { name, code })
+    }
+  }
   const itemStatus = (number: R8ItemNumber): '空缺' | '部分空缺' | '記載あり' => {
     const reason = reasons[number]?.trim()
     if (reason) return evaluateR8ItemCompleteness(number, formatNotApplicableText(number, reason))
@@ -187,18 +220,54 @@ export const EthicsProtocolChecklist = ({
     setMetadata((old) => ({ ...old, confirmedMappings }))
     void window.api.writingSafeguards.setEthicsProtocol({ projectId, protocol })
   }
-  const downloadDraft = (): void => {
-    if (!projectId || !window.api.writingSafeguards) return
-    void window.api.writingSafeguards
-      .exportEthicsDraft({ projectId })
-      .then(({ fileName, bytes }) => {
-        const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes)]))
-        const anchor = document.createElement('a')
-        anchor.href = url
-        anchor.download = fileName
-        anchor.click()
-        URL.revokeObjectURL(url)
+  const downloadDraft = async (): Promise<void> => {
+    // A second click while the save dialog is open must not start a second export; the ref covers
+    // the same-tick double click that a state flag cannot see yet.
+    if (draftExportInFlight.current) return
+    draftExportInFlight.current = true
+    setDraftExporting(true)
+    setDraftNotice(undefined)
+    try {
+      if (!projectId) {
+        setDraftNotice({
+          level: 'error',
+          message: draftFailureMessage('ethics-draft-project-missing', ETHICS_DRAFT_FILE_NAME)
+        })
+        return
+      }
+      const bridge = window.api.writingSafeguards
+      if (!bridge || !window.api.saveBlobFile) {
+        setDraftNotice({
+          level: 'error',
+          message: draftFailureMessage('ethics-draft-bridge-unavailable', ETHICS_DRAFT_FILE_NAME)
+        })
+        return
+      }
+      const result = await bridge.exportEthicsDraft({ projectId })
+      if (!result.ok) {
+        setDraftNotice({
+          level: 'error',
+          message: draftFailureMessage(result.code, result.fileName)
+        })
+        return
+      }
+      // Save through the desktop save dialog rather than a blob anchor: the dialog is what tells
+      // the doctor a file is being written, and it reports the written path.
+      const saved = await window.api.saveBlobFile({
+        suggestedName: result.fileName,
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        data: Uint8Array.from(result.bytes).buffer
       })
+      if (!saved.saved) setDraftNotice({ level: 'info', message: t('No file was saved.') })
+    } catch {
+      setDraftNotice({
+        level: 'error',
+        message: draftFailureMessage('ethics-draft-failed', ETHICS_DRAFT_FILE_NAME)
+      })
+    } finally {
+      draftExportInFlight.current = false
+      setDraftExporting(false)
+    }
   }
   return (
     <section aria-label={c.title} className="space-y-2 border-t border-border pt-3">
@@ -329,9 +398,22 @@ export const EthicsProtocolChecklist = ({
           }}
         />
       </label>
-      <button type="button" disabled={!projectId} onClick={downloadDraft}>
+      <button
+        type="button"
+        disabled={!projectId || draftExporting}
+        aria-busy={draftExporting}
+        onClick={() => void downloadDraft()}
+      >
         {t('Download incomplete DOCX draft')}
       </button>
+      {draftNotice ? (
+        <ErrorNotice
+          inline
+          level={draftNotice.level}
+          description={draftNotice.message}
+          dismissButton={{ label: t('Dismiss'), onClick: () => setDraftNotice(undefined) }}
+        />
+      ) : null}
     </section>
   )
 }
