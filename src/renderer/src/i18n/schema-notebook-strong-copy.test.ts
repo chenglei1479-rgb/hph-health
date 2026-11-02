@@ -37,8 +37,10 @@ const catalogs: Record<string, { renderer: Record<string, string> }> = {
 
 const STRONG_KEYS: readonly {
   key: string
-  // Locale → a substring the translation cannot lose without weakening the statement.
-  mustKeep: Record<string, RegExp>
+  // Locale → the substrings the translation cannot lose without weakening the statement. A key with
+  // two separate limits (free text *and* the numeric cap) needs both, or a translator can drop one
+  // half while the sentence count stays the same — which is exactly how this was missed once.
+  mustKeep: Record<string, RegExp | readonly RegExp[]>
 }[] = [
   {
     key: 'This tag cannot be removed. To work without patient data, create a new project.',
@@ -84,14 +86,15 @@ const STRONG_KEYS: readonly {
     // the 12-category cap must all survive.
     key: 'Not sent by default. Sending is recorded. Free-text columns cannot be selected. A column with more than 12 categories can be selected, but only the 12 most frequent are sent, and the rest are shown as other values omitted.',
     mustKeep: {
-      de: /Freitextspalten können nicht ausgewählt werden/,
-      es: /no se pueden seleccionar/,
-      fr: /ne peuvent pas être sélectionnées/,
-      ja: /選べません/,
-      ko: /선택할 수 없습니다/,
-      ru: /выбрать нельзя/,
-      'zh-Hans': /无法选择/,
-      'zh-Hant': /無法選取/
+      // Two independent limits: the free-text ban, and the numeric cap that the first pass dropped.
+      de: [/Freitextspalten können nicht ausgewählt werden/, /12 häufigsten/],
+      es: [/no se pueden seleccionar/, /12 más frecuentes/],
+      fr: [/ne peuvent pas être sélectionnées/, /12 plus fréquentes/],
+      ja: [/選べません/, /12種類だけ送り/],
+      ko: [/선택할 수 없습니다/, /12개만/],
+      ru: [/выбрать нельзя/, /12 самых частых/],
+      'zh-Hans': [/无法选择/, /最多的 12 种/],
+      'zh-Hant': [/無法選取/, /最多的 12 種/]
     }
   },
   {
@@ -110,14 +113,15 @@ const STRONG_KEYS: readonly {
   {
     key: 'Cells under 10 are hidden to protect privacy. Your local Notebook still shows the real numbers.',
     mustKeep: {
-      de: /zeigt die echten Zahlen/,
-      es: /cifras reales/,
-      fr: /chiffres réels/,
-      ja: /実数が表示されます/,
-      ko: /실제 값이 표시됩니다/,
-      ru: /видны реальные числа/,
-      'zh-Hans': /显示真实数值/,
-      'zh-Hant': /顯示真實數值/
+      // Both halves: the masking threshold, and the reassurance that the local view is unchanged.
+      de: [/weniger als 10/, /zeigt die echten Zahlen/],
+      es: [/menos de 10/, /cifras reales/],
+      fr: [/inférieures à 10/, /chiffres réels/],
+      ja: [/10 未満/, /実数が表示されます/],
+      ko: [/10 미만/, /실제 값이 표시됩니다/],
+      ru: [/меньше 10/, /видны реальные числа/],
+      'zh-Hans': [/低于 10/, /显示真实数值/],
+      'zh-Hant': [/低於 10/, /顯示真實數值/]
     }
   },
   {
@@ -225,10 +229,31 @@ describe('schema-notebook strong copy', () => {
     }
   )
 
-  it.each(STRONG_KEYS.flatMap((entry) => Object.entries(entry.mustKeep).map(([locale, token]) => [locale, entry.key, token] as const)))(
-    'keeps the limiting wording in %s copy',
-    (locale, key, token) => {
-      expect(catalogs[locale]!.renderer[key]).toMatch(token)
-    }
-  )
+  it.each(
+    STRONG_KEYS.flatMap((entry) =>
+      Object.entries(entry.mustKeep).flatMap(([locale, token]) =>
+        [token].flat().map((pattern) => [locale, entry.key, pattern] as const)
+      )
+    )
+  )('keeps the limiting wording in %s copy', (locale, key, token) => {
+    expect(catalogs[locale]!.renderer[key]).toMatch(token)
+  })
+
+  // Proof that the token check is not decorative. Deleting the "only the 12 most frequent are sent"
+  // half of the Japanese sentence keeps the sentence count at four, so the clause check alone stays
+  // green; the numeric token is what has to catch it. If this test ever passes without the token
+  // failing, the guard has stopped guarding the limit it claims to guard.
+  it('catches a deleted half-sentence that leaves the clause count unchanged', () => {
+    const entry = STRONG_KEYS.find((candidate) => candidate.key.startsWith('Not sent by default.'))!
+    const full = catalogs.ja!.renderer[entry.key]
+    const halfRemoved = full.replace(/多いものから12種類だけ送り、/u, '')
+
+    expect(halfRemoved).not.toBe(full)
+    // The shape that made the first guard useless: same number of sentences, weaker statement.
+    expect(sentenceCount(halfRemoved)).toBe(sentenceCount(full))
+
+    const tokens = [entry.mustKeep.ja].flat()
+    expect(tokens.every((token) => token.test(full))).toBe(true)
+    expect(tokens.some((token) => !token.test(halfRemoved))).toBe(true)
+  })
 })
