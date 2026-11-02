@@ -143,6 +143,50 @@ describe('EthicsProtocolChecklist', () => {
     })
   })
 
+  // Same silent-failure class as the download button: without the guard this click threw a
+  // synchronous TypeError and the page did nothing at all.
+  it('escapes no error when the mapping is confirmed without a preload bridge', async () => {
+    const setEthicsProtocol = vi.fn()
+    installApi({
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: [
+            { heading: '独自の研究方法欄', item: null, confidence: 0.4, status: '対応不明' }
+          ]
+        })),
+        setEthicsProtocol,
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn()
+      }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    await screen.findByRole('combobox', { name: 'Select checklist item: 独自の研究方法欄' })
+    fireEvent.change(screen.getByLabelText('Confirming doctor'), {
+      target: { value: 'doctor-1' }
+    })
+    Object.defineProperty(window, 'api', { configurable: true, value: undefined })
+    const escaped: unknown[] = []
+    const capture = (event: ErrorEvent): void => {
+      escaped.push(event.error)
+    }
+    window.addEventListener('error', capture)
+
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm heading mappings' }))
+    } finally {
+      window.removeEventListener('error', capture)
+    }
+    // A handler that escapes into the window error channel is the silent failure itself: the page
+    // does nothing and the doctor gets no reason.
+    expect(escaped).toEqual([])
+    expect(setEthicsProtocol).not.toHaveBeenCalled()
+  })
+
   // #132: the download used to end in a rejected IPC promise with nobody listening, so a refusal
   // and a dead button looked the same. Each way out below is one observable result.
   it('shows the reason and the code when the draft export is refused', async () => {
@@ -332,5 +376,79 @@ describe('EthicsProtocolChecklist', () => {
         await i18next.changeLanguage('en')
       })
     }
+  })
+
+  it('reports a missing preload bridge when window.api itself is absent', async () => {
+    Object.defineProperty(window, 'api', { configurable: true, value: undefined })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+
+    // Without the optional chain this read threw inside the handler and landed on
+    // "could not be created. Try again." — advice that cannot work when the bridge is gone.
+    const message = await screen.findByText(/could not be saved because this window/)
+    expect(message.textContent).toContain('ethics-draft-bridge-unavailable')
+    expect(screen.queryByText(/could not be created/)).toBeNull()
+  })
+
+  it('separates a failed write from a failed export', async () => {
+    installApi({
+      saveBlobFile: vi.fn(async () => {
+        throw new Error('EACCES')
+      }),
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn(async () => ({
+          ok: true,
+          fileName: '研究計画書_草案.docx',
+          bytes: [1]
+        }))
+      }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+
+    const message = await screen.findByText(/could not be saved\. The draft was created/)
+    expect(message.textContent).toContain('ethics-draft-save-failed')
+    expect(screen.queryByText(/could not be created/)).toBeNull()
+  })
+
+  it('clears the notice when the project changes', async () => {
+    installApi({
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn(async () => ({
+          ok: false,
+          code: 'ethics-draft-blocked-phi',
+          fileName: '研究計画書_草案.docx'
+        }))
+      }
+    })
+
+    const { rerender } = render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+    expect(await screen.findByText(/was not created because the draft contains/)).toBeTruthy()
+
+    rerender(<EthicsProtocolChecklist projectId="study-2" />)
+    await waitFor(() =>
+      expect(screen.queryByText(/was not created because the draft contains/)).toBeNull()
+    )
   })
 })

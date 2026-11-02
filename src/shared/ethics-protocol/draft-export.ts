@@ -7,6 +7,8 @@ export type EthicsDraftExportFailureCode =
   | 'ethics-draft-failed'
   // Raised by the renderer, never by main: the window cannot reach the export bridge at all.
   | 'ethics-draft-bridge-unavailable'
+  // Raised by the renderer: the DOCX was produced but could not be written to the chosen path.
+  | 'ethics-draft-save-failed'
 
 export type EthicsDraftExportResult =
   | { ok: true; fileName: string; bytes: number[] }

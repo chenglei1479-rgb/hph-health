@@ -8047,6 +8047,7 @@
     "{{name}} was not created because no project is selected. (Code: {{code}})": "{{name}} n’a pas été créé, car aucun projet n’est sélectionné. (Code : {{code}})",
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "{{name}} n’a pas pu être enregistré, car cette fenêtre ne peut pas joindre l’application de bureau. Redémarrez l’application, puis réessayez. (Code : {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} n’a pas pu être créé. Réessayez. (Code : {{code}})",
-    "No file was saved.": "Aucun fichier n’a été enregistré."
+    "No file was saved.": "Aucun fichier n’a été enregistré.",
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} n’a pas pu être enregistré. Le brouillon a été créé, mais il n’a pas pu être écrit à l’emplacement choisi. (Code : {{code}})"
   }
 }
