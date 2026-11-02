@@ -212,6 +212,9 @@ export const EthicsProtocolChecklist = ({
   const confirmMappings = (): void => {
     const doctor = confirmingDoctor.trim()
     if (!doctor) return
+    // Without this guard the click threw a synchronous TypeError and the page did nothing — the
+    // same silent failure the download path was just cured of.
+    if (!projectId || !window.api?.writingSafeguards) return
     const confirmedAt = new Date().toISOString()
     const confirmedMappings = (metadata.headingCandidates ?? []).flatMap((candidate) => {
       const item = Number(mappingSelections[candidate.heading])

@@ -143,6 +143,50 @@ describe('EthicsProtocolChecklist', () => {
     })
   })
 
+  // Same silent-failure class as the download button: without the guard this click threw a
+  // synchronous TypeError and the page did nothing at all.
+  it('escapes no error when the mapping is confirmed without a preload bridge', async () => {
+    const setEthicsProtocol = vi.fn()
+    installApi({
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: [
+            { heading: '独自の研究方法欄', item: null, confidence: 0.4, status: '対応不明' }
+          ]
+        })),
+        setEthicsProtocol,
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn()
+      }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    await screen.findByRole('combobox', { name: 'Select checklist item: 独自の研究方法欄' })
+    fireEvent.change(screen.getByLabelText('Confirming doctor'), {
+      target: { value: 'doctor-1' }
+    })
+    Object.defineProperty(window, 'api', { configurable: true, value: undefined })
+    const escaped: unknown[] = []
+    const capture = (event: ErrorEvent): void => {
+      escaped.push(event.error)
+    }
+    window.addEventListener('error', capture)
+
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm heading mappings' }))
+    } finally {
+      window.removeEventListener('error', capture)
+    }
+    // A handler that escapes into the window error channel is the silent failure itself: the page
+    // does nothing and the doctor gets no reason.
+    expect(escaped).toEqual([])
+    expect(setEthicsProtocol).not.toHaveBeenCalled()
+  })
+
   // #132: the download used to end in a rejected IPC promise with nobody listening, so a refusal
   // and a dead button looked the same. Each way out below is one observable result.
   it('shows the reason and the code when the draft export is refused', async () => {
