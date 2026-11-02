@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { SCHEMA_NOTEBOOK_LOCAL_FILENAME } from '../../../shared/schema-notebook'
 import { SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE } from '../../../shared/schema-notebook'
+import { SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE } from '../../../shared/schema-notebook'
 import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import type { PythonCommand } from '../python-command'
 import {
@@ -123,7 +124,7 @@ describe('executeLocalAnalysis output collection', () => {
     expect(existsSync(join(directory, 'run-outputs', SCHEMA_NOTEBOOK_LOCAL_FILENAME))).toBe(false)
   })
 
-  it('fails the run with a stable code and leaves no directory when it cannot record every file', async () => {
+  it('fails with the cap code and leaves no directory when it records too many files', async () => {
     const directory = await runsDirectory()
     const run: CommandRunner = async (_command, _scriptPath, cwd) => {
       // A runaway loop: more files than the contract accepts. The run must report failure rather than
@@ -151,6 +152,33 @@ describe('executeLocalAnalysis output collection', () => {
     )
     // A directory with no run record would be unreachable in the panel and still occupy the disk.
     expect(existsSync(schemaNotebookRunDirectory(directory, 'run-too-many'))).toBe(false)
+  })
+
+  it('fails with the unreadable code, not the cap code, when a produced file cannot be read back', async () => {
+    const directory = await runsDirectory()
+    const run: CommandRunner = async (_command, _scriptPath, cwd) => {
+      // The files were produced, but they cannot be read back (a lock, a quarantine, a cleanup). This is
+      // not a limit failure, so it must not report the caps to the user.
+      await rm(cwd, { recursive: true, force: true })
+      return { stdout: 'done', stderr: '', code: 0 }
+    }
+
+    const error = await executeLocalAnalysis({
+      language: 'python',
+      code: 'print(1)',
+      tableCsv: 'value\n1\n',
+      runId: 'run-unreadable',
+      runsDirectory: directory,
+      resolvePython: async () => ({ command: 'python', baseArgs: [] }),
+      run
+    }).catch((reason: unknown) => reason)
+
+    expect(error).toBeInstanceOf(ApplicationCommandError)
+    expect((error as ApplicationCommandError).code).toBe(
+      SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE
+    )
+    // Same cleanup rule as the cap case: never leave a directory without a record.
+    expect(existsSync(schemaNotebookRunDirectory(directory, 'run-unreadable'))).toBe(false)
   })
 
   it('removes the scratch files even when the script fails', async () => {

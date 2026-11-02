@@ -15,6 +15,7 @@ export const APPLICATION_COMMAND_ERROR_CODES = [
   'schema-notebook-python-unavailable',
   'schema-notebook-run-output-missing',
   'schema-notebook-run-output-limit',
+  'schema-notebook-run-output-unreadable',
   'csl-file-too-large',
   'csl-invalid-xml',
   'csl-unsupported-doctype',

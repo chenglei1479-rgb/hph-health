@@ -8,6 +8,7 @@ import { extname, join } from 'node:path'
 import { SCHEMA_NOTEBOOK_LOCAL_FILENAME } from '../../../shared/schema-notebook'
 import { SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE } from '../../../shared/schema-notebook'
 import { SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE } from '../../../shared/schema-notebook'
+import { SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE } from '../../../shared/schema-notebook'
 import type {
   SchemaNotebookPythonInterpreter,
   SchemaNotebookRunOutput
@@ -251,12 +252,13 @@ export const executeLocalAnalysis = async (input: {
       // A run directory with no record is unreachable: `lastRun` skips it and the panel can never show
       // these files, yet they would keep the disk. Remove it before reporting the failure.
       await rm(directory, { recursive: true, force: true }).catch(() => undefined)
-      throw error instanceof ApplicationCommandError
-        ? error
-        : new ApplicationCommandError(
-            SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE,
-            `The output files from this run could not be recorded: ${errorMessage(error)}`
-          )
+      if (error instanceof ApplicationCommandError) throw error
+      // A file that cannot be read back is not a cap failure: it gets its own code, so the panel can
+      // explain the real cause instead of quoting limits the user never hit.
+      throw new ApplicationCommandError(
+        SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE,
+        `The output files from this run could not be read: ${errorMessage(error)}`
+      )
     }
     return {
       stdout,

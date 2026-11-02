@@ -122,11 +122,16 @@ export type SchemaNotebookRunOutput = {
 export const SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE =
   'schema-notebook-run-output-missing' as const
 
-// The run finished but its output files could not be recorded: a cap was exceeded, or a file could not
-// be read. The run directory is removed before the failure is reported, so nothing is left on disk
-// without a record, and the panel shows one operable sentence with the caps instead of raw English.
+// The run finished but its output files could not be recorded because a cap was exceeded. The run
+// directory is removed before the failure is reported, so nothing is left on disk without a record.
+// This code alone carries the caps; a produced file that cannot be read back has its own code below.
 export const SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE =
   'schema-notebook-run-output-limit' as const
+
+// A produced file could not be read back after the run (gone, locked, or unreadable). Same cleanup as
+// the cap case, but the sentence must not mention the caps: the user did not hit a limit.
+export const SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE =
+  'schema-notebook-run-output-unreadable' as const
 
 export type SaveSchemaNotebookOutputRequest = {
   projectId: string

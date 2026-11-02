@@ -5,6 +5,7 @@ import {
   SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
   SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE,
   SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE,
+  SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE,
   SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
   type CategoricalOptInRequest,
   type ExecuteAnalysisRequest,
@@ -88,6 +89,19 @@ const localizeSchemaNotebookFailure =
       throw new Error(
         translate(
           'The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})',
+          { code: error.code }
+        )
+      )
+    }
+    if (
+      error instanceof ApplicationCommandError &&
+      error.code === SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE
+    ) {
+      // No caps in this sentence: a file that could not be read back has nothing to do with a limit, and
+      // quoting one would send the user looking for a size problem that does not exist.
+      throw new Error(
+        translate(
+          'The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})',
           { code: error.code }
         )
       )
