@@ -3,6 +3,7 @@ import { ApplicationCommandError } from '../../../shared/application-command-con
 import {
   SCHEMA_NOTEBOOK_CSV_ENCODING_CODE,
   SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
+  SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE,
   SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE,
   SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
   type CategoricalOptInRequest,
@@ -74,6 +75,19 @@ const localizeSchemaNotebookFailure =
       throw new Error(
         translate(
           'The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})',
+          { code: error.code }
+        )
+      )
+    }
+    if (
+      error instanceof ApplicationCommandError &&
+      error.code === SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE
+    ) {
+      // The run finished but its files could not be recorded, so the run directory was removed. The caps
+      // are part of the sentence: without them the user cannot tell why a 200-file loop failed.
+      throw new Error(
+        translate(
+          'The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})',
           { code: error.code }
         )
       )

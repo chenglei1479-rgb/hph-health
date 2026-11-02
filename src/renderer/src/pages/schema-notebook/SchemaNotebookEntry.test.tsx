@@ -869,4 +869,90 @@ describe('SchemaNotebookEntry', () => {
     expect(error?.textContent).toContain('schema-notebook-run-output-missing')
     expect(error?.textContent).not.toContain('Error invoking remote method')
   })
+
+  it('keeps the last run figures listed when the stored table can no longer be reopened', async () => {
+    const copy = schemaNotebookCopy('ja')
+    const saveOutput = vi.fn(async () => ({ saved: true }))
+    const lastRun = vi.fn(async () => ({
+      runId: 'run-before-loss',
+      outputs: [
+        {
+          relativePath: 'plot.png',
+          sizeBytes: 12_779,
+          sha256: 'd'.repeat(64),
+          mimeType: 'image/png'
+        }
+      ]
+    }))
+    localStorage.setItem(
+      schemaNotebookDraftKey('study-1'),
+      JSON.stringify({ tableId: 'table-1', filename: 'study.csv', code: 'print(1)', language: 'python' })
+    )
+    // The table csv is gone, so the panel cannot restore the table at all.
+    const modelContext = vi.fn(async () => {
+      throw new Error(
+        'Error invoking remote method \'schema-notebook:model-context\': Error: The imported table file is missing or unreadable. Nothing was run.'
+      )
+    })
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute: vi.fn(),
+        modelContext,
+        lastRun,
+        saveOutput
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve(lastRun.mock.results.at(-1)?.value)
+    })
+    await act(async () => {
+      await Promise.resolve(modelContext.mock.results.at(-1)?.value).catch(() => undefined)
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    // The table must not look restored...
+    expect(container.textContent).toContain(copy.restoreNotice)
+    // ...but the figures from the last run are still on disk and still listed.
+    const rows = container.querySelectorAll('[data-testid="schema-notebook-output"]')
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.textContent).toContain('plot.png')
+
+    // The draft keeps the run source even though the restore cleared the table reference, so the next
+    // mount still finds the record instead of losing the figures from the UI for good.
+    const stored = JSON.parse(localStorage.getItem(schemaNotebookDraftKey('study-1')) ?? '{}') as {
+      tableId?: string
+      lastRunTableId?: string
+    }
+    expect(stored.tableId).toBeUndefined()
+    expect(stored.lastRunTableId).toBe('table-1')
+
+    const saveButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.saveOutput
+    )
+    await act(async () => {
+      saveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(saveOutput.mock.results.at(-1)?.value)
+    })
+    expect(saveOutput).toHaveBeenCalledWith({
+      projectId: 'study-1',
+      runId: 'run-before-loss',
+      relativePath: 'plot.png'
+    })
+  })
 })

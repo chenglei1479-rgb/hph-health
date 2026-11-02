@@ -11,6 +11,10 @@ export type SchemaNotebookDraft = {
   filename?: string
   code: string
   language: 'python' | 'r'
+  // The table whose newest run the panel lists. Kept apart from `tableId` because a failed restore
+  // clears `tableId` on purpose (so the panel stops retrying a table it cannot read) while the run
+  // record and its figures are still usable (#121).
+  lastRunTableId?: string
 }
 
 export const SCHEMA_NOTEBOOK_DEFAULT_CODE =
@@ -38,6 +42,8 @@ export const normalizeSchemaNotebookDraft = (value: unknown): SchemaNotebookDraf
     draft.tableId = record.tableId.trim()
   if (typeof record.filename === 'string' && record.filename.trim().length > 0)
     draft.filename = record.filename.trim()
+  if (typeof record.lastRunTableId === 'string' && record.lastRunTableId.trim().length > 0)
+    draft.lastRunTableId = record.lastRunTableId.trim()
   return draft
 }
 

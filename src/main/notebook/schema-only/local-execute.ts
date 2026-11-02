@@ -7,6 +7,7 @@ import { extname, join } from 'node:path'
 
 import { SCHEMA_NOTEBOOK_LOCAL_FILENAME } from '../../../shared/schema-notebook'
 import { SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE } from '../../../shared/schema-notebook'
+import { SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE } from '../../../shared/schema-notebook'
 import type {
   SchemaNotebookPythonInterpreter,
   SchemaNotebookRunOutput
@@ -53,6 +54,9 @@ const SAFE_RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 const clip = (text: string): string =>
   text.length > OUTPUT_LIMIT ? `${text.slice(0, OUTPUT_LIMIT)}\n[truncated]` : text
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
 
 // The run directory is derived in one place so the service, the record writer, and the save-dialog
 // path check can never disagree about where a run's files live.
@@ -117,14 +121,12 @@ export const collectRunOutputs = async (
       if (!entry.isFile() || excluded.has(absolute)) continue
       const stats = await stat(absolute)
       totalBytes += stats.size
-      if (outputs.length >= MAX_OUTPUT_FILES) {
-        throw new Error(
-          `This run left more than ${MAX_OUTPUT_FILES} output files, so its results were not saved. Reduce the number of files the script writes and run again.`
-        )
-      }
-      if (totalBytes > MAX_OUTPUT_BYTES) {
-        throw new Error(
-          `This run left more than ${Math.floor(MAX_OUTPUT_BYTES / (1024 * 1024))} MB of output files, so its results were not saved. Write smaller files from the script and run again.`
+      if (outputs.length >= MAX_OUTPUT_FILES || totalBytes > MAX_OUTPUT_BYTES) {
+        // Both caps carry the same stable code and the same sentence: the user's next step is identical
+        // (write fewer or smaller files), and neither may surface as an untranslated English string.
+        throw new ApplicationCommandError(
+          SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE,
+          `This run left more than ${MAX_OUTPUT_FILES} output files or ${Math.floor(MAX_OUTPUT_BYTES / (1024 * 1024))} MB of output files, so its results were not saved.`
         )
       }
       outputs.push({
@@ -242,7 +244,20 @@ export const executeLocalAnalysis = async (input: {
     const table = looksLikeTable(stdout) ? stdout : undefined
     // A failed script can still have written a partial figure. Keep and list what exists, and let the
     // non-zero exit code carry the failure.
-    const outputs = await collectRunOutputs(directory, scratch)
+    let outputs: SchemaNotebookRunOutput[]
+    try {
+      outputs = await collectRunOutputs(directory, scratch)
+    } catch (error) {
+      // A run directory with no record is unreachable: `lastRun` skips it and the panel can never show
+      // these files, yet they would keep the disk. Remove it before reporting the failure.
+      await rm(directory, { recursive: true, force: true }).catch(() => undefined)
+      throw error instanceof ApplicationCommandError
+        ? error
+        : new ApplicationCommandError(
+            SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE,
+            `The output files from this run could not be recorded: ${errorMessage(error)}`
+          )
+    }
     return {
       stdout,
       stderr: clip(result.stderr),

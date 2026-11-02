@@ -6,6 +6,8 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { SCHEMA_NOTEBOOK_LOCAL_FILENAME } from '../../../shared/schema-notebook'
+import { SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE } from '../../../shared/schema-notebook'
+import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import type { PythonCommand } from '../python-command'
 import {
   executeLocalAnalysis,
@@ -121,7 +123,7 @@ describe('executeLocalAnalysis output collection', () => {
     expect(existsSync(join(directory, 'run-outputs', SCHEMA_NOTEBOOK_LOCAL_FILENAME))).toBe(false)
   })
 
-  it('fails the run instead of returning a partial list when it cannot record every file', async () => {
+  it('fails the run with a stable code and leaves no directory when it cannot record every file', async () => {
     const directory = await runsDirectory()
     const run: CommandRunner = async (_command, _scriptPath, cwd) => {
       // A runaway loop: more files than the contract accepts. The run must report failure rather than
@@ -142,8 +144,13 @@ describe('executeLocalAnalysis output collection', () => {
       run
     }).catch((reason: unknown) => reason)
 
-    expect(error).toBeInstanceOf(Error)
-    expect((error as Error).message).toContain('more than 200 output files')
+    // The code, not the English sentence: the sentence is copy and may change.
+    expect(error).toBeInstanceOf(ApplicationCommandError)
+    expect((error as ApplicationCommandError).code).toBe(
+      SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE
+    )
+    // A directory with no run record would be unreachable in the panel and still occupy the disk.
+    expect(existsSync(schemaNotebookRunDirectory(directory, 'run-too-many'))).toBe(false)
   })
 
   it('removes the scratch files even when the script fails', async () => {

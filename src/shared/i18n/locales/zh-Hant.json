@@ -169,7 +169,8 @@
     "Choose a CSV file in UTF-8 or Shift-JIS. (Code: {{code}})": "請選擇 UTF-8 或 Shift_JIS 編碼的 CSV 檔案。（代碼：{{code}}）",
     "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "找不到上次匯入的表格檔案或無法讀取，因此未執行分析。請重新選擇表格檔案後再執行。（代碼：{{code}}）",
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "隨附的 Python 執行環境無法啟動，因此未執行分析。請重新安裝應用程式。（代碼：{{code}}）",
-    "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "該次執行的輸出檔案缺失或已變更，因此未儲存檔案。請重新執行分析。（代碼：{{code}}）"
+    "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "該次執行的輸出檔案缺失或已變更，因此未儲存檔案。請重新執行分析。（代碼：{{code}}）",
+    "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "未能儲存該次執行的輸出檔案，因此沒有保留結果（每次執行最多保留 200 個檔案和 512 MB）。請重新執行分析。（代碼：{{code}}）"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新對話可以無需詢問直接執行指令、修改檔案、執行 Notebook 程式碼和存取網路。既有對話不受影響。",
