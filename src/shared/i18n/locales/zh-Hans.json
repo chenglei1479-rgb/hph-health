@@ -7720,6 +7720,12 @@
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "此窗口无法连接到桌面应用，因此未能保存 {{name}}。请重启应用后重试。（代码：{{code}}）",
     "{{name}} could not be created. Try again. (Code: {{code}})": "未能创建 {{name}}。请重试。（代码：{{code}}）",
     "No file was saved.": "未保存任何文件。",
+    "Every statement below cites the execution it comes from. Only executions recorded for this project appear.": "下列每条声明都注明了它所依据的执行。只显示本项目记录的执行。",
+    "Run records could not be read, so no AI usage is declared. Select the project again to retry.": "无法读取运行记录，因此没有声明 AI 使用情况。请重新选择项目以重试。",
+    "Unconfirmed": "未确认",
+    "I verified this declaration.": "我已核对本声明。",
+    "Recorded executions: {{shown}}": "已记录的运行：{{shown}} 次",
+    "Only the {{shown}} most recent executions are listed.": "只列出最近的 {{shown}} 次运行。",
     "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "未能保存 {{name}}。草稿已创建，但无法写入你所选的位置。（代码：{{code}}）"
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { useLocaleStore } from '@/stores/locale-store'
 
@@ -6,8 +7,7 @@ import type { Project } from '../../../../shared/projects'
 import {
   applyCoiChoice,
   buildAiUsageDeclaration,
-  defaultAiUsageRecords,
-  type AiUsageRecord
+  type AiUsageStatement
 } from '../../../../shared/writing-safeguards/ai-usage-declaration'
 import { ethicsWritingReminder } from '../../../../shared/writing-safeguards/ethics-approval'
 import {
@@ -17,6 +17,7 @@ import {
 } from '../../../../shared/writing-safeguards/export-deidentify'
 import { writingSafeguardsCopy, type WritingSafeguardsCopy } from './copy'
 import { EthicsProtocolChecklist } from './EthicsProtocolChecklist'
+import { collectRecordedAgentRuns, statementsFromRuns } from './ai-usage-records'
 
 const downloadText = (filename: string, text: string): void => {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
@@ -35,8 +36,6 @@ const readExportFile = (file: File): Promise<{ name: string; text: string }> =>
     reader.readAsText(file)
   })
 
-const emptyUsage = (): AiUsageRecord => ({ feature: '', model: '', purpose: '' })
-
 const findingLabel = (copy: WritingSafeguardsCopy, kind: ExportFinding['kind']): string => {
   if (kind === 'karte-number') return copy.findingKarte
   if (kind === 'birth-date') return copy.findingBirth
@@ -45,6 +44,7 @@ const findingLabel = (copy: WritingSafeguardsCopy, kind: ExportFinding['kind']):
 
 export const WritingSafeguardsEntry = (): React.JSX.Element => {
   const locale = useLocaleStore((state) => state.locale)
+  const { t } = useTranslation()
   const copy = writingSafeguardsCopy(locale)
   const [open, setOpen] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
@@ -53,13 +53,34 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
   const [saved, setSaved] = useState(false)
   const [started, setStarted] = useState(false)
   const [showReminder, setShowReminder] = useState(false)
-  const [usageEdits, setUsageEdits] = useState<AiUsageRecord[] | null>(null)
-  const usages = useMemo(() => usageEdits ?? defaultAiUsageRecords(locale), [locale, usageEdits])
+  // The declaration is built from recorded executions only; `recordedStatements` is what the run
+  // records produced and `statementEdits` holds the doctor's wording changes (#133).
+  const [recordedStatements, setRecordedStatements] = useState<AiUsageStatement[]>([])
+  const [statementEdits, setStatementEdits] = useState<AiUsageStatement[] | null>(null)
+  const [runsState, setRunsState] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle')
+  const [runsTruncated, setRunsTruncated] = useState(false)
+  const [authorConfirmed, setAuthorConfirmed] = useState(false)
+  const statements = useMemo(
+    () => statementEdits ?? recordedStatements,
+    [recordedStatements, statementEdits]
+  )
+  // Whether the records were readable decides which sentence is honest: "none recorded" may only
+  // appear after a successful read. It is derived from what the read produced, not from the
+  // statements after editing — blanking every feature must not turn "3 executions recorded" into
+  // "no execution recorded" (#133 review).
+  const recordsState = useMemo(
+    () =>
+      runsState === 'ready' ? (recordedStatements.length > 0 ? 'recorded' : 'none') : 'unreadable',
+    [recordedStatements.length, runsState]
+  )
   const [includeCoi, setIncludeCoi] = useState(false)
   const [draft, setDraft] = useState(
     () =>
       buildAiUsageDeclaration({
-        usages: defaultAiUsageRecords(locale),
+        statements: [],
+        // First paint has no read behind it yet; 'none' would flash "no execution recorded"
+        // before the run records are even requested.
+        records: 'unreadable',
         language: locale
       }).draft
   )
@@ -72,10 +93,27 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
 
   useEffect(() => {
     if (draftEdited) return
-    // The disclosure draft is derived from the usage rows unless the doctor has edited it.
+    // The disclosure draft is derived from the recorded statements unless the doctor has edited it.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDraft(buildAiUsageDeclaration({ usages, includeCoi, language: locale }).draft)
-  }, [draftEdited, includeCoi, locale, usages])
+    setDraft(
+      buildAiUsageDeclaration({
+        statements,
+        records: recordsState,
+        recordedCount: recordedStatements.length,
+        includeCoi,
+        language: locale,
+        authorConfirmed
+      }).draft
+    )
+  }, [
+    authorConfirmed,
+    draftEdited,
+    includeCoi,
+    locale,
+    recordsState,
+    recordedStatements.length,
+    statements
+  ])
 
   const openDialog = (): void => {
     setOpen(true)
@@ -85,9 +123,36 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
       .catch(() => setProjects([]))
   }
 
+  const loadRecordedRuns = (id: string): void => {
+    setStatementEdits(null)
+    setRecordedStatements([])
+    setRunsTruncated(false)
+    setAuthorConfirmed(false)
+    if (!id) {
+      setRunsState('idle')
+      return
+    }
+    setRunsState('loading')
+    void collectRecordedAgentRuns(window.api, id)
+      .then((projection) => {
+        setRunsState(projection.status === 'ready' ? 'ready' : 'unavailable')
+        setRecordedStatements(
+          projection.status === 'ready' ? statementsFromRuns(projection.runs) : []
+        )
+        setRunsTruncated(projection.truncated)
+      })
+      // A failed read is a visible state, not an empty declaration: "we could not look" and "there
+      // is nothing" must not read the same.
+      .catch(() => {
+        setRunsState('unavailable')
+        setRecordedStatements([])
+      })
+  }
+
   const chooseProject = (id: string): void => {
     setProjectId(id)
     setSaved(false)
+    loadRecordedRuns(id)
     if (!id || !window.api.writingSafeguards) {
       setApprovalNumber('')
       return
@@ -116,18 +181,29 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
 
   const reminder = showReminder ? ethicsWritingReminder(undefined, locale).message : ''
 
-  const updateUsage = (index: number, patch: Partial<AiUsageRecord>): void => {
-    setUsageEdits((current) => {
-      const base = current ?? defaultAiUsageRecords(locale)
-      return base.map((usage, usageIndex) =>
-        usageIndex === index ? { ...usage, ...patch } : usage
+  const updateStatement = (index: number, patch: Partial<AiUsageStatement>): void => {
+    // Any edit invalidates the author's verification: the sentence they checked is not the sentence
+    // the text now carries (#133 review).
+    setAuthorConfirmed(false)
+    setStatementEdits((current) =>
+      (current ?? recordedStatements).map((statement, statementIndex) =>
+        statementIndex === index ? { ...statement, ...patch } : statement
       )
-    })
+    )
   }
 
   const rebuild = (): void => {
     setDraftEdited(false)
-    setDraft(buildAiUsageDeclaration({ usages, includeCoi, language: locale }).draft)
+    setDraft(
+      buildAiUsageDeclaration({
+        statements,
+        records: recordsState,
+        recordedCount: recordedStatements.length,
+        includeCoi,
+        language: locale,
+        authorConfirmed
+      }).draft
+    )
   }
 
   const showFindings = (next: ExportFinding[]): boolean => {
@@ -222,41 +298,86 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
           <EthicsProtocolChecklist projectId={projectId} />
           <section data-writing-safeguards-disclosure>
             <h3 className="font-medium">{copy.declarationTitle}</h3>
-            {usages.map((usage, index) => (
-              <div key={index} className="grid gap-1">
-                <input
-                  aria-label={copy.feature}
-                  value={usage.feature}
-                  onChange={(event) => updateUsage(index, { feature: event.target.value })}
-                />
-                <input
-                  aria-label={copy.model}
-                  value={usage.model}
-                  onChange={(event) => updateUsage(index, { model: event.target.value })}
-                />
-                <input
-                  aria-label={copy.purpose}
-                  value={usage.purpose}
-                  onChange={(event) => updateUsage(index, { purpose: event.target.value })}
-                />
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() =>
-                setUsageEdits((current) => [
-                  ...(current ?? defaultAiUsageRecords(locale)),
-                  emptyUsage()
-                ])
-              }
-            >
-              {copy.addUsage}
-            </button>
+            <p>
+              {t(
+                'Every statement below cites the execution it comes from. Only executions recorded for this project appear.'
+              )}
+            </p>
+            {runsState === 'unavailable' ? (
+              <p role="status" data-writing-safeguards-runs-unavailable>
+                {t(
+                  'Run records could not be read, so no AI usage is declared. Select the project again to retry.'
+                )}
+              </p>
+            ) : null}
+            {runsState === 'ready' ? (
+              <p role="status" data-writing-safeguards-runs-count>
+                {t('Recorded executions: {{shown}}', { shown: statements.length })}
+              </p>
+            ) : null}
+            {runsTruncated ? (
+              <p role="status">
+                {t('Only the {{shown}} most recent executions are listed.', {
+                  shown: statements.length
+                })}
+              </p>
+            ) : null}
+            <ul>
+              {statements.map((statement, index) => (
+                <li
+                  key={`${statement.evidence.kind}:${
+                    statement.evidence.kind === 'notebook-run'
+                      ? statement.evidence.runId
+                      : statement.evidence.artifactId
+                  }`}
+                  data-writing-safeguards-statement
+                >
+                  <code>
+                    {statement.evidence.kind === 'notebook-run'
+                      ? statement.evidence.runId
+                      : statement.evidence.artifactId}
+                  </code>
+                  <input
+                    aria-label={copy.feature}
+                    value={statement.feature}
+                    onChange={(event) => updateStatement(index, { feature: event.target.value })}
+                  />
+                  <input
+                    aria-label={copy.model}
+                    value={statement.model}
+                    onChange={(event) => updateStatement(index, { model: event.target.value })}
+                  />
+                  <input
+                    aria-label={copy.purpose}
+                    value={statement.purpose}
+                    onChange={(event) => updateStatement(index, { purpose: event.target.value })}
+                  />
+                </li>
+              ))}
+            </ul>
+            <p data-writing-safeguards-review-state>
+              {authorConfirmed ? t('Confirmed') : t('Unconfirmed')}
+            </p>
             <label className="flex items-start gap-2">
               <input
                 type="checkbox"
+                aria-label={t('I verified this declaration.')}
+                checked={authorConfirmed}
+                onChange={(event) => setAuthorConfirmed(event.target.checked)}
+              />
+              <span>{t('I verified this declaration.')}</span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                aria-label={copy.coi}
                 checked={includeCoi}
-                onChange={(event) => setIncludeCoi(event.target.checked)}
+                onChange={(event) => {
+                  // Changing what the declaration says invalidates the verification, exactly as
+                  // editing a statement does.
+                  setIncludeCoi(event.target.checked)
+                  setAuthorConfirmed(false)
+                }}
               />
               <span>{copy.coi}</span>
             </label>

@@ -8048,6 +8048,12 @@
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "No se pudo guardar {{name}} porque esta ventana no puede comunicarse con la aplicación de escritorio. Reinicie la aplicación y vuelva a intentarlo. (Código: {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "No se pudo crear {{name}}. Vuelva a intentarlo. (Código: {{code}})",
     "No file was saved.": "No se guardó ningún archivo.",
+    "Every statement below cites the execution it comes from. Only executions recorded for this project appear.": "Cada afirmación siguiente cita la ejecución en la que se basa. Solo aparecen las ejecuciones registradas para este proyecto.",
+    "Run records could not be read, so no AI usage is declared. Select the project again to retry.": "No se pudieron leer los registros de ejecución, por lo que no se declara ningún uso de IA. Vuelva a seleccionar el proyecto para reintentarlo.",
+    "Unconfirmed": "Sin confirmar",
+    "I verified this declaration.": "He verificado esta declaración.",
+    "Recorded executions: {{shown}}": "Ejecuciones registradas: {{shown}}",
+    "Only the {{shown}} most recent executions are listed.": "Solo se enumeran las {{shown}} ejecuciones más recientes.",
     "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "No se pudo guardar {{name}}. El borrador se creó, pero no se pudo escribir en la ubicación elegida. (Código: {{code}})"
   }
 }

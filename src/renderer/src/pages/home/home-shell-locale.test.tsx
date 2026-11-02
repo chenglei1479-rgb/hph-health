@@ -148,19 +148,18 @@ describe('home shell locale', () => {
     const declaration = container.querySelector('textarea[aria-label="披露草稿"]')
     expect(declaration).toBeInstanceOf(HTMLTextAreaElement)
     if (declaration instanceof HTMLTextAreaElement) {
-      expect(declaration.value).toContain('在准备文稿时')
+      // With no recorded execution the declaration states only what it can stand behind, in the
+      // active locale (#133). The template rows and their intro are gone on purpose.
+      expect(declaration.value).toContain('作者对文稿内容承担全部责任，不将人工智能列为作者。')
+      expect(declaration.value).not.toContain('著者は原稿の内容について全責任を負い')
       expect(declaration.value).not.toContain('原稿の作成にあたり')
+      expect(declaration.value).not.toContain('在准备文稿时')
       expect(declaration.value).not.toContain('著者は DRA の無償提供を受けた')
       expect(container.textContent).toContain('【运营公司名称（未设置）】')
       expect(container.textContent).toContain('无偿获得了Baselio')
       expect(container.textContent).not.toContain('免费获得了 DRA')
     }
-    const feature = container.querySelector('input[aria-label="使用的功能"]')
-    expect(feature).toBeInstanceOf(HTMLInputElement)
-    if (feature instanceof HTMLInputElement) {
-      expect(feature.value).toBe('文献检索与整理')
-      expect(feature.value).not.toContain('文献の検索')
-    }
+    expect(container.querySelector('[data-writing-safeguards-statement]')).toBeNull()
     const begin = [...container.querySelectorAll('button')].find(
       (button) => button.textContent === '开始撰写'
     )
@@ -187,7 +186,8 @@ describe('home shell locale', () => {
     const japaneseDeclaration = container.querySelector('textarea[aria-label="開示の下書き"]')
     expect(japaneseDeclaration).toBeInstanceOf(HTMLTextAreaElement)
     if (japaneseDeclaration instanceof HTMLTextAreaElement) {
-      expect(japaneseDeclaration.value).toContain('原稿の作成にあたり')
+      expect(japaneseDeclaration.value).toContain('著者は原稿の内容について全責任を負い')
+      expect(japaneseDeclaration.value).not.toContain('作者对文稿内容承担全部责任')
     }
 
     await act(async () => {

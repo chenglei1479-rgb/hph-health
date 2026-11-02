@@ -8048,6 +8048,12 @@
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "{{name}} n’a pas pu être enregistré, car cette fenêtre ne peut pas joindre l’application de bureau. Redémarrez l’application, puis réessayez. (Code : {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} n’a pas pu être créé. Réessayez. (Code : {{code}})",
     "No file was saved.": "Aucun fichier n’a été enregistré.",
+    "Every statement below cites the execution it comes from. Only executions recorded for this project appear.": "Chaque affirmation ci-dessous cite l’exécution sur laquelle elle repose. Seules les exécutions enregistrées pour ce projet apparaissent.",
+    "Run records could not be read, so no AI usage is declared. Select the project again to retry.": "Les journaux d’exécution n’ont pas pu être lus ; aucune utilisation de l’IA n’est donc déclarée. Sélectionnez à nouveau le projet pour réessayer.",
+    "Unconfirmed": "Non confirmé",
+    "I verified this declaration.": "J’ai vérifié cette déclaration.",
+    "Recorded executions: {{shown}}": "Exécutions enregistrées : {{shown}}",
+    "Only the {{shown}} most recent executions are listed.": "Seules les {{shown}} exécutions les plus récentes sont listées.",
     "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} n’a pas pu être enregistré. Le brouillon a été créé, mais il n’a pas pu être écrit à l’emplacement choisi. (Code : {{code}})"
   }
 }

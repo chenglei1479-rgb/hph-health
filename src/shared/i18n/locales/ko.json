@@ -7718,6 +7718,12 @@
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "이 창에서 데스크톱 앱에 연결할 수 없어 {{name}} 파일을 저장하지 못했습니다. 앱을 다시 시작한 뒤 다시 시도하세요. (코드: {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} 파일을 만들지 못했습니다. 다시 시도하세요. (코드: {{code}})",
     "No file was saved.": "저장된 파일이 없습니다.",
+    "Every statement below cites the execution it comes from. Only executions recorded for this project appear.": "아래 각 문장에는 근거가 되는 실행이 표시됩니다. 이 프로젝트에 기록된 실행만 표시됩니다.",
+    "Run records could not be read, so no AI usage is declared. Select the project again to retry.": "실행 기록을 읽지 못해 AI 사용을 기재하지 않았습니다. 프로젝트를 다시 선택하면 재시도합니다.",
+    "Unconfirmed": "미확인",
+    "I verified this declaration.": "이 기재 내용을 확인했습니다.",
+    "Recorded executions: {{shown}}": "기록된 실행: {{shown}}건",
+    "Only the {{shown}} most recent executions are listed.": "최근 {{shown}}건의 실행만 표시됩니다.",
     "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} 파일을 저장하지 못했습니다. 초안은 만들어졌지만 선택한 위치에 쓰지 못했습니다. (코드: {{code}})"
   }
 }
