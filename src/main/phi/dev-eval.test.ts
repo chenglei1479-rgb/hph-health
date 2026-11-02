@@ -142,6 +142,66 @@ describe('Japanese PHI dev set', () => {
     })
   })
 
+  // #131: a writing request drew an age-stratified chart, and its four band labels were blocked as
+  // dates twelve times. A band names a group of people; `Age 72` names one person. Releasing the
+  // band is not a loosened rule — it is the difference between a stratum and an identifier — and
+  // every range/open-end spelling is pinned so the next author cannot reintroduce it on one
+  // character. The single-age cases below are the recall side of the same pair.
+  it.each([
+    ['Age 18-39', 'hyphen'],
+    ['Age 40–64', 'en dash'],
+    ['Age 45—59', 'em dash'],
+    ['Age 65~79', 'tilde'],
+    ['Age 65〜79', 'wave dash'],
+    ['Age 65～79', 'fullwidth tilde'],
+    ['Age 80+', 'open end'],
+    ['Age 18 to 39', 'spelled range'],
+    // The open end has a word form too, and the phrase is the same one chart authors already use.
+    // Only pinning the symbol form let the incident come straight back on wording (#131).
+    ['Age 80 and over', 'words, and over'],
+    ['Age 80 and above', 'words, and above'],
+    ['Age 80 or older', 'words, or older'],
+    ['Age 80 or over', 'words, or over'],
+    ['Age 80 years and over', 'words, years and over'],
+    ['Age 80 and older', 'words, and older'],
+    ['Age 80 plus', 'words, plus'],
+    // The word form is a band only when it ends the label. A quote, a line break or the end of the
+    // text is a boundary; a following word is not.
+    ['Age 80 and over"', 'words, then a quote'],
+    ['Age 80 and over\nAdmitted from the ward', 'words, then a line break'],
+    ['Age 80 plus\n', 'words, plus, then a line break']
+  ])('does not treat the age band %s (%s) as a date', (text) => {
+    expect(detectPhi(text).filter((span) => span.category === 'DATE')).toEqual([])
+  })
+
+  it.each([
+    ['Age 72', 'Age 72'],
+    ['Age 72歳', '72歳'],
+    ['18歳', '18歳'],
+    ['72才', '72才'],
+    ['Age 90', 'Age 90'],
+    // The negative lookahead must not be fooled by what merely follows in the sentence: a dose or
+    // a sex next to a single age is not a range, so that age is still one person's.
+    ['Age 72 5mg', 'Age 72'],
+    ['Age 72 — male', 'Age 72'],
+    // ...and neither is a word that merely starts with a band word. Telegraphese like "Age 72 plus
+    // comorbidities" describes one patient; releasing it would be a missed mask, not a saved
+    // keystroke, so the word form has to end the label to count (#131).
+    ['Age 72 plus comorbidities', 'Age 72'],
+    ['Age 72 plus diabetes', 'Age 72'],
+    ['Age 72 and more importantly', 'Age 72'],
+    ['Age 72 or older patients', 'Age 72']
+  ])('still treats the single age in %s as a date', (text, spanText) => {
+    const dates = detectPhi(text).filter((span) => span.category === 'DATE')
+    expect(dates.map((span) => span.text)).toEqual([spanText])
+  })
+
+  // The rule id is what turned three rounds of guessing into one lookup; it is diagnostic only.
+  it('names the rule that produced an age span', () => {
+    expect(detectPhi('Age 72').map((span) => span.rule)).toEqual(['age-english'])
+    expect(detectPhi('満72歳').map((span) => span.rule)).toEqual(['age-sai'])
+  })
+
   // The defect this ticket closes: the guess used to require that the whole text carried no other
   // span, so a name next to an age or a date was never masked at all.
   it.each([
