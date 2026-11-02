@@ -686,33 +686,40 @@ export const createFileSaveCommands = (
                 fileId: versionedRequest.fileId
               })
           : pathManagedFile!
+        // Only a Version that carries a checksum can be verified. An empty string (or a future record
+        // that omits the field) means "we cannot verify", which is not evidence of a bad copy.
+        const expectedChecksum = managedFile.checksum
         try {
           await publish(filePath, (temporaryPath) => managedFile.copyTo(temporaryPath), {
             ...(managedFile.assertCanCopyTo
               ? { validateDestination: () => managedFile.assertCanCopyTo!(filePath) }
+              : {}),
+            ...(expectedChecksum
+              ? {
+                  // Verified before the temporary file replaces the destination: on a mismatch the
+                  // publish fails, the temp directory is cleaned up, and a file that already existed
+                  // at the destination is left untouched.
+                  verifyTemporary: async (temporaryPath: string) => {
+                    const actualChecksum = await sha256OfFile(temporaryPath).catch(() => undefined)
+                    if (actualChecksum !== expectedChecksum) {
+                      const sentence = (options.translate ?? englishNativeTranslator)(
+                        'The saved copy of {{name}} did not match the recorded checksum, so it was deleted. The original file was not changed. (Code: {{code}})'
+                      )
+                        .replace('{{name}}', basename(filePath))
+                        .replace('{{code}}', MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
+                      throw new ApplicationCommandError(
+                        MANAGED_FILE_CHECKSUM_MISMATCH_CODE,
+                        sentence
+                      )
+                    }
+                  }
+                }
               : {})
           })
-          // Only a Version that carries a checksum can be verified. An absent checksum means the record
-          // has none (older artifacts, imported packages) and is not evidence of a bad copy.
-          const expectedChecksum = managedFile.checksum
-          if (expectedChecksum) {
-            const actualChecksum = await sha256OfFile(filePath).catch(() => undefined)
-            if (actualChecksum !== expectedChecksum) {
-              // Remove only the copy this save produced; the Version's own bytes are never touched.
-              await rm(filePath, { force: true }).catch(() => undefined)
-              // The sentence lives in the native catalogs; the placeholders are filled here so the
-              // message carries the file name and the code even where no translator is configured.
-              const sentence = (options.translate ?? englishNativeTranslator)(
-                'The saved copy of {{name}} did not match the recorded checksum, so it was deleted. The original file was not changed. (Code: {{code}})'
-              )
-                .replace('{{name}}', safeName)
-                .replace('{{code}}', MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
-              throw new ApplicationCommandError(MANAGED_FILE_CHECKSUM_MISMATCH_CODE, sentence)
-            }
-          }
           return { saved: true, filePath }
         } finally {
-          if (versionedRequest) await managedFile.close()
+          // The lease must always close, but a close error must not mask the checksum failure above.
+          if (versionedRequest) await managedFile.close().catch(() => undefined)
         }
       } finally {
         await pathManagedFile?.close()

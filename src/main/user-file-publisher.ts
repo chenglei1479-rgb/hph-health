@@ -11,6 +11,9 @@ type PublishUserFileOptions = {
   exclusive?: boolean
   signal?: AbortSignal
   validateDestination?: () => Promise<void>
+  // Runs against the temporary file before it replaces the destination. Throwing aborts the publish:
+  // the destination is left exactly as it was and the temporary directory is removed.
+  verifyTemporary?: (temporaryPath: string) => Promise<void>
   durability?: FileDurability
   copyFileExclusive?: (sourcePath: string, destinationPath: string) => Promise<void>
   linkFile?: (sourcePath: string, destinationPath: string) => Promise<void>
@@ -96,6 +99,7 @@ const publishUserFile = async (
   try {
     await write(temporaryPath)
     await durability.syncFile(temporaryPath)
+    await options.verifyTemporary?.(temporaryPath)
     if (!options.exclusive) {
       try {
         await chmod(temporaryPath, (await stat(destinationPath)).mode & 0o7777)

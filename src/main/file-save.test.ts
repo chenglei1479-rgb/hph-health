@@ -600,7 +600,10 @@ describe('file save IPC handlers', () => {
     })
     const target = join(destination, 'report.csv')
     showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
-    registerFileSaveHandlers({ openManagedFileVersion } as never)
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
 
     await expect(
       handlers.get('file:save-managed')!(
@@ -631,7 +634,10 @@ describe('file save IPC handlers', () => {
     })
     const target = join(destination, 'report.csv')
     showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
-    registerFileSaveHandlers({ openManagedFileVersion } as never)
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
 
     const error = await (
       handlers.get('file:save-managed')!(
@@ -646,14 +652,58 @@ describe('file save IPC handlers', () => {
       ) as Promise<unknown>
     ).catch((reason: unknown) => reason)
 
-    // The stable code lets the renderer and support identify this failure without parsing copy.
-    expect((error as { code?: string }).code).toBe(MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
+    // The stable code travels in the sentence, which is what the renderer strips and shows.
+    const mismatchMessage =
+      (error as { message?: string }).message ?? JSON.stringify(error)
+    expect(mismatchMessage).toContain(MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
     // The user must learn which file was deleted, and that the original was not touched.
-    expect((error as Error).message).toContain('report.csv')
-    expect((error as Error).message).toContain('original file was not changed')
-    // Only the copy this save produced is removed.
+    expect(mismatchMessage).toContain('report.csv')
+    expect(mismatchMessage).toContain('original file was not changed')
+    // Nothing was written to the destination, so nothing needs deleting.
     await expect(readFile(target)).rejects.toMatchObject({ code: 'ENOENT' })
     // The Version handle was still closed on the failure path.
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('leaves an existing destination file untouched when the checksum does not match', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
+    const target = join(destination, 'report.csv')
+    // The user chose a path that already holds their own file; replacing it is part of any Save As,
+    // but a checksum failure must happen BEFORE that replacement, not after.
+    await writeFile(target, 'user-original')
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      await writeFile(destinationPath, 'alpha')
+    })
+    const close = vi.fn(async () => undefined)
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256('beta')
+    })
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    expect(
+      (error as { message?: string }).message ?? JSON.stringify(error)
+    ).toContain(MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
+    // The user's original file at the destination is still exactly what it was.
+    await expect(readFile(target, 'utf8')).resolves.toBe('user-original')
     expect(close).toHaveBeenCalledOnce()
   })
 
@@ -667,7 +717,10 @@ describe('file save IPC handlers', () => {
     const openManagedFileVersion = vi.fn().mockResolvedValue({ copyTo, close })
     const target = join(destination, 'legacy.csv')
     showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
-    registerFileSaveHandlers({ openManagedFileVersion } as never)
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
 
     await expect(
       handlers.get('file:save-managed')!(

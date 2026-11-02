@@ -64,6 +64,31 @@ describe('ManagedFileDownloadButton', () => {
     return container.querySelector('button')!
   }
 
+  it('shows the main-process checksum sentence on screen when a save fails', async () => {
+    window.api = {
+      saveManagedFile: vi.fn(async () => {
+        // Exactly what the preload bridge delivers for an ApplicationCommandError.
+        throw new Error(
+          '[managed-file-checksum-mismatch] The saved copy of report.csv did not match the recorded checksum, so it was deleted. The original file was not changed. (Code: managed-file-checksum-mismatch)'
+        )
+      })
+    } as unknown as Window['api']
+    const button = await renderButton()
+    await act(async () => {
+      button.click()
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    // The failure is visible, not just logged: the file name and the stable code are on the page.
+    const failure = container.querySelector('[data-testid="managed-file-download-failure"]')
+    expect(failure?.textContent).toContain('report.csv')
+    expect(failure?.textContent).toContain('managed-file-checksum-mismatch')
+    // The transport prefix is stripped before it reaches the doctor.
+    expect(failure?.textContent).not.toContain('[managed-file-checksum-mismatch]')
+  })
+
   it('adds annotated export only for the viewed PDF without changing historical original downloads', async () => {
     const execute = vi.fn().mockResolvedValue(undefined)
     const original = vi.fn().mockResolvedValue({ saved: true })

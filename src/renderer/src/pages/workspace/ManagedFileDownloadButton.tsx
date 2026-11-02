@@ -63,7 +63,7 @@ const ManagedFileDownloadButtonState = ({
   download: ManagedFileDownloadController
 }): React.JSX.Element => {
   const { t } = useTranslation()
-  const { status, sizeLimitError } = download
+  const { status, sizeLimitError, failure } = download
   const registeredExport = usePdfExportAction()
   const registeredTranslationExport = usePdfTranslationExportAction()
   const pdfExport =
@@ -114,7 +114,7 @@ const ManagedFileDownloadButtonState = ({
       : status === 'saved'
         ? t('Saved')
         : status === 'error'
-          ? t('Download failed. Try again')
+          ? (failure?.message ?? t('Download failed. Try again'))
           : effectiveDisabled
             ? t('File unavailable')
             : t('Download')
@@ -325,6 +325,17 @@ const ManagedFileDownloadButtonState = ({
       <span className="sr-only" role="status" aria-live="polite">
         {status === 'idle' ? '' : label}
       </span>
+      {failure && status === 'error' ? (
+        // The main process already produced the actionable sentence (file name, what was deleted,
+        // the stable code). It is shown here and in the tooltip, never replaced by generic copy.
+        <span
+          data-testid="managed-file-download-failure"
+          role="alert"
+          className="block min-w-0 max-w-64 text-[11px] leading-4 text-text-100"
+        >
+          {failure.message}
+        </span>
+      ) : null}
     </TooltipProvider>
   )
 }

@@ -4,13 +4,19 @@ import {
   WEB_MANAGED_FILE_SIZE_LIMIT_ERROR_NAME,
   type SaveManagedFileRequest
 } from '../../../../shared/file-save'
+import {
+  applicationCommandErrorCode,
+  stripBridgedCommandErrorCode
+} from '@/lib/application-command-error-message'
 
 type DownloadStatus = 'idle' | 'saving' | 'saved' | 'error'
 type DownloadIdentity = Readonly<{ key: string }>
+type DownloadFailure = Readonly<{ message: string; code?: string }>
 type DownloadState = Readonly<{
   identity: DownloadIdentity
   status: DownloadStatus
   sizeLimitError: boolean
+  failure?: DownloadFailure
 }>
 
 export type ManagedFileDownloadInput = Readonly<{
@@ -28,6 +34,7 @@ export type ManagedFileDownloadInput = Readonly<{
 export type ManagedFileDownloadController = Readonly<{
   status: DownloadStatus
   sizeLimitError: boolean
+  failure?: DownloadFailure
   execute: (requestedVersionId?: string | null) => Promise<void>
 }>
 
@@ -122,8 +129,11 @@ export const useManagedFileDownload = ({
 
     const attempt = Symbol('managed-file-save')
     if (resetTimerRef.current !== undefined) window.clearTimeout(resetTimerRef.current)
-    const updateState = (status: DownloadStatus, sizeLimitError = false): void =>
-      setState({ identity, status, sizeLimitError })
+    const updateState = (
+      status: DownloadStatus,
+      sizeLimitError = false,
+      failure?: DownloadFailure
+    ): void => setState({ identity, status, sizeLimitError, failure })
     updateState('saving')
     const promise = window.api
       .saveManagedFile(request)
@@ -143,9 +153,16 @@ export const useManagedFileDownload = ({
       .catch((error: unknown) => {
         if (!mountedRef.current || activeSaveRef.current?.attempt !== attempt) return
         console.error(`Failed to download managed file: ${suggestedName}`, error)
+        // The main process already rendered the actionable sentence (file name, what was deleted,
+        // and the stable code). Keep it on screen instead of the generic "try again".
+        const raw = error instanceof Error ? error.message : String(error)
         updateState(
           'error',
-          error instanceof Error && error.name === WEB_MANAGED_FILE_SIZE_LIMIT_ERROR_NAME
+          error instanceof Error && error.name === WEB_MANAGED_FILE_SIZE_LIMIT_ERROR_NAME,
+          {
+            message: stripBridgedCommandErrorCode(raw),
+            code: applicationCommandErrorCode(error)
+          }
         )
       })
       .finally(() => {
@@ -158,6 +175,7 @@ export const useManagedFileDownload = ({
   return {
     status: state.identity === identity ? state.status : 'idle',
     sizeLimitError: state.identity === identity && state.sizeLimitError,
+    failure: state.identity === identity ? state.failure : undefined,
     execute
   }
 }
