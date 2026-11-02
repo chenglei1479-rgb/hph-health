@@ -276,10 +276,14 @@ describe('PdfNotebookView', () => {
     })
     await vi.waitFor(() =>
       expect(container.textContent).toContain(
-        'This document has changed. The annotation is unattached and needs review.'
+        'This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.'
       )
     )
     expect(container.textContent).toContain('A highlighted passage')
+    expect(
+      (getByRole(container, 'button', { name: 'Show annotation source' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true)
     expect(await annotationReveal.requestPdfAnnotationReveal(review)).toBe('locator-unsupported')
   })
 

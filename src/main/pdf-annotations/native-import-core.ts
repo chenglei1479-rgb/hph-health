@@ -310,14 +310,14 @@ const parsePdfJs = async (
               subtype,
               selector: {
                 kind: 'text',
-                pageNumber,
                 exact,
                 position: { start: 0, end: exact.length },
                 quads: normalized,
                 extractorVersion: NATIVE_EXTRACTOR_VERSION,
                 pageRotation,
                 coordinateVersion: 1,
-                ...(stored ? stored.selector : {})
+                ...(stored ? stored.selector : {}),
+                pageNumber
               }
             })
           } else if (rect) {

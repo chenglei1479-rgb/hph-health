@@ -176,7 +176,8 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "找不到 {{name}} 的文件，因此无法保存。请重新运行分析以生成该文件，然后再保存。（代码：{{code}}）"
   },
   "renderer": {
-    "This document has changed. The annotation is unattached and needs review.": "此文档已更改。批注未附着于文档，需要检查。",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._other": "已保存带批注的 PDF。由于文档已更改，未包含 {{count}} 条批注。",
+    "This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.": "此文档已更改。批注未附着于文档，需要检查。请重新选择该段文字以再次附着批注。",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新对话可以无需询问直接运行命令、修改文件、执行 Notebook 代码和访问网络。已有对话不受影响。",
     "Also allowed {{scope}}": "还允许{{scope}}",
     "Unpin {{path}}": "取消固定 {{path}}",

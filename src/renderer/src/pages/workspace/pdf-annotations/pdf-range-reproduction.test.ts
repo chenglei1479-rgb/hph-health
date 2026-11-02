@@ -189,3 +189,16 @@ it('rejects a malformed saved offset instead of re-extracting a nearby quotation
   expect(result.annotations).toEqual([])
   expect(result.unsupportedCount).toBe(1)
 })
+
+it('uses the actual import page after a page is inserted and keeps the range needing review', async () => {
+  const { data, annotation } = await exported()
+  const document = await PDFDocument.load(data)
+  document.insertPage(0, [600, 800])
+  const result = await imported((await document.save()).buffer as ArrayBuffer)
+  expect(result.annotations[0]?.pageNumber).toBe(3)
+  expect(result.annotations[0]?.selector).toEqual({
+    ...annotation.target.selector,
+    pageNumber: 3,
+    attachmentState: 'needs-review'
+  })
+})

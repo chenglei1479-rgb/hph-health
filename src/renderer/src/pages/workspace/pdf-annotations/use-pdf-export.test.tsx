@@ -157,3 +157,34 @@ it('unmount aborts the worker and prevents a late save', async () => {
   })
   expect(window.api.saveBlobFile).not.toHaveBeenCalled()
 })
+
+it.each([1, 2])('reports %s omitted needs-review annotations after saving', async (count) => {
+  const reviewItems = Array.from({ length: count }, (_, index) => ({
+    ...item,
+    id: `review-${index}`,
+    kind: 'highlight',
+    target: {
+      source,
+      selector: {
+        kind: 'text',
+        pageNumber: 1,
+        exact: 'Saved quote',
+        position: { start: 0, end: 11 },
+        quads: [{ x: 0.1, y: 0.1, width: 0.2, height: 0.02 }],
+        pageRotation: 0,
+        coordinateVersion: 1,
+        extractorVersion: 'test',
+        attachmentState: 'needs-review'
+      }
+    }
+  })) as PdfAnnotation[]
+  const snapshot = [item, ...reviewItems]
+  await mount({ ...port, forSource: () => snapshot })
+  await act(async () => action!.execute())
+  expect(window.api.saveBlobFile).toHaveBeenCalledOnce()
+  expect(state.message).toBe(
+    count === 1
+      ? 'Annotated PDF saved. 1 annotation was not included because the document changed.'
+      : 'Annotated PDF saved. 2 annotations were not included because the document changed.'
+  )
+})

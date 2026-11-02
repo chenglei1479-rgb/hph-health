@@ -10,7 +10,11 @@ export const preparePdfExportMarks = async (
 ): Promise<PdfExportMark[]> => {
   const marks: PdfExportMark[] = []
   const notes = new Map<number, number>()
-  const grouped = Map.groupBy(annotations, ({ target: { selector } }) =>
+  const exportable = annotations.filter(
+    ({ target: { selector } }) =>
+      !(selector.kind === 'text' && selector.attachmentState === 'needs-review')
+  )
+  const grouped = Map.groupBy(exportable, ({ target: { selector } }) =>
     selector.kind === 'document-note' ? 1 : selector.pageNumber
   )
   for (const [pageNumber, items] of grouped) {
@@ -85,8 +89,6 @@ export const preparePdfExportMarks = async (
         signal.throwIfAborted()
       }
       const selector = annotation.target.selector
-      if (selector.kind === 'text' && selector.attachmentState === 'needs-review')
-        throw new Error('source-changed')
       const viewport = page.getViewport({
         scale: 1,
         rotation: selector.kind === 'document-note' ? page.rotate : selector.pageRotation

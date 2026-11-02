@@ -110,6 +110,10 @@ export const usePdfExport = ({
         exportAnnotations.push(...page.items)
         if (exportAnnotations.length > PDF_EXPORT_MAX_MARKS) throw new Error('too-large')
       }
+      const omittedCount = exportAnnotations.filter(
+        ({ target: { selector } }) =>
+          selector.kind === 'text' && selector.attachmentState === 'needs-review'
+      ).length
       const tags = exportAnnotations.some((item) => item.tagIds.length)
         ? (await waitForPdfExport(window.api.tags.snapshot(), signal)).tags
         : []
@@ -147,7 +151,21 @@ export const usePdfExport = ({
         suggestedName: `${name.replace(/\.pdf$/iu, '')}-annotated.pdf`
       })
       if (!signal.aborted)
-        setState({ busy: false, message: result.saved ? t('Annotated PDF saved.') : undefined })
+        setState({
+          busy: false,
+          message: result.saved
+            ? omittedCount
+              ? t(
+                  'Annotated PDF saved. {{count}} annotations were not included because the document changed.',
+                  {
+                    count: omittedCount,
+                    defaultValue_one:
+                      'Annotated PDF saved. {{count}} annotation was not included because the document changed.'
+                  }
+                )
+              : t('Annotated PDF saved.')
+            : undefined
+        })
     } catch (error) {
       if (
         signal.aborted &&

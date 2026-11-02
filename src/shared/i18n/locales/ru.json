@@ -179,7 +179,11 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Файл {{name}} отсутствует, поэтому сохранить его не удалось. Запустите анализ заново, чтобы создать файл, и затем сохраните его. (Код: {{code}})"
   },
   "renderer": {
-    "This document has changed. The annotation is unattached and needs review.": "Этот документ изменён. Аннотация не привязана к документу и требует проверки.",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._one": "PDF с аннотациями сохранён. {{count}} аннотация не включена, поскольку документ изменён.",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._few": "PDF с аннотациями сохранён. {{count}} аннотации не включены, поскольку документ изменён.",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._many": "PDF с аннотациями сохранён. {{count}} аннотаций не включено, поскольку документ изменён.",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._other": "PDF с аннотациями сохранён. {{count}} аннотации не включены, поскольку документ изменён.",
+    "This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.": "Этот документ изменён. Аннотация не привязана к документу и требует проверки. Выделите фрагмент заново, чтобы снова привязать аннотацию.",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "В новых диалогах агент может без предварительного разрешения выполнять команды, изменять файлы, запускать код Notebook и обращаться к сети. Существующие диалоги не изменятся.",
     "Also allowed {{scope}}": "Также разрешено {{scope}}",
     "Unpin {{path}}": "Отвязать {{path}}",

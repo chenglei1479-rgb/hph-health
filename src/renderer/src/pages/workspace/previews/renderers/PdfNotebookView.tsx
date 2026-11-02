@@ -1303,7 +1303,7 @@ const PdfNotebookView = ({
                         inline
                         level="warning"
                         description={t(
-                          'This document has changed. The annotation is unattached and needs review.'
+                          'This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.'
                         )}
                       />
                     )}
@@ -1360,7 +1360,11 @@ const PdfNotebookView = ({
                             <button
                               type="button"
                               aria-label={t('Show annotation source')}
-                              disabled={pendingId === bookmark.id}
+                              disabled={
+                                pendingId === bookmark.id ||
+                                (selector.kind === 'text' &&
+                                  selector.attachmentState === 'needs-review')
+                              }
                               onClick={() => void reveal(bookmark)}
                               className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
