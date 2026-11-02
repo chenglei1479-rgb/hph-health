@@ -7714,6 +7714,11 @@
     "The previously imported table could not be restored. Choose the file again. Your local code is kept.": "前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。",
     "The previously imported table is still saved. Switch to another project and come back to restore it.": "前回取り込んだ表は保存されています。別のプロジェクトに切り替えてから、このプロジェクトに戻ると復元できます。",
     "Runtime: bundled Python {{version}} (offline)": "実行環境: 同梱の Python {{version}}（オフライン）",
-    "Runtime: system Python {{version}} (the bundled runtime could not start)": "実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）"
+    "Runtime: system Python {{version}} (the bundled runtime could not start)": "実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）",
+    "{{name}} was not created because the draft contains text this app treats as patient information. Remove or generalize it, then try again. (Code: {{code}})": "{{name}} は作成されませんでした。下書きに、このアプリが患者情報として扱うテキストが含まれています。そのテキストを削除するか一般化してから、もう一度お試しください。（コード: {{code}}）",
+    "{{name}} was not created because no project is selected. (Code: {{code}})": "{{name}} は作成されませんでした。プロジェクトが選択されていません。（コード: {{code}}）",
+    "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "このウィンドウからデスクトップアプリに接続できないため、{{name}} を保存できませんでした。アプリを再起動してから、もう一度お試しください。（コード: {{code}}）",
+    "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} を作成できませんでした。もう一度お試しください。（コード: {{code}}）",
+    "No file was saved.": "ファイルは保存されませんでした。"
   }
 }

@@ -1,12 +1,36 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { i18next, initI18n } from '../../i18n'
 import { EthicsProtocolChecklist } from './EthicsProtocolChecklist'
 
 const originalApi = window.api
 
+const installApi = (overrides: Record<string, unknown>): void => {
+  Object.defineProperty(window, 'api', {
+    configurable: true,
+    value: {
+      saveBlobFile: vi.fn(async () => ({ saved: true, filePath: '/tmp/draft.docx' })),
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn()
+      },
+      ...overrides
+    }
+  })
+}
+
 afterEach(() => {
+  cleanup()
   Object.defineProperty(window, 'api', { value: originalApi, configurable: true })
 })
 
@@ -117,5 +141,196 @@ describe('EthicsProtocolChecklist', () => {
         ]
       }
     })
+  })
+
+  // #132: the download used to end in a rejected IPC promise with nobody listening, so a refusal
+  // and a dead button looked the same. Each way out below is one observable result.
+  it('shows the reason and the code when the draft export is refused', async () => {
+    const saveBlobFile = vi.fn()
+    installApi({
+      saveBlobFile,
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn(async () => ({
+          ok: false,
+          code: 'ethics-draft-blocked-phi',
+          fileName: '研究計画書_草案.docx'
+        }))
+      }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+
+    const message = await screen.findByText(/研究計画書_草案\.docx was not created/)
+    expect(message.textContent).toContain('patient information')
+    expect(message.textContent).toContain('ethics-draft-blocked-phi')
+    expect(saveBlobFile).not.toHaveBeenCalled()
+  })
+
+  it('writes the exported bytes through the save dialog', async () => {
+    const saveBlobFile = vi.fn<
+      (request: { suggestedName: string; mimeType: string; data: ArrayBuffer }) => Promise<{
+        saved: boolean
+        filePath?: string
+      }>
+    >(async () => ({ saved: true, filePath: '/tmp/draft.docx' }))
+    installApi({
+      saveBlobFile,
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn(async () => ({
+          ok: true,
+          fileName: '研究計画書_草案.docx',
+          bytes: [80, 75, 3, 4]
+        }))
+      }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+
+    await waitFor(() => expect(saveBlobFile).toHaveBeenCalledOnce())
+    const request = saveBlobFile.mock.calls[0]?.[0] as {
+      suggestedName: string
+      mimeType: string
+      data: ArrayBuffer
+    }
+    expect(request.suggestedName).toBe('研究計画書_草案.docx')
+    expect(request.mimeType).toBe(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+    expect([...new Uint8Array(request.data)]).toEqual([80, 75, 3, 4])
+    expect(screen.queryByText(/patient information/)).toBeNull()
+  })
+
+  it('says that nothing was saved when the save dialog is cancelled', async () => {
+    installApi({
+      saveBlobFile: vi.fn(async () => ({ saved: false })),
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn(async () => ({
+          ok: true,
+          fileName: '研究計画書_草案.docx',
+          bytes: [1]
+        }))
+      }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+
+    expect(await screen.findByText('No file was saved.')).toBeTruthy()
+  })
+
+  it('reports the missing desktop bridge instead of returning silently', async () => {
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: { saveBlobFile: vi.fn() }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+
+    const message = await screen.findByText(/could not be saved because this window/)
+    expect(message.textContent).toContain('ethics-draft-bridge-unavailable')
+  })
+
+  it('runs one export for a same-tick double click', async () => {
+    let release: (value: { ok: true; fileName: string; bytes: number[] }) => void = () => undefined
+    const exportEthicsDraft = vi.fn(
+      () =>
+        new Promise<{ ok: true; fileName: string; bytes: number[] }>((resolve) => {
+          release = resolve
+        })
+    )
+    installApi({
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft
+      }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    const button = screen.getByRole('button', { name: 'Download incomplete DOCX draft' })
+    fireEvent.click(button)
+    fireEvent.click(button)
+
+    expect(exportEthicsDraft).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      release({ ok: true, fileName: '研究計画書_草案.docx', bytes: [1] })
+    })
+  })
+
+  it('renders the refusal in the active locale', async () => {
+    initI18n('ja')
+    await act(async () => {
+      await i18next.changeLanguage('ja')
+    })
+    try {
+      installApi({
+        writingSafeguards: {
+          getEthicsProtocol: vi.fn(async () => ({
+            choices: {},
+            notApplicableItems: [],
+            notApplicableReasons: {},
+            confirmedMappings: [],
+            headingCandidates: []
+          })),
+          setEthicsProtocol: vi.fn(),
+          importEthicsDocx: vi.fn(),
+          exportEthicsDraft: vi.fn(async () => ({
+            ok: false,
+            code: 'ethics-draft-blocked-phi',
+            fileName: '研究計画書_草案.docx'
+          }))
+        }
+      })
+
+      render(<EthicsProtocolChecklist projectId="study-1" />)
+      const button = screen.getByRole('button', { name: '未完成の DOCX 草案をダウンロード' })
+      fireEvent.click(button)
+
+      const message = await screen.findByText(/研究計画書_草案\.docx は作成されませんでした/)
+      expect(message.textContent).toContain('患者情報')
+      expect(message.textContent).toContain('ethics-draft-blocked-phi')
+    } finally {
+      initI18n('en')
+      await act(async () => {
+        await i18next.changeLanguage('en')
+      })
+    }
   })
 })

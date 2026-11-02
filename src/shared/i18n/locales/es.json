@@ -8042,6 +8042,11 @@
     "The previously imported table could not be restored. Choose the file again. Your local code is kept.": "No se pudo restaurar la tabla importada anteriormente. Vuelva a elegir el archivo. Su código local se conserva.",
     "The previously imported table is still saved. Switch to another project and come back to restore it.": "La tabla importada anteriormente sigue guardada. Cambie a otro proyecto y vuelva para restaurarla.",
     "Runtime: bundled Python {{version}} (offline)": "Entorno: Python incluido {{version}} (sin conexión)",
-    "Runtime: system Python {{version}} (the bundled runtime could not start)": "Entorno: Python del sistema {{version}} (no se pudo iniciar el entorno incluido)"
+    "Runtime: system Python {{version}} (the bundled runtime could not start)": "Entorno: Python del sistema {{version}} (no se pudo iniciar el entorno incluido)",
+    "{{name}} was not created because the draft contains text this app treats as patient information. Remove or generalize it, then try again. (Code: {{code}})": "No se creó {{name}} porque el borrador contiene texto que esta aplicación trata como información del paciente. Elimínelo o generalícelo y vuelva a intentarlo. (Código: {{code}})",
+    "{{name}} was not created because no project is selected. (Code: {{code}})": "No se creó {{name}} porque no hay ningún proyecto seleccionado. (Código: {{code}})",
+    "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "No se pudo guardar {{name}} porque esta ventana no puede comunicarse con la aplicación de escritorio. Reinicie la aplicación y vuelva a intentarlo. (Código: {{code}})",
+    "{{name}} could not be created. Try again. (Code: {{code}})": "No se pudo crear {{name}}. Vuelva a intentarlo. (Código: {{code}})",
+    "No file was saved.": "No se guardó ningún archivo."
   }
 }

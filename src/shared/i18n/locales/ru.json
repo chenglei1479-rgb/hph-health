@@ -8181,6 +8181,11 @@
     "The previously imported table could not be restored. Choose the file again. Your local code is kept.": "Не удалось восстановить ранее импортированную таблицу. Выберите файл заново. Локальный код сохранён.",
     "The previously imported table is still saved. Switch to another project and come back to restore it.": "Ранее импортированная таблица сохранена. Переключитесь на другой проект и вернитесь, чтобы восстановить её.",
     "Runtime: bundled Python {{version}} (offline)": "Среда: встроенный Python {{version}} (автономно)",
-    "Runtime: system Python {{version}} (the bundled runtime could not start)": "Среда: системный Python {{version}} (встроенную среду не удалось запустить)"
+    "Runtime: system Python {{version}} (the bundled runtime could not start)": "Среда: системный Python {{version}} (встроенную среду не удалось запустить)",
+    "{{name}} was not created because the draft contains text this app treats as patient information. Remove or generalize it, then try again. (Code: {{code}})": "{{name}} не создан, так как черновик содержит текст, который это приложение считает данными пациента. Удалите или обобщите его и повторите попытку. (Код: {{code}})",
+    "{{name}} was not created because no project is selected. (Code: {{code}})": "{{name}} не создан, так как проект не выбран. (Код: {{code}})",
+    "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "Не удалось сохранить {{name}}: это окно не может связаться с настольным приложением. Перезапустите приложение и повторите попытку. (Код: {{code}})",
+    "{{name}} could not be created. Try again. (Code: {{code}})": "Не удалось создать {{name}}. Повторите попытку. (Код: {{code}})",
+    "No file was saved.": "Файл не был сохранён."
   }
 }

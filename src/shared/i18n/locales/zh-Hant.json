@@ -7714,6 +7714,11 @@
     "The previously imported table could not be restored. Choose the file again. Your local code is kept.": "無法還原之前匯入的表。請重新選擇檔案。本機程式仍會保留。",
     "The previously imported table is still saved. Switch to another project and come back to restore it.": "之前匯入的表仍然保存著。切換到其他專案後再回來即可還原。",
     "Runtime: bundled Python {{version}} (offline)": "執行環境：隨附的 Python {{version}}（離線）",
-    "Runtime: system Python {{version}} (the bundled runtime could not start)": "執行環境：系統 Python {{version}}（隨附的執行環境無法啟動）"
+    "Runtime: system Python {{version}} (the bundled runtime could not start)": "執行環境：系統 Python {{version}}（隨附的執行環境無法啟動）",
+    "{{name}} was not created because the draft contains text this app treats as patient information. Remove or generalize it, then try again. (Code: {{code}})": "未建立 {{name}}，因為草稿中包含本應用程式視為患者資訊的內容。請刪除或一般化該內容後重試。（代碼：{{code}}）",
+    "{{name}} was not created because no project is selected. (Code: {{code}})": "未建立 {{name}}，因為沒有選擇專案。（代碼：{{code}}）",
+    "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "此視窗無法連線到桌面應用程式，因此未能儲存 {{name}}。請重新啟動應用程式後重試。（代碼：{{code}}）",
+    "{{name}} could not be created. Try again. (Code: {{code}})": "未能建立 {{name}}。請重試。（代碼：{{code}}）",
+    "No file was saved.": "未儲存任何檔案。"
   }
 }
