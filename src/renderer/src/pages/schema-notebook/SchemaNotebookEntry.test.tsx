@@ -9,10 +9,27 @@ import { createInitialProjectState, useProjectStore } from '@/stores/project-sto
 import type {
   ExecuteAnalysisResponse,
   ImportTableResponse
+
 } from '../../../../shared/schema-notebook'
 import { SchemaNotebookEntry } from './SchemaNotebookEntry'
-import { schemaNotebookCopy } from './copy'
+
 import { schemaNotebookDraftKey } from './schema-notebook-draft'
+
+// These suites pin the interface language to Japanese, so the panel copy they read is the ja
+// catalog. Asserting the ja strings keeps the beta UI byte-identical after the move into the shared
+// catalog, and the strong-copy suite guards the other seven languages.
+const COPY = {
+  open: '患者表を分析',
+  import: 'ファイルを取り込む',
+  rows: '行数',
+  run: '手元で実行',
+  tableStillSaved:
+    '前回取り込んだ表は保存されています。別のプロジェクトに切り替えてから、このプロジェクトに戻ると復元できます。',
+  restoreNotice:
+    '前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。',
+  interpreterBundled: '実行環境: 同梱の Python {{version}}（オフライン）',
+  interpreterSystem: '実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）'
+}
 
 const tags = vi.fn(async () => [{ projectId: 'study-1' }])
 const importTable = vi.fn(async (..._request: unknown[]): Promise<ImportTableResponse> => ({
@@ -218,7 +235,7 @@ describe('SchemaNotebookEntry', () => {
     expect(masked?.textContent).toContain('n=<10')
     // The panel says which interpreter ran the script, so a PATH fallback is visible.
     expect(container.textContent).toContain(
-      schemaNotebookCopy('ja').interpreterBundled.replace('{{version}}', '3.12.15')
+      COPY.interpreterBundled.replace('{{version}}', '3.12.15')
     )
 
     // The fallback wording is the other half of the same contract: it must say the bundled runtime
@@ -230,7 +247,7 @@ describe('SchemaNotebookEntry', () => {
       runId: 'run-2'
     })
     const runAgain = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent === schemaNotebookCopy('ja').run
+      (button) => button.textContent === COPY.run
     )
     await act(async () => {
       runAgain?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -239,7 +256,7 @@ describe('SchemaNotebookEntry', () => {
       await Promise.resolve(execute.mock.results.at(-1)?.value).catch(() => undefined)
     })
     expect(container.textContent).toContain(
-      schemaNotebookCopy('ja').interpreterSystem.replace('{{version}}', '3.13.15')
+      COPY.interpreterSystem.replace('{{version}}', '3.13.15')
     )
   })
 
@@ -474,7 +491,7 @@ describe('SchemaNotebookEntry', () => {
   })
 
   it('hides the previous table preview when the next import fails', async () => {
-    const copy = schemaNotebookCopy('ja')
+    const copy = COPY
     importTable.mockResolvedValueOnce({
       ok: true,
       tagged: true,
@@ -601,7 +618,7 @@ describe('SchemaNotebookEntry', () => {
   })
 
   it('drops a stale restore notice when a later import fails', async () => {
-    const copy = schemaNotebookCopy('ja')
+    const copy = COPY
     // Start from the "the stored table is gone" state: its notice is on screen.
     localStorage.setItem(
       schemaNotebookDraftKey('study-1'),
@@ -684,7 +701,7 @@ describe('SchemaNotebookEntry', () => {
   })
 
   it('lists the files a run kept and saves a copy of one', async () => {
-    const copy = schemaNotebookCopy('ja')
+    const copy = COPY
     const saveOutput = vi.fn(async () => ({ saved: true }))
     const lastRun = vi.fn(async () => ({
       runId: 'run-restored',
@@ -800,7 +817,7 @@ describe('SchemaNotebookEntry', () => {
   })
 
   it('shows the main-process sentence when a saved copy cannot be produced', async () => {
-    const copy = schemaNotebookCopy('ja')
+    const copy = COPY
     const lastRun = vi.fn(async () => ({
       runId: 'run-restored',
       outputs: [
@@ -871,7 +888,7 @@ describe('SchemaNotebookEntry', () => {
   })
 
   it('keeps the last run figures listed when the stored table can no longer be reopened', async () => {
-    const copy = schemaNotebookCopy('ja')
+    const copy = COPY
     const saveOutput = vi.fn(async () => ({ saved: true }))
     const lastRun = vi.fn(async () => ({
       runId: 'run-before-loss',

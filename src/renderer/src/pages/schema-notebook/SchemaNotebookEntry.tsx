@@ -16,7 +16,6 @@ import type {
   SchemaNotebookRunOutput
 } from '../../../../shared/schema-notebook'
 import { deliverableCardCopy } from '../home/deliverable-packages'
-import { schemaNotebookCopy } from './copy'
 import { loadSchemaNotebookDraft, saveSchemaNotebookDraft } from './schema-notebook-draft'
 
 // A direct IPC rejection arrives as "Error invoking remote method '<channel>': Error: <text>".
@@ -93,21 +92,20 @@ const readFile = (file: File): Promise<{ csvBase64?: string; xlsxBase64?: string
   })
 
 export const PatientDataBadge = (): React.JSX.Element => {
-  const copy = schemaNotebookCopy('ja')
+  const { t } = useTranslation()
   return (
     <span
       data-patient-data-badge
-      title={copy.badgeNote}
+      title={t('This tag cannot be removed. To work without patient data, create a new project.')}
       className="shrink-0 rounded-full bg-[#9a5046]/10 px-2 py-0.5 text-[11px] font-semibold text-[#9a5046]"
     >
-      {copy.badge}
+      {t('Contains patient data')}
     </span>
   )
 }
 
 export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React.JSX.Element => {
   const { t } = useTranslation()
-  const copy = schemaNotebookCopy('ja')
   const agentContext = useProjectStore(
     (state) => state.projects.find((project) => project.id === projectId)?.agentContext
   )
@@ -408,39 +406,39 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       <EthicsWritingNotice open={consultationPack} approvalNumber={shownApprovalNumber} />
       <div className="flex flex-wrap items-center gap-2">
         {tagged ? <PatientDataBadge /> : null}
-        {tagged ? <span className="sr-only">{copy.tagged}</span> : null}
+        {tagged ? <span className="sr-only">{t('This project contains patient data, so the tag cannot be removed.')}</span> : null}
         <button
           type="button"
           className="rounded-md px-2 py-1 text-xs font-medium text-[#315b67] hover:bg-bg-300"
           onClick={() => setOpen(true)}
         >
-          {copy.open}
+          {t('Analyze patient table')}
         </button>
       </div>
       {open ? (
         <section
           role="dialog"
-          aria-label={copy.title}
+          aria-label={t('Local Notebook (schema only)')}
           className="space-y-3 rounded-lg border border-[#d5dfdc] bg-white p-3 text-sm text-[#20343a]"
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h2 className="font-medium">{copy.title}</h2>
-              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.intro}</p>
+              <h2 className="font-medium">{t('Local Notebook (schema only)')}</h2>
+              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{t('The table is analyzed in your local Notebook. The model receives only column names, types, row count, and synthetic samples generated from the schema.')}</p>
               <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">
-                <span className="font-medium text-[#20343a]">{copy.modelView}</span>{' '}
-                {copy.smallCellNote}
+                <span className="font-medium text-[#20343a]">{t('What the model receives')}</span>{' '}
+                {t('Cells under 10 are hidden to protect privacy. Your local Notebook still shows the real numbers.')}
               </p>
-              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.rowBlockNote}</p>
-              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{copy.maskingCheckNote}</p>
+              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{t("Rows for an individual patient (.head(), .tail(), .sample(), one person's values, row-by-row views) are never sent to the model.")}</p>
+              <p className="mt-1 text-xs leading-5 text-[#5a6b6c]">{t('Text returned to the model passes a masking check. Replaced values are pseudonymized.')}</p>
             </div>
             <button type="button" onClick={() => setOpen(false)}>
-              {copy.close}
+              {t('Close')}
             </button>
           </div>
-          {tagged ? <p className="text-xs text-[#9a5046]">{copy.tagged}</p> : null}
+          {tagged ? <p className="text-xs text-[#9a5046]">{t('This project contains patient data, so the tag cannot be removed.')}</p> : null}
           <label className="block text-xs">
-            {copy.file}
+            {t('CSV or Excel')}
             <input
               className="mt-1 block w-full text-xs"
               type="file"
@@ -454,10 +452,10 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
               checked={patientData}
               onChange={(event) => setPatientData(event.target.checked)}
             />
-            {copy.patientData}
+            {t('This table contains patient data')}
           </label>
           <button type="button" disabled={!file || busy} onClick={() => void importFile()}>
-            {copy.import}
+            {t('Import file')}
           </button>
           {blocked ? (
             <pre className="whitespace-pre-wrap text-xs text-[#9a5046]">{blocked}</pre>
@@ -468,16 +466,16 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
               the table (tableId is set, the context has not arrived), which is not a failure at all. */}
           {blocked && tableInfo.tableId && !context ? (
             <p data-testid="schema-notebook-table-still-saved" className="text-xs text-[#5a6b6c]">
-              {copy.tableStillSaved}
+              {t('The previously imported table is still saved. Switch to another project and come back to restore it.')}
             </p>
           ) : null}
           {restoreNotice ? (
             <p data-testid="schema-notebook-restore-notice" className="text-xs text-[#9a5046]">
-              {copy.restoreNotice}
+              {t('The previously imported table could not be restored. Choose the file again. Your local code is kept.')}
             </p>
           ) : null}
           {identifierWarnings.length > 0 ? (
-            <ul aria-label={copy.identifierWarnings} className="space-y-1 text-xs text-[#9a5046]">
+            <ul aria-label={t('Pre-send checks and restrictions help prevent sending direct identifiers such as names and patient IDs. This is not an absolute guarantee.')} className="space-y-1 text-xs text-[#9a5046]">
               {identifierWarnings.map((warning) => (
                 <li key={warning}>{warning}</li>
               ))}
@@ -486,7 +484,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
           {/* The code editor stays available without a table: the draft survives a project switch
               and a lost import, and Run only needs a table to execute against. */}
           <label className="block text-xs">
-            {copy.language}
+            {t('Language')}
             <select
               className="ml-2"
               value={language}
@@ -497,7 +495,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
             </select>
           </label>
           <label className="block text-xs">
-            {copy.code}
+            {t('Python or R code')}
             <textarea
               className="mt-1 block w-full font-mono text-xs"
               rows={5}
@@ -506,7 +504,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
             />
           </label>
           <button type="button" disabled={busy || !context} onClick={() => void run()}>
-            {copy.run}
+            {t('Run locally')}
           </button>
           {context ? (
             <div className="space-y-2">
@@ -514,20 +512,17 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                 // The user checks for mojibake before trusting the columns: showing the encoding is
                 // what makes a CP932 file verifiable instead of silently garbled.
                 <p data-testid="schema-notebook-csv-encoding" className="text-xs text-[#5a6b6c]">
-                  {copy.encodingNotice.replace(
-                    '{{encoding}}',
-                    csvEncoding === 'shift_jis' ? 'Shift_JIS' : 'UTF-8'
-                  )}
+                  {t('Read as {{encoding}}. If the text is garbled, save the file again in Excel as "CSV UTF-8 (Comma delimited)".', { encoding: csvEncoding === 'shift_jis' ? 'Shift_JIS' : 'UTF-8' })}
                 </p>
               ) : null}
               <p>
-                {copy.rows}: {context.rowCount}
+                {t('Rows')}: {context.rowCount}
               </p>
               <ul>
                 {context.columns.map((column) => (
                   <li key={column.name} className="flex flex-wrap items-center gap-2">
                     <span>
-                      {copy.columns}: {column.name} ({column.dtype})
+                      {t('Columns')}: {column.name} ({column.dtype})
                     </span>
                     {column.dtype === 'categorical' || column.dtype === 'binary' ? (
                       <label className="flex items-center gap-1 text-xs">
@@ -537,14 +532,14 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                           checked={Boolean(context.categoricalValues?.[column.name])}
                           onChange={() => void optIn(column.name)}
                         />
-                        {copy.categorical}
+                        {t("Send this column's category values to the model")}
                       </label>
                     ) : null}
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-[#5a6b6c]">{copy.categoricalNote}</p>
-              <p className="text-xs">{copy.synthetic}</p>
+              <p className="text-xs text-[#5a6b6c]">{t('Not sent by default. Sending is recorded. Free-text columns cannot be selected. A column with more than 12 categories can be selected, but only the 12 most frequent are sent, and the rest are shown as other values omitted.')}</p>
+              <p className="text-xs">{t('Synthetic sample (not drawn from real rows)')}</p>
               <pre className="overflow-auto text-xs">
                 {JSON.stringify(context.syntheticSampleRows)}
               </pre>
@@ -552,18 +547,21 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                 // Falling back to a Python on PATH is not silent: say which interpreter ran the
                 // script, so a missing bundled runtime reads as such instead of as a broken package.
                 <p data-testid="schema-notebook-interpreter" className="text-xs text-[#5a6b6c]">
-                  {(result.interpreter.source === 'bundled'
-                    ? copy.interpreterBundled
-                    : copy.interpreterSystem
-                  ).replace('{{version}}', result.interpreter.version)}
+                  {result.interpreter.source === 'bundled'
+                    ? t('Runtime: bundled Python {{version}} (offline)', {
+                        version: result.interpreter.version
+                      })
+                    : t('Runtime: system Python {{version}} (the bundled runtime could not start)', {
+                        version: result.interpreter.version
+                      })}
                 </p>
               ) : null}
               {result ? (
                 <div className="grid gap-2">
-                  <pre aria-label={copy.localResult}>{result.local.stdout}</pre>
-                  <p>{copy.maskingCheck}</p>
-                  <pre aria-label={copy.maskingCheck}>{JSON.stringify(result.forModel)}</pre>
-                  <p>{copy.pseudonymized}</p>
+                  <pre aria-label={t('Local result')}>{result.local.stdout}</pre>
+                  <p>{t('Masking check')}</p>
+                  <pre aria-label={t('Masking check')}>{JSON.stringify(result.forModel)}</pre>
+                  <p>{t('Pseudonymized')}</p>
                 </div>
               ) : null}
             </div>
