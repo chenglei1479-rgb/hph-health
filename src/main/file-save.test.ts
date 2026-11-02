@@ -751,6 +751,39 @@ describe('file save IPC handlers', () => {
     expect(close).not.toHaveBeenCalled()
   })
 
+  it('keeps the original error for a missing local path instead of promising a rerun', async () => {
+    const close = vi.fn(async () => undefined)
+    // A literature attachment or a local file is chosen by path. If it is gone, re-running an
+    // analysis cannot bring it back, so this source must not borrow the Version sentence.
+    const openManagedFile = vi.fn().mockRejectedValue(
+      Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' })
+    )
+    showSaveDialog.mockResolvedValue({
+      canceled: false,
+      filePath: join(downloadsPath, 'article.pdf')
+    })
+    registerFileSaveHandlers({
+      resolveManagedFilePath: vi.fn().mockResolvedValue('/managed/article.pdf'),
+      openManagedFile
+    } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'literature',
+          path: 'literature-attachment-version:version-1',
+          suggestedName: 'article.pdf'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    const message = (error as { message?: string }).message ?? JSON.stringify(error)
+    expect(message).not.toContain(MANAGED_FILE_MISSING_CODE)
+    expect(message).not.toContain('Run the analysis again')
+    expect(close).not.toHaveBeenCalled()
+  })
+
   it('does not claim the Version is missing when the chosen destination fails', async () => {
     const destination = await mkdtemp(join(tmpdir(), 'file-save-missing-'))
     const target = join(destination, 'report.csv')

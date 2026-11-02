@@ -748,7 +748,10 @@ export const createFileSaveCommands = (
         } catch (error) {
           // A Version whose bytes are gone from disk has to answer with something the reader can act
           // on. The control stays enabled for exactly this case, so the sentence names the next step.
-          if (sourceCopied || !isMissingFileError(error)) throw error
+          // Only a Version can be regenerated: a local file or a literature attachment the reader
+          // picked by path is gone for good, and "run the analysis again" would be the wrong fix,
+          // so those sources keep their original error instead of borrowing this sentence.
+          if (!versionedRequest || sourceCopied || !isMissingFileError(error)) throw error
           const sentence = (options.translate ?? englishNativeTranslator)(
             'The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})'
           )

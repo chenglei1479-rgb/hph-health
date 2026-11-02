@@ -136,6 +136,9 @@ describe('NodeVersionFileOperator', () => {
       cursor = entry.cause
     }
     expect(chain).toContain('ENOENT')
+    // Pin the depth too: `file-save`'s isMissingFileError walks at most four links, so this is the
+    // assertion that fails first if another wrapper layer ever pushes the ENOENT out of reach.
+    expect(chain.length).toBeLessThanOrEqual(4)
   })
 
   it('publishes when the configured file system does not support hard links', async () => {
