@@ -7834,6 +7834,8 @@
     "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; de-identified real data only in an approved pilot.": "Das KI-Kontingent der Seed-Einladung ist aufgebraucht. Um fortzufahren, registrieren Sie Ihren eigenen OpenAI-API-Schlüssel oder ziehen Sie später einen kostenpflichtigen Tarif in Betracht. Demo (fiktive Daten) und Literatursuche funktionieren weiterhin. Verwenden Sie in der Beta nur fiktive Daten; de-identifizierte Echtdaten nur in einem freigegebenen Pilotprojekt.",
     "The AI contracted by the operator (OpenAI in the beta)": "Die vom Betreiber beauftragte KI (in der Beta OpenAI)",
     "The provider you registered": "Der von Ihnen registrierte Anbieter",
-    "No AI provider is configured": "Kein KI-Anbieter eingerichtet"
+    "No AI provider is configured": "Kein KI-Anbieter eingerichtet",
+    "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "Von diesem Lauf gespeicherte Dateien (sie bleiben nach dem Schließen der App erhalten; mit der Schaltfläche rechts speichern Sie eine Kopie)",
+    "Saved.": "Gespeichert."
   }
 }

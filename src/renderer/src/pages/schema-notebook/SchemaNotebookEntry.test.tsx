@@ -782,7 +782,7 @@ describe('SchemaNotebookEntry', () => {
     expect(container.textContent).toContain('21 KB')
 
     const saveButtons = Array.from(container.querySelectorAll('button')).filter(
-      (button) => button.textContent === copy.saveOutput
+      (button) => button.textContent === 'コピーを保存'
     )
     await act(async () => {
       saveButtons[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -796,7 +796,7 @@ describe('SchemaNotebookEntry', () => {
       runId: 'run-1',
       relativePath: 'plot.png'
     })
-    expect(container.textContent).toContain(copy.outputSaved)
+    expect(container.textContent).toContain('保存しました。')
   })
 
   it('shows the main-process sentence when a saved copy cannot be produced', async () => {
@@ -854,7 +854,7 @@ describe('SchemaNotebookEntry', () => {
       await Promise.resolve(lastRun.mock.results.at(-1)?.value)
     })
     const saveButton = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent === copy.saveOutput
+      (button) => button.textContent === 'コピーを保存'
     )
     await act(async () => {
       saveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -941,7 +941,7 @@ describe('SchemaNotebookEntry', () => {
     expect(stored.lastRunTableId).toBe('table-1')
 
     const saveButton = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent === copy.saveOutput
+      (button) => button.textContent === 'コピーを保存'
     )
     await act(async () => {
       saveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))

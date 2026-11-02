@@ -53,6 +53,12 @@ const MAX_OUTPUT_BYTES = 512 * 1024 * 1024
 
 const SAFE_RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
+// App-owned run metadata lives in its own dot directory inside the run directory, never in the user's
+// output namespace: a script that writes its own `run.json` must keep that file, and a record that
+// overwrote it would report success while the recorded checksum could never match (#121 review).
+export const RUN_METADATA_DIRECTORY = '.run'
+export const RUN_RECORD_FILENAME = 'record.json'
+
 const clip = (text: string): string =>
   text.length > OUTPUT_LIMIT ? `${text.slice(0, OUTPUT_LIMIT)}\n[truncated]` : text
 
@@ -116,6 +122,8 @@ export const collectRunOutputs = async (
       // A symlink may point outside the run directory; it is not this run's output.
       if (entry.isSymbolicLink()) continue
       if (entry.isDirectory()) {
+        // The app's own metadata directory is never a user output, even if a file somehow landed in it.
+        if (prefix === '' && entry.name === RUN_METADATA_DIRECTORY) continue
         await walk(absolute, relativePath)
         continue
       }

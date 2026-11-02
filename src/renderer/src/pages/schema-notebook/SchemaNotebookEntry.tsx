@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { ErrorNotice } from '@/components/error-notice'
 import { useProjectStore } from '@/stores/project-store'
 import { EthicsWritingNotice } from '@/pages/writing-safeguards/EthicsWritingNotice'
 import {
@@ -155,6 +156,23 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     () => loadSchemaNotebookDraft(projectId).lastRunTableId
   )
 
+  // Reads the newest run record for one table. Callers own the state update so they can guard against
+  // a project switch that lands mid-read.
+  const fetchLastRunOutputs = async (
+    tableId: string
+  ): Promise<{ runId: string; outputs: SchemaNotebookRunOutput[] } | null> => {
+    const notebook = api()
+    if (!notebook) return null
+    try {
+      const previous = await notebook.lastRun({ projectId, tableId })
+      return previous && previous.outputs.length > 0
+        ? { runId: previous.runId, outputs: previous.outputs }
+        : null
+    } catch {
+      return null
+    }
+  }
+
   useEffect(() => {
     const draft = loadSchemaNotebookDraft(projectId)
     setCode(draft.code)
@@ -172,27 +190,19 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     setLoadedProjectId(projectId)
     const notebook = api()
     let cancelled = false
-    // Read the run record before, and independently of, the table restore: a table file that went
-    // missing still leaves the figures from its last run on disk, and this is what keeps them listed.
-    if (notebook && runSource) {
-      void (async () => {
-        try {
-          const previous = await notebook.lastRun({ projectId, tableId: runSource })
-          if (cancelled) return
-          setRunOutputs(
-            previous && previous.outputs.length > 0
-              ? { runId: previous.runId, outputs: previous.outputs }
-              : null
-          )
-        } catch {
-          if (cancelled) return
-          setRunOutputs(null)
-        }
-      })()
+    // One table owns the listed outputs. When the table restores, its id decides which run is shown;
+    // when it cannot be restored we fall back to the recorded run source, so a lost table csv still
+    // leaves its figures listed (#121 review).
+    const hydrate = (tableId: string | undefined): void => {
+      if (!tableId) return
+      void fetchLastRunOutputs(tableId).then((previous) => {
+        if (cancelled) return
+        setRunOutputs(previous)
+      })
     }
     if (!draft.tableId || !notebook?.modelContext) {
-      // No table to reopen. Still cancel the record read on unmount/project switch.
       if (draft.tableId) setRestoreNotice(true)
+      hydrate(runSource)
       return () => {
         cancelled = true
       }
@@ -206,17 +216,24 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
           throw new Error('The stored table could not be reopened.')
         }
         setContext(restored)
+        // The restored table can differ from the draft's run source (the draft keeps the last run
+        // source separately), so re-read against the table that is actually open.
+        setRunSourceTableId(restored.tableId)
+        hydrate(restored.tableId)
       } catch {
         if (cancelled) return
         // Clearing the table reference is deliberate (the panel stops retrying an unreadable table).
         // `runSourceTableId` is not part of `tableInfo`, so the figures stay reachable.
         setTableInfo({})
         setRestoreNotice(true)
+        hydrate(runSource)
       }
     })()
     return () => {
       cancelled = true
     }
+    // fetchLastRunOutputs closes over api()/projectId only; the effect re-runs per project.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
   useEffect(() => {
@@ -301,6 +318,12 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       setCsvEncoding(response.encoding)
       setTableInfo({ tableId: response.context.tableId, filename: file.name })
       setRunSourceTableId(response.context.tableId)
+      // A different table means the listed files belong to someone else: clear them before reading this
+      // table's own newest run, so table A's figures can never sit beside table B's schema (#121 review).
+      setRunOutputs(null)
+      setOutputNotice(null)
+      setOutputError(null)
+      setRunOutputs(await fetchLastRunOutputs(response.context.tableId))
     } catch (error) {
       // Strip the IPC transport chrome so the panel shows the main process sentence, not
       // "Error invoking remote method 'schema-notebook:import-table': ...".
@@ -361,7 +384,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
         relativePath
       })
       // A cancelled dialog is a normal outcome, not a failure; it says nothing.
-      if (saved.saved) setOutputNotice(copy.outputSaved)
+      if (saved.saved) setOutputNotice(t('Saved.'))
     } catch (error) {
       setOutputError(failureText(error))
     }
@@ -550,8 +573,17 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
               still on disk and the record still lists them, so they stay listed and saveable. */}
           {runOutputs && runOutputs.outputs.length > 0 ? (
             <div className="space-y-1">
-              <p className="text-xs text-[#5a6b6c]">{copy.outputs}</p>
-              <ul aria-label={copy.outputs} className="space-y-1 text-xs">
+              <p className="text-xs text-[#5a6b6c]">
+                {t(
+                  'Files saved by this run (they stay after you close the app; use the button on the right to save a copy)'
+                )}
+              </p>
+              <ul
+                aria-label={t(
+                  'Files saved by this run (they stay after you close the app; use the button on the right to save a copy)'
+                )}
+                className="space-y-1 text-xs"
+              >
                 {runOutputs.outputs.map((output) => (
                   <li
                     key={output.relativePath}
@@ -561,7 +593,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                     <span className="font-mono">{output.relativePath}</span>
                     <span>{formatBytes(output.sizeBytes)}</span>
                     <button type="button" onClick={() => void saveRunOutput(output.relativePath)}>
-                      {copy.saveOutput}
+                      {t('Save a copy')}
                     </button>
                   </li>
                 ))}
@@ -572,9 +604,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                 </p>
               ) : null}
               {outputError ? (
-                <p data-testid="schema-notebook-output-error" className="text-xs text-[#9a5046]">
-                  {outputError}
-                </p>
+                <div data-testid="schema-notebook-output-error">
+                  <ErrorNotice inline level="error" description={outputError} />
+                </div>
               ) : null}
             </div>
           ) : null}

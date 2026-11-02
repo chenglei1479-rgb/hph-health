@@ -227,6 +227,45 @@ describe('schema Notebook run outputs survive the app', () => {
       runId: firstRun.runId
     })
   })
+
+  it('keeps a user file named run.json and stores its own record outside the output namespace', async () => {
+    const directory = await storageRoot()
+    const destination = join(directory, 'saved-user-run-json.json')
+    const userBytes = '{"user":"mine"}'
+    const notebook = service(directory, {
+      // The script writes a file called run.json itself; the app's metadata must not take its name.
+      run: async (_command, _scriptPath, cwd) => {
+        await writeFile(join(cwd, 'run.json'), userBytes)
+        return { stdout: '', stderr: '', code: 0 }
+      },
+      chooseSavePath: async () => ({ canceled: false, filePath: destination })
+    })
+    const { projectId, tableId } = await importTable(notebook)
+    const executed = await notebook.execute({
+      projectId,
+      tableId,
+      language: 'python',
+      code: 'print(1)'
+    })
+
+    expect(executed.local.outputs.map((output) => output.relativePath)).toEqual(['run.json'])
+    expect(executed.local.outputs[0]?.sizeBytes).toBe(Buffer.byteLength(userBytes))
+    // The user's file survives untouched...
+    const runDirectory = join(directory, 'runs', executed.runId)
+    await expect(readFile(join(runDirectory, 'run.json'), 'utf8')).resolves.toBe(userBytes)
+    // ...and the app's record lives somewhere else entirely, so it cannot overwrite it.
+    const record = JSON.parse(
+      await readFile(join(runDirectory, '.run', 'record.json'), 'utf8')
+    ) as { runId: string; outputs: unknown[] }
+    expect(record.runId).toBe(executed.runId)
+    expect(record.outputs).toHaveLength(1)
+
+    // The recorded checksum therefore still matches, so the copy can be saved.
+    await expect(
+      notebook.saveOutput({ projectId, runId: executed.runId, relativePath: 'run.json' })
+    ).resolves.toEqual({ saved: true })
+    await expect(readFile(destination, 'utf8')).resolves.toBe(userBytes)
+  })
 })
 
 const bundledPython = join(

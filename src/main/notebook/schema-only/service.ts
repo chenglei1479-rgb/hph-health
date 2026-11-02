@@ -24,6 +24,8 @@ import { createCategoricalOptInLog } from './categorical-opt-in'
 import { releaseCategoricalValuesForModel } from './categorical-release'
 import {
   executeLocalAnalysis,
+  RUN_METADATA_DIRECTORY,
+  RUN_RECORD_FILENAME,
   schemaNotebookRunDirectory,
   type CommandRunner
 } from './local-execute'
@@ -143,7 +145,11 @@ export const createSchemaNotebookService = (options: {
   const now = options.now ?? (() => new Date())
 
   const runRecordPath = (runId: string): string =>
-    join(schemaNotebookRunDirectory(runsDirectory, runId), 'run.json')
+    join(
+      schemaNotebookRunDirectory(runsDirectory, runId),
+      RUN_METADATA_DIRECTORY,
+      RUN_RECORD_FILENAME
+    )
 
   const missingOutputError = (message?: string): ApplicationCommandError =>
     new ApplicationCommandError(
