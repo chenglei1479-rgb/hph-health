@@ -105,6 +105,61 @@ export type ExecuteAnalysisRequest = {
   code: string
 }
 
+// One file a local run produced. It lives in the run's own durable directory under the app data
+// folder, so it outlives the run, a project switch, and an app restart (#121). The panel lists these
+// and can save a copy through the system dialog.
+export type SchemaNotebookRunOutput = {
+  /** Path inside the run directory, '/'-separated. Never absolute and never contains '..'. */
+  relativePath: string
+  sizeBytes: number
+  sha256: string
+  mimeType: string
+}
+
+// A run that finished but whose output file can no longer be read, or whose bytes changed after the
+// run recorded their checksum. The panel keeps the row visible and explains the failure instead of
+// silently saving the wrong file.
+export const SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE =
+  'schema-notebook-run-output-missing' as const
+
+// The run finished but its output files could not be recorded because a cap was exceeded. The run
+// directory is removed before the failure is reported, so nothing is left on disk without a record.
+// This code alone carries the caps; a produced file that cannot be read back has its own code below.
+export const SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE =
+  'schema-notebook-run-output-limit' as const
+
+// A produced file could not be read back after the run (gone, locked, or unreadable). Same cleanup as
+// the cap case, but the sentence must not mention the caps: the user did not hit a limit.
+export const SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE =
+  'schema-notebook-run-output-unreadable' as const
+
+export type SaveSchemaNotebookOutputRequest = {
+  projectId: string
+  runId: string
+  relativePath: string
+}
+
+// `saved: false` is a cancelled save dialog: a normal outcome, not an error.
+export type SaveSchemaNotebookOutputResponse = {
+  saved: boolean
+}
+
+// One run, as written to `<runs>/<runId>/run.json` at run end. This is the single storage the run
+// history and the "computed" counters build on (#121 stores it, #123 reads it). It deliberately keeps
+// no stdout, stderr, or head text: those can quote patient rows, and the run record outlives the panel.
+export type SchemaNotebookRunRecord = {
+  schemaVersion: 1
+  runId: string
+  projectId: string
+  tableId: string
+  language: 'python' | 'r'
+  startedAt: string
+  endedAt: string
+  exitCode: number | null
+  outputs: SchemaNotebookRunOutput[]
+  interpreter?: SchemaNotebookPythonInterpreter
+}
+
 export type GatedNotebookOutput = {
   error?: string
   stdout?: string
@@ -117,9 +172,13 @@ export type ExecuteAnalysisResponse = {
     stdout: string
     stderr: string
     exitCode: number | null
+    // Local only. Output file names never join `forModel`: a file may be named after a patient.
+    outputs: SchemaNotebookRunOutput[]
   }
   forModel: GatedNotebookOutput
   interpreter?: SchemaNotebookPythonInterpreter
+  /** Identity of the run that produced `local.outputs`; needed to save a copy later. */
+  runId: string
 }
 
 export type PatientDataTag = {

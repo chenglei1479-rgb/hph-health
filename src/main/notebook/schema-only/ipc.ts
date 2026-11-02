@@ -3,10 +3,14 @@ import { ApplicationCommandError } from '../../../shared/application-command-con
 import {
   SCHEMA_NOTEBOOK_CSV_ENCODING_CODE,
   SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
+  SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE,
+  SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE,
+  SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE,
   SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
   type CategoricalOptInRequest,
   type ExecuteAnalysisRequest,
-  type ImportTableRequest
+  type ImportTableRequest,
+  type SaveSchemaNotebookOutputRequest
 } from '../../../shared/schema-notebook'
 import { englishNativeTranslator, type NativeTranslator } from '../../locale/main-process-messages'
 import { createSchemaNotebookService, type SchemaNotebookService } from './service'
@@ -62,6 +66,46 @@ const localizeSchemaNotebookFailure =
         })
       )
     }
+    if (
+      error instanceof ApplicationCommandError &&
+      error.code === SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE
+    ) {
+      // One sentence covers both reasons the service reports (the file is gone, or its bytes changed),
+      // and the next step is the same for both: run the analysis again. The stable code rides along so
+      // a support report can quote it.
+      throw new Error(
+        translate(
+          'The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})',
+          { code: error.code }
+        )
+      )
+    }
+    if (
+      error instanceof ApplicationCommandError &&
+      error.code === SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE
+    ) {
+      // The run finished but its files could not be recorded, so the run directory was removed. The caps
+      // are part of the sentence: without them the user cannot tell why a 200-file loop failed.
+      throw new Error(
+        translate(
+          'The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})',
+          { code: error.code }
+        )
+      )
+    }
+    if (
+      error instanceof ApplicationCommandError &&
+      error.code === SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE
+    ) {
+      // No caps in this sentence: a file that could not be read back has nothing to do with a limit, and
+      // quoting one would send the user looking for a size problem that does not exist.
+      throw new Error(
+        translate(
+          'The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})',
+          { code: error.code }
+        )
+      )
+    }
     throw error
   }
 
@@ -109,6 +153,26 @@ export const registerSchemaNotebookIpc = (
       return localizeFailure(error)
     }
   })
+  ipcMainHandle(
+    'schema-notebook:save-output',
+    async (_event, request: SaveSchemaNotebookOutputRequest) => {
+      try {
+        return await service.saveOutput(request)
+      } catch (error) {
+        return localizeFailure(error)
+      }
+    }
+  )
+  ipcMainHandle(
+    'schema-notebook:last-run',
+    async (_event, request: { projectId: string; tableId: string }) => {
+      try {
+        return await service.lastRun(request.projectId, request.tableId)
+      } catch (error) {
+        return localizeFailure(error)
+      }
+    }
+  )
   ipcMainHandle('schema-notebook:patient-data-tags', () => service.patientDataTags())
   return service
 }

@@ -17,6 +17,8 @@ import { ApplicationCommandError } from '../../../shared/application-command-con
 import {
   SCHEMA_NOTEBOOK_CSV_ENCODING_CODE,
   SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE,
+  SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE,
+  SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE,
   SCHEMA_NOTEBOOK_TABLE_MISSING_CODE
 } from '../../../shared/schema-notebook'
 import { registerSchemaNotebookIpc } from './ipc'
@@ -114,6 +116,49 @@ it('lets an uncoded failure through unchanged', async () => {
   register(() => Promise.reject(failure))
 
   await expect(rejection()).resolves.toBe(failure)
+})
+
+it('turns an unrecordable output run into the sentences with its caps and code', async () => {
+  register(() =>
+    Promise.reject(
+      new ApplicationCommandError(
+        SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE,
+        'This run left more than 200 output files or 512 MB of output files, so its results were not saved.'
+      )
+    )
+  )
+
+  const error = await rejection()
+
+  const message = (error as Error).message
+  // The user needs the caps to know why it failed, and the code so support can trace it.
+  expect(message).toContain('200 files and 512 MB')
+  expect(message).toContain(SCHEMA_NOTEBOOK_RUN_OUTPUT_LIMIT_CODE)
+  // Not the raw service message: that one is English-only and names no next step.
+  expect(message).not.toBe(
+    'This run left more than 200 output files or 512 MB of output files, so its results were not saved.'
+  )
+})
+
+it('keeps the caps out of the unreadable-output sentence', async () => {
+  register(() =>
+    Promise.reject(
+      new ApplicationCommandError(
+        SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE,
+        'The output files from this run could not be read: EPERM: operation not permitted'
+      )
+    )
+  )
+
+  const error = await rejection()
+
+  const message = (error as Error).message
+  expect(message).toContain('could not be read')
+  expect(message).toContain(SCHEMA_NOTEBOOK_RUN_OUTPUT_UNREADABLE_CODE)
+  // The caps belong to the limit code only. Copy-pasting that sentence here would send the user looking
+  // for a size problem that does not exist, so this is asserted, not just commented.
+  expect(message).not.toContain('200')
+  expect(message).not.toContain('512')
 })
 
 await configureTestElectronHost(await import('electron'))

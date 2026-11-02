@@ -170,7 +170,10 @@
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "Los términos de búsqueda se han modificado durante la comprobación de privacidad. La búsqueda no se ha enviado. Retire la información de pacientes y vuelva a intentarlo.",
     "Choose a CSV file in UTF-8 or Shift-JIS. (Code: {{code}})": "Elija un archivo CSV en UTF-8 o Shift_JIS. (Código: {{code}})",
     "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "Falta el archivo de la tabla importada anteriormente o no se puede leer, por lo que el análisis no se ejecutó. Vuelva a elegir el archivo de la tabla y ejecútelo de nuevo. (Código: {{code}})",
-    "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "No se pudo iniciar el entorno de Python incluido, por lo que el análisis no se ejecutó. Reinstale la aplicación. (Código: {{code}})"
+    "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "No se pudo iniciar el entorno de Python incluido, por lo que el análisis no se ejecutó. Reinstale la aplicación. (Código: {{code}})",
+    "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "Los archivos de salida de esa ejecución faltan o han cambiado, por lo que no se guardó el archivo. Vuelva a ejecutar el análisis. (Código: {{code}})",
+    "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "No se pudieron guardar los archivos de salida de esa ejecución, por lo que no se conservaron sus resultados (hasta 200 archivos y 512 MB por ejecución). Vuelva a ejecutar el análisis. (Código: {{code}})",
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "No se pudieron leer los archivos de salida de esa ejecución, por lo que no se conservaron sus resultados. Vuelva a ejecutar el análisis. (Código: {{code}})"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Las nuevas conversaciones pueden ejecutar comandos, cambiar archivos, ejecutar código Notebook y acceder a la red sin preguntar primero. Las conversaciones existentes no cambian.",
@@ -7999,6 +8002,8 @@
     "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; de-identified real data only in an approved pilot.": "El cupo de IA de la invitación seed se ha agotado. Para continuar, registre su propia clave API de OpenAI o considere un plan de pago cuando esté disponible. La demostración (datos ficticios) y la búsqueda bibliográfica siguen disponibles. En la beta, utilice solo datos ficticios; los datos reales disociados se permiten solo en un piloto aprobado.",
     "The AI contracted by the operator (OpenAI in the beta)": "La IA contratada por el operador (OpenAI en la beta)",
     "The provider you registered": "El proveedor que usted registró",
-    "No AI provider is configured": "No hay proveedor de IA configurado"
+    "No AI provider is configured": "No hay proveedor de IA configurado",
+    "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "Archivos guardados por esta ejecución (se conservan tras cerrar la aplicación; utilice el botón de la derecha para guardar una copia)",
+    "Saved.": "Guardado."
   }
 }

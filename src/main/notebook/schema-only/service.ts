@@ -1,11 +1,12 @@
-import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { createHash, randomUUID } from 'node:crypto'
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, extname, join, resolve, sep, relative as relativePath } from 'node:path'
 
 import Papa from 'papaparse'
 import { createLogger } from '@aipoch/diagnostics/node'
 
 import {
+  SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE,
   SCHEMA_NOTEBOOK_TABLE_MISSING_CODE,
   type CategoricalOptInRequest,
   type ExecuteAnalysisRequest,
@@ -13,12 +14,21 @@ import {
   type ImportTableRequest,
   type ImportTableResponse,
   type PatientDataTag,
-  type SchemaModelContext
+  type SaveSchemaNotebookOutputRequest,
+  type SaveSchemaNotebookOutputResponse,
+  type SchemaModelContext,
+  type SchemaNotebookRunRecord
 } from '../../../shared/schema-notebook'
 import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import { createCategoricalOptInLog } from './categorical-opt-in'
 import { releaseCategoricalValuesForModel } from './categorical-release'
-import { executeLocalAnalysis, type CommandRunner } from './local-execute'
+import {
+  executeLocalAnalysis,
+  RUN_METADATA_DIRECTORY,
+  RUN_RECORD_FILENAME,
+  schemaNotebookRunDirectory,
+  type CommandRunner
+} from './local-execute'
 import { readTableInput } from './import-table'
 import { isHospitalApproved } from './machine-approval'
 import { buildSchemaModelContext } from './model-context'
@@ -26,6 +36,7 @@ import { createPatientDataTagStore } from './patient-data-tag'
 import { findDirectIdentifierColumns } from './identifier-columns'
 import { detectPatientPhiSpans, formatBlockedImport } from './patient-phi'
 import type { PythonCommand } from '../python-command'
+import { desktopFileInteraction } from '../../desktop-interaction'
 import { gateNotebookOutputs } from './release-model-text'
 import { profileTable, type LocalTable } from './schema-profile'
 import {
@@ -47,8 +58,19 @@ export type SchemaNotebookService = {
   optInCategorical: (request: CategoricalOptInRequest) => Promise<SchemaModelContext>
   modelContext: (projectId: string, tableId: string) => Promise<SchemaModelContext>
   execute: (request: ExecuteAnalysisRequest) => Promise<ExecuteAnalysisResponse>
+  saveOutput: (request: SaveSchemaNotebookOutputRequest) => Promise<SaveSchemaNotebookOutputResponse>
+  // The newest recorded run for a table, or null. Reading the same record `execute` wrote is what lets
+  // the panel show a figure again after the app restarts (#121); run history and counters stay in #123.
+  lastRun: (projectId: string, tableId: string) => Promise<SchemaNotebookRunRecord | null>
   patientDataTags: () => PatientDataTag[]
 }
+
+// The save dialog is a desktop capability. Injecting it keeps this module runnable in the Node
+// backend and in tests, the same way `resolvePython` and `run` are injected.
+export type ChooseRunOutputSavePath = (options: {
+  defaultPath: string
+  filters?: Array<{ name: string; extensions: string[] }>
+}) => Promise<{ canceled: boolean; filePath?: string }>
 
 const requireId = (value: string, label: string): string => {
   const trimmed = value.trim()
@@ -59,6 +81,32 @@ const requireId = (value: string, label: string): string => {
 const tableToCsv = (table: LocalTable): string =>
   Papa.unparse({ fields: table.columns, data: table.rows })
 
+// Output paths arrive from the renderer, so they are untrusted: only a plain relative path inside the
+// run directory is accepted, never an absolute path and never a `..` segment.
+const normalizeRunOutputPath = (value: string): string => {
+  const unified = value.trim().replaceAll('\\', '/')
+  const segments = unified.split('/').filter((part) => part !== '' && part !== '.')
+  if (
+    segments.length === 0 ||
+    unified.startsWith('/') ||
+    /^[A-Za-z]:/.test(unified) ||
+    segments.includes('..')
+  ) {
+    throw new Error('Invalid run output path.')
+  }
+  return segments.join('/')
+}
+
+const saveFiltersFor = (
+  relativePath: string
+): Array<{ name: string; extensions: string[] }> | undefined => {
+  const extension = extname(relativePath).toLowerCase().replace(/^\./, '')
+  return extension === '' ? undefined : [{ name: extension.toUpperCase(), extensions: [extension] }]
+}
+
+const defaultChooseSavePath: ChooseRunOutputSavePath = (request) =>
+  desktopFileInteraction().chooseSavePath(request)
+
 export const createSchemaNotebookService = (options: {
   directory: string
   approvalLogPath: string
@@ -66,6 +114,7 @@ export const createSchemaNotebookService = (options: {
   resolvePython?: () => Promise<PythonCommand>
   resolveR?: () => Promise<PythonCommand | undefined>
   run?: CommandRunner
+  chooseSavePath?: ChooseRunOutputSavePath
   machineApproved?: () => boolean
   readAgentContext?: (projectId: string) => Promise<string | undefined> | string | undefined
 }): SchemaNotebookService => {
@@ -87,6 +136,61 @@ export const createSchemaNotebookService = (options: {
       encoding: 'utf8',
       mode: 0o600
     })
+  }
+
+  // One durable directory per run holds everything the script wrote (#121). The run record is the
+  // single source of truth for the output list: the panel saves a copy against it, and the run history
+  // in #123 reads the same file. It deliberately stores no stdout/stderr text, which can quote rows.
+  const runsDirectory = join(options.directory, 'runs')
+  const now = options.now ?? (() => new Date())
+
+  const runRecordPath = (runId: string): string =>
+    join(
+      schemaNotebookRunDirectory(runsDirectory, runId),
+      RUN_METADATA_DIRECTORY,
+      RUN_RECORD_FILENAME
+    )
+
+  const missingOutputError = (message?: string): ApplicationCommandError =>
+    new ApplicationCommandError(
+      SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE,
+      message ??
+        'The files from that run are no longer on this device. Run the analysis again to create them.'
+    )
+
+  const readRunRecord = (runId: string): SchemaNotebookRunRecord => {
+    let raw: string
+    try {
+      raw = readFileSync(runRecordPath(runId), 'utf8')
+    } catch {
+      throw missingOutputError()
+    }
+    try {
+      return JSON.parse(raw) as SchemaNotebookRunRecord
+    } catch {
+      throw missingOutputError()
+    }
+  }
+
+  const writeRunRecord = (record: SchemaNotebookRunRecord): void => {
+    const path = runRecordPath(record.runId)
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, JSON.stringify(record, null, 2), { encoding: 'utf8', mode: 0o600 })
+  }
+
+  // Run ids start with the sortable ISO timestamp, so a reverse name sort is newest-first without
+  // reading a single record. The cap bounds how many files one panel open can touch.
+  const listRunIdsNewestFirst = (): string[] => {
+    try {
+      return readdirSync(runsDirectory, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
+        .reverse()
+        .slice(0, 200)
+    } catch {
+      return []
+    }
   }
 
   const schemaNotebookLog = createLogger('schema-notebook')
@@ -259,20 +363,41 @@ export const createSchemaNotebookService = (options: {
       const stored = readStored(tableId)
       if (stored.projectId !== projectId) throw new Error('Table does not belong to this project.')
       requireTableFile(tableId, 'csv')
+      // Sortable and unique, so the run history in #123 can order runs without reading every record.
+      const startedAt = now()
+      const runId = `run-${startedAt.toISOString().replace(/[:.]/gu, '-')}-${randomUUID().slice(0, 8)}`
       const localRun = await executeLocalAnalysis({
         language: request.language,
         code,
         tableCsv: readCsv(tableId),
+        runId,
+        runsDirectory,
         resolvePython: options.resolvePython,
         resolveR: options.resolveR,
         run: options.run
+      })
+      // The record is written before the response leaves, because a run the panel can list but the
+      // history cannot is exactly the state this ticket removes. A failed write therefore fails the
+      // run instead of returning a list nothing points at.
+      writeRunRecord({
+        schemaVersion: 1,
+        runId: localRun.runId,
+        projectId,
+        tableId,
+        language: request.language,
+        startedAt: startedAt.toISOString(),
+        endedAt: now().toISOString(),
+        exitCode: localRun.exitCode,
+        outputs: localRun.outputs,
+        ...(localRun.interpreter === undefined ? {} : { interpreter: localRun.interpreter })
       })
       const error =
         localRun.exitCode !== 0 || localRun.stderr.trim().length > 0
           ? localRun.stderr || localRun.stdout
           : undefined
       // Local stdout stays on the machine. Only this copy is eligible for a model,
-      // and only after the row refusal and the provider PHI gate.
+      // and only after the row refusal and the provider PHI gate. Output file names stay local too:
+      // a name can carry a patient name even when the bytes are already masked.
       const forModel = await gateNotebookOutputs(
         {
           ...(error === undefined ? {} : { error }),
@@ -286,14 +411,77 @@ export const createSchemaNotebookService = (options: {
         local: {
           stdout: localRun.stdout,
           stderr: localRun.stderr,
-          exitCode: localRun.exitCode
+          exitCode: localRun.exitCode,
+          outputs: localRun.outputs
         },
         forModel,
-        ...(localRun.interpreter === undefined ? {} : { interpreter: localRun.interpreter })
+        ...(localRun.interpreter === undefined ? {} : { interpreter: localRun.interpreter }),
+        runId: localRun.runId
       }
+    },
+    async saveOutput(request) {
+      const projectId = requireId(request.projectId, 'projectId')
+      const runId = requireId(request.runId, 'runId')
+      // Validated before the record read, so a traversal attempt is reported as an invalid id instead
+      // of being folded into the "no longer on this device" message.
+      const runDirectory = schemaNotebookRunDirectory(runsDirectory, runId)
+      const record = readRunRecord(runId)
+      if (record.projectId !== projectId) throw new Error('That run does not belong to this project.')
+      const target = normalizeRunOutputPath(request.relativePath)
+      const output = record.outputs.find((item) => item.relativePath === target)
+      if (!output) {
+        throw missingOutputError(
+          'That file is not part of this run. Run the analysis again to create it.'
+        )
+      }
+      const absolute = resolve(runDirectory, target)
+      const inside = relativePath(runDirectory, absolute)
+      if (inside === '' || inside === '..' || inside.startsWith(`..${sep}`)) {
+        throw new Error('Invalid run output path.')
+      }
+      let bytes: Buffer
+      try {
+        bytes = readFileSync(absolute)
+      } catch {
+        throw missingOutputError()
+      }
+      // The dialog only saves the bytes this run recorded. A file that changed on disk is reported,
+      // never saved under the run's checksum: that would make the saved copy unverifiable.
+      if (
+        bytes.byteLength !== output.sizeBytes ||
+        createHash('sha256').update(bytes).digest('hex') !== output.sha256
+      ) {
+        throw missingOutputError(
+          'That file changed after the run finished, so it was not saved. Run the analysis again.'
+        )
+      }
+      const filters = saveFiltersFor(target)
+      const selected = await (options.chooseSavePath ?? defaultChooseSavePath)({
+        defaultPath: target.includes('/') ? target.slice(target.lastIndexOf('/') + 1) : target,
+        ...(filters === undefined ? {} : { filters })
+      })
+      // A cancelled dialog is a normal outcome, not a failure.
+      if (selected.canceled || !selected.filePath) return { saved: false }
+      writeFileSync(selected.filePath, bytes)
+      return { saved: true }
     },
     patientDataTags() {
       return tags.list()
+    },
+    async lastRun(requestProjectId, requestTableId) {
+      const projectId = requireId(requestProjectId, 'projectId')
+      const tableId = requireId(requestTableId, 'tableId')
+      for (const runId of listRunIdsNewestFirst()) {
+        let record: SchemaNotebookRunRecord
+        try {
+          record = JSON.parse(readFileSync(runRecordPath(runId), 'utf8')) as SchemaNotebookRunRecord
+        } catch {
+          // A record that cannot be read is not the panel's problem; keep looking for an older one.
+          continue
+        }
+        if (record.projectId === projectId && record.tableId === tableId) return record
+      }
+      return null
     }
   }
 }

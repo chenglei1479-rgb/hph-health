@@ -253,9 +253,11 @@ const REMOTE_LOCAL_ONLY_CHANNELS: GroupedInventory = {
   'schema-notebook': [
     'execute',
     'import-table',
+    'last-run',
     'model-context',
     'opt-in-categorical',
-    'patient-data-tags'
+    'patient-data-tags',
+    'save-output'
   ],
   'remote-access': ['probe'],
   runtime: [

@@ -171,7 +171,10 @@
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "Условия поиска изменились при проверке конфиденциальности. Поисковый запрос не отправлен. Удалите данные пациентов и повторите попытку.",
     "Choose a CSV file in UTF-8 or Shift-JIS. (Code: {{code}})": "Выберите CSV-файл в кодировке UTF-8 или Shift_JIS. (Код: {{code}})",
     "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "Файл ранее импортированной таблицы отсутствует или недоступен для чтения, поэтому анализ не выполнялся. Выберите файл таблицы заново и запустите анализ. (Код: {{code}})",
-    "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "Встроенную среду Python не удалось запустить, поэтому анализ не выполнялся. Переустановите приложение. (Код: {{code}})"
+    "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "Встроенную среду Python не удалось запустить, поэтому анализ не выполнялся. Переустановите приложение. (Код: {{code}})",
+    "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "Выходные файлы того запуска отсутствуют или изменены, поэтому файл не был сохранён. Запустите анализ ещё раз. (Код: {{code}})",
+    "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "Не удалось сохранить выходные файлы того запуска, поэтому его результаты не сохранены (до 200 файлов и 512 МБ за запуск). Запустите анализ ещё раз. (Код: {{code}})",
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "Не удалось прочитать выходные файлы того запуска, поэтому его результаты не сохранены. Запустите анализ ещё раз. (Код: {{code}})"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "В новых диалогах агент может без предварительного разрешения выполнять команды, изменять файлы, запускать код Notebook и обращаться к сети. Существующие диалоги не изменятся.",
@@ -8138,6 +8141,8 @@
     "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; de-identified real data only in an approved pilot.": "Лимит ИИ по seed-приглашению исчерпан. Чтобы продолжить, зарегистрируйте свой API-ключ OpenAI или рассмотрите платный план, когда он появится. Демонстрация (вымышленные данные) и поиск по литературе продолжают работать. В бете используйте только вымышленные данные; обезличенные реальные данные — только в утверждённом пилотном проекте.",
     "The AI contracted by the operator (OpenAI in the beta)": "ИИ-сервис, с которым оператор заключил договор (в бете OpenAI)",
     "The provider you registered": "Зарегистрированный вами поставщик",
-    "No AI provider is configured": "Поставщик ИИ не настроен"
+    "No AI provider is configured": "Поставщик ИИ не настроен",
+    "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "Файлы, сохранённые этим запуском (они остаются после закрытия приложения; кнопка справа сохраняет копию)",
+    "Saved.": "Сохранено."
   }
 }
