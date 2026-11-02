@@ -884,9 +884,11 @@ describe('TB-01 remote preview admission', () => {
 const LOCAL_CATALOG_COMMANDS = [
   'schema-notebook:execute',
   'schema-notebook:import-table',
+  'schema-notebook:last-run',
   'schema-notebook:model-context',
   'schema-notebook:opt-in-categorical',
   'schema-notebook:patient-data-tags',
+  'schema-notebook:save-output',
   'statistician-review:export-package',
   'variable-definition:export-template',
   'variable-definition:generate',
@@ -949,6 +951,8 @@ describe('local catalog commands', () => {
       importTable: vi.fn(async (request: unknown) => ({ imported: request })),
       modelContext: vi.fn(async (projectId: string, tableId: string) => ({ projectId, tableId })),
       optInCategorical: vi.fn(async (request: unknown) => ({ opted: request })),
+      saveOutput: vi.fn(async (request: unknown) => ({ saved: true, request })),
+      lastRun: vi.fn(async () => null),
       patientDataTags: vi.fn(() => [{ id: 'tag' }])
     }
     const writingSafeguards = {
@@ -985,6 +989,8 @@ describe('local catalog commands', () => {
       schemaNotebook.importTable,
       schemaNotebook.modelContext,
       schemaNotebook.optInCategorical,
+      schemaNotebook.saveOutput,
+      schemaNotebook.lastRun,
       schemaNotebook.patientDataTags,
       writingSafeguards.getEthicsApproval,
       writingSafeguards.setEthicsApproval,
@@ -1023,6 +1029,19 @@ describe('local catalog commands', () => {
       await expect(
         composition.localWeb.invoke('schema-notebook:patient-data-tags', invocation())
       ).resolves.toEqual([{ id: 'tag' }])
+      const runOutput = { projectId: 'project-1', runId: 'run-1', relativePath: 'plot.png' }
+      await expect(
+        composition.localWeb.invoke('schema-notebook:save-output', {
+          ...invocation(),
+          args: [runOutput]
+        })
+      ).resolves.toEqual({ saved: true, request: runOutput })
+      await expect(
+        composition.localWeb.invoke('schema-notebook:last-run', {
+          ...invocation(),
+          args: [{ projectId: 'project-1', tableId: 'table-1' }]
+        })
+      ).resolves.toBeNull()
       await expect(
         composition.localWeb.invoke('writing-safeguards:get-ethics-approval', {
           ...invocation(),

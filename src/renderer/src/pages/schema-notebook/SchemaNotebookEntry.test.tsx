@@ -122,14 +122,20 @@ describe('SchemaNotebookEntry', () => {
       }
     })
     const execute = vi.fn(async (): Promise<ExecuteAnalysisResponse> => ({
-      local: { stdout: 'group,n\nA,4\nB,20', stderr: 'ValueError: n=2', exitCode: 1 },
+      local: {
+        stdout: 'group,n\nA,4\nB,20',
+        stderr: 'ValueError: n=2',
+        exitCode: 1,
+        outputs: []
+      },
       forModel: {
         error: 'ValueError: n=<10',
         stdout: 'group,n\nA,<10\nB,20',
         head: 'A,<10',
         table: 'group,n\nA,<10\nB,20'
       },
-      interpreter: { source: 'bundled' as const, version: '3.12.15' }
+      interpreter: { source: 'bundled' as const, version: '3.12.15' },
+      runId: 'run-1'
     }))
     window.api = {
       schemaNotebook: {
@@ -137,7 +143,9 @@ describe('SchemaNotebookEntry', () => {
         importTable,
         optInCategorical: vi.fn(),
         execute,
-        modelContext: vi.fn()
+        modelContext: vi.fn(),
+        lastRun: vi.fn(async () => null),
+        saveOutput: vi.fn(async () => ({ saved: true }))
       }
     } as unknown as Window['api']
     container = document.createElement('div')
@@ -216,9 +224,10 @@ describe('SchemaNotebookEntry', () => {
     // The fallback wording is the other half of the same contract: it must say the bundled runtime
     // could not start, not that a file is missing.
     execute.mockResolvedValueOnce({
-      local: { stdout: 'group,n\nA,4\nB,20', stderr: '', exitCode: 0 },
+      local: { stdout: 'group,n\nA,4\nB,20', stderr: '', exitCode: 0, outputs: [] },
       forModel: { stdout: 'group,n\nA,4\nB,20', table: 'group,n\nA,4\nB,20' },
-      interpreter: { source: 'system' as const, version: '3.13.15' }
+      interpreter: { source: 'system' as const, version: '3.13.15' },
+      runId: 'run-2'
     })
     const runAgain = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent === schemaNotebookCopy('ja').run
@@ -672,5 +681,192 @@ describe('SchemaNotebookEntry', () => {
     expect(container.textContent).toContain('Workbook has no worksheets.')
     // The old "cannot be restored" notice is gone: the two failures are different.
     expect(container.textContent).not.toContain(copy.restoreNotice)
+  })
+
+  it('lists the files a run kept and saves a copy of one', async () => {
+    const copy = schemaNotebookCopy('ja')
+    const saveOutput = vi.fn(async () => ({ saved: true }))
+    const lastRun = vi.fn(async () => ({
+      runId: 'run-restored',
+      outputs: [
+        { relativePath: 'plot.png', sizeBytes: 12_779, sha256: 'a'.repeat(64), mimeType: 'image/png' }
+      ]
+    }))
+    const execute = vi.fn(async (): Promise<ExecuteAnalysisResponse> => ({
+      local: {
+        stdout: '3',
+        stderr: '',
+        exitCode: 0,
+        outputs: [
+          {
+            relativePath: 'plot.png',
+            sizeBytes: 12_779,
+            sha256: 'a'.repeat(64),
+            mimeType: 'image/png'
+          },
+          {
+            relativePath: 'figures/nested.svg',
+            sizeBytes: 21_219,
+            sha256: 'b'.repeat(64),
+            mimeType: 'image/svg+xml'
+          }
+        ]
+      },
+      forModel: { stdout: '3' },
+      runId: 'run-1'
+    }))
+    // A stored draft means the panel reopens the project with the table it had, which is also the path
+    // that must show the previous run's figures again after a restart.
+    localStorage.setItem(
+      schemaNotebookDraftKey('study-1'),
+      JSON.stringify({ tableId: 'table-1', filename: 'study.csv', code: 'print(1)', language: 'python' })
+    )
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute,
+        modelContext: vi.fn(async () => ({
+          mode: 'schema-only' as const,
+          tableId: 'table-1',
+          rowCount: 3,
+          columns: [{ name: 'age', dtype: 'integer' as const }],
+          syntheticSampleRows: [['900001']],
+          syntheticSampleNote: 'synthetic',
+          localFilename: 'table.csv' as const
+        })),
+        lastRun,
+        saveOutput
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(lastRun.mock.results.at(-1)?.value)
+    })
+
+    // Reopened project: the previous run's file is listed before anything runs in this session.
+    expect(lastRun).toHaveBeenCalledWith({ projectId: 'study-1', tableId: 'table-1' })
+    const restored = container.querySelectorAll('[data-testid="schema-notebook-output"]')
+    expect(restored).toHaveLength(1)
+    expect(restored[0]?.textContent).toContain('plot.png')
+    expect(restored[0]?.textContent).toContain('12 KB')
+
+    // A new run replaces the list with what it kept, including a nested file.
+    const run = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.run
+    )
+    await act(async () => {
+      run?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(execute.mock.results.at(-1)?.value)
+    })
+    const rows = container.querySelectorAll('[data-testid="schema-notebook-output"]')
+    expect(rows).toHaveLength(2)
+    expect(container.textContent).toContain('figures/nested.svg')
+    expect(container.textContent).toContain('21 KB')
+
+    const saveButtons = Array.from(container.querySelectorAll('button')).filter(
+      (button) => button.textContent === copy.saveOutput
+    )
+    await act(async () => {
+      saveButtons[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(saveOutput.mock.results.at(-1)?.value)
+    })
+    // The copy is saved against THIS run, not the restored one.
+    expect(saveOutput).toHaveBeenCalledWith({
+      projectId: 'study-1',
+      runId: 'run-1',
+      relativePath: 'plot.png'
+    })
+    expect(container.textContent).toContain(copy.outputSaved)
+  })
+
+  it('shows the main-process sentence when a saved copy cannot be produced', async () => {
+    const copy = schemaNotebookCopy('ja')
+    const lastRun = vi.fn(async () => ({
+      runId: 'run-restored',
+      outputs: [
+        { relativePath: 'plot.png', sizeBytes: 12, sha256: 'c'.repeat(64), mimeType: 'image/png' }
+      ]
+    }))
+    const saveOutput = vi.fn(async () => {
+      throw new Error(
+        "Error invoking remote method 'schema-notebook:save-output': Error: The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: schema-notebook-run-output-missing)"
+      )
+    })
+    localStorage.setItem(
+      schemaNotebookDraftKey('study-1'),
+      JSON.stringify({ tableId: 'table-1', filename: 'study.csv', code: 'print(1)', language: 'python' })
+    )
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute: vi.fn(),
+        modelContext: vi.fn(async () => ({
+          mode: 'schema-only' as const,
+          tableId: 'table-1',
+          rowCount: 3,
+          columns: [{ name: 'age', dtype: 'integer' as const }],
+          syntheticSampleRows: [['900001']],
+          syntheticSampleNote: 'synthetic',
+          localFilename: 'table.csv' as const
+        })),
+        lastRun,
+        saveOutput
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(lastRun.mock.results.at(-1)?.value)
+    })
+    const saveButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.saveOutput
+    )
+    await act(async () => {
+      saveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve(saveOutput.mock.results.at(-1)?.value).catch(() => undefined)
+    })
+
+    // The IPC transport chrome is stripped and the main-process sentence is shown as-is.
+    const error = container.querySelector('[data-testid="schema-notebook-output-error"]')
+    expect(error?.textContent).toContain('Run the analysis again.')
+    expect(error?.textContent).toContain('schema-notebook-run-output-missing')
+    expect(error?.textContent).not.toContain('Error invoking remote method')
   })
 })

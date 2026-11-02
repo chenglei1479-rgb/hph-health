@@ -39,6 +39,10 @@ export type SchemaNotebookCopy = {
   // Says which interpreter ran the script, so a PATH fallback and a bundled run are distinguishable.
   interpreterBundled: string
   interpreterSystem: string
+  // Files the run wrote and kept. The panel lists them with a size and can save a copy of each.
+  outputs: string
+  saveOutput: string
+  outputSaved: string
 }
 
 const ja: SchemaNotebookCopy = {
@@ -83,7 +87,11 @@ const ja: SchemaNotebookCopy = {
   identifierWarnings:
     '氏名・患者IDなど直接識別子の送信を防ぐため、送信前チェックと制限があります。絶対保証ではありません。',
   restoreNotice:
-    '前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。'
+    '前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。',
+  outputs:
+    'この実行で保存したファイル（アプリを閉じても残ります。右のボタンでコピーを保存できます）',
+  saveOutput: 'コピーを保存',
+  outputSaved: '保存しました。'
 }
 
 const catalogs: Record<string, SchemaNotebookCopy> = {

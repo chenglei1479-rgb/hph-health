@@ -1,4 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ApplicationCommandError } from '../../../shared/application-command-contract'
 import { SCHEMA_NOTEBOOK_PYTHON_UNAVAILABLE_CODE } from '../../../shared/schema-notebook'
@@ -18,6 +21,18 @@ vi.mock('./bundled-python', async (original) => {
 
 const { executeLocalAnalysis } = await import('./local-execute')
 
+const roots: string[] = []
+
+const runsDirectory = async (): Promise<string> => {
+  const root = await mkdtemp(join(tmpdir(), 'schema-notebook-interpreter-'))
+  roots.push(root)
+  return root
+}
+
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
+})
+
 describe('schema-notebook interpreter failures', () => {
   it('raises a coded error when the packaged interpreter exists but cannot start', async () => {
     resolution.value = {
@@ -29,7 +44,9 @@ describe('schema-notebook interpreter failures', () => {
     const error = await executeLocalAnalysis({
       language: 'python',
       code: 'print(1)',
-      tableCsv: 'a\n1'
+      tableCsv: 'a\n1',
+      runId: 'run-unusable',
+      runsDirectory: await runsDirectory()
     }).catch((reason: unknown) => reason)
 
     expect(error).toBeInstanceOf(ApplicationCommandError)
@@ -46,10 +63,14 @@ describe('schema-notebook interpreter failures', () => {
     const result = await executeLocalAnalysis({
       language: 'python',
       code: 'print(1)',
-      tableCsv: 'a\n1'
+      tableCsv: 'a\n1',
+      runId: 'run-missing',
+      runsDirectory: await runsDirectory()
     })
 
     expect(result.exitCode).toBe(127)
     expect(result.stderr).toContain('was not found')
+    // Nothing ran, so there is nothing to keep.
+    expect(result.outputs).toEqual([])
   })
 })

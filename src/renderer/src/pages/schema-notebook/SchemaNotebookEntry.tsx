@@ -11,7 +11,8 @@ import type {
   CsvEncoding,
   ExecuteAnalysisResponse,
   ImportTableResponse,
-  SchemaModelContext
+  SchemaModelContext,
+  SchemaNotebookRunOutput
 } from '../../../../shared/schema-notebook'
 import { deliverableCardCopy } from '../home/deliverable-packages'
 import { schemaNotebookCopy } from './copy'
@@ -47,6 +48,15 @@ type SchemaNotebookApi = {
     language: 'python' | 'r'
     code: string
   }) => Promise<ExecuteAnalysisResponse>
+  saveOutput: (request: {
+    projectId: string
+    runId: string
+    relativePath: string
+  }) => Promise<{ saved: boolean }>
+  lastRun: (request: {
+    projectId: string
+    tableId: string
+  }) => Promise<{ runId: string; outputs: SchemaNotebookRunOutput[] } | null>
   modelContext: (request: { projectId: string; tableId: string }) => Promise<SchemaModelContext>
   patientDataTags: () => Promise<Array<{ projectId: string }>>
 }
@@ -54,6 +64,13 @@ type SchemaNotebookApi = {
 const api = (): SchemaNotebookApi | null => {
   const candidate = window.api as { schemaNotebook?: SchemaNotebookApi } | undefined
   return candidate?.schemaNotebook ?? null
+}
+
+// Small enough to avoid a formatting dependency: the panel only shows a rough size next to a name.
+const formatBytes = (bytes: number): string => {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${bytes} B`
 }
 
 // CSV bytes travel to the main process, which owns decoding. Excel on a Japanese Windows writes
@@ -113,6 +130,14 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
   const [restoreNotice, setRestoreNotice] = useState(false)
   const [csvEncoding, setCsvEncoding] = useState<CsvEncoding | undefined>(undefined)
   const [result, setResult] = useState<ExecuteAnalysisResponse | null>(null)
+  // Files the current table's newest run left behind. Loaded from the run record on mount, so a figure
+  // is still listed after the app restarts (#121); the record itself, not this state, is the storage.
+  const [runOutputs, setRunOutputs] = useState<{
+    runId: string
+    outputs: SchemaNotebookRunOutput[]
+  } | null>(null)
+  const [outputNotice, setOutputNotice] = useState<string | null>(null)
+  const [outputError, setOutputError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   // The imported table is referenced by its stored id, never by file contents. It can go missing
   // (project cleanup, restarted storage), so the restore path re-reads the context and says so.
@@ -131,6 +156,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     setLanguage(draft.language)
     setContext(null)
     setResult(null)
+    setRunOutputs(null)
+    setOutputNotice(null)
+    setOutputError(null)
     setBlocked(null)
     setRestoreNotice(false)
     setTableInfo({ tableId: draft.tableId, filename: draft.filename })
@@ -142,6 +170,22 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       return
     }
     let cancelled = false
+    // The run record is read independently of the table restore: a table file that went missing still
+    // leaves the figures from its last run on disk, and they must stay listed and saveable.
+    void (async () => {
+      try {
+        const previous = await notebook.lastRun({ projectId, tableId: draft.tableId! })
+        if (cancelled) return
+        setRunOutputs(
+          previous && previous.outputs.length > 0
+            ? { runId: previous.runId, outputs: previous.outputs }
+            : null
+        )
+      } catch {
+        if (cancelled) return
+        setRunOutputs(null)
+      }
+    })()
     void (async () => {
       try {
         const restored = await notebook.modelContext({ projectId, tableId: draft.tableId! })
@@ -264,14 +308,20 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     if (!notebook || !context) return
     setBusy(true)
     try {
-      setResult(
-        await notebook.execute({
-          projectId,
-          tableId: context.tableId,
-          language,
-          code
-        })
+      const executed = await notebook.execute({
+        projectId,
+        tableId: context.tableId,
+        language,
+        code
+      })
+      setResult(executed)
+      setRunOutputs(
+        executed.local.outputs.length > 0
+          ? { runId: executed.runId, outputs: executed.local.outputs }
+          : null
       )
+      setOutputNotice(null)
+      setOutputError(null)
     } catch (error) {
       // The main process localizes this failure: the execute channel is a direct IPC channel, so a code
       // set on the thrown error never reaches the renderer. Showing the sentence as-is keeps the panel
@@ -279,6 +329,26 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       setBlocked(failureText(error))
     } finally {
       setBusy(false)
+    }
+  }
+
+  // Saves one copy of a run output through the system dialog. The main process re-checks the bytes
+  // against the checksum the run recorded, so a file changed on disk is reported instead of saved.
+  const saveRunOutput = async (relativePath: string): Promise<void> => {
+    const notebook = api()
+    if (!notebook || !runOutputs) return
+    setOutputNotice(null)
+    setOutputError(null)
+    try {
+      const saved = await notebook.saveOutput({
+        projectId,
+        runId: runOutputs.runId,
+        relativePath
+      })
+      // A cancelled dialog is a normal outcome, not a failure; it says nothing.
+      if (saved.saved) setOutputNotice(copy.outputSaved)
+    } catch (error) {
+      setOutputError(failureText(error))
     }
   }
 
@@ -456,6 +526,47 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                   <p>{copy.maskingCheck}</p>
                   <pre aria-label={copy.maskingCheck}>{JSON.stringify(result.forModel)}</pre>
                   <p>{copy.pseudonymized}</p>
+                </div>
+              ) : null}
+              {/* Files the run kept. Listed from the run record, so they survive a restart and a
+                  project switch; saving one goes through the system dialog. */}
+              {runOutputs && runOutputs.outputs.length > 0 ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-[#5a6b6c]">{copy.outputs}</p>
+                  <ul aria-label={copy.outputs} className="space-y-1 text-xs">
+                    {runOutputs.outputs.map((output) => (
+                      <li
+                        key={output.relativePath}
+                        data-testid="schema-notebook-output"
+                        className="flex flex-wrap items-center gap-2"
+                      >
+                        <span className="font-mono">{output.relativePath}</span>
+                        <span>{formatBytes(output.sizeBytes)}</span>
+                        <button
+                          type="button"
+                          onClick={() => void saveRunOutput(output.relativePath)}
+                        >
+                          {copy.saveOutput}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {outputNotice ? (
+                    <p
+                      data-testid="schema-notebook-output-saved"
+                      className="text-xs text-[#315b67]"
+                    >
+                      {outputNotice}
+                    </p>
+                  ) : null}
+                  {outputError ? (
+                    <p
+                      data-testid="schema-notebook-output-error"
+                      className="text-xs text-[#9a5046]"
+                    >
+                      {outputError}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>

@@ -5,7 +5,10 @@ import type {
   ImportTableRequest,
   ImportTableResponse,
   PatientDataTag,
-  SchemaModelContext
+  SaveSchemaNotebookOutputRequest,
+  SaveSchemaNotebookOutputResponse,
+  SchemaModelContext,
+  SchemaNotebookRunRecord
 } from '../../../shared/schema-notebook'
 import {
   defineApplicationCommand,
@@ -46,6 +49,18 @@ const schemaNotebookOptInCategoricalCommand = defineApplicationCommand<
   SchemaModelContext
 >('schema-notebook:opt-in-categorical')
 
+const schemaNotebookSaveOutputCommand = defineApplicationCommand<
+  'schema-notebook:save-output',
+  readonly [request: SaveSchemaNotebookOutputRequest],
+  SaveSchemaNotebookOutputResponse
+>('schema-notebook:save-output')
+
+const schemaNotebookLastRunCommand = defineApplicationCommand<
+  'schema-notebook:last-run',
+  readonly [request: { projectId: string; tableId: string }],
+  SchemaNotebookRunRecord | null
+>('schema-notebook:last-run')
+
 const schemaNotebookPatientDataTagsCommand = defineApplicationCommand<
   'schema-notebook:patient-data-tags',
   readonly [],
@@ -57,6 +72,8 @@ const schemaNotebookApplicationCommandGroup = defineApplicationCommandGroup('sch
   schemaNotebookImportTableCommand,
   schemaNotebookModelContextCommand,
   schemaNotebookOptInCategoricalCommand,
+  schemaNotebookSaveOutputCommand,
+  schemaNotebookLastRunCommand,
   schemaNotebookPatientDataTagsCommand
 ] as const)
 
@@ -82,6 +99,14 @@ const registerSchemaNotebookApplicationCommands = (
       'schema-notebook:opt-in-categorical': (invocation) => {
         assertLocalCaller(invocation.callerContext, schemaNotebookOptInCategoricalCommand.name)
         return service.optInCategorical(invocation.args[0])
+      },
+      'schema-notebook:save-output': (invocation) => {
+        assertLocalCaller(invocation.callerContext, schemaNotebookSaveOutputCommand.name)
+        return service.saveOutput(invocation.args[0])
+      },
+      'schema-notebook:last-run': (invocation) => {
+        assertLocalCaller(invocation.callerContext, schemaNotebookLastRunCommand.name)
+        return service.lastRun(invocation.args[0].projectId, invocation.args[0].tableId)
       },
       'schema-notebook:patient-data-tags': (invocation) => {
         assertLocalCaller(invocation.callerContext, schemaNotebookPatientDataTagsCommand.name)

@@ -168,7 +168,8 @@
     "The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.": "隐私检查更改了检索词，未发送检索请求。请移除患者信息后重试。",
     "Choose a CSV file in UTF-8 or Shift-JIS. (Code: {{code}})": "请选择 UTF-8 或 Shift_JIS 编码的 CSV 文件。（代码：{{code}}）",
     "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "找不到上次导入的表格文件或无法读取，因此未执行分析。请重新选择表格文件后再运行。（代码：{{code}}）",
-    "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "随附的 Python 运行环境无法启动，因此未执行分析。请重新安装应用。（代码：{{code}}）"
+    "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "随附的 Python 运行环境无法启动，因此未执行分析。请重新安装应用。（代码：{{code}}）",
+    "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "该次运行的输出文件缺失或已更改，因此未保存文件。请重新运行分析。（代码：{{code}}）"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新对话可以无需询问直接运行命令、修改文件、执行 Notebook 代码和访问网络。已有对话不受影响。",
