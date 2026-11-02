@@ -460,7 +460,8 @@ const ProjectFileItems = ({
   previewById,
   onPreview,
   onOpenInPanel,
-  onAddToResearchPackage
+  onAddToResearchPackage,
+  canAddToResearchPackage
 }: {
   files: ProjectFileItem[]
   viewMode: ProjectFilesViewMode
@@ -468,6 +469,7 @@ const ProjectFileItems = ({
   onPreview: (file: ProjectFileItem) => void
   onOpenInPanel: (file: ProjectFileItem) => void
   onAddToResearchPackage?: (file: ProjectFileItem) => void
+  canAddToResearchPackage?: (file: ProjectFileItem) => boolean
 }): React.JSX.Element => {
   const { t } = useTranslation()
 
@@ -485,9 +487,11 @@ const ProjectFileItems = ({
           file.source === 'upload'
             ? t('Preview uploaded file {{name}}', { name: file.name })
             : t('Preview generated file {{name}}', { name: file.name })
-        const addToResearchPackage = onAddToResearchPackage
-          ? () => onAddToResearchPackage(file)
-          : undefined
+        // No owning Session means no package to add to, so the action is never offered at all.
+        const addToResearchPackage =
+          onAddToResearchPackage && (canAddToResearchPackage?.(file) ?? true)
+            ? () => onAddToResearchPackage(file)
+            : undefined
         if (viewMode === 'list') {
           return (
             <FileListRow

@@ -123,4 +123,21 @@ describe('package operation preselect', () => {
 
     expect(usePackageOperationStore.getState().preselect).toBeNull()
   })
+
+  // A selection that times out in the main process settles as a failure, not a cancellation, so the
+  // request must not survive into the next export through that branch either.
+  it('drops an unconsumed request when the export fails before showing the selector', () => {
+    usePackageOperationStore.getState().preselectResearchPackageFile({
+      fileId: 'artifact-1',
+      filename: 'plot.png'
+    })
+    usePackageOperationStore.getState().receive({
+      id: 'operation-1',
+      kind: 'export',
+      state: 'failed',
+      progress: { phase: 'selecting' }
+    })
+
+    expect(usePackageOperationStore.getState().preselect).toBeNull()
+  })
 })

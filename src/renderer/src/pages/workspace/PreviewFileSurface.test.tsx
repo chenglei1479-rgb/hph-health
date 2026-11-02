@@ -1302,6 +1302,37 @@ describe('PreviewFileSurface managed text versions', () => {
     )
   })
 
+  it('offers adding the previewed Version to the research package beside its download', async () => {
+    useSessionStore.setState({
+      sessions: [{ id: 'session-1', projectId: 'project-1' }] as never
+    })
+    await act(async () => {
+      root.render(
+        <PreviewFileSurface
+          item={{ ...managedUploadItem, selectedVersionId: 'upload-v1', versionNumber: 1 }}
+          onClose={vi.fn()}
+        />
+      )
+      await Promise.resolve()
+    })
+
+    const action = container.querySelector<HTMLElement>(
+      '[data-testid="preview-add-to-research-package"]'
+    )
+    expect(action).not.toBeNull()
+
+    await act(async () => {
+      action?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await Promise.resolve()
+    })
+
+    // This harness has no package export bridge, and the refusal names the file instead of hiding.
+    const toast = container.querySelector('[data-testid="preview-package-inclusion-error"]')
+    expect(toast?.textContent).toContain(
+      'Could not add README.md to the research package. Try again.'
+    )
+  })
+
   it('replaces preview actions with text-only Cancel and Save controls while editing', async () => {
     const managedArtifactItem: PreviewFileItem = {
       ...managedUploadItem,

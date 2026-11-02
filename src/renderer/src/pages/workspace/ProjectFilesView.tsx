@@ -17,6 +17,7 @@ import { relativeTimeParts, type RelativeTimeUnit } from '@/lib/format-relative-
 import { cn } from '@/lib/utils'
 import { useGrantedFoldersStore } from '@/stores/granted-folders-store'
 import { useNavigationStore } from '@/stores/navigation-store'
+import { useSessionStore } from '@/stores/session-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import {
   PROJECT_FILES_PREVIEW_ID,
@@ -210,7 +211,8 @@ const ProjectArtifactGroupSection = ({
   previewById,
   onPreview,
   onOpenInPanel,
-  onAddToResearchPackage
+  onAddToResearchPackage,
+  canAddToResearchPackage
 }: {
   group: ArtifactGroupItem
   title: string
@@ -228,6 +230,7 @@ const ProjectArtifactGroupSection = ({
   onPreview: (file: ProjectFileItem) => void
   onOpenInPanel: (file: ProjectFileItem) => void
   onAddToResearchPackage: (file: ProjectFileItem) => void
+  canAddToResearchPackage: (file: ProjectFileItem) => boolean
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const sectionId = `session:${group.sessionId}`
@@ -271,6 +274,7 @@ const ProjectArtifactGroupSection = ({
               onPreview={onPreview}
               onOpenInPanel={onOpenInPanel}
               onAddToResearchPackage={onAddToResearchPackage}
+              canAddToResearchPackage={canAddToResearchPackage}
             />
           ) : null}
           {page?.error ? (
@@ -521,13 +525,29 @@ const ProjectFilesViewContent = ({
   )
   const addToResearchPackage = (file: ProjectFileItem): void => {
     setPackageIncludeError(undefined)
-    void addFileToResearchPackage(file).then(
+    const target = {
+      projectId: file.projectId,
+      sessionId: file.sessionId,
+      fileId: file.sourceFileId,
+      filename: file.name
+    }
+    void addFileToResearchPackage(target).then(
       (started) => {
         if (!started) setPackageIncludeError(file)
       },
       () => setPackageIncludeError(file)
     )
   }
+  // A package export belongs to one Session, so a file with no loaded owning Session (an upload
+  // still on the pending pseudo-session, a session not in this project) gets no action at all: an
+  // entry that can only ever fail is worse than no entry.
+  const sessionKeys = useSessionStore((state) => state.sessions)
+  const packageableSessionKeys = useMemo(
+    () => new Set(sessionKeys.map((session) => `${session.projectId}:${session.id}`)),
+    [sessionKeys]
+  )
+  const canAddToResearchPackage = (file: ProjectFileItem): boolean =>
+    packageableSessionKeys.has(`${file.projectId}:${file.sessionId}`)
 
   const grantedRoots = useGrantedFoldersStore((state) => state.roots)
   const isLocalMode = sourceMode === 'local'
@@ -798,6 +818,7 @@ const ProjectFilesViewContent = ({
                       onPreview={previewFile}
                       onOpenInPanel={openFileInPanel}
                       onAddToResearchPackage={addToResearchPackage}
+                      canAddToResearchPackage={canAddToResearchPackage}
                     />
                   ) : null}
                   <div
@@ -876,6 +897,7 @@ const ProjectFilesViewContent = ({
                   onPreview={previewFile}
                   onOpenInPanel={openFileInPanel}
                   onAddToResearchPackage={addToResearchPackage}
+                  canAddToResearchPackage={canAddToResearchPackage}
                 />
               ))}
               <div ref={groupsSentinelRef} data-testid="group-page-sentinel" className="h-px" />

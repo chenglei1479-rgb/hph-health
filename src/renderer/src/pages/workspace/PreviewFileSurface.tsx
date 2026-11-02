@@ -16,6 +16,7 @@ import {
   Loader2,
   Maximize2,
   MoreHorizontal,
+  Package,
   Pencil,
   X
 } from 'lucide-react'
@@ -39,6 +40,7 @@ import { Button } from '@/components/ui/button'
 import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { errorDetail } from '@/lib/error-detail'
+import { addFileToResearchPackage } from '@/lib/research-package-inclusion'
 import type { PreviewFileItem, PreviewFileViewState } from '@/stores/preview-workbench-store'
 import { usePreviewWorkbenchStore } from '@/stores/preview-workbench-store'
 import { useNavigationStore } from '@/stores/navigation-store'
@@ -364,6 +366,26 @@ const PreviewFileHeader = ({
       ...(item.mimeType ? { mimeType: item.mimeType } : {})
     }
   }, [item.managedFileId, item.mimeType, item.name, item.path, item.projectId, item.source])
+  // Adding to the research package opens the owning Session's export selector with this Version
+  // checked. A refused start is stated here, beside the action, instead of being swallowed.
+  const [packageIncludeError, setPackageIncludeError] = useState<string | undefined>(undefined)
+  const canAddToResearchPackage = Boolean(
+    item.projectId && item.managedFileId && item.sessionId && item.source !== 'local'
+  )
+  const addToResearchPackage = (): void => {
+    setPackageIncludeError(undefined)
+    void addFileToResearchPackage({
+      projectId: item.projectId,
+      sessionId: item.sessionId,
+      fileId: item.managedFileId,
+      filename: item.name
+    }).then(
+      (started) => {
+        if (!started) setPackageIncludeError(item.name)
+      },
+      () => setPackageIncludeError(item.name)
+    )
+  }
 
   return (
     <header
@@ -512,6 +534,28 @@ const PreviewFileHeader = ({
                 tone="strong"
                 className="bg-transparent shadow-none"
               />
+              {canAddToResearchPackage ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        data-testid="preview-add-to-research-package"
+                        aria-label={t('Add to research package')}
+                        className="shrink-0 text-text-100 hover:text-text-000"
+                        onClick={addToResearchPackage}
+                      >
+                        <Package aria-hidden="true" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className={tooltipClassName}>
+                      {t('Add to research package')}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
               {mentionTarget ? (
                 <ProjectFileMentionButton
                   target={mentionTarget}
@@ -599,6 +643,16 @@ const PreviewFileHeader = ({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+      ) : null}
+      {packageIncludeError ? (
+        <ActionToast
+          testId="preview-package-inclusion-error"
+          title={t('Could not add {{name}} to the research package. Try again.', {
+            name: packageIncludeError
+          })}
+          dismissLabel={t('Dismiss')}
+          onDismiss={() => setPackageIncludeError(undefined)}
+        />
       ) : null}
     </header>
   )
