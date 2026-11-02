@@ -28,6 +28,10 @@ it('roundtrips visible quad corners on rotated cropped UserUnit pages and separa
       target: {
         selector: {
           kind: 'text',
+          exact: 'Selected text',
+          position: { start: 3, end: 16 },
+          extractorVersion: 'test-v1',
+          coordinateVersion: 1,
           pageNumber: i + 1,
           pageRotation,
           quads: [{ x: 0.2, y: 0.3, width: 0.4, height: 0.05 }]

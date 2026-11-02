@@ -176,6 +176,7 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "找不到 {{name}} 的檔案，因此無法儲存。請重新執行分析以產生該檔案，然後再儲存。（代碼：{{code}}）"
   },
   "renderer": {
+    "This document has changed. The annotation is unattached and needs review.": "此文件已變更。註解未附加至文件，需要檢查。",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新對話可以無需詢問直接執行指令、修改檔案、執行 Notebook 程式碼和存取網路。既有對話不受影響。",
     "Also allowed {{scope}}": "也允許{{scope}}",
     "Unpin {{path}}": "取消釘選 {{path}}",

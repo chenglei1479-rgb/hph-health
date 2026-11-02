@@ -176,6 +176,7 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "{{name}} のファイルが見つからないため保存できませんでした。解析をもう一度実行してファイルを作成してから、保存してください。（コード: {{code}}）"
   },
   "renderer": {
+    "This document has changed. The annotation is unattached and needs review.": "この文書は変更されています。注釈は文書に紐付けられておらず、確認が必要です。",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新しい会話では、事前に確認せずにコマンドの実行、ファイルの変更、Notebook コードの実行、ネットワークへのアクセスができます。既存の会話は変更されません。",
     "Also allowed {{scope}}": "{{scope}}も許可されます",
     "Unpin {{path}}": "{{path}} の固定を解除",

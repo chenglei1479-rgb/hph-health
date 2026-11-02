@@ -346,6 +346,12 @@ const requestSavedSourceReveal = async (
   signal?: AbortSignal
 ): Promise<BookmarkRevealOutcome> => {
   if (signal?.aborted) return 'locator-unsupported'
+  if (
+    target.kind === 'pdf' &&
+    target.selector.kind === 'text' &&
+    target.selector.attachmentState === 'needs-review'
+  )
+    return 'locator-unsupported'
   const source = bookmarkFileSource(target)
   if (activatePreview && source?.projectId) {
     const workbench = usePreviewWorkbenchStore.getState()

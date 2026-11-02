@@ -1,3 +1,8 @@
+import {
+  PDF_TEXT_RANGE_KEY,
+  parsePdfStoredTextRange,
+  pdfAnnotationDocumentFingerprint
+} from '../../../../../shared/pdf-annotation-exchange'
 import { PDFDocument, PDFHexString, PDFName, PDFDict, PDFRef, PDFString } from 'pdf-lib'
 import { PRODUCT_DISPLAY_NAME } from '../../../../../shared/product-identity'
 import {
@@ -49,6 +54,9 @@ export const exportAnnotatedPdf = async (request: PdfExportRequest): Promise<Arr
     if (error instanceof Error && error.name === 'EncryptedPDFError') throw new Error('encrypted')
     throw error
   }
+  const fingerprint = request.marks.some((mark) => mark.textRange)
+    ? await pdfAnnotationDocumentFingerprint(document)
+    : undefined
   const context = document.context
   // Rewriting invalidates signatures. Fail before generating any output, including signed forms.
   for (const [, object] of context.enumerateIndirectObjects()) {
@@ -193,8 +201,21 @@ export const exportAnnotatedPdf = async (request: PdfExportRequest): Promise<Arr
         }
       })
     )
+    const storedRange = mark.textRange
+      ? { version: 1 as const, fingerprint, selector: mark.textRange }
+      : undefined
+    if (
+      storedRange &&
+      (!parsePdfStoredTextRange(JSON.stringify(storedRange)) ||
+        storedRange.selector.pageNumber !== mark.pageNumber ||
+        storedRange.selector.attachmentState)
+    )
+      throw new Error('invalid-annotations')
     const isMarkup = !['area', 'page-note', 'document-note'].includes(mark.kind)
     const annotation = context.obj({
+      ...(storedRange
+        ? { [PDF_TEXT_RANGE_KEY]: PDFHexString.fromText(JSON.stringify(storedRange)) }
+        : {}),
       Type: 'Annot',
       Subtype: TYPES[mark.kind],
       P: page.ref,

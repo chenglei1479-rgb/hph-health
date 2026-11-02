@@ -176,6 +176,7 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "{{name}} 파일이 없어 저장하지 못했습니다. 분석을 다시 실행해 파일을 만든 뒤 저장하세요. (코드: {{code}})"
   },
   "renderer": {
+    "This document has changed. The annotation is unattached and needs review.": "이 문서가 변경되었습니다. 주석이 문서에 연결되지 않았으며 검토가 필요합니다.",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "새로운 대화에서는 먼저 묻지 않고 명령을 실행하고, 파일을 변경하고, Notebook 코드를 실행하고, 네트워크에 액세스할 수 있습니다. 기존 대화에는 영향을 주지 않습니다.",
     "Also allowed {{scope}}": "{{scope}}도 허용됨",
     "Unpin {{path}}": "{{path}} 고정 해제",

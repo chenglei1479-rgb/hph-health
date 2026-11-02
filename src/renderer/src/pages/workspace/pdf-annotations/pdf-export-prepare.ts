@@ -85,6 +85,8 @@ export const preparePdfExportMarks = async (
         signal.throwIfAborted()
       }
       const selector = annotation.target.selector
+      if (selector.kind === 'text' && selector.attachmentState === 'needs-review')
+        throw new Error('source-changed')
       const viewport = page.getViewport({
         scale: 1,
         rotation: selector.kind === 'document-note' ? page.rotate : selector.pageRotation
@@ -123,6 +125,7 @@ export const preparePdfExportMarks = async (
         updatedAt: annotation.updatedAt,
         note: describe(annotation),
         pageNumber,
+        ...(selector.kind === 'text' ? { textRange: selector } : {}),
         quads: selector.kind === 'text' ? quads.map(orientTextQuad) : quads
       })
     }

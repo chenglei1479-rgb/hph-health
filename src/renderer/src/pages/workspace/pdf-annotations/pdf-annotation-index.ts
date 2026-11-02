@@ -35,7 +35,11 @@ export const indexPdfAnnotations = (
     }
     document.annotations.push(annotation)
     const selector = annotation.target.selector
-    if (selector.kind === 'document-note') continue
+    if (
+      selector.kind === 'document-note' ||
+      (selector.kind === 'text' && selector.attachmentState === 'needs-review')
+    )
+      continue
     let page = document.pages.get(selector.pageNumber)
     if (!page) {
       page = []

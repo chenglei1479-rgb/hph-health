@@ -178,6 +178,7 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Falta el archivo de {{name}}, por lo que no se pudo guardar. Vuelva a ejecutar el análisis para crearlo y, después, guárdelo. (Código: {{code}})"
   },
   "renderer": {
+    "This document has changed. The annotation is unattached and needs review.": "Este documento ha cambiado. La anotación no está vinculada y requiere revisión.",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Las nuevas conversaciones pueden ejecutar comandos, cambiar archivos, ejecutar código Notebook y acceder a la red sin preguntar primero. Las conversaciones existentes no cambian.",
     "Also allowed {{scope}}": "También permitido {{scope}}",
     "Unpin {{path}}": "Desanclar {{path}}",
