@@ -6,7 +6,9 @@ import type { ApplicationInvocation } from './application-command-router'
 import { Zip, ZipDeflate } from 'fflate'
 
 import { ipcMainHandle } from './ipc-handler-registry'
+import { createHash } from 'node:crypto'
 import { constants } from 'node:fs'
+import { createReadStream } from 'node:fs'
 import { copyFile, mkdtemp, open, rm, writeFile, type FileHandle } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, extname, join } from 'node:path'
@@ -27,6 +29,19 @@ import type {
 import { englishNativeTranslator, type NativeTranslator } from './locale/main-process-messages'
 import { toErrorMessage } from './error-message'
 import { publishUserFile } from './user-file-publisher'
+import { ApplicationCommandError } from '../shared/application-command-contract'
+import { MANAGED_FILE_CHECKSUM_MISMATCH_CODE, MANAGED_FILE_MISSING_CODE } from '../shared/file-save'
+
+// Hashes a file the app just delivered. Used only to prove a saved copy matches the Version record, so
+// a mismatch is reported instead of handing the user bytes that differ from what the preview showed.
+const sha256OfFile = (path: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const hash = createHash('sha256')
+    const stream = createReadStream(path)
+    stream.on('error', reject)
+    stream.on('data', (chunk) => hash.update(chunk))
+    stream.on('end', () => resolve(hash.digest('hex')))
+  })
 
 type RegisterFileSaveHandlersOptions = {
   resolveManagedFilePath?: (
@@ -80,6 +95,8 @@ const PROJECT_ARTIFACT_STREAM_CHUNK_BYTES = 64 * 1024
 type ManagedFileHandle = {
   copyTo: (destinationPath: string, options?: { exclusive?: boolean }) => Promise<void>
   assertCanCopyTo?: (destinationPath: string) => Promise<void>
+  // Present only when the Version record carries a checksum; absent means unverifiable, not corrupt.
+  checksum?: string
   close: () => Promise<void>
 }
 
@@ -193,6 +210,19 @@ const assertSaveProjectArtifactsRequest = (request: SaveProjectArtifactsRequest)
   ) {
     throw new Error('Invalid Project Artifact save request.')
   }
+}
+
+// A Version whose content is gone answers with the stopgap code instead of raw fs text, so the
+// download control can stay enabled and explain the next step (#122 verification 7). The managed
+// Version operator normalizes a missing content file into `VersionFileOperatorError('STORAGE_UNAVAILABLE')`
+// and keeps the original ENOENT as `cause`, so the code alone is not enough to tell them apart.
+const isMissingFileError = (error: unknown, depth = 0): boolean => {
+  if (!error || depth > 4) return false
+  const candidate = error as { code?: unknown; message?: unknown; cause?: unknown }
+  if (candidate.code === 'ENOENT' || candidate.code === 'ENOTDIR') return true
+  if (candidate.cause !== undefined && isMissingFileError(candidate.cause, depth + 1)) return true
+  const message = typeof candidate.message === 'string' ? candidate.message : String(error)
+  return /ENOENT|no such file|no longer (exists|available)/i.test(message)
 }
 
 // Holds the validated source inode across Save As so a pending artifact rename cannot change identity.
@@ -657,27 +687,80 @@ export const createFileSaveCommands = (
         if (canceled || !filePath) return { saved: false }
 
         // Resolve managed identities after confirmation so the default export observes the DB head.
-        const managedFile = versionedRequest
-          ? versionedRequest.versionId
-            ? await options.openManagedFileVersion!(versionedRequest.source, {
-                projectId: versionedRequest.projectId,
-                fileId: versionedRequest.fileId,
-                versionId: versionedRequest.versionId
-              })
-            : await options.openLatestManagedFile!(versionedRequest.source, {
-                projectId: versionedRequest.projectId,
-                fileId: versionedRequest.fileId
-              })
-          : pathManagedFile!
+        // The lease is opened inside the mapped try: a Version whose content file is gone fails
+        // right here (the operator opens it eagerly), not later inside the copy loop.
+        let versionedFile: ManagedFileVersionHandle | undefined
+        // Only a failure while reading the SOURCE means the Version content is missing. A later
+        // rename failure is about the chosen destination folder, and telling the reader to re-run
+        // the analysis for that would send them to fix something that is not broken.
+        let sourceCopied = false
         try {
-          await publish(filePath, (temporaryPath) => managedFile.copyTo(temporaryPath), {
-            ...(managedFile.assertCanCopyTo
-              ? { validateDestination: () => managedFile.assertCanCopyTo!(filePath) }
-              : {})
-          })
+          versionedFile = versionedRequest
+            ? versionedRequest.versionId
+              ? await options.openManagedFileVersion!(versionedRequest.source, {
+                  projectId: versionedRequest.projectId,
+                  fileId: versionedRequest.fileId,
+                  versionId: versionedRequest.versionId
+                })
+              : await options.openLatestManagedFile!(versionedRequest.source, {
+                  projectId: versionedRequest.projectId,
+                  fileId: versionedRequest.fileId
+                })
+            : undefined
+          const managedFile: ManagedFileHandle = versionedFile ?? pathManagedFile!
+          // Only a Version that carries a checksum can be verified. An empty string (or a future
+          // record that omits the field) means "we cannot verify", which is not evidence of a bad copy.
+          const expectedChecksum = managedFile.checksum
+          await publish(
+            filePath,
+            async (temporaryPath) => {
+              await managedFile.copyTo(temporaryPath)
+              sourceCopied = true
+            },
+            {
+              ...(managedFile.assertCanCopyTo
+                ? { validateDestination: () => managedFile.assertCanCopyTo!(filePath) }
+                : {}),
+              ...(expectedChecksum
+                ? {
+                    // Verified before the temporary file replaces the destination: on a mismatch the
+                    // publish fails, the temp directory is cleaned up, and a file that already existed
+                    // at the destination is left untouched.
+                    verifyTemporary: async (temporaryPath: string) => {
+                      const actualChecksum = await sha256OfFile(temporaryPath).catch(() => undefined)
+                      if (actualChecksum !== expectedChecksum) {
+                        const sentence = (options.translate ?? englishNativeTranslator)(
+                          'The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})'
+                        )
+                          .replace('{{name}}', basename(filePath))
+                          .replace('{{code}}', MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
+                        throw new ApplicationCommandError(
+                          MANAGED_FILE_CHECKSUM_MISMATCH_CODE,
+                          sentence
+                        )
+                      }
+                    }
+                  }
+                : {})
+            }
+          )
           return { saved: true, filePath }
+        } catch (error) {
+          // A Version whose bytes are gone from disk has to answer with something the reader can act
+          // on. The control stays enabled for exactly this case, so the sentence names the next step.
+          // Only a Version can be regenerated: a local file or a literature attachment the reader
+          // picked by path is gone for good, and "run the analysis again" would be the wrong fix,
+          // so those sources keep their original error instead of borrowing this sentence.
+          if (!versionedRequest || sourceCopied || !isMissingFileError(error)) throw error
+          const sentence = (options.translate ?? englishNativeTranslator)(
+            'The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})'
+          )
+            .replace('{{name}}', basename(filePath))
+            .replace('{{code}}', MANAGED_FILE_MISSING_CODE)
+          throw new ApplicationCommandError(MANAGED_FILE_MISSING_CODE, sentence)
         } finally {
-          if (versionedRequest) await managedFile.close()
+          // The lease must always close, but a close error must not mask the checksum failure above.
+          if (versionedFile) await versionedFile.close().catch(() => undefined)
         }
       } finally {
         await pathManagedFile?.close()

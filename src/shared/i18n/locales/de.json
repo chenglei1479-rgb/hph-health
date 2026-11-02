@@ -172,7 +172,9 @@
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "Die mitgelieferte Python-Laufzeit konnte nicht gestartet werden, daher wurde die Analyse nicht ausgeführt. Installieren Sie die App neu. (Code: {{code}})",
     "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "Die Ausgabedateien dieses Laufs fehlen oder wurden geändert, daher wurde die Datei nicht gespeichert. Führen Sie die Analyse erneut aus. (Code: {{code}})",
     "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "Die Ausgabedateien dieses Laufs konnten nicht gespeichert werden, daher wurden seine Ergebnisse nicht behalten (pro Lauf bis zu 200 Dateien und 512 MB). Führen Sie die Analyse erneut aus. (Code: {{code}})",
-    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "Die Ausgabedateien dieses Laufs konnten nicht gelesen werden, daher wurden seine Ergebnisse nicht behalten. Führen Sie die Analyse erneut aus. (Code: {{code}})"
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "Die Ausgabedateien dieses Laufs konnten nicht gelesen werden, daher wurden seine Ergebnisse nicht behalten. Führen Sie die Analyse erneut aus. (Code: {{code}})",
+    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "Die gespeicherte Kopie von {{name}} stimmte nicht mit der aufgezeichneten Prüfsumme überein und wurde daher nicht gespeichert. Die Originaldatei wurde nicht verändert. (Code: {{code}})",
+    "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Die Datei für {{name}} fehlt, daher konnte sie nicht gespeichert werden. Führen Sie die Analyse erneut aus, um sie zu erzeugen, und speichern Sie sie dann. (Code: {{code}})"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Neue Konversationen können Befehle ausführen, Dateien ändern, Notebook-Code ausführen und auf das Netzwerk zugreifen, ohne vorher zu fragen. Bestehende Konversationen bleiben unverändert.",
@@ -7836,6 +7838,14 @@
     "The provider you registered": "Der von Ihnen registrierte Anbieter",
     "No AI provider is configured": "Kein KI-Anbieter eingerichtet",
     "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "Von diesem Lauf gespeicherte Dateien (sie bleiben nach dem Schließen der App erhalten; mit der Schaltfläche rechts speichern Sie eine Kopie)",
-    "Saved.": "Gespeichert."
+    "Saved.": "Gespeichert.",
+    "More actions for {{name}}": "Weitere Aktionen für {{name}}",
+    "File details": "Dateidetails",
+    "Publishing...": "Wird veröffentlicht…",
+    "Add to research package": "Zum Forschungspaket hinzufügen",
+    "Could not add {{name}} to the research package. Try again.": "{{name}} konnte nicht zum Forschungspaket hinzugefügt werden. Versuchen Sie es erneut.",
+    "Fit to window": "An Fenster anpassen",
+    "Actual size": "Originalgröße",
+    "This file is {{size}}. Download it to view.": "Diese Datei ist {{size}} groß. Laden Sie sie herunter, um sie anzusehen."
   }
 }

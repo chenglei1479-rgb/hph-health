@@ -128,6 +128,7 @@ const localizeApplicationCommandError = (error: unknown, t: TFunction): string |
 }
 
 export {
+  applicationCommandErrorCode,
   localizeApplicationCommandCode,
   localizeApplicationCommandError,
   stripBridgedCommandErrorCode

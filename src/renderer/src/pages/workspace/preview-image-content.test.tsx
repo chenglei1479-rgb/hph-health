@@ -350,4 +350,64 @@ describe('PreviewImageContent', () => {
     expect(container.textContent).toContain("Image couldn't be loaded for preview")
     expect(window.api.previewResources.release).toHaveBeenCalledWith({ resourceId: 'resource-1' })
   })
+
+  it('states both named zoom modes alongside the image', async () => {
+    root = createRoot(container)
+    await act(async () => {
+      root.render(<PreviewImageContent path="/workspace/photo.png" name="photo.png" />)
+    })
+
+    expect(container.querySelector('[aria-label="Fit to window"]')).not.toBeNull()
+    expect(container.querySelector('[aria-label="Actual size"]')).not.toBeNull()
+  })
+
+  it('never decodes a file past the 50 MB preview limit and keeps the download reachable', async () => {
+    const saveManagedFile = vi.fn().mockResolvedValue({ saved: false })
+    window.api = { ...window.api, saveManagedFile } as unknown as Window['api']
+
+    root = createRoot(container)
+    await act(async () => {
+      root.render(
+        <PreviewImageContent
+          path="/workspace/huge.png"
+          name="huge.png"
+          projectId="project-1"
+          managedFileId="artifact-1"
+          size={51 * 1024 * 1024}
+        />
+      )
+    })
+
+    // The whole file is never requested: no capability is acquired and no <img> is decoded.
+    expect(window.api.previewResources.acquire).not.toHaveBeenCalled()
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.textContent).toContain('File too large to preview')
+    expect(container.textContent).toContain('This file is 51.0 MB. Download it to view.')
+
+    const download = container.querySelector<HTMLButtonElement>('[aria-label="Download huge.png"]')
+    expect(download).not.toBeNull()
+    await act(async () => {
+      download?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await Promise.resolve()
+    })
+    expect(saveManagedFile).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'artifact', projectId: 'project-1', fileId: 'artifact-1' })
+    )
+  })
+
+  it('still decodes a file at the 50 MB limit', async () => {
+    root = createRoot(container)
+    await act(async () => {
+      root.render(
+        <PreviewImageContent
+          path="/workspace/photo.png"
+          name="photo.png"
+          size={50 * 1024 * 1024}
+        />
+      )
+    })
+
+    expect(window.api.previewResources.acquire).toHaveBeenCalled()
+    expect(container.querySelector('img')).not.toBeNull()
+  })
 })

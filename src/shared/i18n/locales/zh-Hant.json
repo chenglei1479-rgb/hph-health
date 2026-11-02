@@ -171,7 +171,9 @@
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "隨附的 Python 執行環境無法啟動，因此未執行分析。請重新安裝應用程式。（代碼：{{code}}）",
     "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "該次執行的輸出檔案缺失或已變更，因此未儲存檔案。請重新執行分析。（代碼：{{code}}）",
     "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "未能儲存該次執行的輸出檔案，因此沒有保留結果（每次執行最多保留 200 個檔案和 512 MB）。請重新執行分析。（代碼：{{code}}）",
-    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "無法讀取該次執行的輸出檔案，因此沒有保留結果。請重新執行分析。（代碼：{{code}}）"
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "無法讀取該次執行的輸出檔案，因此沒有保留結果。請重新執行分析。（代碼：{{code}}）",
+    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "{{name}} 的已儲存副本與記錄的校驗和不一致，因此未保存。原始檔案未被變更。（代碼：{{code}}）",
+    "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "找不到 {{name}} 的檔案，因此無法儲存。請重新執行分析以產生該檔案，然後再儲存。（代碼：{{code}}）"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新對話可以無需詢問直接執行指令、修改檔案、執行 Notebook 程式碼和存取網路。既有對話不受影響。",
@@ -7676,6 +7678,14 @@
     "The provider you registered": "您登錄的服務商",
     "No AI provider is configured": "未設定 AI 服務商",
     "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "本次執行儲存的檔案（關閉應用程式後仍會保留；右側按鈕可儲存副本）",
-    "Saved.": "已儲存。"
+    "Saved.": "已儲存。",
+    "More actions for {{name}}": "{{name}} 的其他操作",
+    "File details": "檔案詳情",
+    "Publishing...": "正在發布…",
+    "Add to research package": "加入研究套件",
+    "Could not add {{name}} to the research package. Try again.": "無法將 {{name}} 加入研究套件。請重試。",
+    "Fit to window": "符合視窗",
+    "Actual size": "實際大小",
+    "This file is {{size}}. Download it to view.": "此檔案大小為 {{size}}，請下載後檢視。"
   }
 }

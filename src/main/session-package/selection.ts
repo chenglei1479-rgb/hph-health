@@ -51,6 +51,7 @@ export const selectablePackageFiles = (
         .map((file) => ({
           ...file,
           groupId: version.versionId,
+          versionId: version.versionId,
           source: 'reproducibility' as const,
           versionNumber: Number(byId.get(version.versionId)?.versionNumber ?? 1),
           dependentFiles: []
@@ -62,6 +63,7 @@ export const selectablePackageFiles = (
         filename: String(row.filename),
         sizeBytes: Number(row.sizeBytes),
         groupId: String(row.artifactId ?? row.uploadFileId),
+        versionId: String(row.id),
         source:
           table === 'ArtifactVersion'
             ? ('artifact' as const)

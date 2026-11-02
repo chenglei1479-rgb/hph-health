@@ -1,4 +1,11 @@
 import { ErrorNotice } from '@/components/error-notice'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { useSmoothStreamingContent } from '@/components/streamdown/use-smooth-streaming-content'
 import { MessageScrollerItem } from '@/components/ui/message-scroller'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -23,6 +30,7 @@ import {
   GitBranch,
   Loader2,
   MessageCircleMore,
+  MoreHorizontal,
   Pencil
 } from 'lucide-react'
 import { Collapsible } from 'radix-ui'
@@ -73,6 +81,9 @@ import type { AnnotationPort } from './annotations/annotation-port'
 import { requestAnnotationReveal } from './annotations/annotation-reveal'
 import { annotationValidationMessage } from './annotations/annotation-validation-message'
 import { ArtifactPreview } from './artifact-preview'
+import { versionedArtifactDownloadName } from './artifact-download-name'
+import { ManagedFileDownloadButton } from './ManagedFileDownloadButton'
+import { useManagedFileDownload } from './use-managed-file-download'
 import {
   ARTIFACT_PREVIEW_BYTES,
   getArtifactName,
@@ -93,6 +104,11 @@ import { copyMessageToClipboard } from './composer/message-clipboard'
 import { resolveSessionProviderId } from './error-report'
 import { FileTypeIcon } from './file-type-icon'
 import { requestPdfReadingReveal } from './pdf-reading-reveal'
+import {
+  addFileToResearchPackage,
+  canAddFileToResearchPackage
+} from '@/lib/research-package-inclusion'
+import { ActionToast } from '@/components/ActionToast'
 import {
   FILE_MISSING_TAG_KEY,
   isManagedFilePublicationPendingError,
@@ -137,6 +153,9 @@ type WorkspaceMessageItemProps = {
   isPackageSession?: boolean
   onPreviewArtifact: (artifact: MessageArtifact) => void
   onPreviewArtifactModal?: (artifact: MessageArtifact) => void
+  // Opens the artifact's provenance/version panel. Absent on archived transcript surfaces that have
+  // no workbench, which is why the "File details" menu item is only rendered when it is supplied.
+  onOpenArtifactDetails?: (artifact: MessageArtifact) => void
   onPreviewUploadAttachment: (attachment: MessageUploadAttachment) => void
   onOpenSkillMention: (skillId: string, name: string) => void
   onOpenLibraryMention?: (scope: LibraryMentionScopeRequest) => void
@@ -890,16 +909,29 @@ const VisibleArtifactPreview = ({
 // Thumbnail button for one generated file; clicking it previews the file instead of opening it.
 const ArtifactCard = ({
   artifact,
-  onPreviewArtifact
+  onPreviewArtifact,
+  onOpenArtifactDetails
 }: {
   artifact: MessageArtifact
   onPreviewArtifact: (artifact: MessageArtifact) => void
+  onOpenArtifactDetails?: (artifact: MessageArtifact) => void
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const artifactName = getArtifactName(artifact)
   const sizeLabel = formatByteSize(artifact.size) ?? ''
   const [setElement, isNearViewport] = useNearViewport<HTMLButtonElement>()
   const publicationPending = isPendingArtifactPublication(artifact)
+  // The download controller lives here rather than inside the button, so the same attempt can be
+  // started from the icon or from the "more" menu without a second IPC call (#122).
+  const download = useManagedFileDownload({
+    source: 'artifact',
+    path: artifact.path,
+    projectId: artifact.resolvedProjectId,
+    fileId: artifact.artifactId,
+    versionId: artifact.versionId,
+    versionNumber: artifact.versionNumber,
+    suggestedName: versionedArtifactDownloadName(artifactName, artifact.versionNumber)
+  })
   const requestKey = JSON.stringify([
     artifact.id,
     artifact.artifactId ?? null,
@@ -925,6 +957,30 @@ const ArtifactCard = ({
     mtimeMs: artifact.mtimeMs
   })
 
+  const downloadName = versionedArtifactDownloadName(artifactName, artifact.versionNumber)
+
+  // The card offers the package entry only when the owning Session is loaded, and it always names
+  // the Version on the card so the selector checks that Version alone.
+  const packageTarget = {
+    projectId: artifact.resolvedProjectId,
+    sessionId: artifact.resolvedSessionId,
+    fileId: artifact.artifactId,
+    versionId: artifact.versionId,
+    filename: artifactName
+  }
+  const canAddToResearchPackage =
+    !publicationPending && canAddFileToResearchPackage(packageTarget)
+  const [packageIncludeError, setPackageIncludeError] = useState(false)
+  const addToResearchPackage = (): void => {
+    setPackageIncludeError(false)
+    void addFileToResearchPackage(packageTarget).then(
+      (started) => {
+        if (!started) setPackageIncludeError(true)
+      },
+      () => setPackageIncludeError(true)
+    )
+  }
+
   return (
     <GeneratedFileCard
       buttonRef={setElement}
@@ -934,6 +990,70 @@ const ArtifactCard = ({
       onClick={() => onPreviewArtifact(artifact)}
       label={t('Preview generated file {{name}}', { name: artifactName })}
       title={artifact.path}
+      statusLabel={publicationPending ? t('Publishing...') : undefined}
+      actions={
+        <>
+          <ManagedFileDownloadButton
+            source="artifact"
+            path={artifact.path}
+            projectId={artifact.resolvedProjectId}
+            fileId={artifact.artifactId}
+            versionId={artifact.versionId}
+            versionNumber={artifact.versionNumber}
+            suggestedName={downloadName}
+            download={download}
+            disabled={publicationPending}
+            iconSize="icon-sm"
+            className="cursor-pointer border-border bg-bg-000/95 shadow-sm"
+          />
+          {/* Radix opens this trigger on click, Enter/Space, and the context-menu key (Chromium turns
+              that key into a contextmenu event), so the card is reachable by Tab alone. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="cursor-pointer bg-bg-000/95 text-text-100 shadow-sm"
+                aria-label={t('More actions for {{name}}', { name: artifactName })}
+              >
+                <MoreHorizontal aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onPreviewArtifact(artifact)}>
+                {t('Preview generated file {{name}}', { name: artifactName })}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={publicationPending}
+                onSelect={() => void download.execute()}
+              >
+                {t('Download {{name}}', { name: downloadName })}
+              </DropdownMenuItem>
+              {canAddToResearchPackage ? (
+                <DropdownMenuItem onSelect={addToResearchPackage}>
+                  {t('Add to research package')}
+                </DropdownMenuItem>
+              ) : null}
+              {onOpenArtifactDetails ? (
+                <DropdownMenuItem onSelect={() => onOpenArtifactDetails(artifact)}>
+                  {t('File details')}
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {packageIncludeError ? (
+            <ActionToast
+              testId="artifact-card-package-inclusion-error"
+              title={t('Could not add {{name}} to the research package. Try again.', {
+                name: artifactName
+              })}
+              dismissLabel={t('Dismiss')}
+              onDismiss={() => setPackageIncludeError(false)}
+            />
+          ) : null}
+        </>
+      }
       preview={
         <>
           <span className={cn('block size-full', missing && 'opacity-40')}>
@@ -965,9 +1085,11 @@ const ArtifactCard = ({
 // Renders the generated files attached to one assistant message.
 const MessageArtifactList = ({
   onPreviewArtifact,
+  onOpenArtifactDetails,
   artifacts
 }: {
   onPreviewArtifact: (artifact: MessageArtifact) => void
+  onOpenArtifactDetails?: (artifact: MessageArtifact) => void
   artifacts: MessageArtifact[]
 }): React.JSX.Element | null => {
   const { t } = useTranslation()
@@ -990,6 +1112,7 @@ const MessageArtifactList = ({
               key={artifact.id}
               artifact={artifact}
               onPreviewArtifact={onPreviewArtifact}
+              onOpenArtifactDetails={onOpenArtifactDetails}
             />
           ))}
           {remainingCount > 0 ? (
@@ -1315,6 +1438,7 @@ const WorkspaceMessageItemImpl = ({
   isPackageSession = false,
   onPreviewArtifact,
   onPreviewArtifactModal = onPreviewArtifact,
+  onOpenArtifactDetails,
   onPreviewUploadAttachment,
   onOpenSkillMention,
   onOpenLibraryMention,
@@ -1950,7 +2074,11 @@ const WorkspaceMessageItemImpl = ({
                 )
               ) : null}
               <MessageImageList images={message.images ?? []} />
-              <MessageArtifactList onPreviewArtifact={onPreviewArtifact} artifacts={artifacts} />
+              <MessageArtifactList
+                onPreviewArtifact={onPreviewArtifact}
+                onOpenArtifactDetails={onOpenArtifactDetails}
+                artifacts={artifacts}
+              />
               {showAssistantFooter && !isAssistantPresenting ? (
                 <WorkspaceAssistantTurnCompletion
                   message={message}
@@ -2077,6 +2205,7 @@ const areWorkspaceMessageItemPropsEqual = (
   (previous.showUserInterruption ?? true) === (next.showUserInterruption ?? true) &&
   (previous.sending ?? false) === (next.sending ?? false) &&
   previous.contentPaddingClassName === next.contentPaddingClassName &&
+  previous.onOpenArtifactDetails === next.onOpenArtifactDetails &&
   previous.turnStartedAt === next.turnStartedAt &&
   (previous.showAssistantFooter ?? true) === (next.showAssistantFooter ?? true) &&
   (previous.subsequentTurns ?? 0) === (next.subsequentTurns ?? 0) &&

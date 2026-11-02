@@ -174,7 +174,9 @@
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "Встроенную среду Python не удалось запустить, поэтому анализ не выполнялся. Переустановите приложение. (Код: {{code}})",
     "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "Выходные файлы того запуска отсутствуют или изменены, поэтому файл не был сохранён. Запустите анализ ещё раз. (Код: {{code}})",
     "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "Не удалось сохранить выходные файлы того запуска, поэтому его результаты не сохранены (до 200 файлов и 512 МБ за запуск). Запустите анализ ещё раз. (Код: {{code}})",
-    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "Не удалось прочитать выходные файлы того запуска, поэтому его результаты не сохранены. Запустите анализ ещё раз. (Код: {{code}})"
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "Не удалось прочитать выходные файлы того запуска, поэтому его результаты не сохранены. Запустите анализ ещё раз. (Код: {{code}})",
+    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "Сохранённая копия {{name}} не совпала с записанной контрольной суммой, поэтому не была сохранена. Исходный файл не изменён. (Код: {{code}})",
+    "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Файл {{name}} отсутствует, поэтому сохранить его не удалось. Запустите анализ заново, чтобы создать файл, и затем сохраните его. (Код: {{code}})"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "В новых диалогах агент может без предварительного разрешения выполнять команды, изменять файлы, запускать код Notebook и обращаться к сети. Существующие диалоги не изменятся.",
@@ -8143,6 +8145,14 @@
     "The provider you registered": "Зарегистрированный вами поставщик",
     "No AI provider is configured": "Поставщик ИИ не настроен",
     "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "Файлы, сохранённые этим запуском (они остаются после закрытия приложения; кнопка справа сохраняет копию)",
-    "Saved.": "Сохранено."
+    "Saved.": "Сохранено.",
+    "More actions for {{name}}": "Другие действия с {{name}}",
+    "File details": "Сведения о файле",
+    "Publishing...": "Публикация…",
+    "Add to research package": "Добавить в исследовательский пакет",
+    "Could not add {{name}} to the research package. Try again.": "Не удалось добавить {{name}} в исследовательский пакет. Повторите попытку.",
+    "Fit to window": "По размеру окна",
+    "Actual size": "Реальный размер",
+    "This file is {{size}}. Download it to view.": "Размер файла — {{size}}. Скачайте его, чтобы просмотреть."
   }
 }

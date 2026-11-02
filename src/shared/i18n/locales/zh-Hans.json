@@ -171,7 +171,9 @@
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "随附的 Python 运行环境无法启动，因此未执行分析。请重新安装应用。（代码：{{code}}）",
     "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "该次运行的输出文件缺失或已更改，因此未保存文件。请重新运行分析。（代码：{{code}}）",
     "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "未能保存该次运行的输出文件，因此没有保留结果（每次运行最多保留 200 个文件和 512 MB）。请重新运行分析。（代码：{{code}}）",
-    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "无法读取该次运行的输出文件，因此没有保留结果。请重新运行分析。（代码：{{code}}）"
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "无法读取该次运行的输出文件，因此没有保留结果。请重新运行分析。（代码：{{code}}）",
+    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "{{name}} 的已保存副本与记录的校验和不一致，因此未保存。原始文件未被更改。（代码：{{code}}）",
+    "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "找不到 {{name}} 的文件，因此无法保存。请重新运行分析以生成该文件，然后再保存。（代码：{{code}}）"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新对话可以无需询问直接运行命令、修改文件、执行 Notebook 代码和访问网络。已有对话不受影响。",
@@ -7676,6 +7678,14 @@
     "The provider you registered": "您注册的服务商",
     "No AI provider is configured": "未配置 AI 服务商",
     "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "本次运行保存的文件（关闭应用后仍会保留；右侧按钮可保存副本）",
-    "Saved.": "已保存。"
+    "Saved.": "已保存。",
+    "More actions for {{name}}": "{{name}} 的更多操作",
+    "File details": "文件详情",
+    "Publishing...": "正在发布…",
+    "Add to research package": "加入研究包",
+    "Could not add {{name}} to the research package. Try again.": "无法将 {{name}} 加入研究包。请重试。",
+    "Fit to window": "适应窗口",
+    "Actual size": "实际大小",
+    "This file is {{size}}. Download it to view.": "此文件大小为 {{size}}，请下载后查看。"
   }
 }

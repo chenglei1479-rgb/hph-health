@@ -1414,6 +1414,8 @@ class ManagedFileVersionService {
       readRange: operatorLease.readRange,
       copyTo: (destinationPath, options) => operatorLease.copyTo(destinationPath, options),
       assertCanCopyTo: operatorLease.assertCanCopyTo,
+      // Carried so a save can prove the delivered bytes are the Version the UI showed (#122).
+      checksum: resolved.version.checksum,
       verifyUnchanged: operatorLease.verifyUnchanged,
       close: operatorLease.close
     }

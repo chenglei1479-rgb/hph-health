@@ -173,7 +173,9 @@
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "L’environnement Python fourni n’a pas pu démarrer, l’analyse n’a donc pas été exécutée. Réinstallez l’application. (Code {{code}})",
     "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "Les fichiers de sortie de cette exécution sont absents ou ont été modifiés ; le fichier n'a donc pas été enregistré. Relancez l'analyse. (Code : {{code}})",
     "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "Les fichiers de sortie de cette exécution n'ont pas pu être enregistrés ; ses résultats n'ont donc pas été conservés (jusqu'à 200 fichiers et 512 Mo par exécution). Relancez l'analyse. (Code : {{code}})",
-    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "Les fichiers de sortie de cette exécution n'ont pas pu être lus ; ses résultats n'ont donc pas été conservés. Relancez l'analyse. (Code : {{code}})"
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "Les fichiers de sortie de cette exécution n'ont pas pu être lus ; ses résultats n'ont donc pas été conservés. Relancez l'analyse. (Code : {{code}})",
+    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "La copie enregistrée de {{name}} ne correspondait pas à la somme de contrôle enregistrée ; elle n'a donc pas été enregistrée. Le fichier d'origine n'a pas été modifié. (Code : {{code}})",
+    "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Le fichier de {{name}} est introuvable, son enregistrement a donc échoué. Relancez l’analyse pour le recréer, puis enregistrez-le. (Code : {{code}})"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Les nouvelles conversations peuvent exécuter des commandes, modifier des fichiers, exécuter du code Notebook et accéder au réseau sans demander préalable. Les conversations existantes restent inchangées.",
@@ -8004,6 +8006,14 @@
     "The provider you registered": "Le fournisseur que vous avez enregistré",
     "No AI provider is configured": "Aucun fournisseur d’IA configuré",
     "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "Fichiers enregistrés par cette exécution (ils restent après la fermeture de l’application, et le bouton à droite permet d’en enregistrer une copie)",
-    "Saved.": "Enregistré."
+    "Saved.": "Enregistré.",
+    "More actions for {{name}}": "Autres actions pour {{name}}",
+    "File details": "Détails du fichier",
+    "Publishing...": "Publication en cours…",
+    "Add to research package": "Ajouter au paquet de recherche",
+    "Could not add {{name}} to the research package. Try again.": "Impossible d’ajouter {{name}} au paquet de recherche. Réessayez.",
+    "Fit to window": "Ajuster à la fenêtre",
+    "Actual size": "Taille réelle",
+    "This file is {{size}}. Download it to view.": "Ce fichier fait {{size}}. Téléchargez-le pour l’afficher."
   }
 }

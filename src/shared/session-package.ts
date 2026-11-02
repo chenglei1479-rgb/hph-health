@@ -63,6 +63,9 @@ export const packageExcludedFileSchema = z
 export type PackageExcludedFile = z.infer<typeof packageExcludedFileSchema>
 export type PackageSelectableFile = PackageExcludedFile & {
   groupId: string
+  // Identity of the exact Version this row offers. `groupId` is the Artifact/Upload file, so a
+  // surface that preselected one Version can check that Version alone instead of every sibling.
+  versionId: string
   source: 'artifact' | 'upload' | 'reproducibility' | 'literature'
   versionNumber: number
   requiredForEvidence?: boolean
@@ -323,6 +326,8 @@ const packageOperationSnapshotSchema: z.ZodType<PackageOperationSnapshot> = z
       .array(
         packageExcludedFileSchema.extend({
           groupId: z.string(),
+          // Exact Version identity so a surface can pre-check the one Version it is showing.
+          versionId: z.string().min(1).max(2048),
           source: z.enum(['artifact', 'upload', 'reproducibility', 'literature']),
           versionNumber: z.number().int().positive(),
           requiredForEvidence: z.boolean().optional(),

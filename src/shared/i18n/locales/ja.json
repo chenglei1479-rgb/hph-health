@@ -171,7 +171,9 @@
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "同梱の Python 実行環境を起動できませんでした。解析は実行していません。アプリを再インストールしてください。（コード: {{code}}）",
     "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "その実行の出力ファイルが見つからないか変更されているため、保存しませんでした。もう一度解析を実行してください。（コード: {{code}}）",
     "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "この実行の出力ファイルを保存できなかったため、結果は残っていません（1回の実行で最大200ファイル・512 MB まで保存できます）。もう一度解析を実行してください。（コード: {{code}}）",
-    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "その実行の出力ファイルを読み取れなかったため、結果は残っていません。もう一度解析を実行してください。（コード: {{code}}）"
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "その実行の出力ファイルを読み取れなかったため、結果は残っていません。もう一度解析を実行してください。（コード: {{code}}）",
+    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "{{name}} の保存したコピーが記録されたチェックサムと一致しなかったため、保存しませんでした。元のファイルは変更していません。（コード: {{code}}）",
+    "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "{{name}} のファイルが見つからないため保存できませんでした。解析をもう一度実行してファイルを作成してから、保存してください。（コード: {{code}}）"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新しい会話では、事前に確認せずにコマンドの実行、ファイルの変更、Notebook コードの実行、ネットワークへのアクセスができます。既存の会話は変更されません。",
@@ -7676,6 +7678,14 @@
     "The provider you registered": "先生が登録した事業者",
     "No AI provider is configured": "AI 事業者は未設定",
     "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "この実行で保存したファイル（アプリを閉じても残ります。右のボタンでコピーを保存できます）",
-    "Saved.": "保存しました。"
+    "Saved.": "保存しました。",
+    "More actions for {{name}}": "{{name}} のその他の操作",
+    "File details": "ファイルの詳細",
+    "Publishing...": "準備中…",
+    "Add to research package": "研究パッケージに追加",
+    "Could not add {{name}} to the research package. Try again.": "{{name}} を研究パッケージに追加できませんでした。もう一度お試しください。",
+    "Fit to window": "ウィンドウに合わせる",
+    "Actual size": "実際のサイズ",
+    "This file is {{size}}. Download it to view.": "このファイルは {{size}} です。ダウンロードして確認してください。"
   }
 }

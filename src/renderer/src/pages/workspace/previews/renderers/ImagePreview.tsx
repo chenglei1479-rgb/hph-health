@@ -1,16 +1,69 @@
 import type { PreviewFileItem, PreviewFileSource } from '@/stores/preview-workbench-store'
-import { ImageOff } from 'lucide-react'
+import { FileWarning, ImageOff } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { formatByteSize } from '@/lib/utils'
 import type { Annotation } from '../../../../../../shared/annotation-contract'
 import type { AnnotationValidationError } from '../../../../../../shared/annotations'
 import { ImagePointAnnotationSurface } from '../../annotations/ImagePointAnnotationSurface'
+import { ManagedFileDownloadButton } from '../../ManagedFileDownloadButton'
 import type { PreviewFileRendererProps } from '../preview-types'
 import { PreviewErrorCard, PreviewFallbackCard, PreviewLoadingContent } from '../PreviewFallback'
+import { usePreviewRuntime } from '../preview-runtime-context'
 import { useCachedPreviewImage } from '../useCachedPreviewImage'
 import { usePreviewResourceKey } from '../usePreviewResourceGeneration'
 import { ZoomablePreview } from './ZoomablePreview'
+
+// Raster and SVG previews are decoded whole. Above this size the reader offers the download instead
+// of decoding a file that would only stall the panel, so the byte budget is stated, not guessed.
+const PREVIEW_IMAGE_MAX_BYTES = 50 * 1024 * 1024
+
+// Keeps the download as the only action but never hides the reason: the size is spelled out so the
+// reader can tell "too large to render here" apart from "broken".
+const ImageTooLargeFallback = ({
+  item,
+  source
+}: {
+  item: {
+    name: string
+    path: string
+    projectId?: string
+    managedFileId?: string
+    selectedVersionId?: string
+    size?: number
+  }
+  source: PreviewFileSource
+}): React.JSX.Element => {
+  const { t } = useTranslation()
+  const runtime = usePreviewRuntime()
+
+  return (
+    <PreviewFallbackCard
+      icon={FileWarning}
+      name={item.name}
+      title={t('File too large to preview')}
+      message={t('This file is {{size}}. Download it to view.', {
+        size: formatByteSize(item.size) ?? ''
+      })}
+      action={
+        <ManagedFileDownloadButton
+          source={source}
+          path={item.path}
+          projectId={item.projectId}
+          fileId={item.managedFileId}
+          versionId={item.selectedVersionId}
+          versionNumber={runtime?.downloadVersionContext?.versionNumber}
+          latestVersionId={runtime?.downloadVersionContext?.latestVersionId}
+          latestVersionNumber={runtime?.downloadVersionContext?.latestVersionNumber}
+          suggestedName={item.name}
+          appearance="primary"
+          wrapperClassName="mt-3"
+        />
+      }
+    />
+  )
+}
 
 const ZoomableImage = ({
   url,
@@ -34,7 +87,7 @@ const ZoomableImage = ({
   onAnnotationError?: (error: AnnotationValidationError) => void
 }): React.JSX.Element => {
   return (
-    <ZoomablePreview>
+    <ZoomablePreview showActualSizePresets>
       {annotationItem ? (
         <ImagePointAnnotationSurface
           item={annotationItem}
@@ -108,6 +161,8 @@ export const PreviewImageContent = ({
   })
   const [failedRequestKey, setFailedRequestKey] = useState<string | undefined>(undefined)
   const hasFailed = failedRequestKey === requestKey
+  // Decoding stops before the read: a file past the byte budget never reaches the panel at all.
+  const tooLarge = typeof size === 'number' && size > PREVIEW_IMAGE_MAX_BYTES
   // A decode failure disables the hook, which releases the protocol capability immediately.
   const state = useCachedPreviewImage(
     {
@@ -121,9 +176,18 @@ export const PreviewImageContent = ({
       size,
       mtimeMs
     },
-    !hasFailed,
+    !hasFailed && !tooLarge,
     hasFailed
   )
+
+  if (tooLarge) {
+    return (
+      <ImageTooLargeFallback
+        item={{ name, path, projectId, managedFileId, selectedVersionId, size }}
+        source={source ?? 'artifact'}
+      />
+    )
+  }
 
   if (state.status === 'loading') return <PreviewLoadingContent />
 

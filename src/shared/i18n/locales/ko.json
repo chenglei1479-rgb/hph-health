@@ -171,7 +171,9 @@
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "함께 제공되는 Python 실행 환경을 시작할 수 없어 분석을 실행하지 않았습니다. 앱을 다시 설치하십시오. (코드: {{code}})",
     "The output files from that run are missing or changed, so the file was not saved. Run the analysis again. (Code: {{code}})": "해당 실행의 출력 파일이 없거나 변경되어 파일을 저장하지 않았습니다. 분석을 다시 실행하십시오. (코드: {{code}})",
     "The output files from that run could not be saved, so its results were not kept (up to 200 files and 512 MB per run). Run the analysis again. (Code: {{code}})": "해당 실행의 출력 파일을 저장하지 못해 결과가 남지 않았습니다(실행당 최대 200개 파일, 512 MB까지 보관). 분석을 다시 실행하십시오. (코드: {{code}})",
-    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "해당 실행의 출력 파일을 읽지 못해 결과가 남지 않았습니다. 분석을 다시 실행하십시오. (코드: {{code}})"
+    "The output files from that run could not be read, so its results were not kept. Run the analysis again. (Code: {{code}})": "해당 실행의 출력 파일을 읽지 못해 결과가 남지 않았습니다. 분석을 다시 실행하십시오. (코드: {{code}})",
+    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "{{name}}의 저장된 사본이 기록된 체크섬과 일치하지 않아 저장하지 않았습니다. 원본 파일은 변경되지 않았습니다. (코드: {{code}})",
+    "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "{{name}} 파일이 없어 저장하지 못했습니다. 분석을 다시 실행해 파일을 만든 뒤 저장하세요. (코드: {{code}})"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "새로운 대화에서는 먼저 묻지 않고 명령을 실행하고, 파일을 변경하고, Notebook 코드를 실행하고, 네트워크에 액세스할 수 있습니다. 기존 대화에는 영향을 주지 않습니다.",
@@ -7674,6 +7676,14 @@
     "The provider you registered": "사용자가 등록한 모델 제공업체",
     "No AI provider is configured": "AI 모델 제공업체가 설정되지 않음",
     "Files saved by this run (they stay after you close the app; use the button on the right to save a copy)": "이번 실행에서 저장한 파일(앱을 닫아도 남습니다. 오른쪽 버튼으로 사본을 저장할 수 있습니다)",
-    "Saved.": "저장 완료"
+    "Saved.": "저장 완료",
+    "More actions for {{name}}": "{{name}}의 추가 작업",
+    "File details": "파일 세부정보",
+    "Publishing...": "게시 중…",
+    "Add to research package": "연구 패키지에 추가",
+    "Could not add {{name}} to the research package. Try again.": "{{name}}을(를) 연구 패키지에 추가하지 못했습니다. 다시 시도하세요.",
+    "Fit to window": "창에 맞추기",
+    "Actual size": "실제 크기",
+    "This file is {{size}}. Download it to view.": "이 파일은 {{size}}입니다. 다운로드한 뒤 확인하세요."
   }
 }

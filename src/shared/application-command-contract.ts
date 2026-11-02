@@ -16,6 +16,8 @@ export const APPLICATION_COMMAND_ERROR_CODES = [
   'schema-notebook-run-output-missing',
   'schema-notebook-run-output-limit',
   'schema-notebook-run-output-unreadable',
+  'managed-file-checksum-mismatch',
+  'managed-file-missing',
   'csl-file-too-large',
   'csl-invalid-xml',
   'csl-unsupported-doctype',

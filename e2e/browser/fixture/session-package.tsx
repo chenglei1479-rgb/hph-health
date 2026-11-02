@@ -76,6 +76,7 @@ usePackageOperationStore.getState().receive({
     : Array.from({ length: 30 }, (_, index) => ({
         source: 'artifact',
         groupId: `result-${index}`,
+        versionId: `result-version-${index}`,
         filename: `research-result-${index}.csv`,
         storageKey: `artifacts/fixture/fixture/result-${index}`,
         sizeBytes: 1024 * (index + 1),

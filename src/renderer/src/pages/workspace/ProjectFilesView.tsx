@@ -10,11 +10,18 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { ActionToast } from '@/components/ActionToast'
 import { errorDetail } from '@/lib/error-detail'
+import {
+  addFileToResearchPackage,
+  canAddFileToResearchPackage,
+  researchPackageTargetForFile
+} from '@/lib/research-package-inclusion'
 import { relativeTimeParts, type RelativeTimeUnit } from '@/lib/format-relative-time'
 import { cn } from '@/lib/utils'
 import { useGrantedFoldersStore } from '@/stores/granted-folders-store'
 import { useNavigationStore } from '@/stores/navigation-store'
+import { useSessionStore } from '@/stores/session-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import {
   PROJECT_FILES_PREVIEW_ID,
@@ -207,7 +214,9 @@ const ProjectArtifactGroupSection = ({
   viewMode,
   previewById,
   onPreview,
-  onOpenInPanel
+  onOpenInPanel,
+  onAddToResearchPackage,
+  canAddToResearchPackage
 }: {
   group: ArtifactGroupItem
   title: string
@@ -224,6 +233,8 @@ const ProjectArtifactGroupSection = ({
   previewById: Map<string, ArtifactPreviewResult | undefined>
   onPreview: (file: ProjectFileItem) => void
   onOpenInPanel: (file: ProjectFileItem) => void
+  onAddToResearchPackage: (file: ProjectFileItem) => void
+  canAddToResearchPackage: (file: ProjectFileItem) => boolean
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const sectionId = `session:${group.sessionId}`
@@ -266,6 +277,8 @@ const ProjectArtifactGroupSection = ({
               previewById={previewById}
               onPreview={onPreview}
               onOpenInPanel={onOpenInPanel}
+              onAddToResearchPackage={onAddToResearchPackage}
+              canAddToResearchPackage={canAddToResearchPackage}
             />
           ) : null}
           {page?.error ? (
@@ -508,6 +521,30 @@ const ProjectFilesViewContent = ({
     workbench.openPanel()
   }
 
+  // Adding a file opens the package selector with that file already checked. A refused start (the
+  // Session is still working, an approval is pending, another package operation is running) has to
+  // reach the reader: the row cannot look like it silently did nothing.
+  const [packageIncludeError, setPackageIncludeError] = useState<ProjectFileItem | undefined>(
+    undefined
+  )
+  const addToResearchPackage = (file: ProjectFileItem): void => {
+    setPackageIncludeError(undefined)
+    const target = researchPackageTargetForFile(file)
+    void addFileToResearchPackage(target).then(
+      (started) => {
+        if (!started) setPackageIncludeError(file)
+      },
+      () => setPackageIncludeError(file)
+    )
+  }
+  // A package export belongs to one Session, so a file with no loaded owning Session (an upload
+  // still on the pending pseudo-session, a session not in this project) gets no action at all: an
+  // entry that can only ever fail is worse than no entry. The subscribed list is what makes this
+  // answer change once hydration finishes; the rule itself stays in the shared predicate.
+  const hydratedSessions = useSessionStore((state) => state.sessions)
+  const canAddToResearchPackage = (file: ProjectFileItem): boolean =>
+    canAddFileToResearchPackage(researchPackageTargetForFile(file), hydratedSessions)
+
   const grantedRoots = useGrantedFoldersStore((state) => state.roots)
   const isLocalMode = sourceMode === 'local'
   // The granted folder the local browser is scoped to; a revoked root reads as the machine itself.
@@ -523,6 +560,15 @@ const ProjectFilesViewContent = ({
 
   return (
     <div data-testid="files-view" className="flex h-full min-h-0 w-full flex-col bg-bg-10">
+      {packageIncludeError ? (
+        <ActionToast
+          title={t('Could not add {{name}} to the research package. Try again.', {
+            name: packageIncludeError.name
+          })}
+          dismissLabel={t('Dismiss')}
+          onDismiss={() => setPackageIncludeError(undefined)}
+        />
+      ) : null}
       {grantedRootMutationError ? (
         <div
           className="m-2 shrink-0 max-h-[40%] overflow-y-auto"
@@ -767,6 +813,8 @@ const ProjectFilesViewContent = ({
                       previewById={currentFilePreviewById}
                       onPreview={previewFile}
                       onOpenInPanel={openFileInPanel}
+                      onAddToResearchPackage={addToResearchPackage}
+                      canAddToResearchPackage={canAddToResearchPackage}
                     />
                   ) : null}
                   <div
@@ -844,6 +892,8 @@ const ProjectFilesViewContent = ({
                   previewById={currentFilePreviewById}
                   onPreview={previewFile}
                   onOpenInPanel={openFileInPanel}
+                  onAddToResearchPackage={addToResearchPackage}
+                  canAddToResearchPackage={canAddToResearchPackage}
                 />
               ))}
               <div ref={groupsSentinelRef} data-testid="group-page-sentinel" className="h-px" />

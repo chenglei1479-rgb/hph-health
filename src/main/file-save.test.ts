@@ -1,4 +1,5 @@
 import { createFileSaveCommands } from './file-save'
+import { MANAGED_FILE_CHECKSUM_MISMATCH_CODE, MANAGED_FILE_MISSING_CODE } from '../shared/file-save'
 import { createElectronCallerContext, createWebCallerContext } from './caller-context'
 import type { ApplicationInvocation } from './application-command-router'
 import { configureTestElectronHost } from '../../test/runtime-host'
@@ -583,6 +584,278 @@ describe('file save IPC handlers', () => {
     expect(resolveManagedFilePath).not.toHaveBeenCalled()
     expect(copyTo).toHaveBeenCalledWith(join(downloadsPath, 'report.csv'))
     expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('verifies a saved copy against the Version checksum and keeps it when it matches', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
+    const bytes = 'alpha'
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      await writeFile(destinationPath, bytes)
+    })
+    const close = vi.fn(async () => undefined)
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256(bytes)
+    })
+    const target = join(destination, 'report.csv')
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
+
+    await expect(
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      )
+    ).resolves.toEqual({ saved: true, filePath: target })
+    await expect(readFile(target, 'utf8')).resolves.toBe(bytes)
+  })
+
+  it('never writes the destination and reports the file name when the checksum does not match', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      // The delivered bytes are not the ones the Version record describes.
+      await writeFile(destinationPath, 'alpha')
+    })
+    const close = vi.fn(async () => undefined)
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256('beta')
+    })
+    const target = join(destination, 'report.csv')
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    // The stable code travels in the sentence, which is what the renderer strips and shows.
+    const mismatchMessage =
+      (error as { message?: string }).message ?? JSON.stringify(error)
+    expect(mismatchMessage).toContain(MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
+    // The user must learn which file was not saved, and that the original was not touched.
+    expect(mismatchMessage).toContain('report.csv')
+    expect(mismatchMessage).toContain('original file was not changed')
+    // Nothing was written to the destination, so nothing needs deleting.
+    await expect(readFile(target)).rejects.toMatchObject({ code: 'ENOENT' })
+    // The Version handle was still closed on the failure path.
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('leaves an existing destination file untouched when the checksum does not match', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
+    const target = join(destination, 'report.csv')
+    // The user chose a path that already holds their own file; replacing it is part of any Save As,
+    // but a checksum failure must happen BEFORE that replacement, not after.
+    await writeFile(target, 'user-original')
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      await writeFile(destinationPath, 'alpha')
+    })
+    const close = vi.fn(async () => undefined)
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256('beta')
+    })
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    expect(
+      (error as { message?: string }).message ?? JSON.stringify(error)
+    ).toContain(MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
+    // The user's original file at the destination is still exactly what it was.
+    await expect(readFile(target, 'utf8')).resolves.toBe('user-original')
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('reports a stable missing-file code when the Version content is gone from disk', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-missing-'))
+    const target = join(destination, 'report.csv')
+    const close = vi.fn(async () => undefined)
+    // Production shape, measured from the real operator: the Version service rejects while opening
+    // the lease, and the outer code is INTEGRITY_FAILED because the recorded integrity can no longer
+    // be proven. The original ENOENT only survives two levels down the cause chain.
+    const storageError = Object.assign(new Error('Managed file version content is unavailable or corrupt.'), {
+      code: 'INTEGRITY_FAILED',
+      cause: Object.assign(new Error('Recorded immutable file is missing.'), {
+        code: 'INTEGRITY_FAILED',
+        cause: Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' })
+      })
+    })
+    const openManagedFileVersion = vi.fn().mockRejectedValue(storageError)
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    const message = (error as { message?: string }).message ?? JSON.stringify(error)
+    // The download control stays enabled for a missing file, so the click has to answer with a code
+    // and a next step instead of raw fs text or a silent failure.
+    expect(message).toContain(MANAGED_FILE_MISSING_CODE)
+    expect(message).toContain('report.csv')
+    expect(message).toContain('Run the analysis again')
+    // The lease never opened, so there is nothing to close.
+    expect(close).not.toHaveBeenCalled()
+  })
+
+  it('keeps the original error for a missing local path instead of promising a rerun', async () => {
+    const close = vi.fn(async () => undefined)
+    // A literature attachment or a local file is chosen by path. If it is gone, re-running an
+    // analysis cannot bring it back, so this source must not borrow the Version sentence.
+    const openManagedFile = vi.fn().mockRejectedValue(
+      Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' })
+    )
+    showSaveDialog.mockResolvedValue({
+      canceled: false,
+      filePath: join(downloadsPath, 'article.pdf')
+    })
+    registerFileSaveHandlers({
+      resolveManagedFilePath: vi.fn().mockResolvedValue('/managed/article.pdf'),
+      openManagedFile
+    } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'literature',
+          path: 'literature-attachment-version:version-1',
+          suggestedName: 'article.pdf'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    const message = (error as { message?: string }).message ?? JSON.stringify(error)
+    expect(message).not.toContain(MANAGED_FILE_MISSING_CODE)
+    expect(message).not.toContain('Run the analysis again')
+    expect(close).not.toHaveBeenCalled()
+  })
+
+  it('does not claim the Version is missing when the chosen destination fails', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-missing-'))
+    const target = join(destination, 'report.csv')
+    const close = vi.fn(async () => undefined)
+    // The source copy succeeds; the rename onto the destination then hits ENOENT because the folder
+    // was deleted or a removable drive was unplugged. Re-running the analysis would be the wrong fix.
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      await writeFile(destinationPath, 'alpha')
+    })
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256('alpha')
+    })
+    const publishUserFile = vi.fn(
+      async (_filePath: string, write: (temporaryPath: string) => Promise<unknown>) => {
+        // The source copy runs first; only the final replace fails.
+        await write(join(destination, 'staged-copy.csv'))
+        throw Object.assign(new Error('ENOENT: no such file or directory, rename'), {
+          code: 'ENOENT'
+        })
+      }
+    )
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({ openManagedFileVersion, publishUserFile } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    expect(copyTo).toHaveBeenCalled()
+    expect((error as { message?: string }).message ?? '').not.toContain(MANAGED_FILE_MISSING_CODE)
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('saves without verifying when the Version record carries no checksum', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      await writeFile(destinationPath, 'alpha')
+    })
+    const close = vi.fn(async () => undefined)
+    // Older artifacts and imported packages have no checksum; that is not a corrupt copy.
+    const openManagedFileVersion = vi.fn().mockResolvedValue({ copyTo, close })
+    const target = join(destination, 'legacy.csv')
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
+
+    await expect(
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'legacy.csv'
+        }
+      )
+    ).resolves.toEqual({ saved: true, filePath: target })
+    await expect(readFile(target, 'utf8')).resolves.toBe('alpha')
   })
 
   it('preserves an explicit historical version when exporting a logical managed file', async () => {

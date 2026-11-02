@@ -95,6 +95,52 @@ describe('NodeVersionFileOperator', () => {
     ).resolves.toEqual(content)
   })
 
+  // The production shape for a Version whose content was deleted: opening it fails eagerly and the
+  // original ENOENT only survives as `cause`. saveFile's mapping depends on exactly this shape, so a
+  // test that fakes a plain ENOENT would prove nothing about the real path (#122 review).
+  it('reports a storage error carrying the original ENOENT when the content file is gone', async () => {
+    const module = await import('./version-file-operator')
+    cleanupRoot = await mkdtemp(join(tmpdir(), 'open-science-version-file-'))
+    const operator = new module.NodeVersionFileOperator({ storageRoot: cleanupRoot })
+    const planInput = {
+      operationId: 'operation-missing-content',
+      scope: {
+        source: 'upload' as const,
+        projectId: 'project-1',
+        sessionId: 'session-1',
+        logicalFileId: 'upload-1'
+      },
+      logicalFilename: 'notes.txt',
+      candidateIndex: 0
+    }
+    const plannedFile = operator.planImmutable(planInput)
+    const stored = await operator.publishImmutable({
+      ...planInput,
+      plannedFile,
+      content: Buffer.from('immutable content\n')
+    })
+    await rm(join(cleanupRoot, ...plannedFile.storageRef.split('/')))
+
+    const error = await operator
+      .openImmutable(stored.storageRef, stored)
+      .then(() => undefined)
+      .catch((reason: unknown) => reason)
+
+    // The outer code is NOT a stable signal here: an absent content file surfaces as INTEGRITY_FAILED
+    // (the recorded integrity can no longer be proven), and the storage layer keeps the original
+    // ENOENT as the cause. Callers must walk the cause chain instead of keying on one code.
+    const chain: string[] = []
+    for (let cursor: unknown = error, depth = 0; cursor && depth < 5; depth += 1) {
+      const entry = cursor as { code?: unknown; cause?: unknown }
+      chain.push(String(entry.code))
+      cursor = entry.cause
+    }
+    expect(chain).toContain('ENOENT')
+    // Pin the depth too: `file-save`'s isMissingFileError walks at most four links, so this is the
+    // assertion that fails first if another wrapper layer ever pushes the ENOENT out of reach.
+    expect(chain.length).toBeLessThanOrEqual(4)
+  })
+
   it('publishes when the configured file system does not support hard links', async () => {
     const module = await import('./version-file-operator')
     cleanupRoot = await mkdtemp(join(tmpdir(), 'open-science-version-file-'))
