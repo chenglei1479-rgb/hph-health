@@ -8187,6 +8187,12 @@
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "Не удалось сохранить {{name}}: это окно не может связаться с настольным приложением. Перезапустите приложение и повторите попытку. (Код: {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "Не удалось создать {{name}}. Повторите попытку. (Код: {{code}})",
     "No file was saved.": "Файл не был сохранён.",
+    "Every statement below cites the execution it comes from. Only executions recorded for this project appear.": "Каждое утверждение ниже указывает выполнение, на котором оно основано. Показаны только выполнения, записанные для этого проекта.",
+    "Run records could not be read, so no AI usage is declared. Select the project again to retry.": "Не удалось прочитать записи о выполнениях, поэтому использование ИИ не указано. Выберите проект заново, чтобы повторить попытку.",
+    "Unconfirmed": "Не подтверждено",
+    "I verified this declaration.": "Я проверил(а) это заявление.",
+    "Recorded executions: {{shown}}": "Записанные выполнения: {{shown}}",
+    "Only the {{shown}} most recent executions are listed.": "Показаны только {{shown}} последних выполнений.",
     "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "Не удалось сохранить {{name}}. Черновик создан, но записать его в выбранное место не удалось. (Код: {{code}})"
   }
 }

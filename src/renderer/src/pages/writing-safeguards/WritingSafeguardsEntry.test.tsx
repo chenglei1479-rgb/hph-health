@@ -27,11 +27,22 @@ describe('writing safeguards', () => {
     vi.unstubAllGlobals()
   })
 
-  const renderEntry = async (): Promise<HTMLDivElement> => {
+  const renderEntry = async (overrides: Record<string, unknown> = {}): Promise<HTMLDivElement> => {
     useLocaleStore.setState({ preference: 'ja', locale: 'ja' })
     window.api = {
       projects: { list: projects },
-      writingSafeguards: { getEthicsApproval, setEthicsApproval }
+      writingSafeguards: {
+        getEthicsApproval,
+        setEthicsApproval,
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        }))
+      },
+      ...overrides
     } as unknown as Window['api']
     container = document.createElement('div')
     document.body.appendChild(container)
@@ -47,6 +58,40 @@ describe('writing safeguards', () => {
     })
     return container
   }
+
+  const selectProject = async (host: HTMLDivElement): Promise<void> => {
+    const select = host.querySelector('select')
+    if (!select) throw new Error('project select is missing')
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        'value'
+      )?.set
+      setter?.call(select, 'study-1')
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+  }
+
+  const declarationValue = (host: HTMLDivElement): string => {
+    const declaration = host.querySelector('textarea[aria-label="開示の下書き"]')
+    return declaration instanceof HTMLTextAreaElement ? declaration.value : ''
+  }
+
+  const sessionApi = (
+    runs: readonly Record<string, unknown>[],
+    options: { sessions?: readonly { id: string; projectId: string; updatedAt: number }[] } = {}
+  ): Record<string, unknown> => ({
+    sessions: {
+      list: vi.fn(async () => ({
+        sessions: options.sessions ?? [{ id: 'session-1', projectId: 'study-1', updatedAt: 9 }]
+      })),
+      loadOne: vi.fn(async () => ({ cwd: '/workspace' }))
+    },
+    notebook: { runIndex: vi.fn(async () => runs) }
+  })
 
   it('shows a non-blocking ethics reminder before writing when the number is empty', async () => {
     const host = await renderEntry()
@@ -85,12 +130,18 @@ describe('writing safeguards', () => {
     if (!(declaration instanceof HTMLTextAreaElement)) return
     expect(declaration.value).toContain('全責任を負い')
     expect(declaration.value).toContain('full responsibility')
-    const checkbox = host.querySelector(
-      '[data-writing-safeguards-disclosure] input[type="checkbox"]'
+    // The review clause is not in the text before the author confirms it (#133).
+    expect(declaration.value).not.toContain('記載内容は著者自身が確認した。')
+    const checkboxes = Array.from(
+      host.querySelectorAll<HTMLInputElement>(
+        '[data-writing-safeguards-disclosure] input[type="checkbox"]'
+      )
+    )
+    const coi = checkboxes.find((box) =>
+      box.getAttribute('aria-label')?.startsWith('利益相反の文を加える')
     )
     await act(async () => {
-      if (!(checkbox instanceof HTMLInputElement)) return
-      checkbox.click()
+      coi?.click()
     })
     const updated = host.querySelector('textarea[aria-label="開示の下書き"]')
     expect(updated).toBeInstanceOf(HTMLTextAreaElement)
@@ -186,5 +237,86 @@ describe('writing safeguards', () => {
     })
     expect(createObjectURL).not.toHaveBeenCalled()
     expect(host.textContent).toContain('生年月日')
+  })
+
+  // #133: the old panel started from four template rows and a review sentence that claimed the
+  // authors had checked them. Both were statements about work nobody had necessarily done.
+  it('declares only the executions the project recorded', async () => {
+    const host = await renderEntry(
+      sessionApi([
+        {
+          runId: 'run-agent-1',
+          source: 'agent',
+          kernelKind: 'python',
+          status: 'completed',
+          startedAt: 2
+        },
+        {
+          runId: 'run-user-1',
+          source: 'user',
+          kernelKind: 'python',
+          status: 'completed',
+          startedAt: 3
+        }
+      ])
+    )
+    await selectProject(host)
+
+    expect(declarationValue(host)).toContain('実行 ID: run-agent-1')
+    expect(declarationValue(host)).not.toContain('run-user-1')
+    expect(declarationValue(host)).not.toContain('文献の検索と整理')
+    expect(declarationValue(host)).not.toContain('統計計画の下書き')
+    const statements = host.querySelectorAll('[data-writing-safeguards-statement]')
+    expect(statements).toHaveLength(1)
+    expect(statements[0]?.textContent).toContain('run-agent-1')
+  })
+
+  it('keeps the review sentence out until the author verifies the declaration', async () => {
+    const host = await renderEntry(
+      sessionApi([
+        {
+          runId: 'run-agent-1',
+          source: 'agent',
+          kernelKind: 'python',
+          status: 'completed',
+          startedAt: 2
+        }
+      ])
+    )
+    await selectProject(host)
+
+    expect(declarationValue(host)).not.toContain('記載内容は著者自身が確認した。')
+    const review = host.querySelector('[data-writing-safeguards-review-state]')
+    expect(review?.textContent).toBe('Unconfirmed')
+
+    const checkbox = host.querySelector('input[aria-label="I verified this declaration."]')
+    await act(async () => {
+      if (checkbox instanceof HTMLInputElement) checkbox.click()
+    })
+
+    expect(declarationValue(host)).toContain('記載内容は著者自身が確認した。')
+    expect(host.querySelector('[data-writing-safeguards-review-state]')?.textContent).toBe(
+      'Confirmed'
+    )
+  })
+
+  it('says nothing was executed when the project has no recorded execution', async () => {
+    const host = await renderEntry(sessionApi([]))
+    await selectProject(host)
+
+    expect(declarationValue(host)).toContain('エージェントによる実行の記録がない')
+    expect(host.querySelectorAll('[data-writing-safeguards-statement]')).toHaveLength(0)
+    expect(host.querySelector('[data-writing-safeguards-runs-count]')).not.toBeNull()
+    expect(host.querySelector('[data-writing-safeguards-runs-unavailable]')).toBeNull()
+  })
+
+  it('reports unreadable run records instead of declaring no AI usage', async () => {
+    const host = await renderEntry()
+    await selectProject(host)
+
+    expect(host.querySelector('[data-writing-safeguards-runs-unavailable]')).not.toBeNull()
+    expect(host.querySelector('[data-writing-safeguards-runs-count]')).toBeNull()
+    // "we could not look" must not be rendered as "there was nothing".
+    expect(declarationValue(host)).not.toContain('エージェントによる実行の記録がない')
   })
 })

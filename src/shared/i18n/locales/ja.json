@@ -7720,6 +7720,12 @@
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "このウィンドウからデスクトップアプリに接続できないため、{{name}} を保存できませんでした。アプリを再起動してから、もう一度お試しください。（コード: {{code}}）",
     "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} を作成できませんでした。もう一度お試しください。（コード: {{code}}）",
     "No file was saved.": "ファイルは保存されませんでした。",
+    "Every statement below cites the execution it comes from. Only executions recorded for this project appear.": "以下の各行は、その根拠となる実行を明記しています。このプロジェクトで記録された実行だけが表示されます。",
+    "Run records could not be read, so no AI usage is declared. Select the project again to retry.": "実行記録を読み取れませんでした。そのため AI の使用は記載していません。プロジェクトを選び直すと再試行します。",
+    "Unconfirmed": "未確認",
+    "I verified this declaration.": "この記載内容を確認しました。",
+    "Recorded executions: {{shown}}": "記録された実行: {{shown}} 件",
+    "Only the {{shown}} most recent executions are listed.": "最新の {{shown}} 件の実行だけを表示しています。",
     "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} を保存できませんでした。下書きは作成されましたが、選んだ保存先に書き込めませんでした。（コード: {{code}}）"
   }
 }

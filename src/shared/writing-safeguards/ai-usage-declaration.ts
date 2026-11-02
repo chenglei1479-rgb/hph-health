@@ -12,10 +12,17 @@ import {
   productNameIsPublic
 } from '../product-identity'
 
-export type AiUsageRecord = {
+export type AiUsageEvidence =
+  { kind: 'notebook-run'; runId: string } | { kind: 'artifact'; artifactId: string }
+
+// One statement is one recorded execution. `feature` and `purpose` are the doctor's words for
+// what that execution was for; the evidence is what makes the sentence auditable instead of an
+// assertion (#133).
+export type AiUsageStatement = {
   feature: string
   model: string
   purpose: string
+  evidence: AiUsageEvidence
 }
 
 export type DisclosureIdentity = {
@@ -121,122 +128,120 @@ const disclosureLocale = (language?: string): DisclosureLocale => {
   return 'en'
 }
 
-type UsageTemplate = { feature: string; purpose: string }
-
 type DisclosureCopy = {
-  usages: readonly UsageTemplate[]
   modelMissing: string
-  purposeFallback: string
-  empty: string
-  line: (feature: string, model: string, purpose: string) => string
-  lead: (body: string) => string
+  evidenceLabel: Readonly<Record<AiUsageEvidence['kind'], string>>
+  noExecution: string
+  intro: string
+  responsibility: string
+  line: (feature: string, model: string, purpose: string, evidence: string) => string
+  confirmedLine: string
   includeEnglish: boolean
 }
 
-const englishLead = (body: string): string =>
-  `During preparation of this manuscript, the authors used the following artificial intelligence (AI) features. ${body} The authors take full responsibility for the content of the manuscript, reviewed that content, and do not list artificial intelligence as an author.`
-
-const englishLine = (feature: string, model: string, purpose: string): string =>
-  `${feature} (model: ${model}) was used for ${purpose}.`
+const englishLine = (feature: string, model: string, purpose: string, evidence: string): string =>
+  purpose.length > 0
+    ? `${feature} (model: ${model}) was used for ${purpose} (${evidence}).`
+    : `${feature} (model: ${model}) was used (${evidence}).`
 
 const disclosureCopy: Record<DisclosureLocale, DisclosureCopy> = {
   ja: {
-    usages: [
-      { feature: '文献の検索と整理', purpose: '関連研究の候補を集める' },
-      { feature: '統計計画の下書き', purpose: '解析方針の草案を作る' },
-      { feature: '原稿の下書き', purpose: '検証済みの結果から文章の草案を作る' },
-      { feature: 'Notebookの結果の説明', purpose: '手元の実行結果を文章にまとめる' }
-    ],
     modelMissing: 'モデル名は記録されていない',
-    purposeFallback: '原稿作成',
-    empty: '記録されたAI機能の使用はない。',
-    line: (feature, model, purpose) =>
-      `「${feature}」（モデル: ${model}）を${purpose}のために使用した。`,
-    lead: (body) =>
-      `原稿の作成にあたり、次の人工知能（AI）機能を使用した。${body}著者は原稿の内容について全責任を負い、人工知能を著者としては記載しない。記載内容は著者自身が確認した。`,
+    evidenceLabel: { 'notebook-run': '実行 ID', artifact: '成果物 ID' },
+    noExecution:
+      'このプロジェクトには、エージェントによる実行の記録がない。したがって、本原稿の作成に AI 機能を用いた実行は記録されていない。',
+    intro: '原稿の作成にあたり、次の人工知能（AI）機能を使用した。',
+    responsibility: '著者は原稿の内容について全責任を負い、人工知能を著者としては記載しない。',
+    line: (feature, model, purpose, evidence) =>
+      purpose.length > 0
+        ? `「${feature}」（モデル: ${model}）を${purpose}のために使用した（${evidence}）。`
+        : `「${feature}」（モデル: ${model}）を使用した（${evidence}）。`,
+    confirmedLine: '記載内容は著者自身が確認した。',
     includeEnglish: true
   },
   'zh-Hans': {
-    usages: [
-      { feature: '文献检索与整理', purpose: '收集相关研究候选' },
-      { feature: '统计计划草稿', purpose: '起草分析方案' },
-      { feature: '文稿草稿', purpose: '根据已核实的结果起草正文' },
-      { feature: 'Notebook 结果说明', purpose: '把本机运行结果整理成文字' }
-    ],
     modelMissing: '未记录模型名称',
-    purposeFallback: '文稿准备',
-    empty: '没有记录到 AI 功能的使用。',
-    line: (feature, model, purpose) => `使用了「${feature}」（模型：${model}），用于${purpose}。`,
-    lead: (body) =>
-      `在准备文稿时，使用了下列人工智能（AI）功能。${body}作者对文稿内容承担全部责任，不将人工智能列为作者。所列内容已经作者本人核对。`,
+    evidenceLabel: { 'notebook-run': '运行 ID', artifact: '产物 ID' },
+    noExecution: '本项目没有智能体执行的记录。因此，本稿件中没有记录到使用 AI 功能的执行。',
+    intro: '在准备文稿时，使用了下列人工智能（AI）功能。',
+    responsibility: '作者对文稿内容承担全部责任，不将人工智能列为作者。',
+    line: (feature, model, purpose, evidence) =>
+      purpose.length > 0
+        ? `使用了「${feature}」（模型：${model}），用于${purpose}（${evidence}）。`
+        : `使用了「${feature}」（模型：${model}）（${evidence}）。`,
+    confirmedLine: '所列内容已经作者本人核对。',
     includeEnglish: true
   },
   'zh-Hant': {
-    usages: [
-      { feature: '文獻檢索與整理', purpose: '收集相關研究候選' },
-      { feature: '統計計畫草稿', purpose: '起草分析方案' },
-      { feature: '文稿草稿', purpose: '根據已核實的結果起草正文' },
-      { feature: 'Notebook 結果說明', purpose: '把本機執行結果整理成文字' }
-    ],
     modelMissing: '未記錄模型名稱',
-    purposeFallback: '文稿準備',
-    empty: '沒有記錄到 AI 功能的使用。',
-    line: (feature, model, purpose) => `使用了「${feature}」（模型：${model}），用於${purpose}。`,
-    lead: (body) =>
-      `在準備文稿時，使用了下列人工智慧（AI）功能。${body}作者對文稿內容承擔全部責任，不將人工智慧列為作者。所列內容已經作者本人核對。`,
+    evidenceLabel: { 'notebook-run': '執行 ID', artifact: '產物 ID' },
+    noExecution: '本專案沒有智慧體執行的記錄。因此，本稿件中沒有記錄到使用 AI 功能的執行。',
+    intro: '在準備文稿時，使用了下列人工智慧（AI）功能。',
+    responsibility: '作者對文稿內容承擔全部責任，不將人工智慧列為作者。',
+    line: (feature, model, purpose, evidence) =>
+      purpose.length > 0
+        ? `使用了「${feature}」（模型：${model}），用於${purpose}（${evidence}）。`
+        : `使用了「${feature}」（模型：${model}）（${evidence}）。`,
+    confirmedLine: '所列內容已經作者本人核對。',
     includeEnglish: true
   },
   en: {
-    usages: [
-      {
-        feature: 'Literature search and organization',
-        purpose: 'gather candidate related studies'
-      },
-      { feature: 'Statistical plan draft', purpose: 'draft an analysis plan' },
-      { feature: 'Manuscript draft', purpose: 'draft prose from verified results' },
-      {
-        feature: 'Explanation of Notebook results',
-        purpose: 'summarize results run on this computer'
-      }
-    ],
     modelMissing: 'the model name was not recorded',
-    purposeFallback: 'manuscript preparation',
-    empty: 'No recorded AI feature was used.',
+    evidenceLabel: { 'notebook-run': 'execution id', artifact: 'artifact id' },
+    noExecution:
+      'No agent execution is recorded for this project, so no execution of an AI feature is recorded for this manuscript.',
+    intro:
+      'During preparation of this manuscript, the authors used the following artificial intelligence (AI) features.',
+    responsibility:
+      'The authors take full responsibility for the content of the manuscript and do not list artificial intelligence as an author.',
     line: englishLine,
-    lead: englishLead,
+    confirmedLine: 'The authors verified this declaration.',
     includeEnglish: false
   }
 }
 
 const clean = (value: string): string => value.replace(/\s+/g, ' ').trim()
 
-const paragraphFor = (copy: DisclosureCopy, usages: readonly AiUsageRecord[]): string => {
-  const recorded = usages.filter((usage) => clean(usage.feature).length > 0)
-  if (recorded.length === 0) return copy.lead(copy.empty)
+const evidenceText = (copy: DisclosureCopy, evidence: AiUsageEvidence): string => {
+  const label = copy.evidenceLabel[evidence.kind]
+  const id = evidence.kind === 'notebook-run' ? evidence.runId : evidence.artifactId
+  return `${label}: ${clean(id)}`
+}
+
+export type AiUsageRecordsState = 'recorded' | 'none' | 'unreadable'
+
+const paragraphFor = (
+  copy: DisclosureCopy,
+  statements: readonly AiUsageStatement[],
+  records: AiUsageRecordsState
+): string => {
+  const recorded = statements.filter((statement) => clean(statement.feature).length > 0)
+  // "unreadable" says nothing about executions at all: claiming "none were recorded" when the
+  // records could not be read is the same class of false statement as the template rows (#133).
+  if (records === 'unreadable') return copy.responsibility
+  if (recorded.length === 0) return `${copy.noExecution}${copy.responsibility}`
   const body = recorded
-    .map((usage) => {
-      const model = clean(usage.model)
+    .map((statement) => {
+      const model = clean(statement.model)
       return copy.line(
-        clean(usage.feature),
+        clean(statement.feature),
         model.length > 0 ? model : copy.modelMissing,
-        clean(usage.purpose) || copy.purposeFallback
+        clean(statement.purpose),
+        evidenceText(copy, statement.evidence)
       )
     })
     .join(copy === disclosureCopy.en ? ' ' : '')
-  return copy.lead(body)
+  const separator = copy === disclosureCopy.en ? ' ' : ''
+  return `${copy.intro}${body}${separator}${copy.responsibility}`
 }
-
-export const defaultAiUsageRecords = (language?: string): AiUsageRecord[] =>
-  disclosureCopy[disclosureLocale(language)].usages.map((usage) => ({
-    feature: usage.feature,
-    model: '',
-    purpose: usage.purpose
-  }))
 
 export type AiUsageDeclaration = {
   japanese: string
   english: string
   draft: string
+  // The review clause is only in the text once the author confirms it; the panel shows the
+  // unconfirmed state until then.
+  confirmed: boolean
 }
 
 const coiSuffix = (
@@ -245,22 +250,45 @@ const coiSuffix = (
   identity?: DisclosureIdentity
 ): string => (includeCoi ? `\n\n${coiLines(locale, identity).join('\n')}` : '')
 
+const paragraphWithConfirmation = (
+  copy: DisclosureCopy,
+  statements: readonly AiUsageStatement[],
+  confirmed: boolean,
+  records: AiUsageRecordsState
+): string => {
+  const paragraph = paragraphFor(copy, statements, records)
+  if (!confirmed) return paragraph
+  const hasStatements = statements.some((statement) => clean(statement.feature).length > 0)
+  return hasStatements && records === 'recorded'
+    ? `${paragraph}${copy.confirmedLine}`
+    : `${paragraph} ${copy.confirmedLine}`
+}
+
 export const buildAiUsageDeclaration = (input: {
-  usages: readonly AiUsageRecord[]
+  statements: readonly AiUsageStatement[]
+  // What the run records said. The caller passes this because only it knows whether the read
+  // succeeded; defaulting to "no statements means nothing ran" would make an unreadable read
+  // indistinguishable from an empty project.
+  records?: AiUsageRecordsState
   includeCoi?: boolean
   language?: string
   identity?: DisclosureIdentity
+  authorConfirmed?: boolean
 }): AiUsageDeclaration => {
   const locale = disclosureLocale(input.language)
   const copy = disclosureCopy[locale]
-  const primary = paragraphFor(copy, input.usages)
-  const english = paragraphFor(disclosureCopy.en, input.usages)
+  const confirmed = input.authorConfirmed === true
+  const hasStatements = input.statements.some((statement) => clean(statement.feature).length > 0)
+  const records = input.records ?? (hasStatements ? 'recorded' : 'none')
+  const primary = paragraphWithConfirmation(copy, input.statements, confirmed, records)
+  const english = paragraphWithConfirmation(disclosureCopy.en, input.statements, confirmed, records)
   const coi = coiSuffix(locale, input.includeCoi, input.identity)
   const draft = copy.includeEnglish ? `${primary}\n\n${english}${coi}\n` : `${primary}${coi}\n`
   return {
     japanese: locale === 'ja' ? primary : '',
     english,
-    draft
+    draft,
+    confirmed
   }
 }
 

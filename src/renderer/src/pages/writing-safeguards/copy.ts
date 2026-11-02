@@ -16,7 +16,6 @@ export type WritingSafeguardsCopy = {
   feature: string
   model: string
   purpose: string
-  addUsage: string
   rebuild: string
   coi: string
   manuscript: string
@@ -46,7 +45,6 @@ const ja: Omit<WritingSafeguardsCopy, 'coi'> = {
   feature: '使った機能',
   model: 'モデル',
   purpose: '用途',
-  addUsage: '機能を追加',
   rebuild: '開示文を作り直す',
   manuscript: '原稿',
   declaration: '開示の下書き',
@@ -77,7 +75,6 @@ const catalogs = {
     feature: 'Feature used',
     model: 'Model',
     purpose: 'Purpose',
-    addUsage: 'Add a feature',
     rebuild: 'Rebuild the disclosure',
     manuscript: 'Manuscript',
     declaration: 'Disclosure draft',
@@ -105,7 +102,6 @@ const catalogs = {
     feature: '使用的功能',
     model: '模型',
     purpose: '用途',
-    addUsage: '添加功能',
     rebuild: '重新生成披露文',
     manuscript: '文稿',
     declaration: '披露草稿',
@@ -133,7 +129,6 @@ const catalogs = {
     feature: '使用的功能',
     model: '模型',
     purpose: '用途',
-    addUsage: '新增功能',
     rebuild: '重新產生揭露文',
     manuscript: '文稿',
     declaration: '揭露草稿',
@@ -161,7 +156,6 @@ const catalogs = {
     feature: 'Verwendete Funktion',
     model: 'Modell',
     purpose: 'Zweck',
-    addUsage: 'Funktion hinzufügen',
     rebuild: 'Offenlegung neu erstellen',
     manuscript: 'Manuskript',
     declaration: 'Entwurf der Offenlegung',
@@ -189,7 +183,6 @@ const catalogs = {
     feature: 'Función utilizada',
     model: 'Modelo',
     purpose: 'Finalidad',
-    addUsage: 'Añadir función',
     rebuild: 'Regenerar la declaración',
     manuscript: 'Manuscrito',
     declaration: 'Borrador de la declaración',
@@ -217,7 +210,6 @@ const catalogs = {
     feature: 'Fonction utilisée',
     model: 'Modèle',
     purpose: 'Usage',
-    addUsage: 'Ajouter une fonction',
     rebuild: 'Régénérer la déclaration',
     manuscript: 'Manuscrit',
     declaration: 'Brouillon de la déclaration',
@@ -245,7 +237,6 @@ const catalogs = {
     feature: '사용한 기능',
     model: '모델',
     purpose: '용도',
-    addUsage: '기능 추가',
     rebuild: '공개문 다시 만들기',
     manuscript: '원고',
     declaration: '공개문 초안',
@@ -273,7 +264,6 @@ const catalogs = {
     feature: 'Использованная функция',
     model: 'Модель',
     purpose: 'Назначение',
-    addUsage: 'Добавить функцию',
     rebuild: 'Собрать текст раскрытия заново',
     manuscript: 'Рукопись',
     declaration: 'Черновик раскрытия',

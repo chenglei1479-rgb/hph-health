@@ -7880,6 +7880,12 @@
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "{{name}} konnte nicht gespeichert werden, weil dieses Fenster die Desktop-App nicht erreicht. Starten Sie die App neu, und versuchen Sie es erneut. (Code: {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} konnte nicht erstellt werden. Versuchen Sie es erneut. (Code: {{code}})",
     "No file was saved.": "Es wurde keine Datei gespeichert.",
+    "Every statement below cites the execution it comes from. Only executions recorded for this project appear.": "Jede Aussage unten nennt die Ausführung, auf der sie beruht. Es erscheinen nur Ausführungen, die für dieses Projekt aufgezeichnet sind.",
+    "Run records could not be read, so no AI usage is declared. Select the project again to retry.": "Die Ausführungsprotokolle konnten nicht gelesen werden, daher wird keine KI-Nutzung angegeben. Wählen Sie das Projekt erneut, um es noch einmal zu versuchen.",
+    "Unconfirmed": "Nicht bestätigt",
+    "I verified this declaration.": "Ich habe diese Erklärung geprüft.",
+    "Recorded executions: {{shown}}": "Aufgezeichnete Ausführungen: {{shown}}",
+    "Only the {{shown}} most recent executions are listed.": "Es werden nur die {{shown}} neuesten Ausführungen aufgeführt.",
     "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} konnte nicht gespeichert werden. Der Entwurf wurde erstellt, ließ sich aber nicht am gewählten Ort schreiben. (Code: {{code}})"
   }
 }
