@@ -7,6 +7,7 @@ import type { JSX, PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { useSessionStore } from '@/stores/session-store'
 import type { ChatMessage } from '@/stores/session-store'
 
 import { WorkspaceMessageItem as MessageItem } from './WorkspaceMessageItem'
@@ -56,6 +57,7 @@ beforeEach(() => {
     // The card probes for a missing backing file once it is near the viewport; "ok" keeps it available.
     artifacts: { readPreview: vi.fn(async () => ({ ok: true, format: 'image', data: '' })) }
   }
+  useSessionStore.setState({ sessions: [] })
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -209,6 +211,40 @@ describe('generated file card actions', () => {
     const labels = menuItems().map((item) => item.textContent)
     expect(labels).not.toContain('File details')
     expect(labels).toHaveLength(2)
+  })
+
+  // A card calls the same helper as the Files row, and the failure has to be visible on the card.
+  it('offers adding the card Version to the research package when its Session is loaded', async () => {
+    useSessionStore.setState({
+      sessions: [{ id: 'session-1', projectId: 'project-1' }] as never
+    })
+    await render({ artifacts: [artifact(2)] })
+
+    await openMenu(menuTrigger('plot.png'))
+    const labels = menuItems().map((item) => item.textContent)
+    expect(labels).toHaveLength(4)
+    expect(labels[0]).toContain('plot.png')
+    expect(labels[1]).toContain('plot-v2.png')
+    expect(labels[2]).toBe('Add to research package')
+    expect(labels[3]).toBe('File details')
+
+    // This harness has no package export bridge, so the refusal names the file instead of vanishing.
+    await click(menuItems()[2] ?? null)
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const toast = container.querySelector('[data-testid="artifact-card-package-inclusion-error"]')
+    expect(toast?.textContent).toContain(
+      'Could not add plot.png to the research package. Try again.'
+    )
+  })
+
+  // No owning Session means no package to join, so the entry is absent rather than inert.
+  it('omits the research package entry when the card Version has no loaded Session', async () => {
+    await render({ artifacts: [artifact(1)] })
+
+    await openMenu(menuTrigger('plot.png'))
+    expect(menuItems().map((item) => item.textContent)).not.toContain('Add to research package')
   })
 })
 

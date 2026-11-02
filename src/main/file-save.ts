@@ -30,7 +30,7 @@ import { englishNativeTranslator, type NativeTranslator } from './locale/main-pr
 import { toErrorMessage } from './error-message'
 import { publishUserFile } from './user-file-publisher'
 import { ApplicationCommandError } from '../shared/application-command-contract'
-import { MANAGED_FILE_CHECKSUM_MISMATCH_CODE } from '../shared/file-save'
+import { MANAGED_FILE_CHECKSUM_MISMATCH_CODE, MANAGED_FILE_MISSING_CODE } from '../shared/file-save'
 
 // Hashes a file the app just delivered. Used only to prove a saved copy matches the Version record, so
 // a mismatch is reported instead of handing the user bytes that differ from what the preview showed.
@@ -210,6 +210,15 @@ const assertSaveProjectArtifactsRequest = (request: SaveProjectArtifactsRequest)
   ) {
     throw new Error('Invalid Project Artifact save request.')
   }
+}
+
+// A Version whose content is gone answers with the stopgap code instead of raw fs text, so the
+// download control can stay enabled and explain the next step (#122 verification 7).
+const isMissingFileError = (error: unknown): boolean => {
+  if (!error) return false
+  if ((error as { code?: unknown }).code === 'ENOENT') return true
+  const message = error instanceof Error ? error.message : String(error)
+  return /ENOENT|no such file|no longer (exists|available)/i.test(message)
 }
 
 // Holds the validated source inode across Save As so a pending artifact rename cannot change identity.
@@ -717,6 +726,16 @@ export const createFileSaveCommands = (
               : {})
           })
           return { saved: true, filePath }
+        } catch (error) {
+          // A Version whose bytes are gone from disk has to answer with something the reader can act
+          // on. The control stays enabled for exactly this case, so the sentence names the next step.
+          if (!isMissingFileError(error)) throw error
+          const sentence = (options.translate ?? englishNativeTranslator)(
+            'The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})'
+          )
+            .replace('{{name}}', basename(filePath))
+            .replace('{{code}}', MANAGED_FILE_MISSING_CODE)
+          throw new ApplicationCommandError(MANAGED_FILE_MISSING_CODE, sentence)
         } finally {
           // The lease must always close, but a close error must not mask the checksum failure above.
           if (versionedRequest) await managedFile.close().catch(() => undefined)

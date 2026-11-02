@@ -12,7 +12,11 @@ import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ActionToast } from '@/components/ActionToast'
 import { errorDetail } from '@/lib/error-detail'
-import { addFileToResearchPackage } from '@/lib/research-package-inclusion'
+import {
+  addFileToResearchPackage,
+  canAddFileToResearchPackage,
+  researchPackageTargetForFile
+} from '@/lib/research-package-inclusion'
 import { relativeTimeParts, type RelativeTimeUnit } from '@/lib/format-relative-time'
 import { cn } from '@/lib/utils'
 import { useGrantedFoldersStore } from '@/stores/granted-folders-store'
@@ -525,12 +529,7 @@ const ProjectFilesViewContent = ({
   )
   const addToResearchPackage = (file: ProjectFileItem): void => {
     setPackageIncludeError(undefined)
-    const target = {
-      projectId: file.projectId,
-      sessionId: file.sessionId,
-      fileId: file.sourceFileId,
-      filename: file.name
-    }
+    const target = researchPackageTargetForFile(file)
     void addFileToResearchPackage(target).then(
       (started) => {
         if (!started) setPackageIncludeError(file)
@@ -540,14 +539,11 @@ const ProjectFilesViewContent = ({
   }
   // A package export belongs to one Session, so a file with no loaded owning Session (an upload
   // still on the pending pseudo-session, a session not in this project) gets no action at all: an
-  // entry that can only ever fail is worse than no entry.
-  const sessionKeys = useSessionStore((state) => state.sessions)
-  const packageableSessionKeys = useMemo(
-    () => new Set(sessionKeys.map((session) => `${session.projectId}:${session.id}`)),
-    [sessionKeys]
-  )
+  // entry that can only ever fail is worse than no entry. The subscribed list is what makes this
+  // answer change once hydration finishes; the rule itself stays in the shared predicate.
+  const hydratedSessions = useSessionStore((state) => state.sessions)
   const canAddToResearchPackage = (file: ProjectFileItem): boolean =>
-    packageableSessionKeys.has(`${file.projectId}:${file.sessionId}`)
+    canAddFileToResearchPackage(researchPackageTargetForFile(file), hydratedSessions)
 
   const grantedRoots = useGrantedFoldersStore((state) => state.roots)
   const isLocalMode = sourceMode === 'local'

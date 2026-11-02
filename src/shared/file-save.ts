@@ -76,7 +76,15 @@ type SaveProjectArtifactsResult =
 // original Artifact is untouched, so the renderer can explain it and support can quote the code (#122).
 const MANAGED_FILE_CHECKSUM_MISMATCH_CODE = 'managed-file-checksum-mismatch' as const
 
-export { MANAGED_FILE_CHECKSUM_MISMATCH_CODE, WEB_MANAGED_FILE_SIZE_LIMIT_ERROR_NAME }
+// Stable code for a Version whose content is gone from disk. The download button stays enabled so the
+// reader gets this answer instead of a dead control, and support can quote the code (#122).
+const MANAGED_FILE_MISSING_CODE = 'managed-file-missing' as const
+
+export {
+  MANAGED_FILE_CHECKSUM_MISMATCH_CODE,
+  MANAGED_FILE_MISSING_CODE,
+  WEB_MANAGED_FILE_SIZE_LIMIT_ERROR_NAME
+}
 export type {
   SaveBlobFileRequest,
   SaveBlobFileResult,

@@ -36,6 +36,7 @@ const snapshot: PackageOperationSnapshot = {
       filename: 'plot.png',
       sizeBytes: 1024,
       groupId: 'plot',
+    versionId: 'plot-version-1',
       source: 'artifact',
       versionNumber: 1,
       dependentFiles: []
@@ -45,6 +46,7 @@ const snapshot: PackageOperationSnapshot = {
       filename: 'result.csv',
       sizeBytes: 512 * 1024 ** 2,
       groupId: 'result',
+    versionId: 'result-version-1',
       source: 'artifact',
       versionNumber: 1,
       dependentFiles: ['Notebook run-1']
@@ -54,6 +56,7 @@ const snapshot: PackageOperationSnapshot = {
       filename: 'raw.bin',
       sizeBytes: 32 * 1024 ** 3 + 1,
       groupId: 'raw',
+    versionId: 'raw-version-1',
       source: 'artifact',
       versionNumber: 1,
       dependentFiles: []
@@ -1292,6 +1295,7 @@ it('includes Literature PDFs in Full, excludes them in Essential, and selects th
     filename: 'paper.pdf',
     sizeBytes: 4096,
     groupId: 'paper',
+    versionId: 'paper-version-1',
     source: 'literature' as const,
     versionNumber: 1,
     dependentFiles: []
@@ -1333,6 +1337,7 @@ it('never labels required Literature PDF evidence as Essential export', async ()
     filename: 'evidence.pdf',
     sizeBytes: 4096,
     groupId: 'a',
+    versionId: 'a-version-1',
     source: 'literature' as const,
     versionNumber: 1,
     dependentFiles: [],

@@ -2,6 +2,15 @@ import { create } from 'zustand'
 import { PACKAGE_MAX_FILE_BYTES } from '../../../shared/session-package'
 import type { PackageOperationSnapshot } from '../../../shared/session-package'
 
+// One file the reader asked to include before the package selector existed.
+export type ResearchPackagePreselect = {
+  fileId: string
+  // When present only this Version is checked. Callers that know which Version is on screen always
+  // pass it, so "add this file" never silently pulls in older and newer Versions.
+  versionId?: string
+  filename: string
+}
+
 export const usePackageOperationStore = create<{
   operation: PackageOperationSnapshot | null
   errorKind?: 'fork'
@@ -13,9 +22,10 @@ export const usePackageOperationStore = create<{
   excludedStorageKeys: string[] | null
   selectionPreset: 'full' | 'compact' | 'custom'
   // One file the reader asked to include before the selector existed. It is an initial value only:
-  // it is consumed by the next selection snapshot and never locks the checkboxes.
-  preselect: { fileId: string; filename: string } | null
-  preselectResearchPackageFile: (target: { fileId: string; filename: string }) => void
+  // it is consumed by the next selection snapshot and never locks the checkboxes. `versionId` pins
+  // the exact Version the reader was looking at; without it every Version of the file is checked.
+  preselect: ResearchPackagePreselect | null
+  preselectResearchPackageFile: (target: ResearchPackagePreselect) => void
   clearPreselect: () => void
   threshold: string
   setThreshold: (threshold: string) => void
@@ -72,16 +82,18 @@ export const usePackageOperationStore = create<{
             ])
           ]
         : draft
-      // The reader asked for exactly one file before the selector existed. Include every Version of
-      // that file here and then drop the request: it seeds the first snapshot only, so later manual
-      // edits and cancellations never resurrect it.
-      const preselectedKeys = state.preselect
+      // The reader asked for one file before the selector existed. When the request names a Version,
+      // only that Version is checked — the others of the same file stay excluded, because a reader
+      // looking at v2 did not ask for v1..v5. The request seeds the first snapshot only, so later
+      // manual edits and cancellations never resurrect it.
+      const request = state.preselect
+      const preselectedKeys = request
         ? new Set(
             (operation?.files ?? [])
-              .filter(
-                (file) =>
-                  file.groupId === state.preselect!.fileId &&
-                  file.filename === state.preselect!.filename
+              .filter((file) =>
+                request.versionId
+                  ? file.groupId === request.fileId && file.versionId === request.versionId
+                  : file.groupId === request.fileId && file.filename === request.filename
               )
               .map((file) => file.storageKey)
           )

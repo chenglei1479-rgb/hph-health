@@ -40,7 +40,10 @@ import { Button } from '@/components/ui/button'
 import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { errorDetail } from '@/lib/error-detail'
-import { addFileToResearchPackage } from '@/lib/research-package-inclusion'
+import {
+  addFileToResearchPackage,
+  canAddFileToResearchPackage
+} from '@/lib/research-package-inclusion'
 import type { PreviewFileItem, PreviewFileViewState } from '@/stores/preview-workbench-store'
 import { usePreviewWorkbenchStore } from '@/stores/preview-workbench-store'
 import { useNavigationStore } from '@/stores/navigation-store'
@@ -369,17 +372,18 @@ const PreviewFileHeader = ({
   // Adding to the research package opens the owning Session's export selector with this Version
   // checked. A refused start is stated here, beside the action, instead of being swallowed.
   const [packageIncludeError, setPackageIncludeError] = useState<string | undefined>(undefined)
-  const canAddToResearchPackage = Boolean(
-    item.projectId && item.managedFileId && item.sessionId && item.source !== 'local'
-  )
+  const packageTarget = {
+    projectId: item.projectId,
+    sessionId: item.sessionId,
+    fileId: item.managedFileId,
+    versionId: downloadVersionContext?.versionId ?? item.selectedVersionId,
+    filename: item.name
+  }
+  const canAddToResearchPackage =
+    item.source !== 'local' && canAddFileToResearchPackage(packageTarget)
   const addToResearchPackage = (): void => {
     setPackageIncludeError(undefined)
-    void addFileToResearchPackage({
-      projectId: item.projectId,
-      sessionId: item.sessionId,
-      fileId: item.managedFileId,
-      filename: item.name
-    }).then(
+    void addFileToResearchPackage(packageTarget).then(
       (started) => {
         if (!started) setPackageIncludeError(item.name)
       },

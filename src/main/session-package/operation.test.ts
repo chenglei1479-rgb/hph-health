@@ -10,6 +10,7 @@ const file = {
   filename: 'result.csv',
   sizeBytes: 10,
   groupId: 'artifact',
+  versionId: 'artifact-version-1',
   source: 'artifact' as const,
   versionNumber: 1,
   dependentFiles: []

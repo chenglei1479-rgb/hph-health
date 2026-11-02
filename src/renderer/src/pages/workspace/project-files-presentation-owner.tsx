@@ -121,6 +121,7 @@ const FileActionButtons = ({
   fileId,
   name,
   disabled,
+  downloadDisabled,
   className,
   onOpenInPanel,
   onAddToResearchPackage
@@ -132,6 +133,9 @@ const FileActionButtons = ({
   fileId: string
   name: string
   disabled: boolean
+  // Kept separate from `disabled`: a missing file still offers Download, because the click is how the
+  // reader learns why it cannot be saved and what to do about it (#122 verification 7).
+  downloadDisabled: boolean
   className: string
   onOpenInPanel: () => void
   onAddToResearchPackage?: () => void
@@ -155,7 +159,7 @@ const FileActionButtons = ({
           projectId={projectId}
           fileId={fileId}
           suggestedName={name}
-          disabled={disabled}
+          disabled={downloadDisabled}
           iconSize="icon-sm"
           className="cursor-pointer border-border bg-bg-000/95 shadow-sm"
         />
@@ -351,6 +355,7 @@ const FileTile = ({
         fileId={fileId}
         name={name}
         disabled={missing || status === 'publishing'}
+        downloadDisabled={status === 'publishing'}
         className="right-1.5 top-1.5"
         onOpenInPanel={onOpenInPanel}
         onAddToResearchPackage={onAddToResearchPackage}
@@ -444,6 +449,7 @@ const FileListRow = ({
         fileId={file.sourceFileId}
         name={file.name}
         disabled={missing || status === 'publishing'}
+        downloadDisabled={status === 'publishing'}
         className="right-2 top-1/2 -translate-y-1/2"
         onOpenInPanel={onOpenInPanel}
         onAddToResearchPackage={onAddToResearchPackage}

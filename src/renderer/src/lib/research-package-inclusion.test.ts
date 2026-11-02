@@ -16,6 +16,7 @@ const target = (overrides: Partial<ResearchPackageTarget> = {}): ResearchPackage
   projectId: 'project-1',
   sessionId: 'session-1',
   fileId: 'artifact-1',
+  versionId: 'version-1',
   filename: 'plot.png',
   ...overrides
 })
@@ -37,6 +38,7 @@ describe('addFileToResearchPackage', () => {
     expect(exportSessionPackage).toHaveBeenCalledTimes(1)
     expect(usePackageOperationStore.getState().preselect).toEqual({
       fileId: 'artifact-1',
+      versionId: 'version-1',
       filename: 'plot.png'
     })
   })

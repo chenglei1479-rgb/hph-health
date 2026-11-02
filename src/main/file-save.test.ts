@@ -1,5 +1,5 @@
 import { createFileSaveCommands } from './file-save'
-import { MANAGED_FILE_CHECKSUM_MISMATCH_CODE } from '../shared/file-save'
+import { MANAGED_FILE_CHECKSUM_MISMATCH_CODE, MANAGED_FILE_MISSING_CODE } from '../shared/file-save'
 import { createElectronCallerContext, createWebCallerContext } from './caller-context'
 import type { ApplicationInvocation } from './application-command-router'
 import { configureTestElectronHost } from '../../test/runtime-host'
@@ -704,6 +704,46 @@ describe('file save IPC handlers', () => {
     ).toContain(MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
     // The user's original file at the destination is still exactly what it was.
     await expect(readFile(target, 'utf8')).resolves.toBe('user-original')
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('reports a stable missing-file code when the Version content is gone from disk', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-missing-'))
+    const target = join(destination, 'report.csv')
+    const copyTo = vi.fn(async () => {
+      throw Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' })
+    })
+    const close = vi.fn(async () => undefined)
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256('beta')
+    })
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({
+      openManagedFileVersion,
+      publishUserFile: productionPublishUserFile
+    } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    const message = (error as { message?: string }).message ?? JSON.stringify(error)
+    // The download control stays enabled for a missing file, so the click has to answer with a code
+    // and a next step instead of raw fs text or a silent failure.
+    expect(message).toContain(MANAGED_FILE_MISSING_CODE)
+    expect(message).toContain('report.csv')
+    expect(message).toContain('Run the analysis again')
     expect(close).toHaveBeenCalledOnce()
   })
 

@@ -169,7 +169,8 @@
     "Choose a CSV file in UTF-8 or Shift-JIS. (Code: {{code}})": "请选择 UTF-8 或 Shift_JIS 编码的 CSV 文件。（代码：{{code}}）",
     "The table file from the previous import is missing or cannot be read, so the analysis was not run. Choose the table file again, then run. (Code: {{code}})": "找不到上次导入的表格文件或无法读取，因此未执行分析。请重新选择表格文件后再运行。（代码：{{code}}）",
     "The bundled Python runtime could not start, so the analysis was not run. Reinstall the app. (Code: {{code}})": "随附的 Python 运行环境无法启动，因此未执行分析。请重新安装应用。（代码：{{code}}）",
-    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "{{name}} 的已保存副本与记录的校验和不一致，因此未保存。原始文件未被更改。（代码：{{code}}）"
+    "The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})": "{{name}} 的已保存副本与记录的校验和不一致，因此未保存。原始文件未被更改。（代码：{{code}}）",
+    "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "找不到 {{name}} 的文件，因此无法保存。请重新运行分析以生成该文件，然后再保存。（代码：{{code}}）"
   },
   "renderer": {
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新对话可以无需询问直接运行命令、修改文件、执行 Notebook 代码和访问网络。已有对话不受影响。",

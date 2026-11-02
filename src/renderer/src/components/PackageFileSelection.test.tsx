@@ -13,6 +13,7 @@ const selectableFile = (overrides: Partial<PackageSelectableFile> = {}): Package
   filename: 'plot.png',
   sizeBytes: 1024,
   groupId: 'artifact-1',
+  versionId: 'artifact-version-1',
   source: 'artifact',
   versionNumber: 1,
   dependentFiles: [],

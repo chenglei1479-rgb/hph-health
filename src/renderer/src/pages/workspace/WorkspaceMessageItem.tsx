@@ -105,6 +105,11 @@ import { resolveSessionProviderId } from './error-report'
 import { FileTypeIcon } from './file-type-icon'
 import { requestPdfReadingReveal } from './pdf-reading-reveal'
 import {
+  addFileToResearchPackage,
+  canAddFileToResearchPackage
+} from '@/lib/research-package-inclusion'
+import { ActionToast } from '@/components/ActionToast'
+import {
   FILE_MISSING_TAG_KEY,
   isManagedFilePublicationPendingError,
   isUnavailableFileError
@@ -954,6 +959,28 @@ const ArtifactCard = ({
 
   const downloadName = versionedArtifactDownloadName(artifactName, artifact.versionNumber)
 
+  // The card offers the package entry only when the owning Session is loaded, and it always names
+  // the Version on the card so the selector checks that Version alone.
+  const packageTarget = {
+    projectId: artifact.resolvedProjectId,
+    sessionId: artifact.resolvedSessionId,
+    fileId: artifact.artifactId,
+    versionId: artifact.versionId,
+    filename: artifactName
+  }
+  const canAddToResearchPackage =
+    !publicationPending && canAddFileToResearchPackage(packageTarget)
+  const [packageIncludeError, setPackageIncludeError] = useState(false)
+  const addToResearchPackage = (): void => {
+    setPackageIncludeError(false)
+    void addFileToResearchPackage(packageTarget).then(
+      (started) => {
+        if (!started) setPackageIncludeError(true)
+      },
+      () => setPackageIncludeError(true)
+    )
+  }
+
   return (
     <GeneratedFileCard
       buttonRef={setElement}
@@ -1003,6 +1030,11 @@ const ArtifactCard = ({
               >
                 {t('Download {{name}}', { name: downloadName })}
               </DropdownMenuItem>
+              {canAddToResearchPackage ? (
+                <DropdownMenuItem onSelect={addToResearchPackage}>
+                  {t('Add to research package')}
+                </DropdownMenuItem>
+              ) : null}
               {onOpenArtifactDetails ? (
                 <DropdownMenuItem onSelect={() => onOpenArtifactDetails(artifact)}>
                   {t('File details')}
@@ -1010,6 +1042,16 @@ const ArtifactCard = ({
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
+          {packageIncludeError ? (
+            <ActionToast
+              testId="artifact-card-package-inclusion-error"
+              title={t('Could not add {{name}} to the research package. Try again.', {
+                name: artifactName
+              })}
+              dismissLabel={t('Dismiss')}
+              onDismiss={() => setPackageIncludeError(false)}
+            />
+          ) : null}
         </>
       }
       preview={
