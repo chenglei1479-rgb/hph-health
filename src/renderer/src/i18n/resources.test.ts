@@ -3973,6 +3973,8 @@ describe('semantic key leaks', () => {
   const SEMANTIC_PATH = /^[a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9-]+){2,}$/
 
   // This guard scans the full source tree and runs under coverage in the selective CI lane.
+  // The 60 s ceiling is a stopgap, not a fix: the real cost is the whole-tree scan, and on a loaded
+  // development machine it already exceeded 30 s twice in a row without any failure of the check itself.
   it('no t() call passes a dotted semantic path', () => {
     const offenders = SCAN_ROOTS.flatMap(sourceFiles).flatMap((path) => {
       const source = codeOnly(readFileSync(path, 'utf8'))
@@ -3983,7 +3985,7 @@ describe('semantic key leaks', () => {
     })
 
     expect(offenders).toEqual([])
-  }, 30_000)
+  }, 60_000)
 })
 
 // ---------------------------------------------------------------------------
