@@ -703,7 +703,7 @@ export const createFileSaveCommands = (
                     const actualChecksum = await sha256OfFile(temporaryPath).catch(() => undefined)
                     if (actualChecksum !== expectedChecksum) {
                       const sentence = (options.translate ?? englishNativeTranslator)(
-                        'The saved copy of {{name}} did not match the recorded checksum, so it was deleted. The original file was not changed. (Code: {{code}})'
+                        'The saved copy of {{name}} did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: {{code}})'
                       )
                         .replace('{{name}}', basename(filePath))
                         .replace('{{code}}', MANAGED_FILE_CHECKSUM_MISMATCH_CODE)

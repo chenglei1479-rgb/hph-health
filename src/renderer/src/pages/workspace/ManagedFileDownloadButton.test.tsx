@@ -69,7 +69,7 @@ describe('ManagedFileDownloadButton', () => {
       saveManagedFile: vi.fn(async () => {
         // Exactly what the preload bridge delivers for an ApplicationCommandError.
         throw new Error(
-          '[managed-file-checksum-mismatch] The saved copy of report.csv did not match the recorded checksum, so it was deleted. The original file was not changed. (Code: managed-file-checksum-mismatch)'
+          '[managed-file-checksum-mismatch] The saved copy of report.csv did not match the recorded checksum, so it was not saved. The original file was not changed. (Code: managed-file-checksum-mismatch)'
         )
       })
     } as unknown as Window['api']

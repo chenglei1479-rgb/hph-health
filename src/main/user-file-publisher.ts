@@ -99,6 +99,9 @@ const publishUserFile = async (
   try {
     await write(temporaryPath)
     await durability.syncFile(temporaryPath)
+    // Reject a destination the target file may not overwrite before spending time hashing
+    // a possibly very large temporary file.
+    await options.validateDestination?.()
     await options.verifyTemporary?.(temporaryPath)
     if (!options.exclusive) {
       try {
@@ -107,7 +110,6 @@ const publishUserFile = async (
         if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
       }
     }
-    await options.validateDestination?.()
     options.signal?.throwIfAborted()
     if (options.exclusive) {
       await publishExclusive(

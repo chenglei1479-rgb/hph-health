@@ -620,7 +620,7 @@ describe('file save IPC handlers', () => {
     await expect(readFile(target, 'utf8')).resolves.toBe(bytes)
   })
 
-  it('deletes the saved copy and reports the file name when the checksum does not match', async () => {
+  it('never writes the destination and reports the file name when the checksum does not match', async () => {
     const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
     const copyTo = vi.fn(async (destinationPath: string) => {
       // The delivered bytes are not the ones the Version record describes.
@@ -656,7 +656,7 @@ describe('file save IPC handlers', () => {
     const mismatchMessage =
       (error as { message?: string }).message ?? JSON.stringify(error)
     expect(mismatchMessage).toContain(MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
-    // The user must learn which file was deleted, and that the original was not touched.
+    // The user must learn which file was not saved, and that the original was not touched.
     expect(mismatchMessage).toContain('report.csv')
     expect(mismatchMessage).toContain('original file was not changed')
     // Nothing was written to the destination, so nothing needs deleting.
