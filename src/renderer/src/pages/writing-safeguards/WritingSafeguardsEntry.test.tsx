@@ -319,4 +319,82 @@ describe('writing safeguards', () => {
     // "we could not look" must not be rendered as "there was nothing".
     expect(declarationValue(host)).not.toContain('エージェントによる実行の記録がない')
   })
+
+  const setValue = async (input: Element | null, value: string): Promise<void> => {
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set
+      setter?.call(input, value)
+      input?.dispatchEvent(new Event('input', { bubbles: true }))
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+  }
+
+  const agentRun = (runId: string): Record<string, unknown> => ({
+    runId,
+    source: 'agent',
+    kernelKind: 'python',
+    status: 'completed',
+    startedAt: 2
+  })
+
+  // Editing a statement changes the sentence the author verified, so the verification cannot
+  // survive it (#133 review).
+  it('drops the verification when a statement is edited', async () => {
+    const host = await renderEntry(sessionApi([agentRun('run-agent-1')]))
+    await selectProject(host)
+    const review = host.querySelector('input[aria-label="I verified this declaration."]')
+    await act(async () => {
+      if (review instanceof HTMLInputElement) review.click()
+    })
+    expect(declarationValue(host)).toContain('記載内容は著者自身が確認した。')
+
+    await setValue(
+      host.querySelector('input[aria-label="使った機能"]'),
+      'Notebook (python) の再実行'
+    )
+
+    expect(host.querySelector('[data-writing-safeguards-review-state]')?.textContent).toBe(
+      'Unconfirmed'
+    )
+    expect(
+      (host.querySelector('input[aria-label="使った機能"]') as HTMLInputElement | null)?.value
+    ).toBe('Notebook (python) の再実行')
+    expect(declarationValue(host)).not.toContain('記載内容は著者自身が確認した。')
+  })
+
+  it('drops the verification when the conflict sentence is toggled', async () => {
+    const host = await renderEntry(sessionApi([agentRun('run-agent-1')]))
+    await selectProject(host)
+    const review = host.querySelector('input[aria-label="I verified this declaration."]')
+    await act(async () => {
+      if (review instanceof HTMLInputElement) review.click()
+    })
+    const coi = host.querySelector<HTMLInputElement>(
+      '[data-writing-safeguards-disclosure] input[aria-label^="利益相反"]'
+    )
+    await act(async () => {
+      coi?.click()
+    })
+
+    expect(host.querySelector('[data-writing-safeguards-review-state]')?.textContent).toBe(
+      'Unconfirmed'
+    )
+  })
+
+  // Blanking every feature leaves executions recorded but nothing to state. Saying "no execution is
+  // recorded" there would contradict the rows still on screen (#133 review).
+  it('says how many executions it is not describing when every feature is blanked out', async () => {
+    const host = await renderEntry(sessionApi([agentRun('run-agent-1'), agentRun('run-agent-2')]))
+    await selectProject(host)
+    for (const input of [...host.querySelectorAll('input[aria-label="使った機能"]')]) {
+      await setValue(input, '')
+    }
+
+    expect(declarationValue(host)).toContain('実行の記録は 2 件あるが')
+    expect(declarationValue(host)).not.toContain('エージェントによる実行の記録がない')
+    expect(host.querySelectorAll('[data-writing-safeguards-statement]')).toHaveLength(2)
+  })
 })

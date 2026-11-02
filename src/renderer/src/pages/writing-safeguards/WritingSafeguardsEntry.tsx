@@ -17,11 +17,7 @@ import {
 } from '../../../../shared/writing-safeguards/export-deidentify'
 import { writingSafeguardsCopy, type WritingSafeguardsCopy } from './copy'
 import { EthicsProtocolChecklist } from './EthicsProtocolChecklist'
-import {
-  collectRecordedAgentRuns,
-  statementsFromRuns,
-  type AgentRunSource
-} from './ai-usage-records'
+import { collectRecordedAgentRuns, statementsFromRuns } from './ai-usage-records'
 
 const downloadText = (filename: string, text: string): void => {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
@@ -69,16 +65,22 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
     [recordedStatements, statementEdits]
   )
   // Whether the records were readable decides which sentence is honest: "none recorded" may only
-  // appear after a successful read (#133).
+  // appear after a successful read. It is derived from what the read produced, not from the
+  // statements after editing — blanking every feature must not turn "3 executions recorded" into
+  // "no execution recorded" (#133 review).
   const recordsState = useMemo(
-    () => (statements.length > 0 ? 'recorded' : runsState === 'ready' ? 'none' : 'unreadable'),
-    [runsState, statements.length]
+    () =>
+      runsState === 'ready' ? (recordedStatements.length > 0 ? 'recorded' : 'none') : 'unreadable',
+    [recordedStatements.length, runsState]
   )
   const [includeCoi, setIncludeCoi] = useState(false)
   const [draft, setDraft] = useState(
     () =>
       buildAiUsageDeclaration({
         statements: [],
+        // First paint has no read behind it yet; 'none' would flash "no execution recorded"
+        // before the run records are even requested.
+        records: 'unreadable',
         language: locale
       }).draft
   )
@@ -97,12 +99,21 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
       buildAiUsageDeclaration({
         statements,
         records: recordsState,
+        recordedCount: recordedStatements.length,
         includeCoi,
         language: locale,
         authorConfirmed
       }).draft
     )
-  }, [authorConfirmed, draftEdited, includeCoi, locale, recordsState, statements])
+  }, [
+    authorConfirmed,
+    draftEdited,
+    includeCoi,
+    locale,
+    recordsState,
+    recordedStatements.length,
+    statements
+  ])
 
   const openDialog = (): void => {
     setOpen(true)
@@ -122,7 +133,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
       return
     }
     setRunsState('loading')
-    void collectRecordedAgentRuns(window.api as unknown as AgentRunSource, id)
+    void collectRecordedAgentRuns(window.api, id)
       .then((projection) => {
         setRunsState(projection.status === 'ready' ? 'ready' : 'unavailable')
         setRecordedStatements(
@@ -171,6 +182,9 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
   const reminder = showReminder ? ethicsWritingReminder(undefined, locale).message : ''
 
   const updateStatement = (index: number, patch: Partial<AiUsageStatement>): void => {
+    // Any edit invalidates the author's verification: the sentence they checked is not the sentence
+    // the text now carries (#133 review).
+    setAuthorConfirmed(false)
     setStatementEdits((current) =>
       (current ?? recordedStatements).map((statement, statementIndex) =>
         statementIndex === index ? { ...statement, ...patch } : statement
@@ -184,6 +198,7 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
       buildAiUsageDeclaration({
         statements,
         records: recordsState,
+        recordedCount: recordedStatements.length,
         includeCoi,
         language: locale,
         authorConfirmed
@@ -357,7 +372,12 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
                 type="checkbox"
                 aria-label={copy.coi}
                 checked={includeCoi}
-                onChange={(event) => setIncludeCoi(event.target.checked)}
+                onChange={(event) => {
+                  // Changing what the declaration says invalidates the verification, exactly as
+                  // editing a statement does.
+                  setIncludeCoi(event.target.checked)
+                  setAuthorConfirmed(false)
+                }}
               />
               <span>{copy.coi}</span>
             </label>

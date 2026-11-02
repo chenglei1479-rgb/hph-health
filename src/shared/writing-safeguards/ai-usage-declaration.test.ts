@@ -41,6 +41,17 @@ describe('AI usage declaration', () => {
     expect(declaration.draft).toContain('全責任を負い')
   })
 
+  it('does not claim nothing ran when the recorded statements were blanked out', () => {
+    const declaration = buildAiUsageDeclaration({
+      statements: [statement({ feature: '' }), statement({ feature: '  ' })],
+      records: 'recorded',
+      recordedCount: 2
+    })
+    expect(declaration.japanese).toContain('実行の記録は 2 件あるが')
+    expect(declaration.japanese).not.toContain('エージェントによる実行の記録がない')
+    expect(declaration.english).toContain('2 agent executions are recorded')
+  })
+
   it('cites the execution each statement rests on', () => {
     const declaration = buildAiUsageDeclaration({
       statements: [statement()],

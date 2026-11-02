@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   AGENT_RUN_LIMIT,
+  AGENT_RUN_SESSION_LIMIT,
   collectRecordedAgentRuns,
   statementsFromRuns,
   type AgentRunSource
@@ -102,5 +103,27 @@ describe('AI usage records', () => {
     expect(projection.truncated).toBe(true)
     // Newest first, so the window keeps the most recent executions.
     expect(projection.runs[0]?.runId).toBe(`run-${AGENT_RUN_LIMIT + 2}`)
+  })
+
+  // The session window is a second cap, and it used to be invisible: an old project's earliest
+  // sessions dropped out with no notice, which reads as "those executions never happened".
+  it('reports the session window as truncation too', async () => {
+    const sessions = Array.from({ length: AGENT_RUN_SESSION_LIMIT + 1 }, (_, index) => ({
+      id: `session-${index}`,
+      updatedAt: index
+    }))
+    const projection = await collectRecordedAgentRuns(
+      api([run({ runId: 'run-in-newest' })], sessions),
+      'study-1'
+    )
+
+    expect(projection.status).toBe('ready')
+    expect(projection.truncated).toBe(true)
+  })
+
+  it('does not report truncation when both windows cover everything', async () => {
+    const projection = await collectRecordedAgentRuns(api([run()]), 'study-1')
+
+    expect(projection.truncated).toBe(false)
   })
 })

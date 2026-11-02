@@ -132,6 +132,9 @@ type DisclosureCopy = {
   modelMissing: string
   evidenceLabel: Readonly<Record<AiUsageEvidence['kind'], string>>
   noExecution: string
+  // A project can hold recorded executions while every statement's feature was blanked out. That
+  // is not "nothing ran", so it gets its own sentence rather than borrowing `noExecution`.
+  emptyRecorded: (count: number) => string
   intro: string
   responsibility: string
   line: (feature: string, model: string, purpose: string, evidence: string) => string
@@ -150,6 +153,8 @@ const disclosureCopy: Record<DisclosureLocale, DisclosureCopy> = {
     evidenceLabel: { 'notebook-run': '実行 ID', artifact: '成果物 ID' },
     noExecution:
       'このプロジェクトには、エージェントによる実行の記録がない。したがって、本原稿の作成に AI 機能を用いた実行は記録されていない。',
+    emptyRecorded: (count) =>
+      `エージェントによる実行の記録は ${count} 件あるが、開示する内容が入力されていない。`,
     intro: '原稿の作成にあたり、次の人工知能（AI）機能を使用した。',
     responsibility: '著者は原稿の内容について全責任を負い、人工知能を著者としては記載しない。',
     line: (feature, model, purpose, evidence) =>
@@ -163,6 +168,7 @@ const disclosureCopy: Record<DisclosureLocale, DisclosureCopy> = {
     modelMissing: '未记录模型名称',
     evidenceLabel: { 'notebook-run': '运行 ID', artifact: '产物 ID' },
     noExecution: '本项目没有智能体执行的记录。因此，本稿件中没有记录到使用 AI 功能的执行。',
+    emptyRecorded: (count) => `本项目的执行记录有 ${count} 条，但没有填写需要披露的内容。`,
     intro: '在准备文稿时，使用了下列人工智能（AI）功能。',
     responsibility: '作者对文稿内容承担全部责任，不将人工智能列为作者。',
     line: (feature, model, purpose, evidence) =>
@@ -176,6 +182,7 @@ const disclosureCopy: Record<DisclosureLocale, DisclosureCopy> = {
     modelMissing: '未記錄模型名稱',
     evidenceLabel: { 'notebook-run': '執行 ID', artifact: '產物 ID' },
     noExecution: '本專案沒有智慧體執行的記錄。因此，本稿件中沒有記錄到使用 AI 功能的執行。',
+    emptyRecorded: (count) => `本專案的執行記錄有 ${count} 條，但沒有填寫需要揭露的內容。`,
     intro: '在準備文稿時，使用了下列人工智慧（AI）功能。',
     responsibility: '作者對文稿內容承擔全部責任，不將人工智慧列為作者。',
     line: (feature, model, purpose, evidence) =>
@@ -190,6 +197,8 @@ const disclosureCopy: Record<DisclosureLocale, DisclosureCopy> = {
     evidenceLabel: { 'notebook-run': 'execution id', artifact: 'artifact id' },
     noExecution:
       'No agent execution is recorded for this project, so no execution of an AI feature is recorded for this manuscript.',
+    emptyRecorded: (count) =>
+      `${count} agent executions are recorded, but no statement content has been entered.`,
     intro:
       'During preparation of this manuscript, the authors used the following artificial intelligence (AI) features.',
     responsibility:
@@ -213,13 +222,20 @@ export type AiUsageRecordsState = 'recorded' | 'none' | 'unreadable'
 const paragraphFor = (
   copy: DisclosureCopy,
   statements: readonly AiUsageStatement[],
-  records: AiUsageRecordsState
+  records: AiUsageRecordsState,
+  recordedCount: number
 ): string => {
   const recorded = statements.filter((statement) => clean(statement.feature).length > 0)
   // "unreadable" says nothing about executions at all: claiming "none were recorded" when the
   // records could not be read is the same class of false statement as the template rows (#133).
   if (records === 'unreadable') return copy.responsibility
-  if (recorded.length === 0) return `${copy.noExecution}${copy.responsibility}`
+  if (recorded.length === 0) {
+    // Executions exist but nothing is left to state (every feature was blanked out). Falling back
+    // to `noExecution` would contradict the records the panel is showing.
+    return records === 'recorded'
+      ? `${copy.emptyRecorded(recordedCount)}${copy.responsibility}`
+      : `${copy.noExecution}${copy.responsibility}`
+  }
   const body = recorded
     .map((statement) => {
       const model = clean(statement.model)
@@ -254,9 +270,10 @@ const paragraphWithConfirmation = (
   copy: DisclosureCopy,
   statements: readonly AiUsageStatement[],
   confirmed: boolean,
-  records: AiUsageRecordsState
+  records: AiUsageRecordsState,
+  recordedCount: number
 ): string => {
-  const paragraph = paragraphFor(copy, statements, records)
+  const paragraph = paragraphFor(copy, statements, records, recordedCount)
   if (!confirmed) return paragraph
   const hasStatements = statements.some((statement) => clean(statement.feature).length > 0)
   return hasStatements && records === 'recorded'
@@ -270,6 +287,9 @@ export const buildAiUsageDeclaration = (input: {
   // succeeded; defaulting to "no statements means nothing ran" would make an unreadable read
   // indistinguishable from an empty project.
   records?: AiUsageRecordsState
+  // How many executions the records yielded, so a blanked-out statement list can say how many
+  // executions it is not describing.
+  recordedCount?: number
   includeCoi?: boolean
   language?: string
   identity?: DisclosureIdentity
@@ -280,8 +300,21 @@ export const buildAiUsageDeclaration = (input: {
   const confirmed = input.authorConfirmed === true
   const hasStatements = input.statements.some((statement) => clean(statement.feature).length > 0)
   const records = input.records ?? (hasStatements ? 'recorded' : 'none')
-  const primary = paragraphWithConfirmation(copy, input.statements, confirmed, records)
-  const english = paragraphWithConfirmation(disclosureCopy.en, input.statements, confirmed, records)
+  const recordedCount = input.recordedCount ?? input.statements.length
+  const primary = paragraphWithConfirmation(
+    copy,
+    input.statements,
+    confirmed,
+    records,
+    recordedCount
+  )
+  const english = paragraphWithConfirmation(
+    disclosureCopy.en,
+    input.statements,
+    confirmed,
+    records,
+    recordedCount
+  )
   const coi = coiSuffix(locale, input.includeCoi, input.identity)
   const draft = copy.includeEnglish ? `${primary}\n\n${english}${coi}\n` : `${primary}${coi}\n`
   return {

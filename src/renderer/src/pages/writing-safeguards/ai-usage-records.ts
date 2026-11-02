@@ -32,6 +32,12 @@ export type AgentRunSource = {
   }
 }
 
+// Compile-time guard for the shape above: if the preload API renames or reshapes `sessions.list`,
+// `sessions.loadOne` or `notebook.runIndex`, this stops compiling. Without it a rename would only
+// turn the read into "records unavailable" at runtime — a silent downgrade of the declaration.
+const agentRunSourceShape: Window['api'] extends AgentRunSource ? true : never = true
+void agentRunSourceShape
+
 // Sessions are read newest first because the renderer asks the session store for every project
 // session and then loads each one to learn its working directory; an old project can have many.
 export const AGENT_RUN_SESSION_LIMIT = 10
@@ -60,8 +66,13 @@ export const collectRecordedAgentRuns = async (
 ): Promise<AgentRunProjection> => {
   if (!api?.sessions?.list || !api.sessions.loadOne || !api.notebook?.runIndex || !projectId)
     return { status: 'unavailable', runs: [], truncated: false }
-  const sessions = (await api.sessions.list()).sessions
-    .filter((session) => session.projectId === projectId)
+  const projectSessions = (await api.sessions.list()).sessions.filter(
+    (session) => session.projectId === projectId
+  )
+  // Both caps are reported, not just the run cap: a project with more sessions than the window
+  // would otherwise lose the older ones' executions with no sign that anything was left out.
+  const sessionsTruncated = projectSessions.length > AGENT_RUN_SESSION_LIMIT
+  const sessions = projectSessions
     .sort((left, right) => right.updatedAt - left.updatedAt)
     .slice(0, AGENT_RUN_SESSION_LIMIT)
 
@@ -91,7 +102,7 @@ export const collectRecordedAgentRuns = async (
   return {
     status: 'ready',
     runs: runs.slice(0, AGENT_RUN_LIMIT),
-    truncated: runs.length > AGENT_RUN_LIMIT
+    truncated: sessionsTruncated || runs.length > AGENT_RUN_LIMIT
   }
 }
 
