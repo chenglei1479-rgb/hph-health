@@ -44,7 +44,9 @@ export const researchPackageTargetForFile = (file: ProjectFileItem): ResearchPac
 // this returns false for real Sessions and every "add to research package" entry disappears without
 // an error — rework this predicate together with that change.
 // Callers inside React pass the Session list they already subscribe to, so hydration completing
-// re-evaluates the entry instead of leaving a stale answer behind.
+// re-evaluates the entry instead of leaving a stale answer behind — but only the Files rows do.
+// The message card and the preview header call this with the store default: they rely entirely on
+// the startup hydration above and would not recover from a late list on their own.
 export const canAddFileToResearchPackage = (
   target: ResearchPackageTarget,
   sessions: readonly { id: string; projectId: string }[] = useSessionStore.getState().sessions

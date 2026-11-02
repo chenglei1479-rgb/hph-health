@@ -710,15 +710,18 @@ describe('file save IPC handlers', () => {
   it('reports a stable missing-file code when the Version content is gone from disk', async () => {
     const destination = await mkdtemp(join(tmpdir(), 'file-save-missing-'))
     const target = join(destination, 'report.csv')
-    const copyTo = vi.fn(async () => {
-      throw Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' })
-    })
     const close = vi.fn(async () => undefined)
-    const openManagedFileVersion = vi.fn().mockResolvedValue({
-      copyTo,
-      close,
-      checksum: sha256('beta')
+    // Production shape, measured from the real operator: the Version service rejects while opening
+    // the lease, and the outer code is INTEGRITY_FAILED because the recorded integrity can no longer
+    // be proven. The original ENOENT only survives two levels down the cause chain.
+    const storageError = Object.assign(new Error('Managed file version content is unavailable or corrupt.'), {
+      code: 'INTEGRITY_FAILED',
+      cause: Object.assign(new Error('Recorded immutable file is missing.'), {
+        code: 'INTEGRITY_FAILED',
+        cause: Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' })
+      })
     })
+    const openManagedFileVersion = vi.fn().mockRejectedValue(storageError)
     showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
     registerFileSaveHandlers({
       openManagedFileVersion,
@@ -744,6 +747,51 @@ describe('file save IPC handlers', () => {
     expect(message).toContain(MANAGED_FILE_MISSING_CODE)
     expect(message).toContain('report.csv')
     expect(message).toContain('Run the analysis again')
+    // The lease never opened, so there is nothing to close.
+    expect(close).not.toHaveBeenCalled()
+  })
+
+  it('does not claim the Version is missing when the chosen destination fails', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-missing-'))
+    const target = join(destination, 'report.csv')
+    const close = vi.fn(async () => undefined)
+    // The source copy succeeds; the rename onto the destination then hits ENOENT because the folder
+    // was deleted or a removable drive was unplugged. Re-running the analysis would be the wrong fix.
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      await writeFile(destinationPath, 'alpha')
+    })
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256('alpha')
+    })
+    const publishUserFile = vi.fn(
+      async (_filePath: string, write: (temporaryPath: string) => Promise<unknown>) => {
+        // The source copy runs first; only the final replace fails.
+        await write(join(destination, 'staged-copy.csv'))
+        throw Object.assign(new Error('ENOENT: no such file or directory, rename'), {
+          code: 'ENOENT'
+        })
+      }
+    )
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({ openManagedFileVersion, publishUserFile } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    expect(copyTo).toHaveBeenCalled()
+    expect((error as { message?: string }).message ?? '').not.toContain(MANAGED_FILE_MISSING_CODE)
     expect(close).toHaveBeenCalledOnce()
   })
 
