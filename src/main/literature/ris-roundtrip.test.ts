@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 import { bibliographicRecordSchema } from '../../../packages/literature-citations/src/contracts.js'
+import { exportRisType } from '../../../packages/literature-citations/src/citation-exchange.js'
 import { LiteratureCitationFormatter } from '../../../packages/literature-citations/src/citation-formatter.js'
 
 const types = ['journalArticle', 'conferencePaper', 'thesis'] as const
@@ -30,6 +31,18 @@ describe('RIS document types', () => {
       'inproceedings',
       'phdthesis'
     ])
+  })
+
+  it('does not trust a document-type note that disagrees with TY', async () => {
+    const ris = 'TY  - CHAP\nTI  - Chapter\nN1  - Baselio document type: review\nER  -'
+    const parsed = await new LiteratureCitationFormatter().parseReferences(ris)
+    expect(parsed.errors).toEqual([])
+    expect(parsed.items).toHaveLength(1)
+    expect(parsed.items[0]?.itemType).toBe('bookSection')
+  })
+
+  it('falls back to GEN for an unknown runtime item type', () => {
+    expect(Reflect.apply(exportRisType, undefined, ['hand-edited-type'])).toBe('TY  - GEN')
   })
 
   it('preserves CPAPER from an external RIS fixture', async () => {

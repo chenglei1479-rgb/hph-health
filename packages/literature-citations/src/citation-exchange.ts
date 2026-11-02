@@ -60,7 +60,8 @@ const cslTypesByRis: Record<string, string> = {
   GEN: 'document'
 }
 const originalTypePrefix = 'Baselio document type: '
-export const exportRisType = (type: LiteratureItemType): string => `TY  - ${risTypes[type]}`
+export const exportRisType = (type: LiteratureItemType): string =>
+  `TY  - ${risTypes[type] ?? 'GEN'}`
 
 const literalNamePrefix = 'Baselio literal creator: '
 const readableLiteralNamePrefixes = [literalNamePrefix, 'DRA literal creator: ']
