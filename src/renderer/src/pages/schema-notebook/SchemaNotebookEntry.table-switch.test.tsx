@@ -10,8 +10,24 @@ import { initI18n } from '../../i18n'
 import { createInitialProjectState, useProjectStore } from '@/stores/project-store'
 import type { ImportTableResponse, SchemaModelContext } from '../../../../shared/schema-notebook'
 import { SchemaNotebookEntry } from './SchemaNotebookEntry'
-import { schemaNotebookCopy } from './copy'
+
 import { schemaNotebookDraftKey } from './schema-notebook-draft'
+
+// These suites pin the interface language to Japanese, so the panel copy they read is the ja
+// catalog. Asserting the ja strings keeps the beta UI byte-identical after the move into the shared
+// catalog, and the strong-copy suite guards the other seven languages.
+const COPY = {
+  open: '患者表を分析',
+  import: 'ファイルを取り込む',
+  rows: '行数',
+  run: '手元で実行',
+  tableStillSaved:
+    '前回取り込んだ表は保存されています。別のプロジェクトに切り替えてから、このプロジェクトに戻ると復元できます。',
+  restoreNotice:
+    '前回取り込んだ表を復元できませんでした。ファイルを選び直してください。手元のコードはそのまま残しています。',
+  interpreterBundled: '実行環境: 同梱の Python {{version}}（オフライン）',
+  interpreterSystem: '実行環境: システムの Python {{version}}（同梱ランタイムを起動できませんでした）'
+}
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -69,7 +85,7 @@ describe('SchemaNotebookEntry table switch', () => {
   })
 
   it('drops the previous table files when a different table is imported', async () => {
-    const copy = schemaNotebookCopy('ja')
+    const copy = COPY
     localStorage.setItem(
       schemaNotebookDraftKey('study-1'),
       JSON.stringify({ tableId: 'table-a', filename: 'a.csv', code: 'print(1)', language: 'python' })
