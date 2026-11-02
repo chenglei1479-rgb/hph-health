@@ -333,24 +333,49 @@ export function detectPhi(original: string): PhiSpan[] {
 }
 
 function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void {
-  const agePatterns: ReadonlyArray<readonly [string, boolean]> = [
-    ['享年\\s*\\d{2,3}', true],
-    ['満?\\d{2,3}\\s*歳\\s*\\d{1,2}\\s*か?月', false],
-    ['満?\\d{2,3}\\s*\\n\\s*歳', false],
-    ['満?\\d{2,3}\\s*歳(?:超|代)?', false],
-    ['満?\\d{2,3}\\s*才', false],
-    ['\\d{2,3}\\s*歳代', false],
-    ['\\d{2,3}\\s*代(?:後半|前半)?', false],
-    ['\\d{2,3}\\s*y\\s*/\\s*o', false],
-    ['\\d{2,3}\\s*yo\\b', false],
-    ['\\d{2,3}\\s*years old', false],
-    ['(?:卒寿|白寿|百寿|茶寿|米寿)', false],
-    ['満?百歳', false],
-    ['[零〇一二三四五六七八九十百]{1,6}歳', false],
-    ['年齢\\s*[:：]\\s*\\d{2,3}(?![\\d歳才y/])', true],
-    ['Age\\s+\\d{2,3}(?![\\dy/歳才])', true]
+  // Age shapes also carry a rule id now. Without one, a beta.20 block report named only
+  // category/offset/length, and working out that `Age 18` came from the English age pattern took
+  // three rounds of guessing at date patterns (#131).
+  const agePatterns: ReadonlyArray<readonly [string, boolean, string]> = [
+    ['享年\\s*\\d{2,3}', true, 'age-obituary'],
+    ['満?\\d{2,3}\\s*歳\\s*\\d{1,2}\\s*か?月', false, 'age-month'],
+    ['満?\\d{2,3}\\s*\\n\\s*歳', false, 'age-wrapped'],
+    ['満?\\d{2,3}\\s*歳(?:超|代)?', false, 'age-sai'],
+    ['満?\\d{2,3}\\s*才', false, 'age-sai-kanji'],
+    ['\\d{2,3}\\s*歳代', false, 'age-sai-dai'],
+    ['\\d{2,3}\\s*代(?:後半|前半)?', false, 'age-dai'],
+    ['\\d{2,3}\\s*y\\s*/\\s*o', false, 'age-yo-slash'],
+    ['\\d{2,3}\\s*yo\\b', false, 'age-yo'],
+    ['\\d{2,3}\\s*years old', false, 'age-years-old'],
+    ['(?:卒寿|白寿|百寿|茶寿|米寿)', false, 'age-longevity'],
+    ['満?百歳', false, 'age-hundred'],
+    ['[零〇一二三四五六七八九十百]{1,6}歳', false, 'age-kanji'],
+    ['年齢\\s*[:：]\\s*\\d{2,3}(?![\\d歳才y/])', true, 'age-ja-label'],
+    // A band label names nobody: `Age 18-39` is a group, while `Age 72` identifies a person. The
+    // mark that follows the number is what tells them apart — not the word "Age" — so the match
+    // stops at both spellings of an open end that real writing uses: the symbol (`-–—~〜～+`) and
+    // the word (`and over`, `or older`, `years and over`, `plus`). Listing one without the other
+    // leaves the incident reachable by rephrasing: "Age 80+" got through while "Age 80 and over"
+    // stayed blocked, and the author sees the same failure either way.
+    //
+    // The word form only counts as a band when the phrase *ends* there. `Age 72 plus comorbidities`
+    // is telegraphic clinical prose about one person, and an earlier version released it because
+    // `\b` only stops a stuck-on suffix ("overall") — a whole following word still slipped through.
+    // That turned a false block into a missed mask, which is the worse of the two. So the phrase
+    // must be followed by no word on the same line: end of text, punctuation, or a line break.
+    // The lookahead deliberately skips horizontal whitespace only, so a chart label ending a line
+    // still reads as a band while "or older patients" does not. (`[^\S\n]*` rather than `\s*`:
+    // a backtracking `\s*` can give back its space and let `[^A-Za-z]` match that space itself,
+    // which re-releases exactly these sentences.)
+    [
+      'Age\\s+\\d{2,3}(?![\\dy/歳才])(?!\\s?(?:[-–—~〜～]\\s?\\d|\\+|to\\s?\\d))' +
+        '(?!\\s+(?:years?\\s+)?(?:and|or)\\s+(?:over|above|older|more)\\b(?![^\\S\\n]*[A-Za-z]))' +
+        '(?!\\s+plus\\b(?![^\\S\\n]*[A-Za-z]))',
+      true,
+      'age-english'
+    ]
   ]
-  for (const [pattern, labeled] of agePatterns) {
+  for (const [pattern, labeled, rule] of agePatterns) {
     const regex = withIndices(pattern, 'g')
     let match: IndexedMatch | null
     while ((match = regex.exec(norm) as IndexedMatch | null)) {
@@ -363,7 +388,8 @@ function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void 
       addSpan(spans, map, start, end, 'DATE', {
         ageGe90: age >= 90,
         kind: 'age',
-        labeled
+        labeled,
+        rule
       })
     }
   }

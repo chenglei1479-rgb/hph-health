@@ -7,12 +7,14 @@ import { fetchProviderRequest } from '../settings/provider-fetch'
 import {
   blockedSpanDiagnostics,
   createClosedGate,
+  createVaultBackedGate,
   installMachineApproval,
   installPhiGate,
   MODEL_RELEASE_RETRY_MESSAGE,
   releaseModelText,
   restoredBlockedSpanDiagnostics
 } from './gate'
+import { createMemoryPhiVault } from './store'
 
 describe('PHI hard gate', () => {
   it('fails closed before a provider session prompt', async () => {
@@ -64,6 +66,60 @@ describe('PHI hard gate', () => {
         })
       ).rejects.toThrow(/privacy check/)
       expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installMachineApproval(null)
+      installPhiGate({
+        release: (text) => ({ text, replacements: [], warnings: [] }),
+        restore: (text) => text
+      })
+    }
+  })
+
+  // #131, on the real path rather than a reconstructed string. The beta.20 incident was a writing
+  // request whose `write_artifact_file` arguments carried a chart's age-stratum labels; the gate read
+  // `Age 18` as a date and blocked the send twelve times. This body mirrors that payload (thirteen
+  // `input` entries, the tool call last) so the shape is the production one, not a guess.
+  it('sends a writing request whose age band labels are groups, not dates (#131)', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const toolArguments = JSON.stringify({
+      path: 'age_strata.py',
+      content:
+        "labels = ['Age 18-39', 'Age 40–64', 'Age 65~79', 'Age 80+', 'Age 80 and over']\n" +
+        'ax.set_xticklabels(labels)'
+    })
+    const writingBody = JSON.stringify({
+      model: 'codex',
+      input: [
+        ...Array.from({ length: 12 }, (_, index) => ({
+          type: 'message',
+          role: 'user',
+          content: `step ${index}`
+        })),
+        { type: 'function_call', name: 'write_artifact_file', arguments: toolArguments }
+      ]
+    })
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: writingBody
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+      // The labels reach the provider intact: no masking, because there was nothing to mask.
+      expect(String(vi.mocked(fetchImpl).mock.calls[0]?.[1]?.body)).toContain('Age 18-39')
+      // Both spellings of the open end take the same path — the word form is not a separate rule.
+      expect(String(vi.mocked(fetchImpl).mock.calls[0]?.[1]?.body)).toContain('Age 80 and over')
+
+      // The other half of the pair: the same request shape carrying one person's age is still held,
+      // and the block names the stable code the incident log carried.
+      const singleAge = writingBody.replace('Age 18-39', 'Age 72')
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body: singleAge
+        })
+      ).rejects.toThrow(new RegExp(PHI_BLOCK_CODE))
     } finally {
       installMachineApproval(null)
       installPhiGate({
