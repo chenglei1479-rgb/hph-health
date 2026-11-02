@@ -13,7 +13,7 @@ import {
   Trash2,
   Upload
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LiteratureHoverDropdown } from '../LiteratureHoverMenus'
 
@@ -98,6 +98,7 @@ export function LiteratureExportMenu({
   onExport: (format: 'bibtex' | 'ris') => Promise<boolean>
 }>): React.JSX.Element {
   const { t } = useTranslation()
+  const hintId = useId()
   const [status, setStatus] = useState<'error' | 'idle' | 'loading' | 'success'>('idle')
   const resetTimeoutRef = useRef<number | undefined>(undefined)
 
@@ -155,11 +156,15 @@ export function LiteratureExportMenu({
         <FileText className="mr-2 size-4" aria-hidden="true" />
         {t('BibTeX')}
       </DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => void runExport('ris')}>
+      <DropdownMenuItem
+        aria-label={t('RIS')}
+        aria-describedby={hintId}
+        onSelect={() => void runExport('ris')}
+      >
         <FileText className="mr-2 size-4" aria-hidden="true" />
         <span>
-          {t('RIS')}
-          <span className="block text-xs text-muted-foreground">
+          <span aria-hidden="true">{t('RIS')}</span>
+          <span id={hintId} className="block text-xs text-muted-foreground">
             {t(
               'RIS carries metadata only, not attachments. Use a full backup to preserve attachments.'
             )}
