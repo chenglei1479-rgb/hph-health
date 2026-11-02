@@ -7675,6 +7675,11 @@
     "No AI provider is configured": "AI 事業者は未設定",
     "More actions for {{name}}": "{{name}} のその他の操作",
     "File details": "ファイルの詳細",
-    "Publishing...": "準備中…"
+    "Publishing...": "準備中…",
+    "Add to research package": "研究パッケージに追加",
+    "Could not add {{name}} to the research package. Try again.": "{{name}} を研究パッケージに追加できませんでした。もう一度お試しください。",
+    "Fit to window": "ウィンドウに合わせる",
+    "Actual size": "実際のサイズ",
+    "This file is {{size}}. Download it to view.": "このファイルは {{size}} です。ダウンロードして確認してください。"
   }
 }

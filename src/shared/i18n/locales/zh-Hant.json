@@ -7675,6 +7675,11 @@
     "No AI provider is configured": "未設定 AI 服務商",
     "More actions for {{name}}": "{{name}} 的其他操作",
     "File details": "檔案詳情",
-    "Publishing...": "正在發布…"
+    "Publishing...": "正在發布…",
+    "Add to research package": "加入研究套件",
+    "Could not add {{name}} to the research package. Try again.": "無法將 {{name}} 加入研究套件。請重試。",
+    "Fit to window": "符合視窗",
+    "Actual size": "實際大小",
+    "This file is {{size}}. Download it to view.": "此檔案大小為 {{size}}，請下載後檢視。"
   }
 }

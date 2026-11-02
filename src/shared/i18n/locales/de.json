@@ -7835,6 +7835,11 @@
     "No AI provider is configured": "Kein KI-Anbieter eingerichtet",
     "More actions for {{name}}": "Weitere Aktionen für {{name}}",
     "File details": "Dateidetails",
-    "Publishing...": "Wird veröffentlicht…"
+    "Publishing...": "Wird veröffentlicht…",
+    "Add to research package": "Zum Forschungspaket hinzufügen",
+    "Could not add {{name}} to the research package. Try again.": "{{name}} konnte nicht zum Forschungspaket hinzugefügt werden. Versuchen Sie es erneut.",
+    "Fit to window": "An Fenster anpassen",
+    "Actual size": "Originalgröße",
+    "This file is {{size}}. Download it to view.": "Diese Datei ist {{size}} groß. Laden Sie sie herunter, um sie anzusehen."
   }
 }

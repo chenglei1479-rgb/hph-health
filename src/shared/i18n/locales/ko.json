@@ -7673,6 +7673,11 @@
     "No AI provider is configured": "AI 모델 제공업체가 설정되지 않음",
     "More actions for {{name}}": "{{name}}의 추가 작업",
     "File details": "파일 세부정보",
-    "Publishing...": "게시 중…"
+    "Publishing...": "게시 중…",
+    "Add to research package": "연구 패키지에 추가",
+    "Could not add {{name}} to the research package. Try again.": "{{name}}을(를) 연구 패키지에 추가하지 못했습니다. 다시 시도하세요.",
+    "Fit to window": "창에 맞추기",
+    "Actual size": "실제 크기",
+    "This file is {{size}}. Download it to view.": "이 파일은 {{size}}입니다. 다운로드한 뒤 확인하세요."
   }
 }

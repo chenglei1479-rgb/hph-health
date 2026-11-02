@@ -499,6 +499,39 @@ describe('ProjectFilesView', () => {
     ).not.toBeNull()
   })
 
+  it('offers adding a generated file to the research package from its row', async () => {
+    await renderView([
+      createSession({
+        id: 'session-1',
+        messages: [createMessage({ id: 'prompt-1', role: 'user' })],
+        artifacts: [
+          {
+            id: 'artifact-1',
+            kind: 'managed-file',
+            path: '/workspace/result.txt',
+            name: 'result.txt'
+          }
+        ]
+      })
+    ])
+
+    const action = container.querySelector<HTMLButtonElement>(
+      '[aria-label="Add to research package"]'
+    )
+    expect(action).not.toBeNull()
+    expect(action?.disabled).toBe(false)
+
+    await act(async () => {
+      action?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await Promise.resolve()
+    })
+
+    // This surface cannot open the package selector, and the reader is told instead of left guessing.
+    expect(container.textContent).toContain(
+      'Could not add result.txt to the research package. Try again.'
+    )
+  })
+
   it('hides archived session artifacts and their filter option', async () => {
     await renderView([
       createSession({

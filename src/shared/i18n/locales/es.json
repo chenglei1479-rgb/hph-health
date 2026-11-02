@@ -8003,6 +8003,11 @@
     "No AI provider is configured": "No hay proveedor de IA configurado",
     "More actions for {{name}}": "Más acciones para {{name}}",
     "File details": "Detalles del archivo",
-    "Publishing...": "Publicando…"
+    "Publishing...": "Publicando…",
+    "Add to research package": "Añadir al paquete de investigación",
+    "Could not add {{name}} to the research package. Try again.": "No se pudo añadir {{name}} al paquete de investigación. Inténtelo de nuevo.",
+    "Fit to window": "Ajustar a la ventana",
+    "Actual size": "Tamaño real",
+    "This file is {{size}}. Download it to view.": "Este archivo ocupa {{size}}. Descárguelo para verlo."
   }
 }

@@ -3,15 +3,22 @@ import { useEffect, useState } from 'react'
 import type { PreviewFileSource } from '@/stores/preview-workbench-store'
 
 import { createPreviewRequestScope, getPreviewFileReader } from './preview-file-reader'
-import { isUnavailableFileError } from './preview-errors'
+import {
+  isManagedFilePublicationPendingError,
+  isUnavailableFileError
+} from './preview-errors'
 
-type UnavailableProbeResult = {
+// Three states a managed file can be in while its card is on screen. `ready` also covers "not probed
+// yet": the card renders normally and the state stays quiet until a read proves otherwise.
+export type ManagedFileAvailability = 'ready' | 'publishing' | 'missing'
+
+type AvailabilityProbeResult = {
   requestKey: string
-  unavailable: boolean
+  availability: ManagedFileAvailability
 }
 
 // Probes one managed file only while its card is near the viewport and caches by file revision.
-const useUnavailablePreviewProbe = ({
+const useManagedFileAvailability = ({
   enabled,
   projectId,
   sessionId,
@@ -31,7 +38,7 @@ const useUnavailablePreviewProbe = ({
   source: PreviewFileSource
   size?: number
   mtimeMs?: number
-}): boolean => {
+}): ManagedFileAvailability => {
   const requestKey = JSON.stringify([
     projectId ?? null,
     sessionId ?? null,
@@ -42,7 +49,7 @@ const useUnavailablePreviewProbe = ({
     size ?? null,
     mtimeMs ?? null
   ])
-  const [result, setResult] = useState<UnavailableProbeResult | null>(null)
+  const [result, setResult] = useState<AvailabilityProbeResult | null>(null)
   const hasCurrentResult = result?.requestKey === requestKey
 
   useEffect(() => {
@@ -61,12 +68,18 @@ const useUnavailablePreviewProbe = ({
       encoding: 'base64'
     }).then(
       () => {
-        if (!canceled) setResult({ requestKey, unavailable: false })
+        if (!canceled) setResult({ requestKey, availability: 'ready' })
       },
       (error: unknown) => {
-        if (!canceled) {
-          setResult({ requestKey, unavailable: isUnavailableFileError(error) })
-        }
+        if (canceled) return
+        // A generated file can be readable before its turn-level finalization publishes the first
+        // Version; that is a transient state, not a missing file.
+        const availability: ManagedFileAvailability = isManagedFilePublicationPendingError(error)
+          ? 'publishing'
+          : isUnavailableFileError(error)
+            ? 'missing'
+            : 'ready'
+        setResult({ requestKey, availability })
       }
     )
 
@@ -85,7 +98,11 @@ const useUnavailablePreviewProbe = ({
     source
   ])
 
-  return hasCurrentResult ? result.unavailable : false
+  return hasCurrentResult ? result.availability : 'ready'
 }
 
-export { useUnavailablePreviewProbe }
+// Boolean view of the same probe for cards that only need the unavailable badge.
+const useUnavailablePreviewProbe = (input: Parameters<typeof useManagedFileAvailability>[0]): boolean =>
+  useManagedFileAvailability(input) === 'missing'
+
+export { useManagedFileAvailability, useUnavailablePreviewProbe }

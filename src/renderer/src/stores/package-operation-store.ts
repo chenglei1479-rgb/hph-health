@@ -12,6 +12,11 @@ export const usePackageOperationStore = create<{
   dismiss: () => void
   excludedStorageKeys: string[] | null
   selectionPreset: 'full' | 'compact' | 'custom'
+  // One file the reader asked to include before the selector existed. It is an initial value only:
+  // it is consumed by the next selection snapshot and never locks the checkboxes.
+  preselect: { fileId: string; filename: string } | null
+  preselectResearchPackageFile: (target: { fileId: string; filename: string }) => void
+  clearPreselect: () => void
   threshold: string
   setThreshold: (threshold: string) => void
   receive: (operation: PackageOperationSnapshot | null) => void
@@ -22,6 +27,11 @@ export const usePackageOperationStore = create<{
   open: false,
   excludedStorageKeys: null,
   selectionPreset: 'compact',
+  preselect: null,
+  preselectResearchPackageFile: (target) =>
+    // A second request replaces the first: only one file is ever pre-checked.
+    set({ preselect: target }),
+  clearPreselect: () => set({ preselect: null }),
   threshold: '256',
   setThreshold: (threshold) => set({ threshold }),
   dismiss: () =>
@@ -46,33 +56,66 @@ export const usePackageOperationStore = create<{
         new Set(
           operation.files.filter((file) => !file.requiredForEvidence).map((file) => file.storageKey)
         )
+      const excluded = operation?.files
+        ? [
+            ...new Set([
+              ...(preset === 'compact'
+                ? operation.files
+                    .filter((file) => !file.requiredForEvidence)
+                    .map((file) => file.storageKey)
+                : (draft ?? []).filter((key) => available!.has(key))),
+              ...operation.files
+                .filter(
+                  (file) => !file.requiredForEvidence && file.sizeBytes > PACKAGE_MAX_FILE_BYTES
+                )
+                .map((file) => file.storageKey)
+            ])
+          ]
+        : draft
+      // The reader asked for exactly one file before the selector existed. Include every Version of
+      // that file here and then drop the request: it seeds the first snapshot only, so later manual
+      // edits and cancellations never resurrect it.
+      const preselectedKeys = state.preselect
+        ? new Set(
+            (operation?.files ?? [])
+              .filter(
+                (file) =>
+                  file.groupId === state.preselect!.fileId &&
+                  file.filename === state.preselect!.filename
+              )
+              .map((file) => file.storageKey)
+          )
+        : undefined
+      const preselectApplies =
+        operation?.state === 'awaiting-selection' &&
+        preselectedKeys !== undefined &&
+        preselectedKeys.size > 0
+      const nextExcluded =
+        preselectApplies && excluded
+          ? excluded.filter((key) => !preselectedKeys!.has(key))
+          : excluded
       return {
         operation,
         dismissedId: same ? state.dismissedId : undefined,
-        excludedStorageKeys: operation?.files
-          ? [
-              ...new Set([
-                ...(preset === 'compact'
-                  ? operation.files
-                      .filter((file) => !file.requiredForEvidence)
-                      .map((file) => file.storageKey)
-                  : (draft ?? []).filter((key) => available!.has(key))),
-                ...operation.files
-                  .filter(
-                    (file) => !file.requiredForEvidence && file.sizeBytes > PACKAGE_MAX_FILE_BYTES
-                  )
-                  .map((file) => file.storageKey)
-              ])
-            ]
-          : draft,
+        excludedStorageKeys: nextExcluded,
+        preselect:
+          preselectApplies ||
+          (operation?.state !== undefined &&
+            ['succeeded', 'cancelled', 'failed'].includes(operation.state))
+            ? null
+            : state.preselect,
         selectionPreset:
-          preset === 'compact' &&
-          operation?.files?.some((file) => file.source === 'literature' && file.requiredForEvidence)
+          preselectApplies
             ? 'custom'
-            : operation?.files?.some((file) => file.sizeBytes > PACKAGE_MAX_FILE_BYTES) &&
-                preset === 'full'
+            : preset === 'compact' &&
+                operation?.files?.some(
+                  (file) => file.source === 'literature' && file.requiredForEvidence
+                )
               ? 'custom'
-              : preset,
+              : operation?.files?.some((file) => file.sizeBytes > PACKAGE_MAX_FILE_BYTES) &&
+                  preset === 'full'
+                ? 'custom'
+                : preset,
         threshold: same || retry ? state.threshold : '256',
         open:
           same && state.dismissedId === operation?.id

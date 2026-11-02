@@ -8,6 +8,7 @@ import {
   Folder,
   Loader2,
   Monitor,
+  Package,
   Paperclip,
   Plus,
   Server
@@ -48,8 +49,8 @@ import { GrantedRootMenuRow } from './project-files-granted-root-menu-row'
 import { createProjectFilePreviewArtifact } from './project-files-preview-owner'
 import type { ProjectFilesFilterOption } from './project-files-query-model'
 import { FILE_MISSING_TAG_KEY } from './previews/preview-errors'
+import { useManagedFileAvailability } from './previews/useUnavailablePreviewProbe'
 import { useNearViewport } from './previews/useNearViewport'
-import { useUnavailablePreviewProbe } from './previews/useUnavailablePreviewProbe'
 
 type ProjectFilesViewMode = 'grid' | 'list'
 // Keeps collection semantics visible in both the menu rows and the currently selected trigger.
@@ -121,7 +122,8 @@ const FileActionButtons = ({
   name,
   disabled,
   className,
-  onOpenInPanel
+  onOpenInPanel,
+  onAddToResearchPackage
 }: {
   file: ProjectFileItem
   source: 'artifact' | 'upload'
@@ -132,10 +134,12 @@ const FileActionButtons = ({
   disabled: boolean
   className: string
   onOpenInPanel: () => void
+  onAddToResearchPackage?: () => void
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const openLabel = t('Open {{name}} in split view beside the session', { name })
   const mentionLabel = t('Mention {{name}}', { name })
+  const packageLabel = t('Add to research package')
   const mention = useProjectFileMentionAction(file)
   return (
     <>
@@ -155,6 +159,26 @@ const FileActionButtons = ({
           iconSize="icon-sm"
           className="cursor-pointer border-border bg-bg-000/95 shadow-sm"
         />
+        {onAddToResearchPackage ? (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  className="cursor-pointer bg-bg-000/95 text-text-100 shadow-sm"
+                  aria-label={packageLabel}
+                  disabled={disabled}
+                  onClick={onAddToResearchPackage}
+                >
+                  <Package aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{packageLabel}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -219,7 +243,8 @@ const FileTile = ({
   timestamp,
   previewLabel,
   onPreview,
-  onOpenInPanel
+  onOpenInPanel,
+  onAddToResearchPackage
 }: {
   file: ProjectFileItem
   name: string
@@ -234,12 +259,13 @@ const FileTile = ({
   previewLabel: string
   onPreview: () => void
   onOpenInPanel: () => void
+  onAddToResearchPackage?: () => void
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const sizeLabel = formatByteSize(size)
   const relativeTimeLabel = formatRelativeFileTime(timestamp, t)
   const [setTileElement, isNearViewport] = useNearViewport<HTMLButtonElement>()
-  const missing = useUnavailablePreviewProbe({
+  const status = useManagedFileAvailability({
     enabled: isNearViewport,
     projectId,
     sessionId,
@@ -249,6 +275,7 @@ const FileTile = ({
     size,
     mtimeMs: timestamp
   })
+  const missing = status === 'missing'
   const mentionable = useProjectFileMentionAvailability(file.projectId)
   const mentionDrag = useProjectFileMentionDrag(file, { disabled: missing || !mentionable })
 
@@ -289,6 +316,10 @@ const FileTile = ({
             <span className="absolute left-1.5 top-1.5 rounded bg-text-000/75 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-bg-000 shadow-sm">
               {t(FILE_MISSING_TAG_KEY)}
             </span>
+          ) : status === 'publishing' ? (
+            <span className="absolute left-1.5 top-1.5 rounded bg-text-000/75 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-bg-000 shadow-sm">
+              {t('Publishing...')}
+            </span>
           ) : null}
         </span>
         <span
@@ -319,9 +350,10 @@ const FileTile = ({
         projectId={projectId}
         fileId={fileId}
         name={name}
-        disabled={missing}
+        disabled={missing || status === 'publishing'}
         className="right-1.5 top-1.5"
         onOpenInPanel={onOpenInPanel}
+        onAddToResearchPackage={onAddToResearchPackage}
       />
     </div>
   )
@@ -333,16 +365,18 @@ const FileListRow = ({
   file,
   previewLabel,
   onPreview,
-  onOpenInPanel
+  onOpenInPanel,
+  onAddToResearchPackage
 }: {
   file: ProjectFileItem
   previewLabel: string
   onPreview: () => void
   onOpenInPanel: () => void
+  onAddToResearchPackage?: () => void
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const [setRowElement, isNearViewport] = useNearViewport<HTMLButtonElement>()
-  const missing = useUnavailablePreviewProbe({
+  const status = useManagedFileAvailability({
     enabled: isNearViewport,
     projectId: file.projectId,
     sessionId: file.sessionId,
@@ -352,8 +386,11 @@ const FileListRow = ({
     size: file.size,
     mtimeMs: file.mtimeMs
   })
+  const missing = status === 'missing'
   const mentionable = useProjectFileMentionAvailability(file.projectId)
-  const mentionDrag = useProjectFileMentionDrag(file, { disabled: missing || !mentionable })
+  const mentionDrag = useProjectFileMentionDrag(file, {
+    disabled: missing || status === 'publishing' || !mentionable
+  })
   const sizeLabel = formatByteSize(file.size)
   const relativeTimeLabel = formatRelativeFileTime(file.mtimeMs ?? file.sortAtMs, t)
 
@@ -383,6 +420,10 @@ const FileListRow = ({
           <span className="shrink-0 text-[9px] font-semibold uppercase text-text-300">
             {t(FILE_MISSING_TAG_KEY)}
           </span>
+        ) : status === 'publishing' ? (
+          <span className="shrink-0 text-[9px] font-semibold uppercase text-text-300">
+            {t('Publishing...')}
+          </span>
         ) : null}
         {sizeLabel || relativeTimeLabel ? (
           <span
@@ -402,9 +443,10 @@ const FileListRow = ({
         projectId={file.projectId}
         fileId={file.sourceFileId}
         name={file.name}
-        disabled={missing}
+        disabled={missing || status === 'publishing'}
         className="right-2 top-1/2 -translate-y-1/2"
         onOpenInPanel={onOpenInPanel}
+        onAddToResearchPackage={onAddToResearchPackage}
       />
     </div>
   )
@@ -417,13 +459,15 @@ const ProjectFileItems = ({
   viewMode,
   previewById,
   onPreview,
-  onOpenInPanel
+  onOpenInPanel,
+  onAddToResearchPackage
 }: {
   files: ProjectFileItem[]
   viewMode: ProjectFilesViewMode
   previewById: Map<string, ArtifactPreviewResult | undefined>
   onPreview: (file: ProjectFileItem) => void
   onOpenInPanel: (file: ProjectFileItem) => void
+  onAddToResearchPackage?: (file: ProjectFileItem) => void
 }): React.JSX.Element => {
   const { t } = useTranslation()
 
@@ -441,6 +485,9 @@ const ProjectFileItems = ({
           file.source === 'upload'
             ? t('Preview uploaded file {{name}}', { name: file.name })
             : t('Preview generated file {{name}}', { name: file.name })
+        const addToResearchPackage = onAddToResearchPackage
+          ? () => onAddToResearchPackage(file)
+          : undefined
         if (viewMode === 'list') {
           return (
             <FileListRow
@@ -449,6 +496,7 @@ const ProjectFileItems = ({
               previewLabel={previewLabel}
               onPreview={() => onPreview(file)}
               onOpenInPanel={() => onOpenInPanel(file)}
+              onAddToResearchPackage={addToResearchPackage}
             />
           )
         }
@@ -469,6 +517,7 @@ const ProjectFileItems = ({
             previewLabel={previewLabel}
             onPreview={() => onPreview(file)}
             onOpenInPanel={() => onOpenInPanel(file)}
+            onAddToResearchPackage={addToResearchPackage}
           />
         )
       })}

@@ -8142,6 +8142,11 @@
     "No AI provider is configured": "Поставщик ИИ не настроен",
     "More actions for {{name}}": "Другие действия с {{name}}",
     "File details": "Сведения о файле",
-    "Publishing...": "Публикация…"
+    "Publishing...": "Публикация…",
+    "Add to research package": "Добавить в исследовательский пакет",
+    "Could not add {{name}} to the research package. Try again.": "Не удалось добавить {{name}} в исследовательский пакет. Повторите попытку.",
+    "Fit to window": "По размеру окна",
+    "Actual size": "Реальный размер",
+    "This file is {{size}}. Download it to view.": "Размер файла — {{size}}. Скачайте его, чтобы просмотреть."
   }
 }
