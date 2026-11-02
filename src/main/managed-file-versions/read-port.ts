@@ -60,6 +60,9 @@ export type ManagedFileReadLease = ResolvedManagedFileVersion & {
   readRange: (begin: number, end: number) => Promise<Uint8Array>
   copyTo: (destinationPath: string, options?: { exclusive?: boolean }) => Promise<void>
   assertCanCopyTo?: (destinationPath: string) => Promise<void>
+  // Checksum recorded for this Version. Older records and imported packages may not carry one; a
+  // missing checksum means "we cannot verify", never "the bytes are wrong" (#122).
+  checksum?: string
   verifyUnchanged: () => Promise<void>
   close: () => Promise<void>
 }

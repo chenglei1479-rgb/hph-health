@@ -6,7 +6,9 @@ import type { ApplicationInvocation } from './application-command-router'
 import { Zip, ZipDeflate } from 'fflate'
 
 import { ipcMainHandle } from './ipc-handler-registry'
+import { createHash } from 'node:crypto'
 import { constants } from 'node:fs'
+import { createReadStream } from 'node:fs'
 import { copyFile, mkdtemp, open, rm, writeFile, type FileHandle } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, extname, join } from 'node:path'
@@ -27,6 +29,19 @@ import type {
 import { englishNativeTranslator, type NativeTranslator } from './locale/main-process-messages'
 import { toErrorMessage } from './error-message'
 import { publishUserFile } from './user-file-publisher'
+import { ApplicationCommandError } from '../shared/application-command-contract'
+import { MANAGED_FILE_CHECKSUM_MISMATCH_CODE } from '../shared/file-save'
+
+// Hashes a file the app just delivered. Used only to prove a saved copy matches the Version record, so
+// a mismatch is reported instead of handing the user bytes that differ from what the preview showed.
+const sha256OfFile = (path: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const hash = createHash('sha256')
+    const stream = createReadStream(path)
+    stream.on('error', reject)
+    stream.on('data', (chunk) => hash.update(chunk))
+    stream.on('end', () => resolve(hash.digest('hex')))
+  })
 
 type RegisterFileSaveHandlersOptions = {
   resolveManagedFilePath?: (
@@ -80,6 +95,8 @@ const PROJECT_ARTIFACT_STREAM_CHUNK_BYTES = 64 * 1024
 type ManagedFileHandle = {
   copyTo: (destinationPath: string, options?: { exclusive?: boolean }) => Promise<void>
   assertCanCopyTo?: (destinationPath: string) => Promise<void>
+  // Present only when the Version record carries a checksum; absent means unverifiable, not corrupt.
+  checksum?: string
   close: () => Promise<void>
 }
 
@@ -675,6 +692,24 @@ export const createFileSaveCommands = (
               ? { validateDestination: () => managedFile.assertCanCopyTo!(filePath) }
               : {})
           })
+          // Only a Version that carries a checksum can be verified. An absent checksum means the record
+          // has none (older artifacts, imported packages) and is not evidence of a bad copy.
+          const expectedChecksum = managedFile.checksum
+          if (expectedChecksum) {
+            const actualChecksum = await sha256OfFile(filePath).catch(() => undefined)
+            if (actualChecksum !== expectedChecksum) {
+              // Remove only the copy this save produced; the Version's own bytes are never touched.
+              await rm(filePath, { force: true }).catch(() => undefined)
+              // The sentence lives in the native catalogs; the placeholders are filled here so the
+              // message carries the file name and the code even where no translator is configured.
+              const sentence = (options.translate ?? englishNativeTranslator)(
+                'The saved copy of {{name}} did not match the recorded checksum, so it was deleted. The original file was not changed. (Code: {{code}})'
+              )
+                .replace('{{name}}', safeName)
+                .replace('{{code}}', MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
+              throw new ApplicationCommandError(MANAGED_FILE_CHECKSUM_MISMATCH_CODE, sentence)
+            }
+          }
           return { saved: true, filePath }
         } finally {
           if (versionedRequest) await managedFile.close()

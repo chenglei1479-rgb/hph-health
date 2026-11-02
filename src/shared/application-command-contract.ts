@@ -13,6 +13,7 @@ export const APPLICATION_COMMAND_ERROR_CODES = [
   'schema-notebook-table-missing',
   'schema-notebook-csv-encoding',
   'schema-notebook-python-unavailable',
+  'managed-file-checksum-mismatch',
   'csl-file-too-large',
   'csl-invalid-xml',
   'csl-unsupported-doctype',

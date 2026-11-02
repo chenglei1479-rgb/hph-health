@@ -1,4 +1,5 @@
 import { createFileSaveCommands } from './file-save'
+import { MANAGED_FILE_CHECKSUM_MISMATCH_CODE } from '../shared/file-save'
 import { createElectronCallerContext, createWebCallerContext } from './caller-context'
 import type { ApplicationInvocation } from './application-command-router'
 import { configureTestElectronHost } from '../../test/runtime-host'
@@ -583,6 +584,104 @@ describe('file save IPC handlers', () => {
     expect(resolveManagedFilePath).not.toHaveBeenCalled()
     expect(copyTo).toHaveBeenCalledWith(join(downloadsPath, 'report.csv'))
     expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('verifies a saved copy against the Version checksum and keeps it when it matches', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
+    const bytes = 'alpha'
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      await writeFile(destinationPath, bytes)
+    })
+    const close = vi.fn(async () => undefined)
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256(bytes)
+    })
+    const target = join(destination, 'report.csv')
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({ openManagedFileVersion } as never)
+
+    await expect(
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      )
+    ).resolves.toEqual({ saved: true, filePath: target })
+    await expect(readFile(target, 'utf8')).resolves.toBe(bytes)
+  })
+
+  it('deletes the saved copy and reports the file name when the checksum does not match', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      // The delivered bytes are not the ones the Version record describes.
+      await writeFile(destinationPath, 'alpha')
+    })
+    const close = vi.fn(async () => undefined)
+    const openManagedFileVersion = vi.fn().mockResolvedValue({
+      copyTo,
+      close,
+      checksum: sha256('beta')
+    })
+    const target = join(destination, 'report.csv')
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({ openManagedFileVersion } as never)
+
+    const error = await (
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'report.csv'
+        }
+      ) as Promise<unknown>
+    ).catch((reason: unknown) => reason)
+
+    // The stable code lets the renderer and support identify this failure without parsing copy.
+    expect((error as { code?: string }).code).toBe(MANAGED_FILE_CHECKSUM_MISMATCH_CODE)
+    // The user must learn which file was deleted, and that the original was not touched.
+    expect((error as Error).message).toContain('report.csv')
+    expect((error as Error).message).toContain('original file was not changed')
+    // Only the copy this save produced is removed.
+    await expect(readFile(target)).rejects.toMatchObject({ code: 'ENOENT' })
+    // The Version handle was still closed on the failure path.
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('saves without verifying when the Version record carries no checksum', async () => {
+    const destination = await mkdtemp(join(tmpdir(), 'file-save-checksum-'))
+    const copyTo = vi.fn(async (destinationPath: string) => {
+      await writeFile(destinationPath, 'alpha')
+    })
+    const close = vi.fn(async () => undefined)
+    // Older artifacts and imported packages have no checksum; that is not a corrupt copy.
+    const openManagedFileVersion = vi.fn().mockResolvedValue({ copyTo, close })
+    const target = join(destination, 'legacy.csv')
+    showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerFileSaveHandlers({ openManagedFileVersion } as never)
+
+    await expect(
+      handlers.get('file:save-managed')!(
+        { sender: {} },
+        {
+          source: 'artifact',
+          projectId: 'project-1',
+          fileId: 'artifact-1',
+          versionId: 'version-1',
+          suggestedName: 'legacy.csv'
+        }
+      )
+    ).resolves.toEqual({ saved: true, filePath: target })
+    await expect(readFile(target, 'utf8')).resolves.toBe('alpha')
   })
 
   it('preserves an explicit historical version when exporting a logical managed file', async () => {

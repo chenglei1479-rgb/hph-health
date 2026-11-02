@@ -72,7 +72,11 @@ type SaveProjectArtifactFailure = SaveProjectArtifactFile & {
 type SaveProjectArtifactsResult =
   { saved: false } | { saved: true; filePath?: string; failures?: SaveProjectArtifactFailure[] }
 
-export { WEB_MANAGED_FILE_SIZE_LIMIT_ERROR_NAME }
+// Stable code for a saved copy whose bytes did not match the Version record. The copy is deleted and the
+// original Artifact is untouched, so the renderer can explain it and support can quote the code (#122).
+const MANAGED_FILE_CHECKSUM_MISMATCH_CODE = 'managed-file-checksum-mismatch' as const
+
+export { MANAGED_FILE_CHECKSUM_MISMATCH_CODE, WEB_MANAGED_FILE_SIZE_LIMIT_ERROR_NAME }
 export type {
   SaveBlobFileRequest,
   SaveBlobFileResult,
