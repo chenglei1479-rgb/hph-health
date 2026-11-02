@@ -1391,7 +1391,9 @@ it('groups adjacent generated files in one gallery without changing timeline ste
   expect(screen.getAllByText('GENERATED · 2')).toHaveLength(1)
   const cards = screen.getAllByRole('button', { name: /Preview generated file/ })
   expect(cards).toHaveLength(2)
-  expect(cards[0].parentElement).toBe(cards[1].parentElement)
+  // One gallery still owns both cards. Each card has its own positioned wrapper now (the action
+  // buttons must be siblings of the preview button, never children of it), so compare the wrappers.
+  expect(cards[0].parentElement?.parentElement).toBe(cards[1].parentElement?.parentElement)
   expect(source.branches[0].steps).toHaveLength(3)
   seekProgress(1000)
   expect(screen.getByRole('button', { name: 'Preview generated file v1.txt' })).toBeTruthy()

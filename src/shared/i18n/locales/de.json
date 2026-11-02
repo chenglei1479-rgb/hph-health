@@ -7831,6 +7831,9 @@
     "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; de-identified real data only in an approved pilot.": "Das KI-Kontingent der Seed-Einladung ist aufgebraucht. Um fortzufahren, registrieren Sie Ihren eigenen OpenAI-API-Schlüssel oder ziehen Sie später einen kostenpflichtigen Tarif in Betracht. Demo (fiktive Daten) und Literatursuche funktionieren weiterhin. Verwenden Sie in der Beta nur fiktive Daten; de-identifizierte Echtdaten nur in einem freigegebenen Pilotprojekt.",
     "The AI contracted by the operator (OpenAI in the beta)": "Die vom Betreiber beauftragte KI (in der Beta OpenAI)",
     "The provider you registered": "Der von Ihnen registrierte Anbieter",
-    "No AI provider is configured": "Kein KI-Anbieter eingerichtet"
+    "No AI provider is configured": "Kein KI-Anbieter eingerichtet",
+    "More actions for {{name}}": "Weitere Aktionen für {{name}}",
+    "File details": "Dateidetails",
+    "Publishing...": "Wird veröffentlicht…"
   }
 }

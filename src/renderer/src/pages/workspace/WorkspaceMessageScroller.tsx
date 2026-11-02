@@ -1408,6 +1408,27 @@ const WorkspaceMessageScrollerImpl = ({
     [currentProjectId, currentSessionId]
   )
 
+  // Opens the same workbench tab as a preview, with the provenance/version panel already open. The
+  // panel only exists inside the preview surface, so this is the seam that gives the message card a
+  // "File details" action instead of a second panel implementation (#122).
+  const onOpenArtifactDetails = useCallback(
+    (artifact: MessageArtifact): void => {
+      if (!currentSessionId) return
+      const previewItem = createPreviewFileItemFromArtifact(
+        artifact,
+        artifact.resolvedSessionId ?? currentSessionId,
+        artifact.resolvedProjectId ?? currentProjectId
+      )
+      if (!previewItem) return
+      const store = usePreviewWorkbenchStore.getState()
+      store.upsertAndActivateItem(previewItem)
+      if (previewItem.projectId) {
+        store.setFileViewState(previewItem.projectId, previewItem.id, { provenanceOpen: true })
+      }
+    },
+    [currentProjectId, currentSessionId]
+  )
+
   const onPreviewArtifactModal = useCallback(
     (artifact: MessageArtifact): void => {
       if (currentSessionId) previewArtifactModal(artifact, currentSessionId, currentProjectId)
@@ -1770,6 +1791,7 @@ const WorkspaceMessageScrollerImpl = ({
                     isPackageSession: Boolean(activeSession?.packageOrigin),
                     onPreviewArtifact,
                     onPreviewArtifactModal,
+                    onOpenArtifactDetails,
                     onPreviewUploadAttachment,
                     onOpenSkillMention,
                     onOpenLibraryMention,

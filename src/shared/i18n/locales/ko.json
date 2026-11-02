@@ -7669,6 +7669,9 @@
     "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; de-identified real data only in an approved pilot.": "시드 초대 AI 한도를 모두 사용했습니다. 계속하려면 자신의 OpenAI API 키를 등록하거나, 유료 요금제가 출시되면 검토하세요. 데모(가상 데이터)와 문헌 검색은 계속 사용할 수 있습니다. 베타에서는 가상 데이터만 사용하세요. 비식별화된 실제 데이터는 승인된 파일럿에만 허용됩니다.",
     "The AI contracted by the operator (OpenAI in the beta)": "운영자가 계약한 AI(베타는 OpenAI)",
     "The provider you registered": "사용자가 등록한 모델 제공업체",
-    "No AI provider is configured": "AI 모델 제공업체가 설정되지 않음"
+    "No AI provider is configured": "AI 모델 제공업체가 설정되지 않음",
+    "More actions for {{name}}": "{{name}}의 추가 작업",
+    "File details": "파일 세부정보",
+    "Publishing...": "게시 중…"
   }
 }

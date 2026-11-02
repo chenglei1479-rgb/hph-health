@@ -7671,6 +7671,9 @@
     "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; de-identified real data only in an approved pilot.": "种子邀请的 AI 额度已用完。要继续使用，请注册您自己的 OpenAI API 密钥，或在付费方案推出后再考虑。演示（虚构数据）与文献检索仍可继续使用。测试版仅限虚构数据；已去标识的真实数据仅限批准的试点。",
     "The AI contracted by the operator (OpenAI in the beta)": "运营方签约的 AI（测试版为 OpenAI）",
     "The provider you registered": "您注册的服务商",
-    "No AI provider is configured": "未配置 AI 服务商"
+    "No AI provider is configured": "未配置 AI 服务商",
+    "More actions for {{name}}": "{{name}} 的更多操作",
+    "File details": "文件详情",
+    "Publishing...": "正在发布…"
   }
 }

@@ -8138,6 +8138,9 @@
     "You have used up the seed invite AI allowance. To continue, register your own OpenAI API key, or consider a paid plan when it becomes available. Demo (fictional data) and literature search keep working. In the beta, use fictional data only; de-identified real data only in an approved pilot.": "Лимит ИИ по seed-приглашению исчерпан. Чтобы продолжить, зарегистрируйте свой API-ключ OpenAI или рассмотрите платный план, когда он появится. Демонстрация (вымышленные данные) и поиск по литературе продолжают работать. В бете используйте только вымышленные данные; обезличенные реальные данные — только в утверждённом пилотном проекте.",
     "The AI contracted by the operator (OpenAI in the beta)": "ИИ-сервис, с которым оператор заключил договор (в бете OpenAI)",
     "The provider you registered": "Зарегистрированный вами поставщик",
-    "No AI provider is configured": "Поставщик ИИ не настроен"
+    "No AI provider is configured": "Поставщик ИИ не настроен",
+    "More actions for {{name}}": "Другие действия с {{name}}",
+    "File details": "Сведения о файле",
+    "Publishing...": "Публикация…"
   }
 }
