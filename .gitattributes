@@ -2,3 +2,6 @@
 # runner (core.autocrlf=true) checks text files out as CRLF, and prettier then flags the trailing
 # CR ("Delete ␍") on files like build/*.cjs. text=auto lets git leave detected-binary files alone.
 * text=auto eol=lf
+
+# Preserve the encrypted test fixture and its PDF cross-reference record spacing byte for byte.
+src/main/pdf-annotations/fixtures/permission-encrypted.pdf binary
