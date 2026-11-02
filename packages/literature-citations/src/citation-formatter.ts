@@ -17,7 +17,12 @@ import {
   type LiteratureRecordImportFormat
 } from './contracts.js'
 import { fromCslItem, toCslItem } from './csl.js'
-import { exportRisFields, importRisFields, normalizeBibtexEntry } from './citation-exchange.js'
+import {
+  exportRisType,
+  exportRisFields,
+  importRisFields,
+  normalizeBibtexEntry
+} from './citation-exchange.js'
 import {
   citationResourceDirectory,
   type LiteratureCitationStyleLibrary
@@ -332,7 +337,8 @@ class LiteratureCitationFormatter {
           const csl = toCslItem(id, item)
           return engine
             .exportRis(JSON.stringify([csl]))
-            .replace(/^ER {2}-.*$/mu, () => `${exportRisFields(csl)}ER  - `)
+            .replace(/^TY {2}-.*$/mu, () => exportRisType(item.itemType))
+            .replace(/^ER {2}-.*$/mu, () => `${exportRisFields(csl, item.itemType)}ER  - `)
         })
         .join('\n')
     }
@@ -384,7 +390,12 @@ class LiteratureCitationFormatter {
     const errors = [...parsed.errors]
     const items = parsed.entries.flatMap((entry) => {
       try {
-        return [fromCslItem(format === 'bibtex' ? normalizeBibtexEntry(entry) : entry)]
+        const item = fromCslItem(format === 'bibtex' ? normalizeBibtexEntry(entry) : entry)
+        return [
+          format === 'ris' && entry.risOriginalType
+            ? { ...item, itemType: entry.risOriginalType as BibliographicRecord['itemType'] }
+            : item
+        ]
       } catch (error) {
         errors.push({
           preview: String(entry.title ?? entry.id ?? '').slice(0, 160),

@@ -177,6 +177,7 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Die Datei für {{name}} fehlt, daher konnte sie nicht gespeichert werden. Führen Sie die Analyse erneut aus, um sie zu erzeugen, und speichern Sie sie dann. (Code: {{code}})"
   },
   "renderer": {
+    "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS enthält nur Metadaten, keine Anhänge. Verwenden Sie eine vollständige Sicherung, um Anhänge zu erhalten.",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Neue Konversationen können Befehle ausführen, Dateien ändern, Notebook-Code ausführen und auf das Netzwerk zugreifen, ohne vorher zu fragen. Bestehende Konversationen bleiben unverändert.",
     "Also allowed {{scope}}": "Auch erlaubt {{scope}}",
     "Unpin {{path}}": "{{path}} nicht mehr anheften",

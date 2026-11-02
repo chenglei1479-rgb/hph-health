@@ -178,6 +178,7 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Le fichier de {{name}} est introuvable, son enregistrement a donc échoué. Relancez l’analyse pour le recréer, puis enregistrez-le. (Code : {{code}})"
   },
   "renderer": {
+    "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS contient uniquement les métadonnées, sans les pièces jointes. Utilisez une sauvegarde complète pour conserver les pièces jointes.",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Les nouvelles conversations peuvent exécuter des commandes, modifier des fichiers, exécuter du code Notebook et accéder au réseau sans demander préalable. Les conversations existantes restent inchangées.",
     "Also allowed {{scope}}": "Également autorisé {{scope}}",
     "Unpin {{path}}": "Désépingler {{path}}",

@@ -77,6 +77,11 @@ export function LiteratureAddMenu({
             <span>{t('Import references')}</span>
             <span className="text-xs text-muted-foreground">
               {t('BibTeX, RIS, or PubMed NBIB')}
+              <span className="block">
+                {t(
+                  'RIS carries metadata only, not attachments. Use a full backup to preserve attachments.'
+                )}
+              </span>
             </span>
           </span>
         </DropdownMenuItem>
@@ -152,7 +157,14 @@ export function LiteratureExportMenu({
       </DropdownMenuItem>
       <DropdownMenuItem onSelect={() => void runExport('ris')}>
         <FileText className="mr-2 size-4" aria-hidden="true" />
-        {t('RIS')}
+        <span>
+          {t('RIS')}
+          <span className="block text-xs text-muted-foreground">
+            {t(
+              'RIS carries metadata only, not attachments. Use a full backup to preserve attachments.'
+            )}
+          </span>
+        </span>
       </DropdownMenuItem>
     </LiteratureHoverDropdown>
   )
