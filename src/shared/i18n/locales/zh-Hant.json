@@ -7719,6 +7719,7 @@
     "{{name}} was not created because no project is selected. (Code: {{code}})": "未建立 {{name}}，因為沒有選擇專案。（代碼：{{code}}）",
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "此視窗無法連線到桌面應用程式，因此未能儲存 {{name}}。請重新啟動應用程式後重試。（代碼：{{code}}）",
     "{{name}} could not be created. Try again. (Code: {{code}})": "未能建立 {{name}}。請重試。（代碼：{{code}}）",
-    "No file was saved.": "未儲存任何檔案。"
+    "No file was saved.": "未儲存任何檔案。",
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "未能儲存 {{name}}。草稿已建立，但無法寫入你所選的位置。（代碼：{{code}}）"
   }
 }

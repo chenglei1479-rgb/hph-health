@@ -7879,6 +7879,7 @@
     "{{name}} was not created because no project is selected. (Code: {{code}})": "{{name}} wurde nicht erstellt, weil kein Projekt ausgewählt ist. (Code: {{code}})",
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "{{name}} konnte nicht gespeichert werden, weil dieses Fenster die Desktop-App nicht erreicht. Starten Sie die App neu, und versuchen Sie es erneut. (Code: {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "{{name}} konnte nicht erstellt werden. Versuchen Sie es erneut. (Code: {{code}})",
-    "No file was saved.": "Es wurde keine Datei gespeichert."
+    "No file was saved.": "Es wurde keine Datei gespeichert.",
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} konnte nicht gespeichert werden. Der Entwurf wurde erstellt, ließ sich aber nicht am gewählten Ort schreiben. (Code: {{code}})"
   }
 }

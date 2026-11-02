@@ -8047,6 +8047,7 @@
     "{{name}} was not created because no project is selected. (Code: {{code}})": "No se creó {{name}} porque no hay ningún proyecto seleccionado. (Código: {{code}})",
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "No se pudo guardar {{name}} porque esta ventana no puede comunicarse con la aplicación de escritorio. Reinicie la aplicación y vuelva a intentarlo. (Código: {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "No se pudo crear {{name}}. Vuelva a intentarlo. (Código: {{code}})",
-    "No file was saved.": "No se guardó ningún archivo."
+    "No file was saved.": "No se guardó ningún archivo.",
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "No se pudo guardar {{name}}. El borrador se creó, pero no se pudo escribir en la ubicación elegida. (Código: {{code}})"
   }
 }

@@ -333,4 +333,78 @@ describe('EthicsProtocolChecklist', () => {
       })
     }
   })
+
+  it('reports a missing preload bridge when window.api itself is absent', async () => {
+    Object.defineProperty(window, 'api', { configurable: true, value: undefined })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+
+    // Without the optional chain this read threw inside the handler and landed on
+    // "could not be created. Try again." — advice that cannot work when the bridge is gone.
+    const message = await screen.findByText(/could not be saved because this window/)
+    expect(message.textContent).toContain('ethics-draft-bridge-unavailable')
+    expect(screen.queryByText(/could not be created/)).toBeNull()
+  })
+
+  it('separates a failed write from a failed export', async () => {
+    installApi({
+      saveBlobFile: vi.fn(async () => {
+        throw new Error('EACCES')
+      }),
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn(async () => ({
+          ok: true,
+          fileName: '研究計画書_草案.docx',
+          bytes: [1]
+        }))
+      }
+    })
+
+    render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+
+    const message = await screen.findByText(/could not be saved\. The draft was created/)
+    expect(message.textContent).toContain('ethics-draft-save-failed')
+    expect(screen.queryByText(/could not be created/)).toBeNull()
+  })
+
+  it('clears the notice when the project changes', async () => {
+    installApi({
+      writingSafeguards: {
+        getEthicsProtocol: vi.fn(async () => ({
+          choices: {},
+          notApplicableItems: [],
+          notApplicableReasons: {},
+          confirmedMappings: [],
+          headingCandidates: []
+        })),
+        setEthicsProtocol: vi.fn(),
+        importEthicsDocx: vi.fn(),
+        exportEthicsDraft: vi.fn(async () => ({
+          ok: false,
+          code: 'ethics-draft-blocked-phi',
+          fileName: '研究計画書_草案.docx'
+        }))
+      }
+    })
+
+    const { rerender } = render(<EthicsProtocolChecklist projectId="study-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download incomplete DOCX draft' }))
+    expect(await screen.findByText(/was not created because the draft contains/)).toBeTruthy()
+
+    rerender(<EthicsProtocolChecklist projectId="study-2" />)
+    await waitFor(() =>
+      expect(screen.queryByText(/was not created because the draft contains/)).toBeNull()
+    )
+  })
 })

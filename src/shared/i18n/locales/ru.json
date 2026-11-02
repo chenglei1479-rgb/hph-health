@@ -8186,6 +8186,7 @@
     "{{name}} was not created because no project is selected. (Code: {{code}})": "{{name}} не создан, так как проект не выбран. (Код: {{code}})",
     "{{name}} could not be saved because this window cannot reach the desktop app. Restart the app and try again. (Code: {{code}})": "Не удалось сохранить {{name}}: это окно не может связаться с настольным приложением. Перезапустите приложение и повторите попытку. (Код: {{code}})",
     "{{name}} could not be created. Try again. (Code: {{code}})": "Не удалось создать {{name}}. Повторите попытку. (Код: {{code}})",
-    "No file was saved.": "Файл не был сохранён."
+    "No file was saved.": "Файл не был сохранён.",
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "Не удалось сохранить {{name}}. Черновик создан, но записать его в выбранное место не удалось. (Код: {{code}})"
   }
 }

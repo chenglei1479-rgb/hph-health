@@ -81,9 +81,14 @@ export const EthicsProtocolChecklist = ({
   const [mappingSelections, setMappingSelections] = useState<Record<string, string>>({})
   const [confirmingDoctor, setConfirmingDoctor] = useState('')
   const [draftExporting, setDraftExporting] = useState(false)
+  // The notice remembers the project it was raised in. Rendering it only for that project is what
+  // keeps another project's refusal off this checklist after a switch — no clearing effect needed,
+  // because the state never has to be synchronised back into itself.
   const [draftNotice, setDraftNotice] = useState<
-    { level: 'error' | 'info'; message: string } | undefined
+    { projectId: string; level: 'error' | 'info'; message: string } | undefined
   >(undefined)
+  const visibleDraftNotice =
+    draftNotice && draftNotice.projectId === projectId ? draftNotice : undefined
   const draftExportInFlight = useRef(false)
   // One sentence per failure so the doctor reads a reason and a code in the same place; the key is
   // the English sentence and the code is interpolated, matching the other export surfaces (#132).
@@ -106,6 +111,11 @@ export const EthicsProtocolChecklist = ({
         )
       case 'ethics-draft-failed':
         return t('{{name}} could not be created. Try again. (Code: {{code}})', { name, code })
+      case 'ethics-draft-save-failed':
+        return t(
+          '{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})',
+          { name, code }
+        )
     }
   }
   const itemStatus = (number: R8ItemNumber): '空缺' | '部分空缺' | '記載あり' => {
@@ -124,7 +134,10 @@ export const EthicsProtocolChecklist = ({
     )
   }
   useEffect(() => {
-    if (!projectId || !window.api.writingSafeguards) return
+    // `window.api` itself is absent in a window whose preload bridge never installed, so the mount
+    // read needs the same `?.` as the export path; without it the panel crashed before it could
+    // say anything.
+    if (!projectId || !window.api?.writingSafeguards) return
     void window.api.writingSafeguards.getEthicsProtocol({ projectId }).then((protocol) => {
       setChoices(protocol.choices)
       setReasons(protocol.notApplicableReasons)
@@ -158,7 +171,7 @@ export const EthicsProtocolChecklist = ({
     })
   }, [projectId])
   const save = (): void => {
-    if (!projectId || !window.api.writingSafeguards) return
+    if (!projectId || !window.api?.writingSafeguards) return
     void window.api.writingSafeguards.setEthicsProtocol({
       projectId,
       protocol: {
@@ -175,7 +188,7 @@ export const EthicsProtocolChecklist = ({
     })
   }
   const importDocx = (file: File): void => {
-    if (!projectId || !window.api.writingSafeguards) return
+    if (!projectId || !window.api?.writingSafeguards) return
     void file.arrayBuffer().then((buffer) =>
       window.api.writingSafeguards
         .importEthicsDocx({
@@ -227,43 +240,50 @@ export const EthicsProtocolChecklist = ({
     draftExportInFlight.current = true
     setDraftExporting(true)
     setDraftNotice(undefined)
+    const showDraftError = (code: EthicsDraftExportFailureCode, name: string): void =>
+      setDraftNotice({
+        projectId,
+        level: 'error',
+        message: draftFailureMessage(code, name)
+      })
     try {
       if (!projectId) {
-        setDraftNotice({
-          level: 'error',
-          message: draftFailureMessage('ethics-draft-project-missing', ETHICS_DRAFT_FILE_NAME)
-        })
+        showDraftError('ethics-draft-project-missing', ETHICS_DRAFT_FILE_NAME)
         return
       }
-      const bridge = window.api.writingSafeguards
-      if (!bridge || !window.api.saveBlobFile) {
-        setDraftNotice({
-          level: 'error',
-          message: draftFailureMessage('ethics-draft-bridge-unavailable', ETHICS_DRAFT_FILE_NAME)
-        })
+      // `window.api` itself can be absent (a window that never got the preload bridge); reading it
+      // without `?.` threw before the guard and reported "creation failed" instead of "restart the
+      // app", which sends the doctor to retry a button that can never work.
+      const api = window.api
+      const bridge = api?.writingSafeguards
+      if (!bridge || !api?.saveBlobFile) {
+        showDraftError('ethics-draft-bridge-unavailable', ETHICS_DRAFT_FILE_NAME)
         return
       }
       const result = await bridge.exportEthicsDraft({ projectId })
       if (!result.ok) {
-        setDraftNotice({
-          level: 'error',
-          message: draftFailureMessage(result.code, result.fileName)
-        })
+        showDraftError(result.code, result.fileName)
         return
       }
       // Save through the desktop save dialog rather than a blob anchor: the dialog is what tells
-      // the doctor a file is being written, and it reports the written path.
-      const saved = await window.api.saveBlobFile({
-        suggestedName: result.fileName,
-        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        data: Uint8Array.from(result.bytes).buffer
-      })
-      if (!saved.saved) setDraftNotice({ level: 'info', message: t('No file was saved.') })
+      // the doctor a file is being written, and it reports the written path. A failure here is a
+      // different event from a failed export — the draft exists, the write did not happen.
+      let saved: { saved: boolean }
+      try {
+        saved = await api.saveBlobFile({
+          suggestedName: result.fileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          data: Uint8Array.from(result.bytes).buffer
+        })
+      } catch {
+        showDraftError('ethics-draft-save-failed', result.fileName)
+        return
+      }
+      if (!saved.saved) {
+        setDraftNotice({ projectId, level: 'info', message: t('No file was saved.') })
+      }
     } catch {
-      setDraftNotice({
-        level: 'error',
-        message: draftFailureMessage('ethics-draft-failed', ETHICS_DRAFT_FILE_NAME)
-      })
+      showDraftError('ethics-draft-failed', ETHICS_DRAFT_FILE_NAME)
     } finally {
       draftExportInFlight.current = false
       setDraftExporting(false)
@@ -406,11 +426,11 @@ export const EthicsProtocolChecklist = ({
       >
         {t('Download incomplete DOCX draft')}
       </button>
-      {draftNotice ? (
+      {visibleDraftNotice ? (
         <ErrorNotice
           inline
-          level={draftNotice.level}
-          description={draftNotice.message}
+          level={visibleDraftNotice.level}
+          description={visibleDraftNotice.message}
           dismissButton={{ label: t('Dismiss'), onClick: () => setDraftNotice(undefined) }}
         />
       ) : null}
