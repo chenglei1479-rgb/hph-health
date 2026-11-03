@@ -3,7 +3,6 @@ import { readFile, readdir } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import sharp from 'sharp'
 import type { PdfStructureEngine, PdfStructureEngineOptions } from './types.js'
 import { nodeProcessRuntime } from './node-runtime.js'
 import { readWorkerResult } from './worker-result.js'
@@ -20,6 +19,9 @@ export const createEngineAt = (
         .update('candidate-pdf-engine-v1')
         .update(JSON.stringify(options.modelRecipe))
       const require = createRequire(pathToFileURL(join(resources, 'host.mjs')))
+      const { default: sharp } = await import('sharp').catch((cause: unknown) => {
+        throw new Error('PDF image processing is unavailable.', { cause })
+      })
       hash.update(JSON.stringify(sharp.versions))
       for (const dependency of ['pdfjs-dist', '@napi-rs/canvas']) {
         hash

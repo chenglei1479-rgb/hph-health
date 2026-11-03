@@ -179,6 +179,7 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Файл {{name}} отсутствует, поэтому сохранить его не удалось. Запустите анализ заново, чтобы создать файл, и затем сохраните его. (Код: {{code}})"
   },
   "renderer": {
+    "PDF image processing could not be loaded. Repair the application installation and try again.": "Не удалось загрузить обработку изображений PDF. Восстановите установку приложения и повторите попытку.",
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS содержит только метаданные, без вложений. Для сохранения вложений используйте полную резервную копию.",
     "Annotated PDF saved. {{count}} annotations were not included because the document changed._one": "PDF с аннотациями сохранён. {{count}} аннотация не включена, поскольку документ изменён.",
     "Annotated PDF saved. {{count}} annotations were not included because the document changed._few": "PDF с аннотациями сохранён. {{count}} аннотации не включены, поскольку документ изменён.",
