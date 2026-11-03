@@ -1,4 +1,5 @@
 import { PackageHistory } from './history-schema'
+import type { PackageLiteratureCitations } from './literature-citations-contract'
 import { PackageLiterature } from './literature-contract'
 import type { PackagePdfNotes } from './pdf-notes-contract'
 import { PackageReproducibility } from './reproducibility-contract'
@@ -39,6 +40,7 @@ export type PackageRecords = {
   tables: Record<NativeTable, NativeRow[]>
   pdfNotes?: PackagePdfNotes
   literature?: PackageLiterature
+  literatureCitations?: PackageLiteratureCitations
   history?: PackageHistory
   reproducibility?: PackageReproducibility
 }

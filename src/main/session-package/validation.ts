@@ -12,6 +12,10 @@ import { assertPackageCapacity } from './capacity'
 import { executionEvidenceKeys } from './execution-evidence'
 import { validatePackageLiterature } from './literature'
 import {
+  assertCitationPdfSelection,
+  validatePackageLiteratureCitations
+} from './literature-citations'
+import {
   nativeStorageKeys,
   prepareNativePublication,
   projectIncludedHeads,
@@ -63,8 +67,10 @@ export const validatePackageRecords = async (
   if (Boolean(records.literature) !== Boolean(manifest.requiredFeatures?.includes('literature')))
     throw new Error('Literature package capability declaration is invalid.')
   validatePackageLiterature(records)
+  validatePackageLiteratureCitations(records)
   for (const file of manifest.excludedFiles) assertPortablePackageStorageKey(file.storageKey)
   const excluded = validateExcludedFiles(records, manifest.excludedFiles)
+  assertCitationPdfSelection(records, excluded)
   assertNoExcludedContentCopies(records, manifest.excludedFiles, manifest.inventory)
   const files = new Map<string, SessionPackageManifest['inventory'][number]>()
   const portableKeys = new Set<string>()

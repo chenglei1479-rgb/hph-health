@@ -88,9 +88,18 @@ import { capturePackageHistory, type PackageHistory } from './history'
 import { assertSettledHistory, inspectSessionPackage, preview, readSession } from './inspection'
 import {
   capturePackageLiterature,
+  literaturePackageStorageKey,
   sessionLiteratureReferences,
   validatePackageLiteratureSession
 } from './literature'
+import {
+  applyCitationExclusions,
+  citedItemIds,
+  citedPdfVersionIds,
+  packageCitationInventory,
+  resolveCitedPdfs
+} from './literature-citations'
+import { packageLiteratureCitationsSchema } from './literature-citations-contract'
 import {
   captureNativeRecords,
   mapPackageReferences,
@@ -647,6 +656,9 @@ export class SessionPackageService {
       const excluded = new Set(selection.excludedStorageKeys)
       if (!selection.includePdfNotes && !options.consumeSnapshot) delete records.pdfNotes
       filterPackagePdfNotes(records, new Set([...excluded, ...alreadyExcluded]))
+      // The forwarded package must describe the selection it actually ships, so a cited PDF the
+      // researcher has just left out becomes "omitted by choice" here as well.
+      applyCitationExclusions(records, new Set([...excluded, ...alreadyExcluded]))
       const forwardedRecordsJson = JSON.stringify(records)
       const additional = selectable
         .filter((file) => excluded.has(file.storageKey))
@@ -754,7 +766,7 @@ export class SessionPackageService {
               writePackageArchive(staging, temporary, this.signal)
             )
           }
-          return preview(forwarded, forwardedSession)
+          return preview(forwarded, forwardedSession, records)
         },
         () => rm(staging, { recursive: true, force: true })
       )
@@ -813,12 +825,22 @@ export class SessionPackageService {
       ) as PackagePdfNotes,
       request.sessionId
     )
-    const literatureSources = await capturePackageLiterature(
+    // A citation survives without its PDF, but only the exporting computer can still tell "the
+    // Library has no usable PDF" from "the researcher left it out". Resolve every cited reference
+    // here, before the Library is out of reach, and offer each usable PDF as optional content.
+    const citedItemIdsInSession = citedItemIds(records.literatureCitations?.artifacts ?? [])
+    const packagedLiteratureVersions = new Set([...literatureIds, ...bookmarkLiteratureIds])
+    const citedResolutions = await resolveCitedPdfs(
       client,
-      session,
-      records,
-      bookmarkLiteratureIds
+      citedItemIdsInSession,
+      packagedLiteratureVersions
     )
+    const citedPdfIds = citedPdfVersionIds(citedResolutions, packagedLiteratureVersions)
+    const citationStorageKey = (attachmentId: string, versionId: string): string =>
+      literaturePackageStorageKey(request.projectId, request.sessionId, attachmentId, versionId)
+    const literatureSources = await capturePackageLiterature(client, session, records, [
+      ...new Set([...bookmarkLiteratureIds, ...citedPdfIds])
+    ])
     const sourceKey = (key: string): string => literatureSources.get(key) ?? key
     const history = await this.captureHistory(session)
     records.history = history
@@ -898,6 +920,23 @@ export class SessionPackageService {
     if (selection.includePdfNotes) {
       records.pdfNotes = await capturePackagePdfNotes(client, records, excludedKeys)
       retainInheritedPdfNotes(records, inheritedPdfNotes, excludedKeys)
+      recordsJson = JSON.stringify(records)
+      metadataBytes =
+        Buffer.byteLength(sessionJson) +
+        Buffer.byteLength(recordsJson) +
+        Buffer.byteLength(PACKAGE_README)
+    }
+    if (records.literatureCitations) {
+      // Recorded after the selection so "omitted by choice" means this package, not a guess.
+      records.literatureCitations = packageLiteratureCitationsSchema.parse({
+        ...records.literatureCitations,
+        citations: packageCitationInventory(
+          citedItemIdsInSession,
+          citedResolutions,
+          excludedKeys,
+          citationStorageKey
+        )
+      })
       recordsJson = JSON.stringify(records)
       metadataBytes =
         Buffer.byteLength(sessionJson) +
@@ -1148,7 +1187,7 @@ export class SessionPackageService {
           client,
           session,
           currentRecords,
-          bookmarkLiteratureIds
+          [...new Set([...bookmarkLiteratureIds, ...citedPdfIds])]
         )
         if (!isDeepStrictEqual(currentLiteratureSources, literatureSources))
           throw new Error('The Session changed during export. Try again.')
@@ -1167,6 +1206,11 @@ export class SessionPackageService {
           )
           retainInheritedPdfNotes(currentRecords, inheritedPdfNotes, excludedKeys)
         }
+        if (currentRecords.literatureCitations && records.literatureCitations)
+          currentRecords.literatureCitations = packageLiteratureCitationsSchema.parse({
+            ...currentRecords.literatureCitations,
+            citations: records.literatureCitations.citations
+          })
         if (
           current.status !== 'found' ||
           !isDeepStrictEqual(
@@ -1183,7 +1227,7 @@ export class SessionPackageService {
             writePackageArchive(directory, temporaryPath, this.signal)
           )
         }
-        return preview(manifest, session)
+        return preview(manifest, session, records)
       },
       () => rm(directory, { recursive: true, force: true })
     )
@@ -1413,7 +1457,12 @@ export class SessionPackageService {
           sourceSessionId: sourceSession.id,
           importedAt: Date.now(),
           manifestChecksum,
-          excludedFiles: manifest.excludedFiles
+          excludedFiles: manifest.excludedFiles,
+          // The receiving computer cannot tell which cited PDFs never existed, so this inventory is
+          // carried with the imported history and shown beside the citation list.
+          ...(native.records.literatureCitations
+            ? { citations: native.records.literatureCitations.citations }
+            : {})
         }
       }
       if (forkSource) {

@@ -772,6 +772,12 @@ const ArtifactProvenancePanel = ({
       )?.packageOrigin
     )
   )
+  const packageCitationPdfs = useSessionStore(
+    (state) =>
+      state.sessions.find(
+        (session) => session.id === item.sessionId && session.projectId === projectId
+      )?.packageOrigin?.citations
+  )
   const exportingSession = usePackageOperationStore((state) =>
     sessionExportLocked(state.operation, { id: item.sessionId, projectId })
   )
@@ -1932,6 +1938,7 @@ const ArtifactProvenancePanel = ({
             key={selectedVersionId}
             literature={literature}
             isPackageSession={importedSession}
+            citationPdfs={packageCitationPdfs}
             versionSummary={editSummary}
             formatContext={
               item.artifactId &&

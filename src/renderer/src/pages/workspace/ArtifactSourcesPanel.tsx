@@ -18,6 +18,7 @@ import type {
   ArtifactLiteratureManifest,
   ArtifactLiteratureReference
 } from '../../../../shared/artifact-literature'
+import type { PackageCitationPdf } from '../../../../shared/session-package'
 import { ArtifactLiteratureDetailDialog } from './ArtifactLiteratureDetailDialog'
 
 const creatorName = (creator: ArtifactLiteratureReference['item']['creators'][number]): string =>
@@ -36,11 +37,15 @@ const referencePublication = (reference: ArtifactLiteratureReference): string =>
 const ArtifactSourcesPanel = ({
   literature,
   isPackageSession = false,
+  citationPdfs,
   versionSummary,
   formatContext
 }: {
   literature: ArtifactLiteratureManifest
   isPackageSession?: boolean
+  // Per-reference PDF evidence captured by the exporting computer. Absent for a live Session and
+  // for packages written before it was recorded, so nothing is claimed in that case.
+  citationPdfs?: readonly PackageCitationPdf[]
   versionSummary?: ReactNode
   formatContext?: {
     projectId: string
@@ -52,6 +57,28 @@ const ArtifactSourcesPanel = ({
 }): React.JSX.Element => {
   const { t } = useTranslation()
   const formatDate = useDateTimeFormat()
+  const citationStates = new Map((citationPdfs ?? []).map((entry) => [entry.itemId, entry.state]))
+  const packageCitationCounts = literature.references.reduce(
+    (counts, reference) => {
+      const state = citationStates.get(reference.itemId)
+      if (state) counts[state] += 1
+      return counts
+    },
+    { included: 0, 'omitted-by-choice': 0, unavailable: 0 }
+  )
+  const hasCitationStates = literature.references.some((reference) =>
+    citationStates.has(reference.itemId)
+  )
+  const citationStateLabel = (
+    state: PackageCitationPdf['state'] | undefined
+  ): string | undefined =>
+    state === 'included'
+      ? t('PDF included in this package')
+      : state === 'omitted-by-choice'
+        ? t('PDF left out of this package')
+        : state === 'unavailable'
+          ? t('No PDF was available on the computer that exported this package')
+          : undefined
   const [selectedReference, setSelectedReference] = useState<
     ArtifactLiteratureReference | undefined
   >()
@@ -200,6 +227,18 @@ const ArtifactSourcesPanel = ({
           </Button>
         ) : null}
       </div>
+      {hasCitationStates ? (
+        <p className="mt-2 text-xs text-text-300" data-testid="citation-pdf-summary">
+          {t(
+            'Cited PDFs: {{included}} included, {{omitted}} excluded, {{unavailable}} unavailable.',
+            {
+              included: packageCitationCounts.included,
+              omitted: packageCitationCounts['omitted-by-choice'],
+              unavailable: packageCitationCounts.unavailable
+            }
+          )}
+        </p>
+      ) : null}
       <div className="mt-2 space-y-1.5 text-xs text-text-300">
         <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <span>{t('Citation style')}</span>
@@ -389,6 +428,11 @@ const ArtifactSourcesPanel = ({
                   ) : null}
                   {publication ? (
                     <p className="text-xs leading-5 text-text-300">{publication}</p>
+                  ) : null}
+                  {citationStateLabel(citationStates.get(reference.itemId)) ? (
+                    <p className="mt-1 text-xs leading-5 text-text-300">
+                      {citationStateLabel(citationStates.get(reference.itemId))}
+                    </p>
                   ) : null}
                   {reference.item.abstract ? (
                     <p className="mt-2 line-clamp-2 text-xs leading-5 text-text-300">

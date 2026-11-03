@@ -424,3 +424,58 @@ it('discloses incomplete old corpus snapshots without querying current metadata 
   expect(screen.getByText('Snapshot unavailable')).not.toBeNull()
   expect(get).not.toHaveBeenCalled()
 })
+
+it('shows each cited PDF state recorded by the computer that exported the package', () => {
+  render(
+    <ArtifactSourcesPanel
+      literature={literature}
+      isPackageSession
+      citationPdfs={[
+        { itemId: 'item-1', state: 'omitted-by-choice', reason: 'excluded-from-export' }
+      ]}
+    />
+  )
+  expect(screen.getByTestId('citation-pdf-summary').textContent).toBe(
+    'Cited PDFs: 0 included, 1 excluded, 0 unavailable.'
+  )
+  expect(screen.getByText('PDF left out of this package')).not.toBeNull()
+})
+
+it('describes an unavailable cited PDF instead of implying the package is complete', () => {
+  render(
+    <ArtifactSourcesPanel
+      literature={literature}
+      isPackageSession
+      citationPdfs={[{ itemId: 'item-1', state: 'unavailable', reason: 'no-pdf' }]}
+    />
+  )
+  expect(
+    screen.getByText('No PDF was available on the computer that exported this package')
+  ).not.toBeNull()
+  expect(screen.getByTestId('citation-pdf-summary').textContent).toBe(
+    'Cited PDFs: 0 included, 0 excluded, 1 unavailable.'
+  )
+})
+
+it('claims nothing about PDFs when the package recorded no citation inventory', () => {
+  render(<ArtifactSourcesPanel literature={literature} isPackageSession />)
+  expect(screen.queryByTestId('citation-pdf-summary')).toBeNull()
+  expect(screen.queryByText('PDF included in this package')).toBeNull()
+})
+
+it('counts only the references this Artifact Version cites', () => {
+  render(
+    <ArtifactSourcesPanel
+      literature={literature}
+      isPackageSession
+      citationPdfs={[
+        { itemId: 'item-1', state: 'included', attachmentVersionId: 'version-1' },
+        { itemId: 'other-artifact-item', state: 'unavailable', reason: 'no-pdf' }
+      ]}
+    />
+  )
+  expect(screen.getByTestId('citation-pdf-summary').textContent).toBe(
+    'Cited PDFs: 1 included, 0 excluded, 0 unavailable.'
+  )
+  expect(screen.getByText('PDF included in this package')).not.toBeNull()
+})

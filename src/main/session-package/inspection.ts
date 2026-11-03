@@ -5,6 +5,7 @@ import { hasCurrentRunningDelegatedAttempt } from '../../shared/delegated-work-p
 import type { SessionPackageManifest, SessionPackagePreview } from '../../shared/session-package'
 import { readPackageArchive, readPackageJson } from './archive'
 import { parseNativeRecords } from './native-snapshot'
+import type { PackageRecords } from './records-contract'
 import { validatePackageRecords } from './validation'
 
 export const assertSettledHistory = (session: PersistedChatSession): void => {
@@ -40,24 +41,48 @@ export const readSession = async (directory: string): Promise<PersistedChatSessi
 }
 export const preview = (
   manifest: SessionPackageManifest,
-  session: PersistedChatSession
-): SessionPackagePreview => ({
-  title: manifest.source.title,
-  projectName: manifest.source.projectName,
-  branchCount: session.conversationGraph?.branches.length ?? 1,
-  messageCount: session.conversationGraph?.messages.length ?? session.messages.length,
-  fileCount: manifest.inventory.filter(
-    (entry) => entry.kind === 'file' || entry.kind === 'notebook'
-  ).length,
-  totalBytes: manifest.inventory.reduce((total, entry) => total + entry.sizeBytes, 0),
-  omissions: [
-    ...manifest.omissions,
-    ...manifest.excludedFiles.map((file) => ({
-      kind: 'excluded' as const,
-      description: file.filename
-    }))
-  ]
-})
+  session: PersistedChatSession,
+  // Derived rather than stored: a re-export can exclude more PDFs, and the package must never
+  // describe the citation evidence it used to carry.
+  records?: Pick<PackageRecords, 'literatureCitations'>
+): SessionPackagePreview => {
+  const citations = records?.literatureCitations?.citations ?? []
+  const unavailable = citations.filter((entry) => entry.state === 'unavailable').length
+  const omitted = citations.filter((entry) => entry.state === 'omitted-by-choice').length
+  return {
+    title: manifest.source.title,
+    projectName: manifest.source.projectName,
+    branchCount: session.conversationGraph?.branches.length ?? 1,
+    messageCount: session.conversationGraph?.messages.length ?? session.messages.length,
+    fileCount: manifest.inventory.filter(
+      (entry) => entry.kind === 'file' || entry.kind === 'notebook'
+    ).length,
+    totalBytes: manifest.inventory.reduce((total, entry) => total + entry.sizeBytes, 0),
+    omissions: [
+      ...manifest.omissions,
+      ...(unavailable
+        ? [
+            {
+              kind: 'missing' as const,
+              description: `Cited reference PDFs unavailable on the computer that exported this package: ${unavailable}. Their citation metadata is included.`
+            }
+          ]
+        : []),
+      ...(omitted
+        ? [
+            {
+              kind: 'excluded' as const,
+              description: `Cited reference PDFs left out of this package: ${omitted}. Their citation metadata is included.`
+            }
+          ]
+        : []),
+      ...manifest.excludedFiles.map((file) => ({
+        kind: 'excluded' as const,
+        description: file.filename
+      }))
+    ]
+  }
+}
 
 export const inspectSessionPackage = async (
   path: string,
@@ -72,5 +97,5 @@ export const inspectSessionPackage = async (
   const records = parseNativeRecords(await readPackageJson(join(directory, 'records.json')))
   validatePackageLiteratureSession(records, session)
   await validatePackageRecords(directory, manifest, records, signal, manifest.source, temporaryRoot)
-  return preview(manifest, session)
+  return preview(manifest, session, records)
 }
