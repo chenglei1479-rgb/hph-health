@@ -1,11 +1,12 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { load } from 'js-yaml'
 
 import {
   launchRecorded,
+  publishStartupDiagnosticSummary,
   PRERELEASE_READY_LINES,
   SIGNED_OUT_READY_LINES
 } from './packaged-startup-smoke.mjs'
@@ -153,7 +154,7 @@ it('uses supported native runners without bypassing or extending the smoke gates
   const smoke = workflow.jobs.smoke
   expect(smoke.strategy.matrix.include).toEqual([
     { os: 'windows-latest', label: 'Windows x64', artifact: 'dra-x64-win' },
-    { os: 'macos-26', label: 'macOS arm64', artifact: 'dra-arm64-mac' },
+    { os: 'macos-15', label: 'macOS arm64', artifact: 'dra-arm64-mac' },
     { os: 'macos-15-intel', label: 'macOS x64', artifact: 'dra-x64-mac' }
   ])
   expect(smoke['timeout-minutes']).toBe(40)
@@ -167,4 +168,101 @@ it('uses supported native runners without bypassing or extending the smoke gates
   const upload = smoke.steps.find((step) => step.name === 'Upload the startup log')!
   expect(upload.if).toBe('always()')
   expect(upload.with?.path).toBe('startup-logs/**')
+})
+
+it('keeps home paths and raw main-log tails out of injected job output', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'packaged-smoke-private-'))
+  const userData = join(root, 'profile')
+  const workspaceLogs = join(root, 'startup-logs')
+  const privateTail = 'PRIVATE_MAIN_LOG_BODY C:\\Users\\alice\\secret.txt /Users/alice/secret.txt'
+  const written: string[] = []
+  // Catch accidental console.error/process writes outside the injected summary writer too.
+  const stdout = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+    written.push(String(chunk))
+    return true
+  })
+  const stderr = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+    written.push(String(chunk))
+    return true
+  })
+  try {
+    const code = `
+      const fs = require('node:fs'), path = require('node:path');
+      const logs = path.join(${JSON.stringify(userData)}, 'desktop-logs');
+      fs.mkdirSync(logs, {recursive:true});
+      fs.writeFileSync(path.join(logs, 'main.log'), ${JSON.stringify(privateTail)});
+      process.stderr.write(${JSON.stringify(DRA_STARTUP_FAILURE_PREFIX)});
+      setInterval(() => {}, 1000);
+    `
+    expect(
+      await launchRecorded({
+        binary: process.execPath,
+        args: ['-e', code],
+        env: process.env,
+        label: 'privacy fixture',
+        logFile: join(root, 'startup.log'),
+        stdoutPath: join(root, 'stdout.log'),
+        stderrPath: join(root, 'stderr.log'),
+        timeoutMs: 1500,
+        workspaceLogs,
+        userData,
+        readyLines: PRERELEASE_READY_LINES,
+        writeJobLog: (message: string) => written.push(message)
+      })
+    ).toBe(1)
+    const output = written.join('')
+    expect(output).toContain('startup-error')
+    expect(output).toContain('main (current)')
+    expect(output).not.toContain('Users')
+    expect(output).not.toContain('alice')
+    expect(output).not.toContain(root)
+    expect(output).not.toContain('PRIVATE_MAIN_LOG_BODY')
+    expect(output).not.toContain('ENOENT')
+    // Detailed diagnostics are still available in the explicitly uploaded artifact.
+    expect(readFileSync(join(workspaceLogs, 'diagnostics.txt'), 'utf8')).toContain(privateTail)
+    expect(readFileSync(join(workspaceLogs, 'app-logs', 'desktop-logs', 'main.log'), 'utf8')).toBe(
+      privateTail
+    )
+  } finally {
+    stdout.mockRestore()
+    stderr.mockRestore()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+it('publishes only the diagnostic summary allowlist', () => {
+  const written: string[] = []
+  publishStartupDiagnosticSummary(
+    {
+      label: 'Windows x64 prerelease',
+      reason: 'spawn-error',
+      expectedReadyLines: PRERELEASE_READY_LINES,
+      process: {
+        pid: 123,
+        exitCode: null,
+        signalCode: null,
+        aliveBeforeCleanup: false,
+        error: 'C:\\Users\\alice\\private.exe'
+      },
+      logs: [
+        {
+          kind: 'main (current)',
+          state: 'read',
+          bytes: 64,
+          path: '/Users/alice/main.log',
+          tail: 'PRIVATE_MAIN_LOG_BODY',
+          error: 'private error detail'
+        }
+      ]
+    },
+    (message: string) => written.push(message)
+  )
+  expect(written).toHaveLength(1)
+  expect(JSON.parse(written[0])).toEqual({
+    label: 'Windows x64 prerelease',
+    reason: 'spawn-error',
+    expectedReadyLines: PRERELEASE_READY_LINES,
+    process: { pid: 123, exitCode: null, signalCode: null, aliveBeforeCleanup: false },
+    logs: [{ kind: 'main (current)', state: 'read', bytes: 64 }]
+  })
 })
