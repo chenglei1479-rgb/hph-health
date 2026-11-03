@@ -7738,6 +7738,7 @@
     "Model: {{provider}} / {{model}}": "模型：{{provider}} / {{model}}",
     "Checking whether this feature can run…": "正在检查此功能是否可以运行…",
     "PDF translation needs a model.": "PDF 翻译需要模型。",
-    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "尚未配置可用于翻译的模型。请在“设置 > 模型”中添加 API 或订阅模型，然后回到此 PDF。"
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "尚未配置可用于翻译的模型。请在“设置 > 模型”中添加 API 或订阅模型，然后回到此 PDF。",
+    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "表格标题的文字也出现在单元格中。由于无法可靠拆分版式，仍按抽取结果显示。"
   }
 }

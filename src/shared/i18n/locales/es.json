@@ -8068,6 +8068,7 @@
     "Model: {{provider}} / {{model}}": "Modelo: {{provider}} / {{model}}",
     "Checking whether this feature can run…": "Comprobando si esta función puede ejecutarse…",
     "PDF translation needs a model.": "La traducción de PDF necesita un modelo.",
-    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "No hay ningún modelo configurado para la traducción. Añada un modelo de API o de suscripción en Ajustes > Modelos y vuelva a este PDF."
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "No hay ningún modelo configurado para la traducción. Añada un modelo de API o de suscripción en Ajustes > Modelos y vuelva a este PDF.",
+    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "El texto del título de la tabla también aparece dentro de una celda. Se muestra tal como se extrajo porque el diseño no se puede separar de forma fiable."
   }
 }

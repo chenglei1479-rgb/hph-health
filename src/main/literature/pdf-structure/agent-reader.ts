@@ -6,6 +6,7 @@ import type { PdfStructureResult } from '@aipoch/pdf-structure/result'
 import type { SessionCatalog } from '../../session-persistence/coordinator'
 import { prepareModelImageData, type ImageContentData } from '../../uploads/attachment-media'
 import { resolveCurrentPdfContext } from '../pdf-context'
+import { dropCaptionRow } from '../../../shared/pdf-table-caption'
 import type { PdfStructureOwner } from './owner'
 import type { PdfStructureSourceAuthority, PdfStructureSourceRequest } from './source'
 
@@ -359,7 +360,16 @@ export class PdfElementAgentReader {
     if (parts.length) {
       const current = parts[part]
       if (!current) throw stale()
-      const table = current.table
+      // #136: a leading row that repeats the caption is the caption shown twice, not a data row.
+      // When the caption sits inside a merged or mixed cell it is reported instead of rebuilt.
+      const scan = dropCaptionRow(current.table, [element.caption?.text, current.title])
+      const table = scan.table
+      if (scan.droppedCaptionRow)
+        warnings.push('A leading row repeated the caption; it is not reported as table data.')
+      if (scan.captionInsideCells)
+        warnings.push(
+          'The caption text also appears inside a table cell; it is reported as extracted because the layout cannot be split reliably.'
+        )
       // Row roles are absent from the extraction schema. Repeated leading rows are context only.
       const rows = [...new Set(table.cells.map((cell) => cell.row))].sort((a, b) => a - b)
       const cells: ReturnType<typeof projectionCell>[] = []

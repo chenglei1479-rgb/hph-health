@@ -47,6 +47,7 @@ import {
 } from '../../../../../../shared/pdf-structure'
 import { type PdfStructureResult } from '@aipoch/pdf-structure/result'
 import { copyPdfTable, pdfTableLayout } from '../../../../../../shared/pdf-table-copy'
+import { dropCaptionRow } from '../../../../../../shared/pdf-table-caption'
 
 const formatBytes = (bytes: number): string => `${(bytes / 1024 ** 2).toFixed(1)} MiB`
 import { groupPdfFigureSelections, type Selection } from './pdf-figure-selections'
@@ -56,11 +57,13 @@ type TableData = NonNullable<PdfStructureResult['elements'][number]['table']>
 const TableDetails = ({
   table,
   title,
+  caption,
   sharedNotes,
   downloadName
 }: {
   table: TableData
   title?: string
+  caption?: string
   sharedNotes?: TableData['notes']
   downloadName: string
 }): React.JSX.Element => {
@@ -71,19 +74,25 @@ const TableDetails = ({
   const [action, setAction] = useState<'copy' | 'download' | null>(null)
   const actionPending = useRef(false)
   const missing = t('[Missing]')
+  // #136: a leading row that repeats the caption is the caption shown twice, not a data row.
+  const scan = useMemo(() => dropCaptionRow(table, [caption, title]), [caption, table, title])
+  const displayTable = scan.table
   const grid = useMemo(
     () =>
-      table && table.rowCount <= 256 && table.columnCount <= 128
-        ? pdfTableLayout(table)
+      displayTable && displayTable.rowCount <= 256 && displayTable.columnCount <= 128
+        ? pdfTableLayout(displayTable)
         : undefined,
-    [table]
+    [displayTable]
   )
   const exportTable = async (requestedAction: 'copy' | 'download'): Promise<void> => {
     if (!table || !reviewed || actionPending.current) return
     actionPending.current = true
     setAction(requestedAction)
     setCopyStatus(undefined)
-    const copyTable = { ...table, notes: [...(table.notes ?? []), ...(sharedNotes ?? [])] }
+    const copyTable = {
+      ...displayTable,
+      notes: [...(displayTable.notes ?? []), ...(sharedNotes ?? [])]
+    }
     try {
       if (requestedAction === 'download') {
         let content = copyPdfTable(copyTable, format, missing, true)
@@ -180,6 +189,16 @@ const TableDetails = ({
               </tbody>
             </table>
           </div>
+          {scan.captionInsideCells ? (
+            <p
+              className="text-xs leading-5 text-status-warning-foreground"
+              data-pdf-table-caption-inside
+            >
+              {t(
+                'The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.'
+              )}
+            </p>
+          ) : null}
           {table!.unassignedText.length ? (
             <div className="space-y-1 rounded-md border border-border-200 bg-bg-20 p-3">
               <p className="font-medium">{t('Unplaced table text')}</p>
@@ -640,6 +659,7 @@ const CandidateDetails = ({
                 key={index}
                 table={part.table}
                 title={part.title}
+                caption={element.caption?.text}
                 sharedNotes={element.tableNotes}
                 downloadName={`pdf-${element.id}-page-${element.regions[0].page}-part-${index + 1}`}
               />
@@ -648,6 +668,7 @@ const CandidateDetails = ({
             <TableDetails
               key={selected.continuations?.length ?? 0}
               table={table}
+              caption={element.caption?.text}
               sharedNotes={element.tableNotes}
               downloadName={`pdf-${element.id}-page-${element.regions[0].page}`}
             />
