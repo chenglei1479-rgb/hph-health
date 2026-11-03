@@ -1,3 +1,4 @@
+import { PDF_IMAGE_PROCESSING_UNAVAILABLE } from '../../../shared/pdf-structure'
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, open, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -1099,3 +1100,15 @@ it.each(['upload-version', 'artifact-version'] as const)(
     ).rejects.toThrow('LINKED_PDF_UNAVAILABLE')
   }
 )
+
+it('reports fingerprint failures without starting extraction or returning an empty result', async () => {
+  const test = setup()
+  const failure = new Error(PDF_IMAGE_PROCESSING_UNAVAILABLE)
+  vi.mocked(test.engine.describe).mockRejectedValueOnce(failure)
+  const handle = test.owner.acquire(reading, [1])
+  await expect(handle.result).rejects.toBe(failure)
+  expect(test.engine.start).not.toHaveBeenCalled()
+  expect(test.acquireUse).not.toHaveBeenCalled()
+  expect(test.writers()).toBe(0)
+  handle.release()
+})

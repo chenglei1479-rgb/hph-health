@@ -43,6 +43,7 @@ import {
 } from '../../../../../../shared/local-models'
 import {
   PDF_CLEANUP_PENDING,
+  PDF_IMAGE_PROCESSING_UNAVAILABLE,
   type PdfStructureSource
 } from '../../../../../../shared/pdf-structure'
 import { type PdfStructureResult } from '@aipoch/pdf-structure/result'
@@ -923,9 +924,12 @@ export const PdfFiguresView = ({
         setCompleted(settled)
         if (
           outcome.error &&
-          [PDF_CLEANUP_PENDING, LOCAL_MODEL_NOT_INSTALLED, PDF_MODEL_CHANGED].some((code) =>
-            outcome.error!.endsWith(code)
-          )
+          [
+            PDF_CLEANUP_PENDING,
+            PDF_IMAGE_PROCESSING_UNAVAILABLE,
+            LOCAL_MODEL_NOT_INSTALLED,
+            PDF_MODEL_CHANGED
+          ].some((code) => outcome.error!.endsWith(code))
         ) {
           setError(outcome.error)
           stopRequests()
@@ -978,6 +982,7 @@ export const PdfFiguresView = ({
     !restoring && !busy && !error && !limited && failed.length === 0 && results.length === pageCount
   const analysisIncomplete = !busy && (completed > 0 || error || limited)
   const cleanupBlocked = error?.endsWith(PDF_CLEANUP_PENDING)
+  const imageProcessingUnavailable = error?.endsWith(PDF_IMAGE_PROCESSING_UNAVAILABLE)
   const needsDownload = model && (!model.installedRevision || model.updateAvailable)
   const active = entries.find((entry) => entry.element === selected?.element) ?? entries[0]
   const activeIndex = entries.findIndex((entry) => entry.element === active?.element)
@@ -1207,9 +1212,13 @@ export const PdfFiguresView = ({
               ? t(
                   'A previous PDF task could not finish cleanup. Analyze again to retry cleanup safely. If cleanup still fails, report the issue.'
                 )
-              : t(
-                  'PDF analysis could not continue. Check the local model installation and try again.'
-                )
+              : imageProcessingUnavailable
+                ? t(
+                    'PDF image processing could not be loaded. Repair the application installation and try again.'
+                  )
+                : t(
+                    'PDF analysis could not continue. Check the local model installation and try again.'
+                  )
           }
           help={{
             whyLabel: t('Extraction progress'),

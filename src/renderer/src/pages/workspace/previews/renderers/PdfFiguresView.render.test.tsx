@@ -1,3 +1,4 @@
+import { PDF_IMAGE_PROCESSING_UNAVAILABLE } from '../../../../../../shared/pdf-structure'
 // @vitest-environment jsdom
 import { act, Profiler } from 'react'
 import { fireEvent } from '@testing-library/react'
@@ -1673,6 +1674,33 @@ it('stops at a shared cleanup failure and offers a retry without claiming unatte
   expect(api.pdfStructure.parse).toHaveBeenCalledTimes(13)
   expect(container.textContent).not.toContain('PDF analysis is blocked')
 })
+
+it.each(['en', 'zh-Hans'] as const)(
+  'reports the image-processing failure visibly in %s instead of an empty extraction',
+  async (locale) => {
+    await i18next.changeLanguage(locale)
+    api.pdfStructure.parse.mockRejectedValue(new Error(PDF_IMAGE_PROCESSING_UNAVAILABLE))
+    await act(async () =>
+      root.render(
+        <PdfFiguresView
+          source={{ attachmentVersionId: 'version-1' }}
+          pageCount={12}
+          onNavigate={navigate}
+        />
+      )
+    )
+    await click(i18next.t('Analyze PDF'))
+    expect(api.pdfStructure.parse).toHaveBeenCalledTimes(1)
+    expect(api.localModels.install).not.toHaveBeenCalled()
+    const alert = container.querySelector('[role="alert"]')
+    expect(alert?.textContent).toContain(
+      i18next.t(
+        'PDF image processing could not be loaded. Repair the application installation and try again.'
+      )
+    )
+    expect(container.textContent).not.toContain(i18next.t('No figures or tables detected'))
+  }
+)
 
 it.each([LOCAL_MODEL_NOT_INSTALLED, PDF_MODEL_CHANGED])(
   'stops remaining requests for terminal model error %s',

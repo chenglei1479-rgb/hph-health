@@ -176,6 +176,7 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "找不到 {{name}} 的檔案，因此無法儲存。請重新執行分析以產生該檔案，然後再儲存。（代碼：{{code}}）"
   },
   "renderer": {
+    "PDF image processing could not be loaded. Repair the application installation and try again.": "無法載入 PDF 影像處理功能。請修復應用程式安裝後重試。",
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS 僅包含中繼資料，不包含附件。請使用完整備份來保留附件。",
     "Annotated PDF saved. {{count}} annotations were not included because the document changed._other": "已儲存含註解的 PDF。由於文件已變更，未包含 {{count}} 則註解。",
     "This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.": "此文件已變更。註解未附加至文件，需要檢查。請重新選取該段文字以再次附加註解。",
