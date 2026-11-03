@@ -342,6 +342,20 @@ function TranslationSettingsFields({
   const apiModels = useAvailableApiModels()
   const agentCatalog = useAgentModels(options.agentModel?.frameworkId)
   const target = executor.targets.find((value) => value.id === options.targetId)
+  // #134: a setup with no model at all cannot be submitted, so it is replaced before it is shown
+  // rather than reported after the doctor has chosen a language and pressed translate. The list
+  // re-renders from the settings store the moment a provider is added, so no reload is needed.
+  if (apiModels.length === 0 && agentCatalog.models.length === 0 && !disabled) {
+    return (
+      <ErrorNotice
+        level="warning"
+        title={t('PDF translation needs a model.')}
+        description={t(
+          'No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.'
+        )}
+      />
+    )
+  }
   const apiModelHint = t('Direct API only supports API models. Subscription models must use Agent.')
   const lockedSettingsReason = disabled
     ? t('Start a new translation to change these settings.')

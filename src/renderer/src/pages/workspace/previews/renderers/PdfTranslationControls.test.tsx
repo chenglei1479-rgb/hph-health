@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { PdfTranslationControls } from './PdfTranslationControls'
 import { createPdfTranslationSource } from '@aipoch/pdf-translation/reader'
 import type { PdfTranslationJob } from './use-pdf-translation-job'
@@ -19,6 +19,25 @@ const executor = {
   translate: vi.fn()
 }
 const idle: PdfTranslationJob = { status: 'idle', done: 0, total: 0 }
+
+// #134: an unconfigured model now replaces the setup form, so a test that means to exercise the
+// form has to start from a configured model. Tests that deliberately remove it assert the notice.
+beforeEach(() => {
+  useSettingsStore.setState({
+    providers: [apiProvider],
+    activeProviderId: apiProvider.id,
+    activeModel: 'first-model',
+    agentFrameworkId: 'opencode',
+    agentFrameworks: [
+      {
+        id: 'opencode',
+        displayName: 'OpenCode',
+        supportedApiTypes: ['openai'],
+        supportsSkills: true
+      }
+    ]
+  })
+})
 
 const apiProvider: ProviderView = {
   id: 'api-provider',
@@ -1241,4 +1260,33 @@ it('shows local download progress with cancellation and download errors with ret
   expect(
     screen.getByRole<HTMLButtonElement>('button', { name: 'Translate document' }).disabled
   ).toBe(true)
+})
+
+// #134: with nothing configured the setup form is not rendered at all — that is the behaviour the
+// ticket asks for, not a banner above a form that cannot be submitted.
+it('shows the setup notice instead of the form when no translation model is configured', () => {
+  useSettingsStore.setState({
+    providers: [],
+    activeProviderId: undefined,
+    activeModel: undefined,
+    agentFrameworks: []
+  })
+  render(
+    <PdfTranslationControls
+      executor={apiExecutor}
+      ready
+      hasTranslatableText
+      state={idle}
+      onStart={vi.fn()}
+      onCancel={vi.fn()}
+      onNewTranslation={vi.fn()}
+    />
+  )
+  expect(screen.queryByRole('combobox', { name: 'Translation method' })).toBeNull()
+  expect(screen.getByText('PDF translation needs a model.')).toBeTruthy()
+  expect(
+    screen.getByText(
+      'No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.'
+    )
+  ).toBeTruthy()
 })

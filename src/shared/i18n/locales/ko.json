@@ -7724,6 +7724,15 @@
     "I verified this declaration.": "이 기재 내용을 확인했습니다.",
     "Recorded executions: {{shown}}": "기록된 실행: {{shown}}건",
     "Only the {{shown}} most recent executions are listed.": "최근 {{shown}}건의 실행만 표시됩니다.",
-    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} 파일을 저장하지 못했습니다. 초안은 만들어졌지만 선택한 위치에 쓰지 못했습니다. (코드: {{code}})"
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} 파일을 저장하지 못했습니다. 초안은 만들어졌지만 선택한 위치에 쓰지 못했습니다. (코드: {{code}})",
+    "Variable definitions need a configured model.": "변수 정의에는 설정된 모델이 필요합니다.",
+    "No model provider is configured. Add an OpenAI or Azure OpenAI provider in Settings > Models, then come back here.": "모델 제공업체가 설정되어 있지 않습니다. 설정 > 모델에서 OpenAI 또는 Azure OpenAI 제공업체를 추가한 뒤 여기로 돌아오세요.",
+    "The selected provider has no model. Choose a model in Settings > Models, then come back here.": "선택한 모델 제공업체에 모델이 없습니다. 설정 > 모델에서 모델을 선택한 뒤 여기로 돌아오세요.",
+    "The model settings could not be read. Try again; if it keeps failing, open Settings > Models.": "모델 설정을 읽지 못했습니다. 다시 시도하고, 계속 실패하면 설정 > 모델을 여세요.",
+    "The provider configured in Settings cannot be used here. Check its key and model in Settings > Models, then try again.": "설정된 모델 제공업체를 여기에서 사용할 수 없습니다. 설정 > 모델에서 키와 모델을 확인한 뒤 다시 시도하세요.",
+    "Model: {{provider}} / {{model}}": "모델: {{provider}} / {{model}}",
+    "Checking whether this feature can run…": "이 기능을 실행할 수 있는지 확인하는 중…",
+    "PDF translation needs a model.": "PDF 번역에는 모델이 필요합니다.",
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "번역에 사용할 모델이 설정되어 있지 않습니다. 설정 > 모델에서 API 또는 구독 모델을 추가한 뒤 이 PDF로 돌아오세요."
   }
 }

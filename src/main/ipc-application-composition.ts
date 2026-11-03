@@ -56,7 +56,10 @@ import { createWritingSafeguardsCommandOwner } from './writing-safeguards/applic
 import { registerWritingSafeguardsIpc } from './writing-safeguards/ipc'
 import { createEthicsApprovalStore } from './writing-safeguards/ethics-store'
 import { defaultVariableDefinitionCompleter } from './variable-definition/model-client'
-import { captureVariableDefinitionProviderTarget } from './variable-definition/provider-target'
+import {
+  captureVariableDefinitionProviderTarget,
+  probeVariableDefinitionProvider
+} from './variable-definition/provider-target'
 import { createVariableDefinitionService } from './variable-definition/service'
 
 import { getUserDataPath } from './user-data-path'
@@ -772,7 +775,10 @@ export const createApplicationModules = async (
   const variableDefinition = createVariableDefinitionService({
     complete: defaultVariableDefinitionCompleter(() =>
       captureVariableDefinitionProviderTarget(settingsBootstrap.settingsService)
-    )
+    ),
+    // #134: the panel asks this before it renders its form.
+    availability: () =>
+      probeVariableDefinitionProvider(settingsBootstrap.settingsService).then(({ check }) => check)
   })
   surfaceAdapters.push(
     createElectronSurfaceAdapter('writing-safeguards', () => {

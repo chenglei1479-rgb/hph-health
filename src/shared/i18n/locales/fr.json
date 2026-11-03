@@ -8054,6 +8054,15 @@
     "I verified this declaration.": "J’ai vérifié cette déclaration.",
     "Recorded executions: {{shown}}": "Exécutions enregistrées : {{shown}}",
     "Only the {{shown}} most recent executions are listed.": "Seules les {{shown}} exécutions les plus récentes sont listées.",
-    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} n’a pas pu être enregistré. Le brouillon a été créé, mais il n’a pas pu être écrit à l’emplacement choisi. (Code : {{code}})"
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} n’a pas pu être enregistré. Le brouillon a été créé, mais il n’a pas pu être écrit à l’emplacement choisi. (Code : {{code}})",
+    "Variable definitions need a configured model.": "Les définitions de variables nécessitent un modèle configuré.",
+    "No model provider is configured. Add an OpenAI or Azure OpenAI provider in Settings > Models, then come back here.": "Aucun fournisseur de modèle n’est configuré. Ajoutez un fournisseur OpenAI ou Azure OpenAI dans Paramètres > Modèles, puis revenez ici.",
+    "The selected provider has no model. Choose a model in Settings > Models, then come back here.": "Le fournisseur sélectionné n’a pas de modèle. Choisissez un modèle dans Paramètres > Modèles, puis revenez ici.",
+    "The model settings could not be read. Try again; if it keeps failing, open Settings > Models.": "Les paramètres de modèle n’ont pas pu être lus. Réessayez ; si cela échoue encore, ouvrez Paramètres > Modèles.",
+    "The provider configured in Settings cannot be used here. Check its key and model in Settings > Models, then try again.": "Le fournisseur configuré dans Paramètres ne peut pas être utilisé ici. Vérifiez sa clé et son modèle dans Paramètres > Modèles, puis réessayez.",
+    "Model: {{provider}} / {{model}}": "Modèle : {{provider}} / {{model}}",
+    "Checking whether this feature can run…": "Vérification de la possibilité d’exécuter cette fonction…",
+    "PDF translation needs a model.": "La traduction de PDF nécessite un modèle.",
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "Aucun modèle n’est configuré pour la traduction. Ajoutez un modèle API ou d’abonnement dans Paramètres > Modèles, puis revenez à ce PDF."
   }
 }

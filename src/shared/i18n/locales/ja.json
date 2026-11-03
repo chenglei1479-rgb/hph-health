@@ -7726,6 +7726,15 @@
     "I verified this declaration.": "この記載内容を確認しました。",
     "Recorded executions: {{shown}}": "記録された実行: {{shown}} 件",
     "Only the {{shown}} most recent executions are listed.": "最新の {{shown}} 件の実行だけを表示しています。",
-    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} を保存できませんでした。下書きは作成されましたが、選んだ保存先に書き込めませんでした。（コード: {{code}}）"
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} を保存できませんでした。下書きは作成されましたが、選んだ保存先に書き込めませんでした。（コード: {{code}}）",
+    "Variable definitions need a configured model.": "変数定義には、モデルの設定が必要です。",
+    "No model provider is configured. Add an OpenAI or Azure OpenAI provider in Settings > Models, then come back here.": "モデルのプロバイダーが設定されていません。設定 > モデルで OpenAI または Azure OpenAI のプロバイダーを追加してから、ここに戻ってください。",
+    "The selected provider has no model. Choose a model in Settings > Models, then come back here.": "選択中のプロバイダーにモデルがありません。設定 > モデルでモデルを選んでから、ここに戻ってください。",
+    "The model settings could not be read. Try again; if it keeps failing, open Settings > Models.": "モデルの設定を読み取れませんでした。もう一度お試しください。繰り返し失敗する場合は、設定 > モデルを開いてください。",
+    "The provider configured in Settings cannot be used here. Check its key and model in Settings > Models, then try again.": "設定されているプロバイダーは、ここでは使用できません。設定 > モデルでキーとモデルを確認してから、もう一度お試しください。",
+    "Model: {{provider}} / {{model}}": "モデル: {{provider}} / {{model}}",
+    "Checking whether this feature can run…": "この機能を実行できるか確認しています…",
+    "PDF translation needs a model.": "PDF 翻訳にはモデルが必要です。",
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "翻訳に使えるモデルが設定されていません。設定 > モデルで API またはサブスクリプションのモデルを追加してから、この PDF に戻ってください。"
   }
 }
