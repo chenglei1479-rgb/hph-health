@@ -6,6 +6,7 @@ import { load } from 'js-yaml'
 
 import {
   launchRecorded,
+  packagedProcessState,
   publishStartupDiagnosticSummary,
   PRERELEASE_READY_LINES,
   SIGNED_OUT_READY_LINES
@@ -253,6 +254,7 @@ it('publishes only the diagnostic summary allowlist', () => {
       process: {
         pid: 123,
         exitCode: null,
+        exitCodeHex: '/Users/alice/should-not-be-copied',
         signalCode: null,
         aliveBeforeCleanup: false,
         error: 'C:\\Users\\alice\\private.exe'
@@ -275,7 +277,37 @@ it('publishes only the diagnostic summary allowlist', () => {
     label: 'Windows x64 prerelease',
     reason: 'spawn-error',
     expectedReadyLines: PRERELEASE_READY_LINES,
-    process: { pid: 123, exitCode: null, signalCode: null, aliveBeforeCleanup: false },
+    process: {
+      pid: 123,
+      exitCode: null,
+      exitCodeHex: null,
+      signalCode: null,
+      aliveBeforeCleanup: false
+    },
     logs: [{ kind: 'main (current)', state: 'read', bytes: 64 }]
+  })
+})
+
+it.each([
+  [-1073741819, 'C0000005'],
+  [-1073741515, 'C0000135']
+] as const)('keeps smoke native exit %s and derived hex %s in process evidence', (code, hex) => {
+  const state = packagedProcessState({ exitCode: code, signalCode: null })
+  expect(state).toMatchObject({ exitCode: code, exitCodeHex: hex, signalCode: null })
+  const written: string[] = []
+  publishStartupDiagnosticSummary(
+    {
+      label: 'Windows x64',
+      reason: 'exited',
+      expectedReadyLines: PRERELEASE_READY_LINES,
+      process: state,
+      logs: []
+    },
+    (message: string) => written.push(message)
+  )
+  expect(JSON.parse(written[0]).process).toMatchObject({
+    exitCode: code,
+    exitCodeHex: hex,
+    signalCode: null
   })
 })

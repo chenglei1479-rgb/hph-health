@@ -218,7 +218,14 @@ it('records an owned runtime shutdown close as informational', async () => {
   expect(mocks.warn).not.toHaveBeenCalled()
   expect(mocks.info).toHaveBeenCalledExactlyOnceWith('desktop runtime disconnected', {
     phase: 'shutdown',
-    runtimeProcess: { pid: 42, exitCode: null, signal: null, uptimeMs: null, startupPhase: null },
+    runtimeProcess: {
+      pid: 42,
+      exitCode: null,
+      exitCodeHex: null,
+      signal: null,
+      uptimeMs: null,
+      startupPhase: null
+    },
     reason: 'transport-close',
     closeCode: 1006,
     pendingRequests: 0,

@@ -1,3 +1,4 @@
+import { backendStartupExitMessage } from './desktop-runtime-launcher'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -305,4 +306,13 @@ describe('desktop backend child environment', () => {
     expect(env.DRA_PRERELEASE).toBeUndefined()
     expect(env.DRA_AUTH_MODE).toBe('required')
   })
+})
+
+it.each([
+  [-1073741819, 'C0000005'],
+  [-1073741515, 'C0000135']
+] as const)('identifies Windows startup exit %s with hex %s', (code, hex) => {
+  const message = backendStartupExitMessage({ exitCode: code, signalCode: null }, '/artifact/logs')
+  expect(message).toContain(`(${code})`)
+  expect(message).toContain(`exitCodeHex=${hex}`)
 })

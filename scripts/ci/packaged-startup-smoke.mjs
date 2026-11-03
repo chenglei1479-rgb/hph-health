@@ -347,6 +347,17 @@ const logTail = (kind, path) => {
   }
 }
 
+const exitCodeHex = (exitCode) =>
+  typeof exitCode === 'number' ? (exitCode >>> 0).toString(16).toUpperCase().padStart(8, '0') : null
+
+export const packagedProcessState = (child) => ({
+  pid: child.pid,
+  exitCode: child.exitCode,
+  exitCodeHex: exitCodeHex(child.exitCode),
+  signalCode: child.signalCode,
+  aliveBeforeCleanup: child.pid !== undefined && defaultPidAlive(child.pid)
+})
+
 // Job logs get only this allowlist. Paths, log tails and free-form error messages stay in artifacts.
 export const publishStartupDiagnosticSummary = (
   diagnostics,
@@ -362,6 +373,7 @@ export const publishStartupDiagnosticSummary = (
     process: {
       pid: typeof state.pid === 'number' ? state.pid : null,
       exitCode: typeof state.exitCode === 'number' ? state.exitCode : null,
+      exitCodeHex: exitCodeHex(state.exitCode),
       signalCode:
         typeof state.signalCode === 'string' && /^SIG[A-Z0-9]+$/.test(state.signalCode)
           ? state.signalCode
@@ -682,12 +694,7 @@ const finish = async ({
   } catch (error) {
     result = { ok: false, reason: 'wait-error', detail: error.stack ?? String(error) }
   } finally {
-    processState = {
-      pid: child.pid,
-      exitCode: child.exitCode,
-      signalCode: child.signalCode,
-      aliveBeforeCleanup: child.pid !== undefined && defaultPidAlive(child.pid)
-    }
+    processState = packagedProcessState(child)
     stopPackagedApp(child.pid)
     mirrorLog(logFile, join(workspaceLogs, 'startup.log'))
     mirrorLog(stdoutPath, join(workspaceLogs, 'stdout.log'))
