@@ -1095,6 +1095,105 @@ it('aligns numeric values without changing source text or merged cells', async (
   expect(container.querySelector('.pdf-research-table-scroll')?.getAttribute('tabindex')).toBe('0')
 })
 
+// #136: the caption is already shown above the table, so a leading row that repeats it is the same
+// text twice — it must not be presented as a data row, nor copied as one.
+it('does not present a leading caption row as table data or in the copy', async () => {
+  api.pdfStructure.parse.mockResolvedValue({
+    ...result,
+    elements: [
+      {
+        ...result.elements[0],
+        caption: { text: 'Table 1. Outcomes.', regions: result.elements[0].caption!.regions },
+        table: {
+          rowCount: 2,
+          columnCount: 2,
+          cells: [
+            {
+              row: 0,
+              column: 0,
+              rowSpan: 1,
+              columnSpan: 2,
+              text: 'Table 1. Outcomes',
+              regions: []
+            },
+            { row: 1, column: 0, rowSpan: 1, columnSpan: 1, text: 'Age', regions: [] },
+            { row: 1, column: 1, rowSpan: 1, columnSpan: 1, text: '42', regions: [] }
+          ],
+          unassignedText: [],
+          issues: []
+        }
+      }
+    ]
+  })
+  await act(async () =>
+    root.render(
+      <PdfFiguresView
+        source={{ attachmentVersionId: 'version-1' }}
+        pageCount={1}
+        onNavigate={navigate}
+      />
+    )
+  )
+  await click('Analyze PDF')
+  await click('TablePage 1')
+  expect(container.querySelector('td[colspan="2"]')).toBeNull()
+  expect(container.querySelectorAll('tbody tr')).toHaveLength(1)
+  expect(container.querySelector('[data-pdf-caption]')?.textContent).toBe('Table 1. Outcomes.')
+  await act(async () =>
+    container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click()
+  )
+  await click('Copy')
+  expect(clipboard).toHaveBeenCalledWith('Age\t42')
+})
+
+// Unsplittable shapes are reported, never rebuilt: the grid keeps what was extracted.
+it('reports a caption that sits inside a cell instead of rewriting the grid', async () => {
+  api.pdfStructure.parse.mockResolvedValue({
+    ...result,
+    elements: [
+      {
+        ...result.elements[0],
+        caption: { text: 'Table 1. Outcomes', regions: result.elements[0].caption!.regions },
+        table: {
+          rowCount: 2,
+          columnCount: 2,
+          cells: [
+            { row: 0, column: 0, rowSpan: 1, columnSpan: 1, text: 'Age', regions: [] },
+            {
+              row: 0,
+              column: 1,
+              rowSpan: 1,
+              columnSpan: 1,
+              text: 'Table 1. Outcomes\nn=42',
+              regions: []
+            },
+            { row: 1, column: 0, rowSpan: 1, columnSpan: 1, text: '42', regions: [] },
+            { row: 1, column: 1, rowSpan: 1, columnSpan: 1, text: '7', regions: [] }
+          ],
+          unassignedText: [],
+          issues: []
+        }
+      }
+    ]
+  })
+  await act(async () =>
+    root.render(
+      <PdfFiguresView
+        source={{ attachmentVersionId: 'version-1' }}
+        pageCount={1}
+        onNavigate={navigate}
+      />
+    )
+  )
+  await click('Analyze PDF')
+  await click('TablePage 1')
+  expect(container.querySelector('[data-pdf-table-caption-inside]')?.textContent).toContain(
+    'also appears inside a table cell'
+  )
+  expect(container.textContent).toContain('n=42')
+  expect(container.querySelectorAll('tbody tr')).toHaveLength(2)
+})
+
 const selectExportFormat = async (value: string): Promise<void> => {
   await act(async () =>
     fireEvent.keyDown(container.querySelector('[aria-label="Table export format"]')!, {

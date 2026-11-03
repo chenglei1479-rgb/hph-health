@@ -8208,6 +8208,7 @@
     "Model: {{provider}} / {{model}}": "Модель: {{provider}} / {{model}}",
     "Checking whether this feature can run…": "Проверяем, можно ли запустить эту функцию…",
     "PDF translation needs a model.": "Для перевода PDF нужна модель.",
-    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "Для перевода не настроена модель. Добавьте модель API или по подписке в разделе «Настройки > Модели» и вернитесь к этому PDF."
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "Для перевода не настроена модель. Добавьте модель API или по подписке в разделе «Настройки > Модели» и вернитесь к этому PDF.",
+    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "Текст заголовка таблицы также находится внутри ячейки. Он показан в том виде, в каком извлечён: разметку нельзя надёжно разделить."
   }
 }

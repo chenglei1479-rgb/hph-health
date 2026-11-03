@@ -486,4 +486,40 @@ describe('Agent PDF evidence from existing Structure caches', () => {
     expect(JSON.stringify(output.data).length).toBeLessThan(32000)
     expect(prepareModelImageData).not.toHaveBeenCalled()
   })
+
+  // #136: the caption is reported separately, so a leading row that repeats it is the same text
+  // twice; the agent must not receive it as table data.
+  it('does not report a leading caption row as table data', async () => {
+    const withCaptionRow = structuredClone(table)
+    withCaptionRow.table!.rowCount = 3
+    withCaptionRow.table!.cells = [
+      {
+        row: 0,
+        column: 0,
+        rowSpan: 1,
+        columnSpan: 3,
+        text: 'Table 2. Treatment-group outcomes.',
+        regions: [region]
+      },
+      { row: 1, column: 0, rowSpan: 1, columnSpan: 1, text: 'Group', regions: [region] },
+      { row: 2, column: 0, rowSpan: 1, columnSpan: 1, text: '9.2', regions: [region] }
+    ]
+    withCaptionRow.table!.notes = undefined
+    withCaptionRow.table!.unassignedText = []
+    const { reader, context, reference } = setup([withCaptionRow])
+
+    const output = await reader.read(context, { elementRef: await reference() })
+
+    expect(output.data.table).toMatchObject({
+      cells: [
+        expect.objectContaining({ text: 'Group' }),
+        expect.objectContaining({ text: '9.2' })
+      ]
+    })
+    expect(output.data.warnings).toEqual(
+      expect.arrayContaining([
+        'A leading row repeated the caption; it is not reported as table data.'
+      ])
+    )
+  })
 })
