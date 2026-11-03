@@ -8059,6 +8059,15 @@
     "I verified this declaration.": "He verificado esta declaración.",
     "Recorded executions: {{shown}}": "Ejecuciones registradas: {{shown}}",
     "Only the {{shown}} most recent executions are listed.": "Solo se enumeran las {{shown}} ejecuciones más recientes.",
-    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "No se pudo guardar {{name}}. El borrador se creó, pero no se pudo escribir en la ubicación elegida. (Código: {{code}})"
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "No se pudo guardar {{name}}. El borrador se creó, pero no se pudo escribir en la ubicación elegida. (Código: {{code}})",
+    "Variable definitions need a configured model.": "Las definiciones de variables necesitan un modelo configurado.",
+    "No model provider is configured. Add an OpenAI or Azure OpenAI provider in Settings > Models, then come back here.": "No hay ningún proveedor de modelos configurado. Añada un proveedor de OpenAI o Azure OpenAI en Ajustes > Modelos y vuelva aquí.",
+    "The selected provider has no model. Choose a model in Settings > Models, then come back here.": "El proveedor seleccionado no tiene modelo. Elija un modelo en Ajustes > Modelos y vuelva aquí.",
+    "The model settings could not be read. Try again; if it keeps failing, open Settings > Models.": "No se pudo leer la configuración de modelos. Vuelva a intentarlo; si sigue fallando, abra Ajustes > Modelos.",
+    "The provider configured in Settings cannot be used here. Check its key and model in Settings > Models, then try again.": "El proveedor configurado en Ajustes no se puede usar aquí. Compruebe su clave y su modelo en Ajustes > Modelos y vuelva a intentarlo.",
+    "Model: {{provider}} / {{model}}": "Modelo: {{provider}} / {{model}}",
+    "Checking whether this feature can run…": "Comprobando si esta función puede ejecutarse…",
+    "PDF translation needs a model.": "La traducción de PDF necesita un modelo.",
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "No hay ningún modelo configurado para la traducción. Añada un modelo de API o de suscripción en Ajustes > Modelos y vuelva a este PDF."
   }
 }

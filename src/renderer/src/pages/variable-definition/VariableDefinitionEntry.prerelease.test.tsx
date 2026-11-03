@@ -45,6 +45,14 @@ it('shows the variable-definition entry in a prerelease build without account or
         ]
       },
       variableDefinition: {
+        // The check passes here; generation still fails, which is the race the message covers
+        // when a provider disappears between the pre-flight check and the call (#134).
+        getAvailability: async () => ({
+          status: 'ready',
+          providerId: 'openai',
+          providerLabel: 'OpenAI',
+          modelId: 'gpt-test'
+        }),
         generate: vi.fn(async () => {
           throw new Error(VARIABLE_DEFINITION_MISSING_KEY_MESSAGE)
         }),

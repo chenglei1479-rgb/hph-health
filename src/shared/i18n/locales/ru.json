@@ -8199,6 +8199,15 @@
     "I verified this declaration.": "Я проверил(а) это заявление.",
     "Recorded executions: {{shown}}": "Записанные выполнения: {{shown}}",
     "Only the {{shown}} most recent executions are listed.": "Показаны только {{shown}} последних выполнений.",
-    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "Не удалось сохранить {{name}}. Черновик создан, но записать его в выбранное место не удалось. (Код: {{code}})"
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "Не удалось сохранить {{name}}. Черновик создан, но записать его в выбранное место не удалось. (Код: {{code}})",
+    "Variable definitions need a configured model.": "Для определения переменных нужна настроенная модель.",
+    "No model provider is configured. Add an OpenAI or Azure OpenAI provider in Settings > Models, then come back here.": "Поставщик моделей не настроен. Добавьте поставщика OpenAI или Azure OpenAI в разделе «Настройки > Модели» и вернитесь сюда.",
+    "The selected provider has no model. Choose a model in Settings > Models, then come back here.": "У выбранного поставщика нет модели. Выберите модель в разделе «Настройки > Модели» и вернитесь сюда.",
+    "The model settings could not be read. Try again; if it keeps failing, open Settings > Models.": "Не удалось прочитать настройки моделей. Повторите попытку; если ошибка повторяется, откройте «Настройки > Модели».",
+    "The provider configured in Settings cannot be used here. Check its key and model in Settings > Models, then try again.": "Настроенного в настройках поставщика нельзя использовать здесь. Проверьте его ключ и модель в разделе «Настройки > Модели» и повторите попытку.",
+    "Model: {{provider}} / {{model}}": "Модель: {{provider}} / {{model}}",
+    "Checking whether this feature can run…": "Проверяем, можно ли запустить эту функцию…",
+    "PDF translation needs a model.": "Для перевода PDF нужна модель.",
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "Для перевода не настроена модель. Добавьте модель API или по подписке в разделе «Настройки > Модели» и вернитесь к этому PDF."
   }
 }

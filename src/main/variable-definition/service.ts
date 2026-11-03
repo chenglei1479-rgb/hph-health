@@ -3,6 +3,7 @@ import type {
   GenerateVariableDefinitionRequest,
   VariableDefinitionTable
 } from '../../shared/variable-definition'
+import type { ModelRequirementCheck } from '../../shared/model-requirement'
 import type { VariableDefinitionCompleter } from './model-client'
 import { buildVariableDefinitionPrompt } from './prompt'
 import { parseVariableDefinitions } from './parse'
@@ -17,13 +18,24 @@ const requireText = (value: string, message: string): string => {
 }
 
 export type VariableDefinitionService = {
+  // The pre-flight answer for the panel (#134). It reads configuration only.
+  availability: () => Promise<ModelRequirementCheck>
   generate: (request: GenerateVariableDefinitionRequest) => Promise<VariableDefinitionTable>
   exportTemplate: (table: VariableDefinitionTable) => ExportVariableDefinitionResponse
 }
 
 export const createVariableDefinitionService = (options: {
   complete: VariableDefinitionCompleter
+  availability?: () => Promise<ModelRequirementCheck>
 }): VariableDefinitionService => ({
+  // A service created without a probe cannot claim readiness; "unreadable" is the honest answer and
+  // tells the panel to offer a retry rather than a settings detour.
+  availability:
+    options.availability ??
+    (async (): Promise<ModelRequirementCheck> => ({
+      status: 'unavailable',
+      code: 'model-requirement-settings-unreadable'
+    })),
   async generate(request) {
     const projectId = requireText(request.projectId, 'projectId is required.')
     const researchPlan = requireText(request.researchPlan, '研究計画を入力してください。')

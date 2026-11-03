@@ -7729,6 +7729,15 @@
     "I verified this declaration.": "我已核对本声明。",
     "Recorded executions: {{shown}}": "已记录的运行：{{shown}} 次",
     "Only the {{shown}} most recent executions are listed.": "只列出最近的 {{shown}} 次运行。",
-    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "未能保存 {{name}}。草稿已创建，但无法写入你所选的位置。（代码：{{code}}）"
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "未能保存 {{name}}。草稿已创建，但无法写入你所选的位置。（代码：{{code}}）",
+    "Variable definitions need a configured model.": "变量定义需要配置好的模型。",
+    "No model provider is configured. Add an OpenAI or Azure OpenAI provider in Settings > Models, then come back here.": "尚未配置模型提供方。请在“设置 > 模型”中添加 OpenAI 或 Azure OpenAI 提供方，然后回到这里。",
+    "The selected provider has no model. Choose a model in Settings > Models, then come back here.": "所选提供方没有模型。请在“设置 > 模型”中选择模型，然后回到这里。",
+    "The model settings could not be read. Try again; if it keeps failing, open Settings > Models.": "无法读取模型设置。请重试；如果仍然失败，请打开“设置 > 模型”。",
+    "The provider configured in Settings cannot be used here. Check its key and model in Settings > Models, then try again.": "已配置的提供方在此处不可用。请在“设置 > 模型”中检查其密钥和模型，然后重试。",
+    "Model: {{provider}} / {{model}}": "模型：{{provider}} / {{model}}",
+    "Checking whether this feature can run…": "正在检查此功能是否可以运行…",
+    "PDF translation needs a model.": "PDF 翻译需要模型。",
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "尚未配置可用于翻译的模型。请在“设置 > 模型”中添加 API 或订阅模型，然后回到此 PDF。"
   }
 }

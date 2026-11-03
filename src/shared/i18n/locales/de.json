@@ -7890,6 +7890,15 @@
     "I verified this declaration.": "Ich habe diese Erklärung geprüft.",
     "Recorded executions: {{shown}}": "Aufgezeichnete Ausführungen: {{shown}}",
     "Only the {{shown}} most recent executions are listed.": "Es werden nur die {{shown}} neuesten Ausführungen aufgeführt.",
-    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} konnte nicht gespeichert werden. Der Entwurf wurde erstellt, ließ sich aber nicht am gewählten Ort schreiben. (Code: {{code}})"
+    "{{name}} could not be saved. The draft was created, but it could not be written to the location you chose. (Code: {{code}})": "{{name}} konnte nicht gespeichert werden. Der Entwurf wurde erstellt, ließ sich aber nicht am gewählten Ort schreiben. (Code: {{code}})",
+    "Variable definitions need a configured model.": "Variablendefinitionen benötigen ein konfiguriertes Modell.",
+    "No model provider is configured. Add an OpenAI or Azure OpenAI provider in Settings > Models, then come back here.": "Es ist kein Modellanbieter konfiguriert. Fügen Sie in Einstellungen > Modelle einen OpenAI- oder Azure-OpenAI-Anbieter hinzu, und kommen Sie dann hierher zurück.",
+    "The selected provider has no model. Choose a model in Settings > Models, then come back here.": "Der ausgewählte Anbieter hat kein Modell. Wählen Sie in Einstellungen > Modelle ein Modell, und kommen Sie dann hierher zurück.",
+    "The model settings could not be read. Try again; if it keeps failing, open Settings > Models.": "Die Modelleinstellungen konnten nicht gelesen werden. Versuchen Sie es erneut; wenn es weiter fehlschlägt, öffnen Sie Einstellungen > Modelle.",
+    "The provider configured in Settings cannot be used here. Check its key and model in Settings > Models, then try again.": "Der in den Einstellungen konfigurierte Anbieter kann hier nicht verwendet werden. Prüfen Sie Schlüssel und Modell in Einstellungen > Modelle, und versuchen Sie es erneut.",
+    "Model: {{provider}} / {{model}}": "Modell: {{provider}} / {{model}}",
+    "Checking whether this feature can run…": "Es wird geprüft, ob diese Funktion ausgeführt werden kann…",
+    "PDF translation needs a model.": "Die PDF-Übersetzung benötigt ein Modell.",
+    "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "Für die Übersetzung ist kein Modell konfiguriert. Fügen Sie in Einstellungen > Modelle ein API- oder Abonnementmodell hinzu, und kehren Sie dann zu diesem PDF zurück."
   }
 }

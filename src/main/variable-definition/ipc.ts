@@ -11,6 +11,7 @@ export const registerVariableDefinitionIpc = (
     complete: defaultVariableDefinitionCompleter()
   })
 ): void => {
+  ipcMainHandle('variable-definition:availability', () => service.availability())
   ipcMainHandle(
     'variable-definition:generate',
     (_event, request: GenerateVariableDefinitionRequest) => service.generate(request)

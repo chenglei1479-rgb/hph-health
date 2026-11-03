@@ -449,6 +449,7 @@ export const WEB_INVOKE_CHANNELS = {
   'uploads.stageLocalPath': 'uploads:stage-local-path',
   'variableDefinition.exportTemplate': 'variable-definition:export-template',
   'variableDefinition.generate': 'variable-definition:generate',
+  'variableDefinition.getAvailability': 'variable-definition:availability',
   'window.close': 'window:close',
   'writingSafeguards.exportEthicsDraft': 'writing-safeguards:export-ethics-draft',
   'writingSafeguards.getEthicsApproval': 'writing-safeguards:get-ethics-approval',

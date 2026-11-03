@@ -879,6 +879,7 @@ describe('preload bridge — public surface inventory', () => {
       'uploads.stageLocalPath',
       'variableDefinition.exportTemplate',
       'variableDefinition.generate',
+      'variableDefinition.getAvailability',
       'window.announceWindowFindAppearance',
       'window.announceWindowFindContentReady',
       'window.announceWindowFindReady',
