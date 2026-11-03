@@ -200,9 +200,8 @@ jobs:
           - os: windows-latest
             label: Windows x64
             artifact: dra-x64-win
-          # macos-14 is the Apple silicon image requested for this smoke. It retires on
-          # 2026-11-02; until then it is the arm64 runner that matches the beta dmg.
-          - os: macos-14
+          # macos-14 retired on 2026-11-02. Pin a supported native arm64 image.
+          - os: macos-26
             label: macOS arm64
             artifact: dra-arm64-mac
           # macos-13, the previous free Intel image, was removed in December 2025.
