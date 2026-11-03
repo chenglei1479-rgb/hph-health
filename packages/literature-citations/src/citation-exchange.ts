@@ -1,3 +1,4 @@
+import { LITERATURE_ITEM_TYPES, type LiteratureItemType } from './contracts.js'
 import type { CslItem, CslName } from './csl.js'
 
 // citeme-engine-wasm 0.3.8 exposes BibTeX month and day components as zero-based values.
@@ -26,6 +27,42 @@ export const normalizeBibtexEntry = (entry: Record<string, unknown>): Record<str
   }
 }
 
+// RIS conversion stays here; CSL and BibTeX type semantics are unchanged.
+const risTypes: Record<LiteratureItemType, string> = {
+  journalArticle: 'JOUR',
+  review: 'JOUR',
+  conferencePaper: 'CPAPER',
+  book: 'BOOK',
+  bookSection: 'CHAP',
+  thesis: 'THES',
+  report: 'RPRT',
+  preprint: 'UNPB',
+  dataset: 'DATA',
+  standard: 'STAND',
+  patent: 'PAT',
+  webpage: 'ELEC',
+  document: 'GEN'
+}
+const cslTypesByRis: Record<string, string> = {
+  JOUR: 'article-journal',
+  JFULL: 'article-journal',
+  CPAPER: 'paper-conference',
+  CONF: 'paper-conference',
+  BOOK: 'book',
+  CHAP: 'chapter',
+  THES: 'thesis',
+  RPRT: 'report',
+  UNPB: 'article',
+  DATA: 'dataset',
+  STAND: 'standard',
+  PAT: 'patent',
+  ELEC: 'webpage',
+  GEN: 'document'
+}
+const originalTypePrefix = 'Baselio document type: '
+export const exportRisType = (type: LiteratureItemType): string =>
+  `TY  - ${risTypes[type] ?? 'GEN'}`
+
 const literalNamePrefix = 'Baselio literal creator: '
 const readableLiteralNamePrefixes = [literalNamePrefix, 'DRA literal creator: ']
 
@@ -36,8 +73,12 @@ const nameText = (name: CslName): string =>
 // BOOK A3/editor, A4/translator, ET/edition and J2/journal abbreviation follow Zotero's RIS mappings.
 // Labeled N1 notes preserve identifiers without misusing DOI or accession-number tags.
 // These notes are readable by other tools; structured recovery is our explicit adapter contract.
-export const exportRisFields = (item: CslItem): string => {
+export const exportRisFields = (item: CslItem, originalType?: LiteratureItemType): string => {
   const fields: [string, string][] = []
+  // RIS has no dedicated review or preprint type. Keep the original beside the closest TY.
+  if (originalType && ['review', 'preprint', 'document'].includes(originalType)) {
+    fields.push(['N1', `${originalTypePrefix}${originalType}`])
+  }
   for (const key of ['PMID', 'PMCID', 'arXiv'] as const) {
     if (item[key]) fields.push(['N1', `${key}: ${item[key]}`])
   }
@@ -66,7 +107,9 @@ export const importRisFields = (
   const translators: CslName[] = []
   const rawNames = new Map<CslName, string>()
   const literalNames: { tag: string; index: number; literal: string }[] = []
-  const editorTag = entry.type === 'book' ? 'A3' : 'A2'
+  const incomingType = /^[ \t]*TY[ \t]+-[ \t]*(\S+)/mu.exec(input)?.[1]?.toUpperCase()
+  if (incomingType) result.type = cslTypesByRis[incomingType] ?? entry.type
+  const editorTag = result.type === 'book' ? 'A3' : 'A2'
   for (const line of input.split(/\r?\n/u)) {
     const match = /^[ \t]*([A-Z0-9]{2})[ \t]+-[ \t]*(.*)$/u.exec(line)
     if (!match) continue
@@ -75,6 +118,16 @@ export const importRisFields = (
     const value = raw!.trim()
     if (!value) continue
     if (tag === 'N1') {
+      const originalType = value.startsWith(originalTypePrefix)
+        ? value.slice(originalTypePrefix.length)
+        : ''
+      if (
+        LITERATURE_ITEM_TYPES.some(
+          (type) => type === originalType && risTypes[type] === incomingType
+        )
+      ) {
+        result.risOriginalType = originalType
+      }
       const identifier = /^(PMID|PMCID|arXiv):\s*(\S+)$/u.exec(value)
       if (identifier) result[identifier[1]!] = identifier[2]
       const prefix = readableLiteralNamePrefixes.find((candidate) => value.startsWith(candidate))
