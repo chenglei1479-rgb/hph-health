@@ -67,6 +67,7 @@ export class DesktopBackendStartupError extends Error {
 // The reporter is owned by this launch attempt only. Its channel must not keep an otherwise
 // finished backend alive, and losing Electron must not terminate the independent Node runtime.
 export function createBackendStartupReporter(): {
+  currentPhase(): BackendStartupStatus['stage']
   phase(stage: BackendStartupStatus['stage']): void
   failed(error: unknown): void
   ready(): void
@@ -94,6 +95,7 @@ export function createBackendStartupReporter(): {
     }
   }
   return {
+    currentPhase: () => stage,
     phase(next) {
       stage = next
       send({})

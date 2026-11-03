@@ -173,6 +173,7 @@ it('uses supported native runners without bypassing or extending the smoke gates
 it('keeps home paths and raw main-log tails out of injected job output', async () => {
   const root = mkdtempSync(join(tmpdir(), 'packaged-smoke-private-'))
   const userData = join(root, 'profile')
+  const configRoot = join(root, 'config')
   const workspaceLogs = join(root, 'startup-logs')
   const privateTail = 'PRIVATE_MAIN_LOG_BODY C:\\Users\\alice\\secret.txt /Users/alice/secret.txt'
   const written: string[] = []
@@ -191,6 +192,9 @@ it('keeps home paths and raw main-log tails out of injected job output', async (
       const logs = path.join(${JSON.stringify(userData)}, 'desktop-logs');
       fs.mkdirSync(logs, {recursive:true});
       fs.writeFileSync(path.join(logs, 'main.log'), ${JSON.stringify(privateTail)});
+      const backendLogs = path.join(${JSON.stringify(configRoot)}, 'logs');
+      fs.mkdirSync(backendLogs, {recursive:true});
+      for (const name of ['main.log','desktop-backend-123-456.log','database-startup-trace.log']) fs.writeFileSync(path.join(backendLogs,name), ${JSON.stringify(privateTail)});
       process.stderr.write(${JSON.stringify(DRA_STARTUP_FAILURE_PREFIX)});
       setInterval(() => {}, 1000);
     `
@@ -198,7 +202,7 @@ it('keeps home paths and raw main-log tails out of injected job output', async (
       await launchRecorded({
         binary: process.execPath,
         args: ['-e', code],
-        env: process.env,
+        env: { ...process.env, OPEN_SCIENCE_CONFIG_ROOT: configRoot },
         label: 'privacy fixture',
         logFile: join(root, 'startup.log'),
         stdoutPath: join(root, 'stdout.log'),
@@ -210,6 +214,15 @@ it('keeps home paths and raw main-log tails out of injected job output', async (
         writeJobLog: (message: string) => written.push(message)
       })
     ).toBe(1)
+    for (const name of ['main.log', 'desktop-backend-123-456.log', 'database-startup-trace.log']) {
+      expect(readFileSync(join(workspaceLogs, 'app-logs', 'backend', name), 'utf8')).toBe(
+        privateTail
+      )
+    }
+    const details = JSON.parse(readFileSync(join(workspaceLogs, 'diagnostics.json'), 'utf8'))
+    expect(details.logs.map((log: { kind: string }) => log.kind)).toEqual(
+      expect.arrayContaining(['backend main', 'backend stdout/stderr', 'database startup trace'])
+    )
     const output = written.join('')
     expect(output).toContain('startup-error')
     expect(output).toContain('main (current)')

@@ -1,3 +1,4 @@
+import { ownedRuntimeProcessDiagnostics } from './runtime-process-diagnostics'
 import { randomUUID } from 'node:crypto'
 import { desktopRuntimeInfoSchema, type DesktopRuntimeInfo } from './desktop-runtime-info'
 import { waitForRuntimeStopped } from './runtime-stop-confirmation'
@@ -210,6 +211,9 @@ export async function connectDesktopRuntime(options: {
       ]('desktop runtime disconnected', {
         phase: quitting ? 'shutdown' : initialized ? 'connected' : 'bootstrap',
         reason,
+        ...(options.startedProcess
+          ? { runtimeProcess: ownedRuntimeProcessDiagnostics(options.startedProcess) }
+          : {}),
         pendingRequests: Math.min(pending.size, 256),
         pendingNativeOperations: Math.min(native.size, 32),
         ...(policyReason ? { policyReason } : {}),

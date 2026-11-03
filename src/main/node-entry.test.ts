@@ -87,7 +87,10 @@ vi.mock('@aipoch/diagnostics/node', async (original) => ({
 
 const exitCode = process.exitCode
 const listeners = new Map(
-  (['SIGINT', 'SIGTERM'] as const).map((signal) => [signal, new Set(process.listeners(signal))])
+  (['SIGINT', 'SIGTERM', 'uncaughtException', 'unhandledRejection'] as const).map((signal) => [
+    signal,
+    new Set(process.listeners(signal))
+  ])
 )
 afterEach(() => {
   vi.unstubAllEnvs()

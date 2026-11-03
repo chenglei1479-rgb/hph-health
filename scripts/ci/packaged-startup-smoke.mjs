@@ -289,6 +289,36 @@ const mirrorAppLogs = (userData, workspaceLogs) => {
   }
 }
 
+const backendLogSources = (configRoot) => {
+  if (!configRoot) return []
+  const directory = join(configRoot, 'logs')
+  let names = []
+  try {
+    names = readdirSync(directory).filter((name) => /^desktop-backend-.*\.log$/.test(name))
+  } catch {
+    /* Missing logs are recorded below. */
+  }
+  return [
+    { kind: 'backend main', path: join(directory, 'main.log') },
+    { kind: 'database startup trace', path: join(directory, 'database-startup-trace.log') },
+    ...names.map((name) => ({ kind: 'backend stdout/stderr', path: join(directory, name) }))
+  ]
+}
+
+const mirrorBackendLogs = (configRoot, workspaceLogs) => {
+  if (!configRoot) return
+  const directory = join(configRoot, 'logs')
+  let names
+  try {
+    names = readdirSync(directory).filter((name) => name.endsWith('.log'))
+  } catch {
+    return
+  }
+  const target = join(workspaceLogs, 'app-logs', 'backend')
+  mkdirSync(target, { recursive: true })
+  for (const name of names) mirrorLog(join(directory, name), join(target, name))
+}
+
 const DIAGNOSTIC_TAIL_BYTES = 16 * 1024
 
 const logTail = (kind, path) => {
@@ -358,6 +388,7 @@ const writeStartupDiagnostics = ({
   stdoutPath,
   stderrPath,
   userData,
+  configRoot,
   processState,
   writeJobLog
 }) => {
@@ -365,6 +396,7 @@ const writeStartupDiagnostics = ({
     logTail('startup marker', logFile),
     logTail('stdout', stdoutPath),
     logTail('stderr', stderrPath),
+    ...backendLogSources(configRoot).map(({ kind, path }) => logTail(kind, path)),
     ...(userData
       ? [
           logTail('main (current)', join(userData, 'desktop-logs', 'main.log')),
@@ -450,6 +482,7 @@ export const launchRecorded = async ({
   rejectAccountLoginAtHome = false,
   writeJobLog
 }) => {
+  const configRoot = env.OPEN_SCIENCE_CONFIG_ROOT
   note(`Launching packaged app (${label}).`)
   mkdirSync(workspaceLogs, { recursive: true })
   // Capture directly in the upload directory, even if the outer CI step is cancelled.
@@ -470,7 +503,8 @@ export const launchRecorded = async ({
         logFile,
         stdoutPath,
         stderrPath,
-        userData
+        userData,
+        configRoot
       },
       null,
       2
@@ -494,6 +528,7 @@ export const launchRecorded = async ({
       stdoutPath,
       stderrPath,
       userData,
+      configRoot,
       processState: { error: String(error) },
       writeJobLog
     })
@@ -510,6 +545,7 @@ export const launchRecorded = async ({
     userData,
     readyLines,
     rejectAccountLoginAtHome,
+    configRoot,
     writeJobLog
   })
 }
@@ -627,6 +663,7 @@ const finish = async ({
   workspaceLogs,
   label,
   userData,
+  configRoot,
   readyLines,
   rejectAccountLoginAtHome = false,
   writeJobLog
@@ -656,6 +693,7 @@ const finish = async ({
     mirrorLog(stdoutPath, join(workspaceLogs, 'stdout.log'))
     mirrorLog(stderrPath, join(workspaceLogs, 'stderr.log'))
     if (userData) mirrorAppLogs(userData, workspaceLogs)
+    mirrorBackendLogs(configRoot, workspaceLogs)
   }
   if (rejectAccountLoginAtHome && userData)
     result = rejectHomeThatStillRequiredLogin(userData, result)
@@ -669,6 +707,7 @@ const finish = async ({
     stdoutPath,
     stderrPath,
     userData,
+    configRoot,
     processState,
     writeJobLog
   })
