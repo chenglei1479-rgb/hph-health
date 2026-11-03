@@ -97,6 +97,22 @@ describe('LiteratureCitationFormatter', () => {
     expect(formatted?.inText).toBe('(von Elm, 2007)')
   })
 
+  // The Library page exports through `exportReferences`, which also converts with `toCslItem`
+  // (citation-formatter.ts:337 and :352). The renderer suite that drives that path cannot be
+  // collected in this checkout (see the PR body), so the export half is pinned here with the same
+  // real formatter and the same record shape.
+  it('keeps the particle in RIS and BibTeX exports', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const parsed = await formatter.parseReferences(
+      'PMID- 12345678\nTI  - STROBE statement\nJT  - Annals of internal medicine\n' +
+        'FAU - von Elm, Erik\nAU  - von Elm E\nDP  - 2007 Oct 16\n'
+    )
+    const references = [{ id: 'strobe', item: parsed.items[0]! }]
+
+    expect(await formatter.exportReferences(references, 'ris')).toContain('AU  - von Elm, Erik')
+    expect(await formatter.exportReferences(references, 'bibtex')).toContain('{von Elm, Erik}')
+  })
+
   it('leaves names without a particle exactly as they were', async () => {
     const formatter = new LiteratureCitationFormatter()
     const parsed = await formatter.parseReferences(
