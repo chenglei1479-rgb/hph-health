@@ -1,3 +1,4 @@
+import type { PdfBookmarkTextSelector } from '../../../../../shared/pdf-bookmarks'
 import type { PdfAnnotation, PdfNativeImportReceipt } from '../../../../../shared/pdf-annotations'
 
 export const PDF_EXPORT_MAX_BYTES = 128 * 1024 * 1024
@@ -11,6 +12,7 @@ export type PdfExportMark = {
   updatedAt: string
   pageNumber: number
   /** PDF user-space points in text top-left, top-right, bottom-left, bottom-right order. */
+  textRange?: PdfBookmarkTextSelector
   quads: number[][]
 }
 export type PdfExportRequest = {

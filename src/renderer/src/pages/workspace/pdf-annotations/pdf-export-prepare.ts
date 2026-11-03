@@ -10,7 +10,11 @@ export const preparePdfExportMarks = async (
 ): Promise<PdfExportMark[]> => {
   const marks: PdfExportMark[] = []
   const notes = new Map<number, number>()
-  const grouped = Map.groupBy(annotations, ({ target: { selector } }) =>
+  const exportable = annotations.filter(
+    ({ target: { selector } }) =>
+      !(selector.kind === 'text' && selector.attachmentState === 'needs-review')
+  )
+  const grouped = Map.groupBy(exportable, ({ target: { selector } }) =>
     selector.kind === 'document-note' ? 1 : selector.pageNumber
   )
   for (const [pageNumber, items] of grouped) {
@@ -123,6 +127,7 @@ export const preparePdfExportMarks = async (
         updatedAt: annotation.updatedAt,
         note: describe(annotation),
         pageNumber,
+        ...(selector.kind === 'text' ? { textRange: selector } : {}),
         quads: selector.kind === 'text' ? quads.map(orientTextQuad) : quads
       })
     }

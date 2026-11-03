@@ -61,6 +61,39 @@ describe('sanitizePdfBookmarkTarget', () => {
     })
   })
 
+  it('preserves an explicit review state while keeping range validation strict', () => {
+    const target = {
+      kind: 'pdf',
+      source,
+      selector: {
+        kind: 'text',
+        pageNumber: 3,
+        exact: ' 日本語 ',
+        position: { start: 2, end: 7 },
+        quads: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.04 }],
+        extractorVersion: 'pdfjs-test',
+        pageRotation: 0,
+        coordinateVersion: 1,
+        attachmentState: 'needs-review'
+      }
+    }
+    const saved = sanitizePdfBookmarkTarget(target)
+    expect(saved).toEqual(target)
+    expect(saved && pdfBookmarkSelectorMatchesPage(saved.selector, 3, 0)).toBe(false)
+    expect(
+      sanitizePdfBookmarkTarget({
+        ...target,
+        selector: { ...target.selector, position: { start: 2, end: 8 } }
+      })
+    ).toBeUndefined()
+    expect(
+      sanitizePdfBookmarkTarget({
+        ...target,
+        selector: { ...target.selector, attachmentState: 'attached-somewhere-else' }
+      })
+    ).toBeUndefined()
+  })
+
   it('accepts a region locator without an annotation image payload', () => {
     expect(
       sanitizePdfBookmarkTarget({

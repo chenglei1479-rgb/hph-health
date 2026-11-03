@@ -28,6 +28,10 @@ it('roundtrips visible quad corners on rotated cropped UserUnit pages and separa
       target: {
         selector: {
           kind: 'text',
+          exact: 'Selected text',
+          position: { start: 3, end: 16 },
+          extractorVersion: 'test-v1',
+          coordinateVersion: 1,
           pageNumber: i + 1,
           pageRotation,
           quads: [{ x: 0.2, y: 0.3, width: 0.4, height: 0.05 }]
@@ -153,5 +157,37 @@ it('keeps underline baselines parallel to source text on rotated and mixed-direc
     expect(marks[1].quads[0]).toEqual([238, 30, 238, 100, 250, 30, 250, 100])
   } finally {
     await task.destroy()
+  }
+})
+
+it('skips needs-review ranges before page validation while exporting other annotations', async () => {
+  const pdf = await PDFDocument.create()
+  pdf.addPage([600, 800])
+  const document = await getDocument({ data: await pdf.save() }).promise
+  const annotations = [
+    {
+      id: 'review',
+      kind: 'highlight',
+      target: { selector: { kind: 'text', pageNumber: 99, attachmentState: 'needs-review' } }
+    },
+    {
+      id: 'kept',
+      kind: 'page-note',
+      note: 'Keep me',
+      target: {
+        selector: { kind: 'page-note', pageNumber: 1, pageRotation: 0, coordinateVersion: 1 }
+      }
+    }
+  ] as PdfAnnotation[]
+  try {
+    const marks = await preparePdfExportMarks(
+      document,
+      annotations,
+      new AbortController().signal,
+      (item) => item.note
+    )
+    expect(marks.map((item) => item.id)).toEqual(['kept'])
+  } finally {
+    await document.destroy()
   }
 })

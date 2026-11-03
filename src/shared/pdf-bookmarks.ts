@@ -24,7 +24,13 @@ export type PdfBookmarkMark = Readonly<{
 }>
 
 export type PdfBookmarkTextSelector = PdfTextSelector &
-  Readonly<{ pageRotation: number; coordinateVersion: 1 } & PdfBookmarkMark>
+  Readonly<
+    {
+      pageRotation: number
+      coordinateVersion: 1
+      attachmentState?: 'needs-review'
+    } & PdfBookmarkMark
+  >
 
 export type PdfBookmarkRegionSelector = Omit<PdfRegionSelector, 'image' | 'imageOmissionReason'> &
   Readonly<{ coordinateVersion: 1 } & PdfBookmarkMark>
@@ -64,6 +70,7 @@ export const pdfBookmarkSelectorMatchesPage = (
   return (
     (selector.kind === 'text' || selector.kind === 'region') &&
     selector.coordinateVersion === 1 &&
+    !(selector.kind === 'text' && selector.attachmentState === 'needs-review') &&
     selector.pageNumber === pageNumber &&
     selector.pageRotation === intrinsicPageRotation
   )
@@ -80,6 +87,7 @@ const TEXT_SELECTOR_KEYS = new Set([
   'kind',
   'pageNumber',
   'exact',
+  'attachmentState',
   'prefix',
   'suffix',
   'position',
@@ -262,6 +270,7 @@ export const sanitizePdfDocumentTarget = (
     selector.kind !== 'text' ||
     !hasOnlyKeys(selector, TEXT_SELECTOR_KEYS) ||
     !exact ||
+    (selector.attachmentState !== undefined && selector.attachmentState !== 'needs-review') ||
     (selector.prefix !== undefined && !prefix) ||
     (selector.suffix !== undefined && !suffix) ||
     !isRecord(position) ||
@@ -289,6 +298,9 @@ export const sanitizePdfDocumentTarget = (
       kind: 'text',
       pageNumber,
       exact,
+      ...(selector.attachmentState === 'needs-review'
+        ? { attachmentState: 'needs-review' as const }
+        : {}),
       ...(prefix ? { prefix } : {}),
       ...(suffix ? { suffix } : {}),
       position: { start: position.start, end: position.end },

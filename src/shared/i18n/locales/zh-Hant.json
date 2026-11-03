@@ -177,6 +177,8 @@
   },
   "renderer": {
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS 僅包含中繼資料，不包含附件。請使用完整備份來保留附件。",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._other": "已儲存含註解的 PDF。由於文件已變更，未包含 {{count}} 則註解。",
+    "This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.": "此文件已變更。註解未附加至文件，需要檢查。請重新選取該段文字以再次附加註解。",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "新對話可以無需詢問直接執行指令、修改檔案、執行 Notebook 程式碼和存取網路。既有對話不受影響。",
     "Also allowed {{scope}}": "也允許{{scope}}",
     "Unpin {{path}}": "取消釘選 {{path}}",

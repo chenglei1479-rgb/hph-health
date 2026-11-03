@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 const getDocument = vi.fn()
 
+// These tests provide synthetic PDF.js pages rather than files on disk.
+vi.mock('node:fs/promises', () => ({ readFile: vi.fn(async () => new Uint8Array()) }))
+vi.mock('../../shared/pdf-annotation-exchange', () => ({
+  pdfStoredTextRanges: vi.fn(async () => new Map())
+}))
+
 vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({ getDocument }))
 
 const page = (

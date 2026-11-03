@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises'
+import { pdfStoredTextRanges } from '../../shared/pdf-annotation-exchange'
 import { createHash } from 'node:crypto'
 
 import type { PdfAnnotationKind, PdfAnnotationSelector } from '../../shared/pdf-annotations'
@@ -216,6 +218,7 @@ const parsePdfJs = async (
   options: NativePdfAnnotationParseOptions = {}
 ): Promise<NativePdfAnnotationImportResult> => {
   options.signal?.throwIfAborted()
+  const storedRanges = await pdfStoredTextRanges(await readFile(filePath))
   const pdfjs = (await import('pdfjs-dist/legacy/build/pdf.mjs')) as typeof import('pdfjs-dist')
   const loadingTask = pdfjs.getDocument({
     url: filePath,
@@ -250,7 +253,8 @@ const parsePdfJs = async (
       const needsText = native.some(
         (annotation) =>
           ['Highlight', 'Underline', 'Squiggly', 'StrikeOut'].includes(annotation.subtype ?? '') &&
-          Boolean(annotation.quadPoints)
+          Boolean(annotation.quadPoints) &&
+          !(annotation.id && storedRanges.has(annotation.id))
       )
       const textContent = needsText ? await page.getTextContent() : { items: [] }
       // Calculate glyph-run bounds once per page. A paper can contain hundreds of native
@@ -286,7 +290,14 @@ const parsePdfJs = async (
         const color = colorFromRgb(annotation.color)
         const hasNativeIdentity = Boolean(annotation.id && /^\d+R\d*$/.test(annotation.id))
         if (hasNativeIdentity && markupKind && normalized.length > 0) {
-          const exact = textForQuads(textRuns, quads)
+          const stored = annotation.id ? storedRanges.get(annotation.id) : undefined
+          if (annotation.id && storedRanges.has(annotation.id)) {
+            if (!stored) {
+              unsupportedCount += 1
+              continue
+            }
+          }
+          const exact = stored?.selector.exact ?? textForQuads(textRuns, quads)
           if (exact) {
             annotations.push({
               stableKey: stableKey(pageNumber, annotation, note, quads),
@@ -299,13 +310,14 @@ const parsePdfJs = async (
               subtype,
               selector: {
                 kind: 'text',
-                pageNumber,
                 exact,
                 position: { start: 0, end: exact.length },
                 quads: normalized,
                 extractorVersion: NATIVE_EXTRACTOR_VERSION,
                 pageRotation,
-                coordinateVersion: 1
+                coordinateVersion: 1,
+                ...(stored ? stored.selector : {}),
+                pageNumber
               }
             })
           } else if (rect) {

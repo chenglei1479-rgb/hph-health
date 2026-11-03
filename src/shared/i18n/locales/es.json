@@ -179,6 +179,10 @@
   },
   "renderer": {
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS solo contiene metadatos, sin archivos adjuntos. Utilice una copia de seguridad completa para conservar los archivos adjuntos.",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._one": "Se guardó el PDF con anotaciones. No se incluyó {{count}} anotación porque el documento ha cambiado.",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._many": "Se guardó el PDF con anotaciones. No se incluyeron {{count}} anotaciones porque el documento ha cambiado.",
+    "Annotated PDF saved. {{count}} annotations were not included because the document changed._other": "Se guardó el PDF con anotaciones. No se incluyeron {{count}} anotaciones porque el documento ha cambiado.",
+    "This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.": "Este documento ha cambiado. La anotación no está vinculada y requiere revisión. Vuelva a seleccionar el pasaje para vincularla de nuevo.",
     "New conversations can run commands, change files, execute notebook code, and access the network without asking first. Existing conversations are unchanged.": "Las nuevas conversaciones pueden ejecutar comandos, cambiar archivos, ejecutar código Notebook y acceder a la red sin preguntar primero. Las conversaciones existentes no cambian.",
     "Also allowed {{scope}}": "También permitido {{scope}}",
     "Unpin {{path}}": "Desanclar {{path}}",

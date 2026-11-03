@@ -1,3 +1,4 @@
+import { ErrorNotice } from '@/components/error-notice'
 import { PdfReconciliationDialog } from '../../pdf-annotations/PdfReconciliationDialog'
 import { pdfAnnotationSourceKey } from '../../pdf-annotations/pdf-annotation-index'
 import type { PdfAnnotation, PdfAnnotationSource } from '../../../../../../shared/pdf-annotations'
@@ -1297,6 +1298,15 @@ const PdfNotebookView = ({
                         '[content-visibility:auto] [contain-intrinsic-size:auto_12rem]'
                     )}
                   >
+                    {selector.kind === 'text' && selector.attachmentState === 'needs-review' && (
+                      <ErrorNotice
+                        inline
+                        level="warning"
+                        description={t(
+                          'This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.'
+                        )}
+                      />
+                    )}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span
@@ -1350,7 +1360,11 @@ const PdfNotebookView = ({
                             <button
                               type="button"
                               aria-label={t('Show annotation source')}
-                              disabled={pendingId === bookmark.id}
+                              disabled={
+                                pendingId === bookmark.id ||
+                                (selector.kind === 'text' &&
+                                  selector.attachmentState === 'needs-review')
+                              }
                               onClick={() => void reveal(bookmark)}
                               className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >

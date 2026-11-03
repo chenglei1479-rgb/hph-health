@@ -251,6 +251,42 @@ describe('PdfNotebookView', () => {
     expect(window.api.pdfAnnotations.list).toHaveBeenCalledTimes(1)
   })
 
+  it('shows an unattached review warning without discarding the saved quotation', async () => {
+    const annotation = bookmark('bookmark-1', 'Review this claim.', 'highlight')
+    if (annotation.target.selector.kind !== 'text') throw new Error('Expected text selector')
+    const review = {
+      ...annotation,
+      target: {
+        ...annotation.target,
+        selector: {
+          ...annotation.target.selector,
+          attachmentState: 'needs-review' as const
+        }
+      }
+    }
+    vi.mocked(window.api.pdfAnnotations.list).mockResolvedValue({ items: [review], total: 1 })
+    await act(async () => {
+      root.render(
+        createElement(
+          PdfAnnotationsProvider,
+          { projectId: 'project-1', sessionId: 'session-1' },
+          createElement(PdfNotebookView, { source, active: true })
+        )
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container.textContent).toContain(
+        'This document has changed. The annotation is unattached and needs review. Re-select the passage to attach it again.'
+      )
+    )
+    expect(container.textContent).toContain('A highlighted passage')
+    expect(
+      (getByRole(container, 'button', { name: 'Show annotation source' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true)
+    expect(await annotationReveal.requestPdfAnnotationReveal(review)).toBe('locator-unsupported')
+  })
+
   it('lists PDF marks and filters commented annotations', async () => {
     await act(async () => {
       root.render(
