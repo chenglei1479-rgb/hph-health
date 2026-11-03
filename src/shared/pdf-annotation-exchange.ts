@@ -112,7 +112,13 @@ export const pdfStoredTextRanges = async (
   data: Uint8Array
 ): Promise<Map<string, PdfStoredTextRange | undefined>> => {
   const ranges = new Map<string, PdfStoredTextRange | undefined>()
-  const document = await PDFDocument.load(data, { updateMetadata: false, ignoreEncryption: true })
+  let document: PDFDocument
+  try {
+    document = await PDFDocument.load(data, { updateMetadata: false, ignoreEncryption: true })
+  } catch {
+    // This optional metadata pass must not block PDFs supported by the native PDF.js importer.
+    return ranges
+  }
   const candidates: Array<[string, string, number]> = []
   for (const [pageIndex, page] of document.getPages().entries()) {
     const annotations = page.node.Annots()

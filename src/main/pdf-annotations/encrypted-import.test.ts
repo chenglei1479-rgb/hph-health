@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { readFile } from 'node:fs/promises'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { PDFDocument } from 'pdf-lib'
 import { parseNativePdfAnnotationsOnCurrentThread } from './native-import-core'
 import { pdfStoredTextRanges } from '../../shared/pdf-annotation-exchange'
@@ -20,4 +20,27 @@ it('imports annotations from permission-encrypted PDFs with an empty user passwo
     note: 'Readable imported note'
   })
   expect(result.unsupportedCount).toBe(0)
+})
+
+it('continues native import when pdf-lib cannot load the encrypted PDF metadata', async () => {
+  const fixture = new URL('./fixtures/permission-encrypted.pdf', import.meta.url)
+  const load = vi
+    .spyOn(PDFDocument, 'load')
+    .mockRejectedValueOnce(new Error('Unsupported encrypted object stream'))
+  try {
+    const result = await parseNativePdfAnnotationsOnCurrentThread(fileURLToPath(fixture))
+    expect(load).toHaveBeenCalledWith(expect.any(Uint8Array), {
+      updateMetadata: false,
+      ignoreEncryption: true
+    })
+    expect(result.annotations).toHaveLength(1)
+    expect(result.annotations[0]).toMatchObject({
+      pageNumber: 1,
+      kind: 'highlight',
+      note: 'Readable imported note'
+    })
+    expect(result.unsupportedCount).toBe(0)
+  } finally {
+    load.mockRestore()
+  }
 })
