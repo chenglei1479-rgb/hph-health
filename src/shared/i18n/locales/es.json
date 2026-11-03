@@ -178,6 +178,8 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Falta el archivo de {{name}}, por lo que no se pudo guardar. Vuelva a ejecutar el análisis para crearlo y, después, guárdelo. (Código: {{code}})"
   },
   "renderer": {
+    "Completed with warnings": "Completado con advertencias",
+    "Warnings": "Advertencias",
     "PDF image processing could not be loaded. Repair the application installation and try again.": "No se pudo cargar el procesamiento de imágenes PDF. Repare la instalación de la aplicación y vuelva a intentarlo.",
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS solo contiene metadatos, sin archivos adjuntos. Utilice una copia de seguridad completa para conservar los archivos adjuntos.",
     "Annotated PDF saved. {{count}} annotations were not included because the document changed._one": "Se guardó el PDF con anotaciones. No se incluyó {{count}} anotación porque el documento ha cambiado.",

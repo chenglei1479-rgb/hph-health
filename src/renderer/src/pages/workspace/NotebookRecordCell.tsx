@@ -35,6 +35,7 @@ export const NotebookRecordCell = ({
   children?: ReactNode
 }): React.JSX.Element => {
   const { t } = useTranslation()
+  const hasWarnings = showResult && run.status === 'completed' && (run.warnings?.length ?? 0) > 0
   const isProblem = showResult && isProblemRunStatus(run.status)
   const statusLabel = showResult ? notebookRunStatusLabel(run.status) : undefined
   const errorLine = isProblem ? resolveRunErrorLine(run) : undefined
@@ -57,6 +58,17 @@ export const NotebookRecordCell = ({
                 {t('error')}
               </span>
             )
+          ) : hasWarnings ? (
+            <span
+              data-testid="notebook-warning-status"
+              className="rounded bg-status-warning-surface px-1.5 py-0.5 text-status-warning-foreground dark:bg-status-warning-dark-surface dark:text-status-warning-dark-foreground"
+            >
+              {t('Completed with warnings')}
+            </span>
+          ) : showResult && run.status === 'completed' ? (
+            <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+              {t('Completed')}
+            </span>
           ) : statusLabel ? (
             <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
               {t(statusLabel)}

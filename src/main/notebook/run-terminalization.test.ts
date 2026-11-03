@@ -264,6 +264,30 @@ const createHarness = (
 }
 
 describe('NotebookRunTerminalizationOwner', () => {
+  it.each(['completed', 'failed'] as const)(
+    'persists warnings without changing the %s lifecycle or traceback',
+    async (status) => {
+      const harness = createHarness()
+      const traceback = status === 'failed' ? 'Traceback: real exception' : ''
+      const terminalized = await harness.owner.run({
+        session,
+        runningRun: runningRun('warnings'),
+        invoke: async () => ({
+          ...completedResult(status),
+          warnings: ['warning'],
+          stderr: 'warning\n',
+          traceback
+        })
+      })
+      expect(terminalized.run).toMatchObject({
+        status,
+        warnings: ['warning'],
+        text: { stderr: 'warning\n', traceback }
+      })
+      expect(harness.document().runs[0]).toMatchObject({ status, warnings: ['warning'] })
+    }
+  )
+
   it('persists failure-time recovery facts for replay and background queries', async () => {
     const harness = createHarness()
     const recovery = { execution: 'not-started', retryAfter: 'cleanup-verified' } as const

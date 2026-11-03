@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { mapLoopOutputs } from './loop-output-mapper'
 
 import {
   KERNEL_FIGURES_DIR_ENV,
@@ -279,5 +280,55 @@ describe('frameRRequest', () => {
 describe('KERNEL_FIGURES_DIR_ENV', () => {
   it('is the stable env var name for the figures directory', () => {
     expect(KERNEL_FIGURES_DIR_ENV).toBe('OPEN_SCIENCE_KERNEL_FIGURES_DIR')
+  })
+})
+
+describe('warning-free legacy interpreter responses', () => {
+  it('keeps R attributed errors as errors without inventing warnings from its empty stderr', () => {
+    const response = parseLoopResponse(
+      JSON.stringify({
+        req_id: 'r',
+        stdout: '',
+        stderr: '',
+        error: 'Error: genuine R failure',
+        error_line: 3,
+        result: null,
+        figures: []
+      })
+    )!
+    const mapped = mapLoopOutputs(response)
+    expect(response.errorLine).toBe(3)
+    expect(mapped.traceback).toBe('Error: genuine R failure')
+    expect(mapped.outputs).toContainEqual(expect.objectContaining({ type: 'error', line: 3 }))
+    expect(mapped).not.toHaveProperty('warnings')
+  })
+  it('preserves JS/REPL results without treating stderr as warnings or failure', () => {
+    const response = parseLoopResponse(
+      JSON.stringify({
+        req_id: 'repl',
+        stdout: 'ok',
+        stderr: 'diagnostic',
+        error: null,
+        result: '2',
+        figures: []
+      })
+    )!
+    const mapped = mapLoopOutputs(response)
+    expect(mapped.traceback).toBe('')
+    expect(mapped.outputs).toContainEqual({ type: 'display', data: { 'text/plain': '2' } })
+    expect(mapped.stderr).toBe('diagnostic')
+    expect(mapped).not.toHaveProperty('warnings')
+  })
+  it('bounds malformed/custom warning input independently of errors and stderr', () => {
+    const response = parseLoopResponse(
+      JSON.stringify({
+        warnings: [null, 4, ...Array(100).fill('x'.repeat(1000))],
+        stderr: 'original',
+        error: 'real exception'
+      })
+    )!
+    expect(response.warnings!.join('').length).toBeLessThanOrEqual(16 * 1024)
+    expect(response.warnings!.length).toBeLessThanOrEqual(32)
+    expect(response).toMatchObject({ stderr: 'original', error: 'real exception' })
   })
 })

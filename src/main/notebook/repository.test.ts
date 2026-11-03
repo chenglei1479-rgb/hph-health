@@ -46,6 +46,33 @@ afterEach(async () => {
 })
 
 describe('notebook run repository', () => {
+  it('reopens historical runs without warnings and keeps new warning runs completed', async () => {
+    const root = await createStorageRoot()
+    const repository = new NotebookRunRepository(root)
+    const projectId = 'p',
+      sessionId = 's'
+    const lane = createRootNotebookLane(projectId, sessionId, 'root-s')
+    await repository.loadOrCreate({ projectId, sessionId, lane, workspaceCwd: '/workspace' })
+    await repository.appendRun({
+      projectId,
+      sessionId,
+      lane,
+      run: admittedRun({ runId: 'legacy', status: 'completed' })
+    })
+    await repository.appendRun({
+      projectId,
+      sessionId,
+      lane,
+      run: admittedRun({ runId: 'warning', status: 'completed', warnings: ['visible warning'] })
+    })
+    const runs = await new NotebookRunRepository(root).readSessionRuns(projectId, sessionId)
+    expect(runs.find((r) => r.runId === 'legacy')).not.toHaveProperty('warnings')
+    expect(runs.find((r) => r.runId === 'warning')).toMatchObject({
+      status: 'completed',
+      warnings: ['visible warning']
+    })
+  })
+
   it('preserves failed runs and optional execution evidence after reopening durable history', async () => {
     const root = await createStorageRoot()
     const repository = new NotebookRunRepository(root)

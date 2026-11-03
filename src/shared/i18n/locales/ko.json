@@ -176,6 +176,8 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "{{name}} 파일이 없어 저장하지 못했습니다. 분석을 다시 실행해 파일을 만든 뒤 저장하세요. (코드: {{code}})"
   },
   "renderer": {
+    "Completed with warnings": "경고와 함께 완료됨",
+    "Warnings": "경고",
     "PDF image processing could not be loaded. Repair the application installation and try again.": "PDF 이미지 처리 기능을 불러올 수 없습니다. 앱 설치를 복구한 후 다시 시도하세요.",
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS에는 메타데이터만 포함되며 첨부 파일은 포함되지 않습니다. 첨부 파일을 보존하려면 전체 백업을 사용하세요.",
     "Annotated PDF saved. {{count}} annotations were not included because the document changed._other": "주석이 포함된 PDF를 저장했습니다. 문서가 변경되어 주석 {{count}}개가 포함되지 않았습니다.",

@@ -1,3 +1,4 @@
+import { normalizeNotebookWarnings } from '../../shared/notebook-warnings'
 import type { NotebookOutput } from '../../shared/notebook'
 
 // One rendered figure produced during a cell execution; already base64-encoded by the driver.
@@ -8,6 +9,7 @@ export type MappedLoopOutputs = {
   outputs: NotebookOutput[]
   stdout: string
   stderr: string
+  warnings?: string[]
   traceback: string
 }
 
@@ -16,6 +18,7 @@ export type MappedLoopOutputs = {
 export function mapLoopOutputs(input: {
   stdout: string
   stderr: string
+  warnings?: string[]
   error: string | null
   errorLine?: number | null
   result: string | null
@@ -45,5 +48,11 @@ export function mapLoopOutputs(input: {
     traceback = error
   }
 
-  return { outputs, stdout, stderr, traceback }
+  return {
+    outputs,
+    stdout,
+    stderr,
+    traceback,
+    ...(input.warnings ? { warnings: normalizeNotebookWarnings(input.warnings) } : {})
+  }
 }

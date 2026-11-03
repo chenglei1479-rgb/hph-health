@@ -708,6 +708,7 @@ class NotebookKernelExecutor implements NotebookExecutor {
       const mapped = mapLoopOutputs({
         stdout: response.stdout,
         stderr: [response.stderr, processStderr].filter(Boolean).join('\n'),
+        warnings: response.warnings,
         error: response.error,
         errorLine: response.errorLine,
         result: response.result,
@@ -722,6 +723,7 @@ class NotebookKernelExecutor implements NotebookExecutor {
         ...(!timedOut && !cancelled && response.executionStarted !== undefined
           ? { executionStarted: response.executionStarted }
           : {}),
+        ...(mapped.warnings ? { warnings: mapped.warnings } : {}),
         stdout: mapped.stdout,
         stderr: mapped.stderr,
         traceback: cancelled ? '' : mapped.traceback,

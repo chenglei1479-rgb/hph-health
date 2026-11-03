@@ -2391,6 +2391,71 @@ gate('NotebookKernelExecutor (fake loop)', () => {
 })
 
 posixGate('NotebookKernelExecutor (real Python loop mutation policy)', () => {
+  it('keeps a warning chart completed and retrievable but a warning plus exception failed', async () => {
+    cwdDir = await mkdtemp(join(tmpdir(), 'warning-chart-executor-'))
+    const request = baseRequest(cwdDir)
+    await mkdir(request.dataRoot, { recursive: true })
+    const executor = new NotebookKernelExecutor({
+      pythonLoopPath: join(__dirname, '../../../resources/notebook/python_loop.py'),
+      platform: 'linux'
+    })
+    try {
+      const result = await executor.execute({
+        ...request,
+        cwd: request.dataRoot,
+        resolvedInterpreter: { command: python3! },
+        runId: 'warning-chart',
+        fileEvidenceStorageRoot: cwdDir,
+        code: [
+          'import os, warnings',
+          'os.environ["DISPLAY"] = ":0"',
+          'warnings.simplefilter("always")',
+          'import matplotlib',
+          'matplotlib.use("Agg")',
+          'import matplotlib.pyplot as plt',
+          'plt.plot([1,2])',
+          'plt.savefig("chart.png")',
+          'plt.show()'
+        ].join('\n')
+      })
+      expect(result.status).toBe('completed')
+      expect(result.warnings?.join('')).toContain(
+        'FigureCanvasAgg is non-interactive, and thus cannot be shown'
+      )
+      expect(result.stderr).toContain(result.warnings![result.warnings!.length - 1])
+      expect(result.traceback).toBe('')
+      const chart = result.workingFiles!.find((file) => file.relativePath === 'data/chart.png')!
+      expect(chart).toBeDefined()
+      expect(chart.checksum).toBeTruthy()
+      const bytes = await readFile(chart.path)
+      expect(bytes.subarray(1, 4).toString()).toBe('PNG')
+      const display = result.outputs.find(
+        (output) => output.type === 'display' && output.data['image/png']
+      )
+      expect(display?.type).toBe('display')
+      if (display?.type === 'display') {
+        expect(Buffer.from(display.data['image/png'], 'base64').subarray(1, 4).toString()).toBe(
+          'PNG'
+        )
+      }
+      const failure = await executor.execute({
+        ...request,
+        resolvedInterpreter: { command: python3! },
+        code: 'warnings.warn("before failure")\nraise ValueError("real failure")'
+      })
+      expect(failure.status).toBe('failed')
+      expect(failure.warnings?.join('')).toContain('before failure')
+      expect(failure.traceback).toMatch(/^Traceback \(most recent call last\):/)
+      expect(failure.traceback).toContain('File "<cell>", line 2')
+      expect(failure.traceback).toMatch(/ValueError: real failure\n$/)
+      expect(failure.outputs).toContainEqual(
+        expect.objectContaining({ type: 'error', traceback: failure.traceback })
+      )
+    } finally {
+      await executor.shutdown()
+    }
+  }, 60_000)
+
   it('injects a registered helper on a private frame before the unchanged producer frame', async () => {
     cwdDir = await mkdtemp(join(tmpdir(), 'os-python-loop-helper-'))
     const request = baseRequest(cwdDir)

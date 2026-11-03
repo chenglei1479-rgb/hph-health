@@ -178,6 +178,8 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "Le fichier de {{name}} est introuvable, son enregistrement a donc échoué. Relancez l’analyse pour le recréer, puis enregistrez-le. (Code : {{code}})"
   },
   "renderer": {
+    "Completed with warnings": "Terminé avec des avertissements",
+    "Warnings": "Avertissements",
     "PDF image processing could not be loaded. Repair the application installation and try again.": "Le traitement des images PDF n’a pas pu être chargé. Réparez l’installation de l’application et réessayez.",
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS contient uniquement les métadonnées, sans les pièces jointes. Utilisez une sauvegarde complète pour conserver les pièces jointes.",
     "Annotated PDF saved. {{count}} annotations were not included because the document changed._one": "PDF annoté enregistré. {{count}} annotation n’a pas été incluse car le document a été modifié.",

@@ -34,6 +34,7 @@ type NotebookRunTerminalResult = {
   status: Exclude<NotebookRunStatus, 'queued' | 'running'>
   stdout: string
   stderr: string
+  warnings?: string[]
   traceback: string
   cwdBefore?: string
   cwdAfter?: string
@@ -478,6 +479,7 @@ class NotebookRunTerminalizationOwner {
       // The normalized outputs already include any traceback; appending another error output would
       // make the preview render it twice.
       outputs: limitedResult.outputs,
+      ...(limitedResult.warnings ? { warnings: limitedResult.warnings } : {}),
       workingFiles: limitedResult.workingFiles ?? [],
       fileEvidence: limitedResult.fileEvidence ?? unavailableFileEvidence(runningRun.runId),
       inputFiles: inputsWithConfirmedAccess(runningRun, limitedResult),

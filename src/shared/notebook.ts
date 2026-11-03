@@ -448,6 +448,8 @@ export type NotebookRunRecord = {
   cwdAfter?: string
   executionCount?: number
   text: NotebookTextOutput
+  // Absent in historical run.json; never inferred from stderr or used as lifecycle status.
+  warnings?: string[]
   outputs: NotebookOutput[]
   // Retained only for reading/exporting historical run.json documents. New native Artifact
   // relationships are recorded by ArtifactVersion provenance and omit this field.

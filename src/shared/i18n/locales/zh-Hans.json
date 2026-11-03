@@ -176,6 +176,8 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "找不到 {{name}} 的文件，因此无法保存。请重新运行分析以生成该文件，然后再保存。（代码：{{code}}）"
   },
   "renderer": {
+    "Completed with warnings": "已完成，但有警告",
+    "Warnings": "警告",
     "PDF image processing could not be loaded. Repair the application installation and try again.": "无法加载 PDF 图像处理功能。请修复应用安装后重试。",
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS 仅包含元数据，不包含附件。请使用完整备份来保留附件。",
     "Annotated PDF saved. {{count}} annotations were not included because the document changed._other": "已保存带批注的 PDF。由于文档已更改，未包含 {{count}} 条批注。",

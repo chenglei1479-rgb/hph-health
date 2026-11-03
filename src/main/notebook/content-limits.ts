@@ -1,3 +1,4 @@
+import { normalizeNotebookWarnings } from '../../shared/notebook-warnings'
 import type { NotebookOutput } from '../../shared/notebook'
 
 const MIB = 1024 * 1024
@@ -61,6 +62,7 @@ export const assertNotebookCodeAppendWithinLimit = (code: string, delta: string)
 type NotebookTerminalContent = {
   stdout: string
   stderr: string
+  warnings?: string[]
   traceback: string
   outputs: NotebookOutput[]
   truncated?: boolean
@@ -143,5 +145,20 @@ export const limitNotebookTerminalContent = <T extends NotebookTerminalContent>(
     return { ...output, data }
   })
 
-  return { ...value, stdout, stderr, traceback, outputs, ...(truncated ? { truncated: true } : {}) }
+  const warnings = normalizeNotebookWarnings(value.warnings)
+  if (
+    value.warnings &&
+    (warnings.length !== value.warnings.length ||
+      warnings.some((text, index) => text !== value.warnings![index]))
+  )
+    truncated = true
+  return {
+    ...value,
+    stdout,
+    stderr,
+    traceback,
+    outputs,
+    ...(value.warnings ? { warnings } : {}),
+    ...(truncated ? { truncated: true } : {})
+  }
 }

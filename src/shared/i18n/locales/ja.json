@@ -176,6 +176,8 @@
     "The file for {{name}} is missing, so it could not be saved. Run the analysis again to create it, then save it. (Code: {{code}})": "{{name}} のファイルが見つからないため保存できませんでした。解析をもう一度実行してファイルを作成してから、保存してください。（コード: {{code}}）"
   },
   "renderer": {
+    "Completed with warnings": "警告付きで完了",
+    "Warnings": "警告",
     "PDF image processing could not be loaded. Repair the application installation and try again.": "PDF の画像処理機能を読み込めませんでした。アプリのインストールを修復してから、もう一度お試しください。",
     "RIS carries metadata only, not attachments. Use a full backup to preserve attachments.": "RIS に含まれるのはメタデータのみで、添付ファイルは含まれません。添付ファイルを保持するには完全バックアップを使用してください。",
     "Annotated PDF saved. {{count}} annotations were not included because the document changed._other": "注釈付き PDF を保存しました。文書が変更されたため、{{count}} 件の注釈は含まれていません。",
