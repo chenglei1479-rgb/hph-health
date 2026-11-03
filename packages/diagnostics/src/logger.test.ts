@@ -4,13 +4,33 @@ import { join } from 'node:path'
 import { Console } from 'node:console'
 import { Writable } from 'node:stream'
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { renameFile, appendLogFile, openLogFile } = vi.hoisted(() => ({
-  renameFile: vi.fn(),
-  appendLogFile: vi.fn(),
-  openLogFile: vi.fn()
-}))
+const { renameFile, appendLogFile, openLogFile, fatalOpen, fatalWrite, fatalSync, fatalClose } =
+  vi.hoisted(() => ({
+    renameFile: vi.fn(),
+    appendLogFile: vi.fn(),
+    openLogFile: vi.fn(),
+    fatalOpen: vi.fn(),
+    fatalWrite: vi.fn(),
+    fatalSync: vi.fn(),
+    fatalClose: vi.fn()
+  }))
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>()
+  fatalOpen.mockImplementation(actual.openSync)
+  fatalWrite.mockImplementation(actual.writeSync)
+  fatalSync.mockImplementation(actual.fsyncSync)
+  fatalClose.mockImplementation(actual.closeSync)
+  return {
+    ...actual,
+    openSync: fatalOpen,
+    writeSync: fatalWrite,
+    fsyncSync: fatalSync,
+    closeSync: fatalClose
+  }
+})
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs/promises')>()
@@ -1547,6 +1567,38 @@ describe('logger: errorLogFields', () => {
 })
 
 describe('logger: fatal process diagnostics', () => {
+  beforeEach(() => {
+    for (const mock of [fatalOpen, fatalWrite, fatalSync, fatalClose]) mock.mockClear()
+  })
+  it('fsyncs the completed fatal write before closing its descriptor', async () => {
+    logDir = await mkdtemp(join(tmpdir(), 'os-logger-fatal-sync-'))
+    initLogger({ logDir, mirrorToConsole: false })
+    writeFatalLogSync('main', 'fatal sync fixture')
+    expect(fatalOpen).toHaveBeenCalledWith(join(logDir, 'main.log'), 'a')
+    expect(fatalWrite).toHaveBeenCalled()
+    expect(fatalSync).toHaveBeenCalledExactlyOnceWith(fatalOpen.mock.results[0].value)
+    expect(fatalClose).toHaveBeenCalledExactlyOnceWith(fatalOpen.mock.results[0].value)
+    expect(fatalWrite.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      fatalSync.mock.invocationCallOrder[0]
+    )
+    expect(fatalSync.mock.invocationCallOrder[0]).toBeLessThan(
+      fatalClose.mock.invocationCallOrder[0]
+    )
+    expect(await readFile(join(logDir, 'main.log'), 'utf8')).toContain('fatal sync fixture')
+  })
+  it.each(['write', 'fsync'])(
+    'closes the fatal descriptor without masking the crash if %s fails',
+    async (step) => {
+      logDir = await mkdtemp(join(tmpdir(), 'os-logger-fatal-sync-failure-'))
+      initLogger({ logDir, mirrorToConsole: false })
+      const failing = step === 'write' ? fatalWrite : fatalSync
+      failing.mockImplementationOnce(() => {
+        throw new Error('injected disk failure')
+      })
+      expect(() => writeFatalLogSync('main', 'fatal failure fixture')).not.toThrow()
+      expect(fatalClose).toHaveBeenCalledExactlyOnceWith(fatalOpen.mock.results[0].value)
+    }
+  )
   it('persists the fatal record before returning without awaiting the write queue', async () => {
     logDir = await mkdtemp(join(tmpdir(), 'os-logger-fatal-'))
     initLogger({

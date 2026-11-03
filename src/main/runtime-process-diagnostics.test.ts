@@ -38,3 +38,23 @@ it.each([
     expect.objectContaining({ exitCode: code, signal, uptimeMs: 200, startupPhase: 'database' })
   )
 })
+
+it.each([
+  [-1073741819, 'C0000005'],
+  [-1073741515, 'C0000135']
+] as const)(
+  'preserves Windows native exit %s as hex %s without inventing a signal or exit 70',
+  (code, hex) => {
+    const child = new ChildProcess()
+    const observation = observeOwnedRuntimeProcess(child)
+    child.emit('exit', code, null)
+    expect(observation.snapshot()).toMatchObject({ exitCode: code, exitCodeHex: hex, signal: null })
+    const untracked = new ChildProcess()
+    Object.defineProperty(untracked, 'exitCode', { value: code })
+    expect(ownedRuntimeProcessDiagnostics(untracked)).toMatchObject({
+      exitCode: code,
+      exitCodeHex: hex,
+      signal: null
+    })
+  }
+)

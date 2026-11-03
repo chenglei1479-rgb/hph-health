@@ -2,10 +2,14 @@ import type { ChildProcess } from 'node:child_process'
 import { createLogger } from '@aipoch/diagnostics/node'
 import type { BackendStartupStatus } from './backend-startup'
 
+export const runtimeExitCodeHex = (exitCode: number | null): string | null =>
+  typeof exitCode === 'number' ? (exitCode >>> 0).toString(16).toUpperCase().padStart(8, '0') : null
+
 type Observation = {
   snapshot: () => {
     pid: number | null
     exitCode: number | null
+    exitCodeHex: string | null
     signal: string | null
     uptimeMs: number | null
     startupPhase: BackendStartupStatus['stage'] | null
@@ -20,6 +24,7 @@ export const ownedRuntimeProcessDiagnostics = (
   observations.get(child)?.snapshot() ?? {
     pid: child.pid ?? null,
     exitCode: child.exitCode,
+    exitCodeHex: runtimeExitCodeHex(child.exitCode),
     signal: child.signalCode,
     uptimeMs: null,
     startupPhase: null // An adopted/untracked process has no known launch time.
@@ -43,6 +48,7 @@ export const observeOwnedRuntimeProcess = (
     snapshot: () => ({
       pid: child.pid ?? null,
       exitCode,
+      exitCodeHex: runtimeExitCodeHex(exitCode),
       signal,
       uptimeMs: Math.max(0, (stoppedAt ?? now()) - started),
       startupPhase

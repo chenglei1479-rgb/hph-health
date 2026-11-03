@@ -1,4 +1,4 @@
-import { observeOwnedRuntimeProcess } from './runtime-process-diagnostics'
+import { observeOwnedRuntimeProcess, runtimeExitCodeHex } from './runtime-process-diagnostics'
 import { runtimeStartupOptionsSchema } from './desktop-runtime-info'
 import { DesktopRuntimeStartupError } from './desktop-startup-recovery'
 import {
@@ -72,6 +72,12 @@ export class DesktopRuntimeStoppingError extends Error {
     this.name = 'DesktopRuntimeStoppingError'
   }
 }
+
+export const backendStartupExitMessage = (
+  child: Pick<ChildProcess, 'exitCode' | 'signalCode'>,
+  logs: string
+): string =>
+  `Node backend exited during startup (${child.signalCode ?? child.exitCode}) [exitCodeHex=${runtimeExitCodeHex(child.exitCode)}]. See ${logs}.`
 
 export type DesktopBackendLaunch = { endpoint: DesktopEndpoint; startedProcess?: ChildProcess }
 
@@ -474,7 +480,7 @@ export async function startOrAttachDesktopBackend(options: {
       }
       if (child.signalCode || child.exitCode !== null)
         throw new DesktopBackendStartupError(
-          `Node backend exited during startup (${child.signalCode ?? child.exitCode}). See ${logs}.`,
+          backendStartupExitMessage(child, logs),
           status?.stage ?? 'bootstrap',
           true,
           logs,
