@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { build } from 'esbuild'
 import { expect, it } from 'vitest'
+import { PDF_IMAGE_PROCESSING_UNAVAILABLE } from '../../../shared/pdf-structure'
 
 it('keeps application startup alive when the real package cannot load sharp', async () => {
   const cache = resolve('node_modules/.cache')
@@ -39,7 +40,7 @@ it('keeps application startup alive when the real package cannot load sharp', as
       const engine = createPdfStructureEngine();
       assert.equal(loads, 0);
       await assert.rejects(engine.describe(), error =>
-        error.message === 'PDF image processing is unavailable.' &&
+        error.message === ${JSON.stringify(PDF_IMAGE_PROCESSING_UNAVAILABLE)} &&
         error.cause?.message === 'Forced sharp native binding failure');
       assert.ok(loads > 0);
       writeFileSync(${JSON.stringify(report)}, 'startup survived; fingerprint failure reported');
