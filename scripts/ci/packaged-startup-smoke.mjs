@@ -317,6 +317,37 @@ const logTail = (kind, path) => {
   }
 }
 
+// Job logs get only this allowlist. Paths, log tails and free-form error messages stay in artifacts.
+export const publishStartupDiagnosticSummary = (
+  diagnostics,
+  writeJobLog = (message) => {
+    process.stdout.write(message)
+  }
+) => {
+  const state = diagnostics.process ?? {}
+  const summary = {
+    label: diagnostics.label,
+    reason: diagnostics.reason,
+    expectedReadyLines: diagnostics.expectedReadyLines,
+    process: {
+      pid: typeof state.pid === 'number' ? state.pid : null,
+      exitCode: typeof state.exitCode === 'number' ? state.exitCode : null,
+      signalCode:
+        typeof state.signalCode === 'string' && /^SIG[A-Z0-9]+$/.test(state.signalCode)
+          ? state.signalCode
+          : null,
+      aliveBeforeCleanup:
+        typeof state.aliveBeforeCleanup === 'boolean' ? state.aliveBeforeCleanup : null
+    },
+    logs: diagnostics.logs.map(({ kind, state, bytes }) => ({
+      kind,
+      state,
+      ...(typeof bytes === 'number' ? { bytes } : {})
+    }))
+  }
+  writeJobLog(JSON.stringify(summary) + '\n')
+}
+
 const writeStartupDiagnostics = ({
   workspaceLogs,
   label,
@@ -327,7 +358,8 @@ const writeStartupDiagnostics = ({
   stdoutPath,
   stderrPath,
   userData,
-  processState
+  processState,
+  writeJobLog
 }) => {
   const logs = [
     logTail('startup marker', logFile),
@@ -365,8 +397,7 @@ const writeStartupDiagnostics = ({
       )
     ].join('\n') + '\n'
   writeFileSync(join(workspaceLogs, 'diagnostics.txt'), text)
-  // Artifacts may be inaccessible to reviewers. Keep bounded failure tails in the job log as well.
-  if (!result.ok) process.stderr.write(text)
+  if (!result.ok) publishStartupDiagnosticSummary(diagnostics, writeJobLog)
 }
 
 const mirrorLog = (source, target) => {
@@ -416,9 +447,10 @@ export const launchRecorded = async ({
   label,
   userData,
   readyLines,
-  rejectAccountLoginAtHome = false
+  rejectAccountLoginAtHome = false,
+  writeJobLog
 }) => {
-  note(`Launching ${binary} (${label}).`)
+  note(`Launching packaged app (${label}).`)
   mkdirSync(workspaceLogs, { recursive: true })
   // Capture directly in the upload directory, even if the outer CI step is cancelled.
   stdoutPath = join(workspaceLogs, 'stdout.log')
@@ -462,7 +494,8 @@ export const launchRecorded = async ({
       stdoutPath,
       stderrPath,
       userData,
-      processState: { error: String(error) }
+      processState: { error: String(error) },
+      writeJobLog
     })
     return 1
   }
@@ -476,7 +509,8 @@ export const launchRecorded = async ({
     label,
     userData,
     readyLines,
-    rejectAccountLoginAtHome
+    rejectAccountLoginAtHome,
+    writeJobLog
   })
 }
 
@@ -594,7 +628,8 @@ const finish = async ({
   label,
   userData,
   readyLines,
-  rejectAccountLoginAtHome = false
+  rejectAccountLoginAtHome = false,
+  writeJobLog
 }) => {
   mkdirSync(workspaceLogs, { recursive: true })
   let result
@@ -634,7 +669,8 @@ const finish = async ({
     stdoutPath,
     stderrPath,
     userData,
-    processState
+    processState,
+    writeJobLog
   })
   writeFileSync(join(workspaceLogs, 'result.txt'), `${label}\n${result.reason}\n${result.detail}`)
   publishSummary(label, result)
