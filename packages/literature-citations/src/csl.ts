@@ -55,6 +55,7 @@ type CslName = Readonly<{
   family?: string
   given?: string
   literal?: string
+  'non-dropping-particle'?: string
 }>
 
 type CslDate = Readonly<{ 'date-parts': readonly [readonly number[]] }>
@@ -88,13 +89,28 @@ type CslItem = Readonly<{
   edition?: string
 }>
 
-const creatorName = (creator: LiteratureCreatorInput): CslName =>
-  creator.nameMode === 'organization'
-    ? { literal: creator.literalName }
-    : {
-        ...(creator.familyName ? { family: creator.familyName } : {}),
-        ...(creator.givenName ? { given: creator.givenName } : {})
-      }
+// #135: CSL keeps a name particle in its own field and lets the style decide whether it stays with
+// the family name (`demote-non-dropping-particle="never"`, as the bundled APA style declares) or is
+// demoted behind the initials. Leaving the particle inside `family` makes the engine parse and
+// demote it on its own terms, which is how "von Elm" became "Elm, E. von" in APA.
+//
+// Only a leading run of lowercase-initial words is split out; everything else is passed through
+// untouched, and the split reconstructs the input exactly. A particle we have never seen is kept,
+// never filtered — dropping part of an author's name is worse than displaying one word too many.
+const leadingParticle = /^((?:\p{Ll}[\p{L}'’.-]*\s+)+)(\S.*)$/u
+
+const creatorName = (creator: LiteratureCreatorInput): CslName => {
+  if (creator.nameMode === 'organization') return { literal: creator.literalName }
+  const particle = creator.familyName ? leadingParticle.exec(creator.familyName) : null
+  return {
+    ...(creator.familyName
+      ? particle
+        ? { family: particle[2], 'non-dropping-particle': particle[1].trimEnd() }
+        : { family: creator.familyName }
+      : {}),
+    ...(creator.givenName ? { given: creator.givenName } : {})
+  }
+}
 
 const creatorsFor = (
   creators: readonly LiteratureCreatorInput[],

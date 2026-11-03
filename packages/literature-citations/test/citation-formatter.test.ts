@@ -76,6 +76,72 @@ describe('LiteratureCitationFormatter', () => {
     expect(reimported.items[0]?.creators).toEqual(item.creators)
   })
 
+  // #135: APA declares demote-non-dropping-particle="never" (resources/apa.csl line 2), so the
+  // particle stays with the family name in both the reference list and the in-text citation.
+  // Before the CSL conversion split the particle out, the engine demoted it on its own terms: the
+  // reference list printed "Elm, E. von." and the citation said "(Elm, 2007)".
+  it('keeps a name particle with the family name in APA references and citations', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const parsed = await formatter.parseReferences(
+      'PMID- 12345678\nTI  - STROBE statement\nJT  - Annals of internal medicine\n' +
+        'FAU - von Elm, Erik\nAU  - von Elm E\nDP  - 2007 Oct 16\n'
+    )
+    expect(parsed.errors).toEqual([])
+    const item = parsed.items[0]!
+    // The import keeps the particle; the defect was in the conversion to CSL, not in the import.
+    expect(item.creators).toMatchObject([{ givenName: 'Erik', familyName: 'von Elm' }])
+
+    const [formatted] = await formatter.formatReferences([{ id: 'strobe', item }], 'apa', 'en-US')
+    expect(formatted?.reference).toContain('von Elm, E. (2007)')
+    expect(formatted?.reference).not.toContain('Elm, E. von')
+    expect(formatted?.inText).toBe('(von Elm, 2007)')
+  })
+
+  it('leaves names without a particle exactly as they were', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const parsed = await formatter.parseReferences(
+      'PMID- 12345679\nTI  - Plain name\nJT  - Journal of Plain Names\nFAU - Yan, Shi-Qi\nDP  - 2024\n'
+    )
+    const item = parsed.items[0]!
+    const [formatted] = await formatter.formatReferences([{ id: 'plain', item }], 'apa', 'en-US')
+
+    expect(formatted?.reference).toContain('Yan, S.-Q. (2024)')
+    expect(formatted?.inText).toBe('(Yan, 2024)')
+  })
+
+  // The red line for this ticket: an unrecognised particle is carried through, not filtered by a
+  // hard-coded list. Losing a word from an author's name is worse than showing one too many.
+  it('keeps a particle it has never seen instead of dropping it', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const parsed = await formatter.parseReferences(
+      'PMID- 12345680\nTI  - Unlisted particle\nJT  - Journal of Unlisted Names\n' +
+        'FAU - qwerty Smith, Ana\nFAU - de la Cruz, Jan\nDP  - 2024\n'
+    )
+    const item = parsed.items[0]!
+    expect(item.creators).toMatchObject([
+      { givenName: 'Ana', familyName: 'qwerty Smith' },
+      { givenName: 'Jan', familyName: 'de la Cruz' }
+    ])
+
+    const [formatted] = await formatter.formatReferences([{ id: 'unlisted', item }], 'apa', 'en-US')
+    expect(formatted?.reference).toContain('qwerty Smith')
+    expect(formatted?.reference).toContain('de la Cruz')
+    expect(formatted?.inText).toContain('qwerty Smith')
+  })
+
+  it('converts a leading particle into the CSL field and reconstructs it losslessly', () => {
+    const base = { nameMode: 'person' as const, givenName: 'Erik', creatorType: 'author' as const }
+    expect(
+      toCslItem('x', { ...reference, creators: [{ ...base, familyName: 'von Elm' }] }).author
+    ).toEqual([{ family: 'Elm', given: 'Erik', 'non-dropping-particle': 'von' }])
+    expect(
+      toCslItem('x', { ...reference, creators: [{ ...base, familyName: 'de la Cruz' }] }).author
+    ).toEqual([{ family: 'Cruz', given: 'Erik', 'non-dropping-particle': 'de la' }])
+    expect(
+      toCslItem('x', { ...reference, creators: [{ ...base, familyName: 'Yan' }] }).author
+    ).toEqual([{ family: 'Yan', given: 'Erik' }])
+  })
+
   it('preserves PubMed journal abbreviations through RIS export and reimport', async () => {
     const formatter = new LiteratureCitationFormatter()
     const parsed = await formatter.parseReferences(
