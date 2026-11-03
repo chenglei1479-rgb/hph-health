@@ -1,3 +1,4 @@
+import { observeOwnedRuntimeProcess } from './runtime-process-diagnostics'
 import { runtimeStartupOptionsSchema } from './desktop-runtime-info'
 import { DesktopRuntimeStartupError } from './desktop-startup-recovery'
 import {
@@ -402,11 +403,13 @@ export async function startOrAttachDesktopBackend(options: {
   let child: ChildProcess
   let failure: Error | undefined
   let status: BackendStartupStatus | undefined
+  let processObservation: ReturnType<typeof observeOwnedRuntimeProcess> | undefined
   const startedAt = Date.now()
   const onMessage = (message: unknown): void => {
     const result = backendStartupStatusSchema.safeParse(message)
     if (result.success && result.data.attemptId === attemptId && status?.kind !== 'failed') {
       status = result.data
+      processObservation?.phase(status.stage)
       try {
         options.onStatus?.({ ...status, elapsedMs: Date.now() - startedAt })
       } catch {
@@ -434,6 +437,7 @@ export async function startOrAttachDesktopBackend(options: {
         stdio: ['ignore', file.fd, file.fd, 'ipc']
       }
     )
+    processObservation = observeOwnedRuntimeProcess(child)
     // Spawn errors can fire before the asynchronous descriptor close settles.
     child.on('error', onError)
     child.on('message', onMessage)
