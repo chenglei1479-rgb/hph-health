@@ -1201,3 +1201,10 @@ it('keeps PDF translation on the desktop view and passes its document lease to t
   expect(composition.task.commandNames()).not.toContain('pdf-translation:begin')
   composition.dispose()
 })
+
+// #150 red proof: this assertion exists only on the ci/pr-unit-tests-red-proof branch. Push that
+// branch to show the PR unit-test job failing; delete the branch afterwards.
+it('red proof: the PR unit-test job must fail when a test fails', () => {
+  expect(1).toBe(2)
+})
+
