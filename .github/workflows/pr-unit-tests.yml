@@ -1,0 +1,70 @@
+name: PR unit tests
+
+# #150: PR CI ran packaging, PHI, i18n, licence and egress checks but no unit tests at all, so
+# `application-command-composition.test.ts` stayed 27/27 red in main for a day while every pull
+# request was green, and the packaged app failed to start on all three platforms. The impact-based
+# selector only ever existed behind the local `npm run test:affected`.
+#
+# The test targets below are fixed on purpose. Impact-based selection saves time, but its failure
+# mode is "the selector matched nothing and the job still passed", which is exactly the shape of
+# that incident. If this set becomes too slow, add groups to the matrix; do not reintroduce a
+# selector without the readiness guard in `scripts/ci/require-unit-test-results.mjs`.
+#
+# `src/main/application-command-composition.test.ts` is the one single-file target: it is the
+# incident suite, it cannot be isolated from a directory, and the guard fails the job when it is
+# missing from the results. Renaming it is therefore a red build, not a silent no-op.
+#
+# `src/main/notebook` is not in this first version. Measured locally with the same command: 181
+# files, 6536 reported tests, 63 failing, 611 s. The failures are environment-dependent
+# (real kernels, managed Python packs, macOS path assertions in `schema-only/bundled-python.test.ts`,
+# Windows symlink/path-length limits) and need their own ticket before this job can report on them
+# honestly. Adding the directory now would bury real regressions in that noise.
+on:
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-unit-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit tests (commands, shared, i18n, diagnostics)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: node scripts/ci/npm-ci.mjs --install-links
+      - name: Build workspace packages
+        run: node scripts/build-dev-packages.mjs
+      - name: Run the unit-test set
+        run: >-
+          node node_modules/vitest/vitest.mjs run
+          src/main/application-command-composition.test.ts
+          src/main/variable-definition
+          src/shared
+          src/renderer/src/i18n
+          packages/diagnostics
+          --reporter=json
+          --outputFile="$env:RUNNER_TEMP/unit-results-commands.json"
+          --maxWorkers=2
+      # A run that matched nothing still exits 0, so the report itself is the evidence of work.
+      - name: Require real test execution
+        run: >-
+          node scripts/ci/require-unit-test-results.mjs
+          "$env:RUNNER_TEMP/unit-results-commands.json"
+          --require src/main/application-command-composition.test.ts
