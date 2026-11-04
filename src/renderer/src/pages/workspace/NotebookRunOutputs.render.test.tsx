@@ -8,6 +8,7 @@ import type { NotebookOutput, NotebookRunRecord } from '../../../../shared/noteb
 import { useSettingsStore } from '@/stores/settings-store'
 import { resolveNotebookRunFigures } from './notebook-run-figures'
 import { NotebookRunOutputs } from './NotebookRunOutputs'
+import { NotebookRecordCell } from './NotebookRecordCell'
 
 let container: HTMLDivElement
 let root: Root
@@ -43,6 +44,68 @@ const render = (outputs: NotebookOutput[], textOverride?: Partial<NotebookRunRec
 }
 
 describe('NotebookRunOutputs', () => {
+  it('shows warning success separately from failure and keeps successful stderr neutral', () => {
+    const warning = 'FigureCanvasAgg is non-interactive, and thus cannot be shown'
+    const run = makeRun({
+      warnings: [warning],
+      outputs: [{ type: 'stream', name: 'stderr', text: warning }]
+    })
+    act(() =>
+      root.render(
+        <NotebookRecordCell run={run} index={1}>
+          <NotebookRunOutputs run={run} />
+        </NotebookRecordCell>
+      )
+    )
+    const badge = container.querySelector('[data-testid="notebook-warning-status"]')!
+    expect(badge.textContent).toBe('Completed with warnings')
+    expect(badge.className).toContain('status-warning')
+    const notice = container.querySelector('[data-testid="notebook-run-warnings"]')!
+    expect(notice.textContent).toContain(warning)
+    expect(notice.querySelector('[role="status"]')).not.toBeNull()
+    const stderr = container.querySelector('[data-testid="notebook-text-output"] pre')!
+    expect(stderr.textContent).toBe(warning)
+    expect(stderr.className).not.toContain('text-danger')
+
+    const failed = {
+      ...run,
+      status: 'failed' as const,
+      text: { ...run.text, traceback: 'ValueError: real failure' },
+      outputs: [...run.outputs, { type: 'error' as const, traceback: 'ValueError: real failure' }]
+    }
+    act(() =>
+      root.render(
+        <NotebookRecordCell run={failed} index={1}>
+          <NotebookRunOutputs run={failed} />
+        </NotebookRecordCell>
+      )
+    )
+    expect(container.querySelector('[data-testid="notebook-warning-status"]')).toBeNull()
+    expect(container.textContent).toContain('error')
+    expect(container.querySelector('[class*="bg-danger"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="notebook-run-warnings"]')?.textContent).toContain(
+      warning
+    )
+    expect(container.textContent).toContain('ValueError: real failure')
+  })
+
+  it('does not infer warnings from stderr in a historical completed run', () => {
+    const run = makeRun({ outputs: [{ type: 'stream', name: 'stderr', text: 'diagnostic' }] })
+    act(() =>
+      root.render(
+        <NotebookRecordCell run={run} index={1}>
+          <NotebookRunOutputs run={run} />
+        </NotebookRecordCell>
+      )
+    )
+    expect(container.textContent).toContain('Completed')
+    expect(container.querySelector('[data-testid="notebook-warning-status"]')).toBeNull()
+    expect(container.querySelector('[data-testid="notebook-run-warnings"]')).toBeNull()
+    expect(
+      container.querySelector('[data-testid="notebook-text-output"] pre')?.className
+    ).not.toContain('text-danger')
+  })
+
   it('shows the truncation notice even when all output was omitted', () => {
     render([], { truncated: true })
 

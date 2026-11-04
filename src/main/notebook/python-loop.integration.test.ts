@@ -21,7 +21,8 @@ import {
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { framePythonNamespaceRequest } from './kernel-protocol'
+import { framePythonNamespaceRequest, parseLoopResponse } from './kernel-protocol'
+import { mapLoopOutputs } from './loop-output-mapper'
 import {
   reportedPythonCallbackPlot,
   reportedPythonCallbackPrelude
@@ -54,6 +55,7 @@ const LOOP = join(__dirname, '../../../resources/notebook/python_loop.py')
 // the raw snake_case field names as they appear on the wire.
 type LoopResponse = {
   output_truncated?: boolean
+  warnings?: string[]
   req_id: string
   stdout: string
   stderr: string
@@ -123,6 +125,104 @@ const startLoop = (
 }
 
 gate('python_loop.py', () => {
+  it('collects a real matplotlib display warning while preserving stderr and the readable chart', async () => {
+    const figuresDir = mkdtempSync(join(tmpdir(), 'warning-chart-'))
+    const loop = startLoop(pyBin!, {
+      MPLBACKEND: 'Agg',
+      MPLCONFIGDIR: figuresDir,
+      DISPLAY: ':0',
+      OPEN_SCIENCE_KERNEL_FIGURES_DIR: figuresDir
+    })
+    try {
+      const response = await loop.send(
+        [
+          'import warnings',
+          'warnings.simplefilter("always")',
+          'import matplotlib.pyplot as plt',
+          'plt.plot([1, 2])',
+          'plt.show()'
+        ].join('\n')
+      )
+      const warning =
+        '<cell>:5: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown'
+      // A cold font cache adds matplotlib's own "building the font cache" notice to the same run, so
+      // select the display warning instead of assuming it is the only one recorded. Exactly one is
+      // required: recording one warning twice is the regression this case exists to catch.
+      const displayWarnings = (response.warnings ?? []).filter((entry) => entry.includes(warning))
+      expect(response.error).toBeNull()
+      expect(displayWarnings).toHaveLength(1)
+      // The warning also stays a stderr byte run; nothing may delete those bytes.
+      expect(response.stderr).toContain(displayWarnings[0])
+      expect(response.figures).toHaveLength(1)
+      const chart = readFileSync(response.figures[0].path)
+      expect(chart.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+      const parsed = parseLoopResponse(JSON.stringify(response))!
+      const mapped = mapLoopOutputs({
+        ...parsed,
+        figures: [{ mime: 'image/png', base64: chart.toString('base64') }]
+      })
+      expect((mapped.warnings ?? []).filter((entry) => entry.includes(warning))).toHaveLength(1)
+      expect(mapped.stderr).toContain(displayWarnings[0])
+      expect(mapped.traceback).toBe('')
+      expect(mapped.outputs).toContainEqual({
+        type: 'display',
+        data: { 'image/png': chart.toString('base64') }
+      })
+      // The hook belongs to this request; it must not leak warnings into the next run.
+      expect((await loop.send('1 + 1')).warnings).toEqual([])
+    } finally {
+      loop.child.kill()
+      rmSync(figuresDir, { recursive: true, force: true })
+    }
+  }, 60_000)
+
+  it('keeps a warning and the complete real exception independently', async () => {
+    const loop = startLoop(pyBin!, {})
+    try {
+      const response = await loop.send(
+        'import warnings\nwarnings.simplefilter("always")\nwarnings.warn("before failure")\nraise ValueError("real failure")'
+      )
+      expect(response.warnings).toEqual(['<cell>:3: UserWarning: before failure\n'])
+      expect(response.stderr).toBe(response.warnings![0])
+      expect(response.error).toMatch(/^Traceback \(most recent call last\):/)
+      expect(response.error).toContain('File "<cell>", line 4')
+      expect(response.error).toMatch(/ValueError: real failure\n$/)
+      const parsed = parseLoopResponse(JSON.stringify(response))!
+      const mapped = mapLoopOutputs(parsed)
+      expect(mapped.traceback).toBe(response.error)
+      expect(mapped.outputs).toContainEqual(
+        expect.objectContaining({ type: 'error', traceback: response.error })
+      )
+      // Turning warnings into exceptions is still a real failure, never a warning success.
+      const asError = await loop.send(
+        'warnings.simplefilter("error")\nwarnings.warn("warning raised")'
+      )
+      expect(asError.error).toContain('UserWarning: warning raised')
+      expect(asError.warnings).toEqual([])
+    } finally {
+      loop.child.kill()
+    }
+  }, 60_000)
+
+  it('bounds warning count and UTF-8 bytes without removing stderr', async () => {
+    const loop = startLoop(pyBin!, {})
+    try {
+      const many = await loop.send(
+        'import warnings\nwarnings.simplefilter("always")\nfor i in range(40): warnings.warn(str(i))'
+      )
+      expect(many.warnings).toHaveLength(32)
+      expect(many.stderr).toContain('UserWarning: 39')
+      expect(many.output_truncated).toBe(true)
+      const large = await loop.send('warnings.warn("警告" * 10000)')
+      expect(large.warnings!.length).toBeGreaterThan(0)
+      expect(Buffer.byteLength(large.warnings!.join(''), 'utf8')).toBeLessThanOrEqual(16 * 1024)
+      expect(large.stderr).toContain('警告'.repeat(10000))
+      expect(large.output_truncated).toBe(true)
+    } finally {
+      loop.child.kill()
+    }
+  }, 60_000)
+
   it('replays the reported pycirclize workflow from its necessary upstream cell', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pycirclize-replay-'))
     const scripts = readFileSync(join(__dirname, 'reported-pycirclize.fixture.py'), 'utf8').split(

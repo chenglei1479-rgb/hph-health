@@ -413,6 +413,8 @@ describe('repl_loop local RPC transport', () => {
 
       expect(oneLine.error).toBeNull()
       expect(multiLine.error).toBeNull()
+      expect(oneLine).not.toHaveProperty('warnings')
+      expect(multiLine).not.toHaveProperty('warnings')
       expect(JSON.parse(oneLine.result ?? '{}')).toEqual({ kind: 'ok' })
       expect(JSON.parse(multiLine.result ?? '{}')).toEqual({ kind: 'ok' })
     } finally {

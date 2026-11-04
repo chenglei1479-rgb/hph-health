@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '@/stores/settings-store'
 import { Notice } from '@/components/notice'
+import { ErrorNotice } from '@/components/error-notice'
 import type { NotebookOutput, NotebookRunRecord } from '../../../../shared/notebook'
 import { resolveNotebookRunFigures } from './notebook-run-figures'
 import { NotebookFolderAccessNotice } from './NotebookFolderAccessNotice'
@@ -414,7 +415,9 @@ const NotebookRunOutputs = ({
                   )
                 : undefined
 
-  if (!hasText && !hasFigures && !run.truncated && !notice && !networkRecovery) return null
+  const warnings = run.warnings ?? []
+  if (!hasText && !hasFigures && !warnings.length && !run.truncated && !notice && !networkRecovery)
+    return null
 
   return (
     <div data-testid="notebook-run-outputs">
@@ -424,6 +427,20 @@ const NotebookRunOutputs = ({
         <p className="mt-2 text-xs text-text-300" data-testid="notebook-run-outcome">
           {notice}
         </p>
+      ) : null}
+      {warnings.length > 0 ? (
+        <ErrorNotice
+          level="warning"
+          role="status"
+          title={t('Warnings')}
+          data-testid="notebook-run-warnings"
+        >
+          <ul className="whitespace-pre-wrap text-xs">
+            {warnings.map((warning, index) => (
+              <li key={index}>{warning}</li>
+            ))}
+          </ul>
+        </ErrorNotice>
       ) : null}
       <NotebookRunTextOutputs run={run} />
       <NotebookRunFigureOutputs run={run} />

@@ -68,6 +68,7 @@ type NotebookControlResult = Pick<
   NotebookSessionExecutionResult,
   | 'stdout'
   | 'stderr'
+  | 'warnings'
   | 'traceback'
   | 'outputs'
   | 'truncated'
@@ -305,6 +306,7 @@ const controlResultFromRun = (run: NotebookRunRecord): NotebookControlResult => 
     stderr: run.text.stderr,
     traceback: run.text.traceback,
     outputs: run.outputs,
+    ...(run.warnings ? { warnings: run.warnings } : {}),
     ...(run.truncated ? { truncated: true } : {}),
     workingFiles: run.workingFiles,
     fileEvidence: run.fileEvidence,
@@ -1457,6 +1459,7 @@ class NotebookExecutionOwner {
       stderr: result.stderr,
       traceback: result.traceback,
       outputs: result.outputs,
+      ...(result.warnings ? { warnings: result.warnings } : {}),
       ...(result.truncated ? { truncated: true } : {}),
       ...(result.recovery ? { recovery: result.recovery } : {}),
       workingFiles: result.workingFiles,

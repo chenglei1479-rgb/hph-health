@@ -1,3 +1,4 @@
+import { normalizeNotebookWarnings } from '../../shared/notebook-warnings'
 // Wire protocol shared between the Node kernel driver and the Python/R exec-loop scripts.
 import { notebookExecutionContextSchema } from '@aipoch/reproducibility/execution-context'
 
@@ -11,6 +12,7 @@ export type KernelLoopResponse = {
   reqId: string
   stdout: string
   stderr: string
+  warnings?: string[]
   error: string | null
   // True only when this request consumed a process-level interrupt. R uses this acknowledgement to
   // distinguish a cancelled request from a normal response that raced ahead of SIGINT delivery.
@@ -186,6 +188,7 @@ export function parseLoopResponse(line: string): KernelLoopResponse | null {
     reqId: typeof obj.req_id === 'string' ? obj.req_id : '',
     stdout: typeof obj.stdout === 'string' ? obj.stdout : '',
     stderr: typeof obj.stderr === 'string' ? obj.stderr : '',
+    ...(Array.isArray(obj.warnings) ? { warnings: normalizeNotebookWarnings(obj.warnings) } : {}),
     error: typeof obj.error === 'string' ? obj.error : null,
     ...(typeof obj.execution_started === 'boolean'
       ? { executionStarted: obj.execution_started }

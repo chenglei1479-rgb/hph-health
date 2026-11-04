@@ -13,6 +13,7 @@ import traceback
 import types
 import math
 import random as _stdlib_random
+import warnings as _warnings
 
 # Bind native RNG APIs before user code. NumPy is optional; initializing its
 # global RNG once at kernel startup also captures unseeded first-cell draws.
@@ -943,6 +944,24 @@ def _run(code, replay_random_state=None):
     out, err = _BudgetTextIO(output_budget), _BudgetTextIO(output_budget)
     old_out, old_err = sys.stdout, sys.stderr
     sys.stdout, sys.stderr = out, err
+    warning_budget = _OutputBudget(min(16 * 1024, _text_limit))
+    warnings = []
+    warnings_truncated = False
+    old_showwarning = _warnings.showwarning
+
+    def showwarning(message, category, filename, lineno, file=None, line=None):
+        nonlocal warnings_truncated
+        # Preserve the normal formatted stderr output, including the caller's warning policy.
+        old_showwarning(message, category, filename, lineno, file=file, line=line)
+        if len(warnings) >= 32:
+            warnings_truncated = True
+            return
+        formatted = _warnings.formatwarning(message, category, filename, lineno, line)
+        captured = warning_budget.take(formatted)
+        if captured:
+            warnings.append(captured)
+
+    _warnings.showwarning = showwarning
     error = None
     result = None
     execution_started = False
@@ -971,12 +990,13 @@ def _run(code, replay_random_state=None):
     except Exception:
         error = diagnostic_budget.take_tail(_safe_format_exception())
     finally:
+        _warnings.showwarning = old_showwarning
         sys.stdout, sys.stderr = old_out, old_err
     figures, figures_truncated = _capture_figures()
     return {"stdout": out.getvalue(), "stderr": err.getvalue(), "error": error,
-            "execution_started": execution_started,
+            "warnings": warnings, "execution_started": execution_started,
             "result": result, "cwd": os.getcwd(), "figures": figures,
-            "output_truncated": output_budget.truncated or diagnostic_budget.truncated or figures_truncated,
+            "output_truncated": output_budget.truncated or diagnostic_budget.truncated or figures_truncated or warning_budget.truncated or warnings_truncated,
             "environment": _capture_environment({"schemaVersion": 1, "before": context_before,
                 "after": _capture_execution_context()})}
 

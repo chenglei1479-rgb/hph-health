@@ -1,3 +1,4 @@
+import { normalizeNotebookWarnings } from '../../shared/notebook-warnings'
 import { indexReplayRun, type ReplayRunIndex } from '../../shared/replay'
 import { mkdir, readdir, rm, stat } from 'node:fs/promises'
 import type { Dirent } from 'node:fs'
@@ -540,6 +541,7 @@ const normalizeRun = (sessionRoot: string, run: NotebookRunRecord): NotebookRunR
     kernelKind: run.kernelKind ?? 'python',
     text: run.text ?? emptyText(),
     outputs: run.outputs ?? [],
+    ...(run.warnings !== undefined ? { warnings: normalizeNotebookWarnings(run.warnings) } : {}),
     workingFiles: normalizeWorkingFiles(sessionRoot, run.runId, run.workingFiles),
     ...(fileEvidence
       ? { fileEvidence: { ...fileEvidence, reasonCodes: [...fileEvidence.reasonCodes] } }

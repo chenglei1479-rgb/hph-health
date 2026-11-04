@@ -139,6 +139,7 @@ export type NotebookSessionExecutionResult = {
   status: Extract<NotebookRunStatus, 'completed' | 'failed' | 'timeout' | 'cancelled'>
   stdout: string
   stderr: string
+  warnings?: string[]
   traceback: string
   // Actual data-process cwd, which can differ from the Session's last selected directory.
   cwdBefore?: string
