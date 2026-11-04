@@ -51,6 +51,15 @@ export const sessionLiteratureReferences = (
   return { versionIds, items: [...items.values()] }
 }
 
+// The package copy path of one Literature Attachment Version. Export selection, the citation
+// inventory and the capture loop must agree on this key, so they share it instead of rebuilding it.
+export const literaturePackageStorageKey = (
+  projectId: string,
+  sessionId: string,
+  attachmentId: string,
+  versionId: string
+): string => `uploads/${projectId}/${sessionId}/${attachmentId}/versions/${versionId}/content`
+
 // Package-owned immutable copies reuse Upload storage/publication/deletion. The Literature
 // section preserves their real source identity; no Library rows are installed on import.
 export const capturePackageLiterature = async (
@@ -134,7 +143,12 @@ export const capturePackageLiterature = async (
       attachmentId: row.attachmentId,
       itemId: row.attachment.itemId
     })
-    const storageKey = `uploads/${session.projectId}/${session.id}/${row.attachmentId}/versions/${row.id}/content`
+    const storageKey = literaturePackageStorageKey(
+      session.projectId,
+      session.id,
+      row.attachmentId,
+      row.id
+    )
     sources.set(storageKey, row.contentBlob.storageKey)
     const timestamp = row.createdAt.toISOString()
     let file = records.tables.UploadFile.find((file) => file.id === row.attachmentId)

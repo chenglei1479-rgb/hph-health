@@ -170,6 +170,36 @@ export const packageOperationRequestSchema = z.discriminatedUnion('action', [
 ])
 export type PackageOperationRequest = z.infer<typeof packageOperationRequestSchema>
 
+// A cited reference either travels with its PDF, was left out by the exporter's own selection, or
+// had no usable PDF on the exporting computer. The receiving computer cannot re-derive the last
+// case, so the exporter must record it next to the citation it belongs to.
+export const packageCitationPdfStateSchema = z.enum([
+  'included',
+  'omitted-by-choice',
+  'unavailable'
+])
+export type PackageCitationPdfState = z.infer<typeof packageCitationPdfStateSchema>
+
+export const packageCitationPdfReasonSchema = z.enum([
+  'no-pdf',
+  'content-unavailable',
+  'item-removed',
+  'excluded-from-export'
+])
+export type PackageCitationPdfReason = z.infer<typeof packageCitationPdfReasonSchema>
+
+export const packageCitationPdfSchema = z
+  .object({
+    itemId: z.string().min(1).max(512),
+    state: packageCitationPdfStateSchema,
+    reason: packageCitationPdfReasonSchema.optional(),
+    // Immutable Version of the PDF this state talks about. Present for every included PDF and for
+    // one omitted by choice, because its metadata still travels; absent when nothing was usable.
+    attachmentVersionId: identity.optional()
+  })
+  .strict()
+export type PackageCitationPdf = z.infer<typeof packageCitationPdfSchema>
+
 export const packageOriginSchema = z
   .object({
     importId: identity,
@@ -177,7 +207,8 @@ export const packageOriginSchema = z
     sourceSessionId: identity,
     importedAt: z.number().int().nonnegative(),
     manifestChecksum: checksum,
-    excludedFiles: z.array(packageExcludedFileSchema).max(10000).optional()
+    excludedFiles: z.array(packageExcludedFileSchema).max(10000).optional(),
+    citations: z.array(packageCitationPdfSchema).max(2000).optional()
   })
   .strict()
 export type SessionPackageOrigin = z.infer<typeof packageOriginSchema>

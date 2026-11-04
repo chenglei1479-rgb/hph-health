@@ -19,6 +19,8 @@ import { createUploadVersionReference, parseUploadVersionReference } from '../..
 import { canonicalJson, sha256, type CanonicalJson } from '../artifacts/provenance-canonical'
 import { reproductionRecipes } from '../artifacts/reproducibility-host'
 import { validatePackageLiterature } from './literature'
+import { captureCitationManifests } from './literature-citations'
+import { packageLiteratureCitationsSchema } from './literature-citations-contract'
 import { packageLiteratureSchema } from './literature-contract'
 import { validatePackagePdfNotes } from './pdf-notes'
 import type { NativeRow, NativeTable, PackageRecords } from './records-contract'
@@ -250,6 +252,13 @@ export const captureNativeRecords = async (
     where: { reviewId: { in: reviews.map((row) => row.id) } },
     orderBy: { id: 'asc' }
   })
+  // A cited-reference snapshot belongs to an immutable Artifact Version, so it is captured with the
+  // Versions rather than with the conversation. The per-item PDF states are added by the caller,
+  // which is the only place that knows the export selection.
+  const citationManifests = await captureCitationManifests(
+    client,
+    versions.map((row) => row.id)
+  )
   return {
     schemaVersion: 1,
     tables: {
@@ -268,7 +277,16 @@ export const captureNativeRecords = async (
       FileOriginSession: origins.map((row) => encodeRow('FileOriginSession', row)),
       ArtifactLineage: lineages.map((row) => encodeRow('ArtifactLineage', row)),
       ArtifactVersion: versions.map((row) => encodeRow('ArtifactVersion', row))
-    }
+    },
+    ...(citationManifests.length
+      ? {
+          literatureCitations: {
+            schemaVersion: 1 as const,
+            artifacts: citationManifests,
+            citations: []
+          }
+        }
+      : {})
   }
 }
 
@@ -285,6 +303,8 @@ export const parseNativeRecords = (value: unknown): PackageRecords => {
     throw new Error('Unsupported package records.')
   if ('literature' in value && value.literature !== undefined)
     packageLiteratureSchema.parse(value.literature)
+  if ('literatureCitations' in value && value.literatureCitations !== undefined)
+    packageLiteratureCitationsSchema.parse(value.literatureCitations)
   const tables = value.tables as Record<string, unknown>
   if ('reproducibility' in value && value.reproducibility !== undefined)
     packageReproducibilitySchema.parse(value.reproducibility)
@@ -732,6 +752,17 @@ export const prepareNativeImport = async (
   // file, so discard counters before the unmeasurable work rather than leaving the UI at 100%.
   onProgress?.({ phase: 'validating' })
   const mapped = projectIncludedHeads(mapReferences(records, identities) as PackageRecords)
+  // Cited reference manifests are stored as canonical JSON with their own checksum, so their
+  // bibliography identities must be remapped like every other packaged identity and the seal
+  // recomputed. The per-item PDF states share the same identity map and are remapped by
+  // mapReferences above.
+  for (const artifact of mapped.literatureCitations?.artifacts ?? []) {
+    const json = canonicalJson(
+      mapReferences(JSON.parse(artifact.manifestJson), identities) as CanonicalJson
+    )
+    artifact.manifestJson = json
+    artifact.checksum = sha256(json)
+  }
   for (const row of mapped.tables.ArtifactMessageSnapshot) {
     if (typeof row.storageKey !== 'string') throw new Error('Invalid Message snapshot storage key.')
     const file = resolveStorageKey(destinationRoot, row.storageKey)
@@ -880,6 +911,25 @@ export const prepareNativePublication = (
       batchBytes += bytes
     }
     flush()
+  }
+  // Cited-reference manifests travel beside the native tables because ArtifactLiteratureManifest
+  // stays outside the table allowlist, which older packages also have to parse. Insert them after the
+  // Versions they annotate; the publication still runs inside one deferred-foreign-key transaction.
+  for (const artifact of records.literatureCitations?.artifacts ?? []) {
+    const createdAt = Date.parse(artifact.createdAt)
+    if (!Number.isFinite(createdAt)) throw new Error('Invalid cited reference timestamp.')
+    statements.push({
+      sql: 'INSERT INTO "ArtifactLiteratureManifest" ("artifactVersionId","schemaVersion","styleId","locale","manifestJson","checksum","createdAt") VALUES (?,?,?,?,?,?,?)',
+      values: [
+        artifact.artifactVersionId,
+        artifact.schemaVersion,
+        artifact.styleId,
+        artifact.locale,
+        artifact.manifestJson,
+        artifact.checksum,
+        createdAt
+      ]
+    })
   }
   // Conversion and allocation finish before the sole application connection is acquired. No file
   // work, pacing or yields inside this atomic publication; the existing witness owns recovery.
