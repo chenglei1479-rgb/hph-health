@@ -6,7 +6,9 @@ import { VARIABLE_DEFINITION_MISSING_KEY_MESSAGE } from '../../shared/variable-d
 import { installMachineApproval } from '../phi/gate'
 import { ProviderTextGenerationService } from '../settings/provider-text-generation'
 import { defaultVariableDefinitionCompleter } from './model-client'
+import { buildVariableDefinitionPrompt } from './prompt'
 import { captureVariableDefinitionProviderTarget } from './provider-target'
+import { createVariableDefinitionService } from './service'
 import { createSettingsVariableDefinitionCompleter } from './settings-completer'
 
 const target = {
@@ -27,25 +29,51 @@ afterEach(() => {
 })
 
 describe('settings variable definition completer', () => {
-  it('calls the saved provider and keeps a dev env override optional', async () => {
+  it('calls the saved provider with the production prompt and keeps a dev env override optional', async () => {
     const fetchImpl = vi.fn(async () =>
       Response.json({
-        choices: [{ finish_reason: 'stop', message: { content: '[{"name":"年齢"}]' } }]
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: {
+              content: JSON.stringify([
+                {
+                  name: '年齢',
+                  definition: '年齢',
+                  recordType: '経過記録',
+                  coding: '',
+                  type: 'integer',
+                  allowedRange: '0-120'
+                }
+              ])
+            }
+          }
+        ]
       })
     )
     const complete = createSettingsVariableDefinitionCompleter({
       resolveTarget: async () => target,
       generate: new ProviderTextGenerationService(fetchImpl as typeof fetch)
     })
-    await expect(
-      complete('研究計画。対象は100例で、変数定義だけを返してください。')
-    ).resolves.toContain('年齢')
+    // Production reaches the provider through the service: it builds the instruction-wrapped prompt
+    // and releases it before the model call. Calling the completer with the raw plan was a test-only
+    // shape, and the PHI gate only rejected that shape.
+    const service = createVariableDefinitionService({ complete })
+    const table = await service.generate({
+      projectId: 'project-1',
+      researchPlan: '研究計画。対象は100例で、変数定義だけを返してください。'
+    })
+    // The service prepends the research-ID column; the model's variable follows it.
+    expect(table.variables.map((variable) => variable.name)).toEqual(['研究用ID', '年齢'])
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('https://hospital.openai.azure.com/v1/chat/completions')
     expect(String(init.headers && (init.headers as Record<string, string>).authorization)).toBe(
       'Bearer user-azure-key'
     )
-    expect(JSON.parse(String(init.body)).messages[1].content).toContain('100例')
+    const prompt = JSON.parse(String(init.body)).messages[1].content
+    expect(prompt).toContain('100例')
+    // The request carries the production wrapper, not the bare plan.
+    expect(prompt).toContain('研究計画だけを読み')
 
     vi.stubEnv('DRA_VARIABLE_DEFINITION_BASE_URL', 'http://127.0.0.1:9/v1')
     vi.stubEnv('DRA_VARIABLE_DEFINITION_MODEL', 'dev-model')
@@ -58,7 +86,9 @@ describe('settings variable definition completer', () => {
       const overridden = defaultVariableDefinitionCompleter(async () => {
         throw new Error('settings should not be read')
       })
-      await expect(overridden('dev plan 100')).resolves.toContain('dev')
+      await expect(overridden(buildVariableDefinitionPrompt('dev plan 100'))).resolves.toContain(
+        'dev'
+      )
     } finally {
       globalThis.fetch = originalFetch
     }

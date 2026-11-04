@@ -314,6 +314,7 @@ const REMOTE_LOCAL_ONLY_CHANNELS: GroupedInventory = {
     'remove-device-credential',
     'remove-github-token',
     'remove-notebook-network',
+    'reopen-onboarding',
     'retry-connector-projection',
     'retry-custom-server',
     'review-notebook-private-destination',
@@ -358,7 +359,7 @@ const REMOTE_LOCAL_ONLY_CHANNELS: GroupedInventory = {
   ],
   update: ['apply', 'cancel', 'download', 'recheck', 'recover'],
   uploads: ['stage-local-path'],
-  'variable-definition': ['export-template', 'generate'],
+  'variable-definition': ['availability', 'export-template', 'generate'],
   'writing-safeguards': [
     'get-ethics-approval',
     'get-ethics-protocol',

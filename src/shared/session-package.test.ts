@@ -41,6 +41,7 @@ it('transports Literature selection through the package operation contract', () 
         sizeBytes: 42,
         groupId: 'a',
         source: 'literature',
+        versionId: 'v',
         versionNumber: 1,
         dependentFiles: []
       }
