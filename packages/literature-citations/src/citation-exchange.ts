@@ -1,5 +1,5 @@
 import { LITERATURE_ITEM_TYPES, type LiteratureItemType } from './contracts.js'
-import type { CslItem, CslName } from './csl.js'
+import { cslFamilyText, type CslItem, type CslName } from './csl.js'
 
 // citeme-engine-wasm 0.3.8 exposes BibTeX month and day components as zero-based values.
 // Keep the correction at this format boundary; RIS and CSL dates are one-based.
@@ -67,8 +67,10 @@ const literalNamePrefix = 'Baselio literal creator: '
 const readableLiteralNamePrefixes = [literalNamePrefix, 'DRA literal creator: ']
 
 const lineValue = (value: string): string => value.replace(/[\r\n]+/gu, ' ').trim()
+// The particle may sit in its own CSL field (#135), so the surname is assembled by the same shared
+// rule the Library conversion uses. A literal (institution) name is written unchanged.
 const nameText = (name: CslName): string =>
-  name.literal ?? `${name.family ?? ''}, ${name.given ?? ''}`
+  name.literal ?? `${cslFamilyText(name)}, ${name.given ?? ''}`
 
 // BOOK A3/editor, A4/translator, ET/edition and J2/journal abbreviation follow Zotero's RIS mappings.
 // Labeled N1 notes preserve identifiers without misusing DOI or accession-number tags.

@@ -55,8 +55,23 @@ type CslName = Readonly<{
   family?: string
   given?: string
   literal?: string
+  'dropping-particle'?: string
   'non-dropping-particle'?: string
 }>
+
+// #152: one rule for reading a CSL surname, shared by the CSL->Library conversion and the RIS
+// exchange writer. A particle may live in its own field after #135, so every consumer must join it
+// back instead of reading `family` alone. No space is inserted after a surname that already ends with
+// a particle joiner ("Jean-" + "Paul"), and the join is exact for names separated by single spaces.
+export const cslFamilyText = (name: CslName): string => {
+  const parts = [name['dropping-particle'], name['non-dropping-particle'], name.family].filter(
+    (part): part is string => typeof part === 'string' && part.length > 0
+  )
+  return parts.reduce(
+    (surname, part) => `${surname}${surname && !/[-'’]$/u.test(surname) ? ' ' : ''}${part}`,
+    ''
+  )
+}
 
 type CslDate = Readonly<{ 'date-parts': readonly [readonly number[]] }>
 
@@ -95,8 +110,9 @@ type CslItem = Readonly<{
 // demote it on its own terms, which is how "von Elm" became "Elm, E. von" in APA.
 //
 // Only a leading run of lowercase-initial words is split out; everything else is passed through
-// untouched, and the split reconstructs the input exactly. A particle we have never seen is kept,
-// never filtered — dropping part of an author's name is worse than displaying one word too many.
+// untouched, and the split reconstructs the input exactly for names separated by single spaces. A
+// particle we have never seen is kept, never filtered — dropping part of an author's name is worse
+// than displaying one word too many.
 const leadingParticle = /^((?:\p{Ll}[\p{L}'’.-]*\s+)+)(\S.*)$/u
 
 const creatorName = (creator: LiteratureCreatorInput): CslName => {
@@ -284,16 +300,11 @@ const creatorsFromCsl = (
         const givenName = stringField(name, 'given')
         // Library names have no separate particle fields. Keep both CSL particle
         // categories in the surname so display and subsequent exports retain them.
-        const familyName = [
-          stringField(name, 'dropping-particle'),
-          stringField(name, 'non-dropping-particle'),
-          stringField(name, 'family')
-        ]
-          .filter(Boolean)
-          .reduce(
-            (surname, part) => `${surname}${surname && !/[-'’]$/u.test(surname) ? ' ' : ''}${part}`,
-            ''
-          )
+        const familyName = cslFamilyText({
+          'dropping-particle': stringField(name, 'dropping-particle'),
+          'non-dropping-particle': stringField(name, 'non-dropping-particle'),
+          family: stringField(name, 'family')
+        })
         return givenName || familyName
           ? [{ nameMode: 'person' as const, givenName, familyName, creatorType }]
           : []

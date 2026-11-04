@@ -64,11 +64,12 @@ describe('LiteratureCitationFormatter', () => {
     ])
     const references = [{ id: 'names', item }]
     const [formatted] = await formatter.formatReferences(references, 'vancouver', 'en-US')
-    // The style can move particles after the initials; the name parts must survive.
-    expect(formatted?.reference).toContain('Dijk')
-    expect(formatted?.reference).toContain('van')
-    expect(formatted?.reference).toContain('Cruz')
-    expect(formatted?.reference).toContain('de la')
+    // Vancouver declares demote-non-dropping-particle="sort-only": the particle stays with the
+    // family name when shown and is demoted only while sorting. Pinning the whole line proves the
+    // order instead of just that both words are somewhere in it.
+    expect(formatted?.reference).toBe(
+      '[1] van Dijk J, de la Cruz A. Name preservation. Journal 2024.'
+    )
     const reimported = await formatter.parseReferences(
       await formatter.exportReferences(references, 'ris')
     )
@@ -156,6 +157,43 @@ describe('LiteratureCitationFormatter', () => {
     expect(
       toCslItem('x', { ...reference, creators: [{ ...base, familyName: 'Yan' }] }).author
     ).toEqual([{ family: 'Yan', given: 'Erik' }])
+  })
+
+  // #152: RIS used to read `family` alone, so an editor or translator lost the particle the CSL
+  // conversion had moved into its own field. The round trip is the shape that catches it.
+  it('round-trips a particle editor and translator through RIS', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const creators = [
+      {
+        creatorType: 'editor' as const,
+        nameMode: 'person' as const,
+        givenName: 'Ada',
+        familyName: 'von Elm'
+      },
+      {
+        creatorType: 'translator' as const,
+        nameMode: 'person' as const,
+        givenName: 'Ada',
+        familyName: 'von Elm'
+      }
+    ]
+    const record: BibliographicRecord = {
+      ...reference,
+      itemType: 'book',
+      title: 'Edited volume',
+      issuedText: '2007',
+      issuedYear: 2007,
+      creators
+    }
+    const ris = await formatter.exportReferences([{ id: 'book', item: record }], 'ris')
+    const lines = ris.split('\n')
+    expect(lines).toContain('A3  - von Elm, Ada')
+    expect(lines).toContain('A4  - von Elm, Ada')
+    expect(lines).not.toContain('A3  - Elm, Ada')
+    expect(lines).not.toContain('A4  - Elm, Ada')
+    const reimported = await formatter.parseReferences(ris)
+    expect(reimported.errors).toEqual([])
+    expect(reimported.items[0]?.creators).toEqual(creators)
   })
 
   it('preserves PubMed journal abbreviations through RIS export and reimport', async () => {
