@@ -144,10 +144,15 @@ gate('python_loop.py', () => {
         ].join('\n')
       )
       const warning =
-        '<cell>:5: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown\n'
+        '<cell>:5: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown'
+      // A cold font cache adds matplotlib's own "building the font cache" notice to the same run, so
+      // select the display warning instead of assuming it is the only one recorded. Exactly one is
+      // required: recording one warning twice is the regression this case exists to catch.
+      const displayWarnings = (response.warnings ?? []).filter((entry) => entry.includes(warning))
       expect(response.error).toBeNull()
-      expect(response.stderr).toBe(warning)
-      expect(response.warnings).toEqual([warning])
+      expect(displayWarnings).toHaveLength(1)
+      // The warning also stays a stderr byte run; nothing may delete those bytes.
+      expect(response.stderr).toContain(displayWarnings[0])
       expect(response.figures).toHaveLength(1)
       const chart = readFileSync(response.figures[0].path)
       expect(chart.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
@@ -156,8 +161,8 @@ gate('python_loop.py', () => {
         ...parsed,
         figures: [{ mime: 'image/png', base64: chart.toString('base64') }]
       })
-      expect(mapped.warnings).toEqual([warning])
-      expect(mapped.stderr).toBe(warning)
+      expect((mapped.warnings ?? []).filter((entry) => entry.includes(warning))).toHaveLength(1)
+      expect(mapped.stderr).toContain(displayWarnings[0])
       expect(mapped.traceback).toBe('')
       expect(mapped.outputs).toContainEqual({
         type: 'display',
