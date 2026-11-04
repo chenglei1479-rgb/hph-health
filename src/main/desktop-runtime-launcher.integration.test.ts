@@ -115,7 +115,7 @@ ${fixtureSource}`
         packaged: true,
         timeoutMs: 1500
       })
-    ).rejects.toThrow('exited during startup (0)')
+    ).rejects.toThrow(/exited during startup \(0\).*exitCodeHex=00000000/)
   })
   it('returns classified credential recovery across the actual child-process boundary', async () => {
     const root = await mkdtemp(join(tmpdir(), 'desktop-launch-credential-'))

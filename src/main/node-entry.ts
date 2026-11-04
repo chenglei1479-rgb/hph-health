@@ -1,3 +1,5 @@
+import { installBackendFatalDiagnostics } from './backend-fatal-diagnostics'
+import { traceDatabaseClientStartup } from './database/database-client-startup-trace'
 import { withRuntimeShutdownLifetime } from './runtime-shutdown-lifetime'
 import {
   installationRootForEntry,
@@ -82,6 +84,7 @@ import { configureUserDataPath } from './user-data-path'
 import { parseWebModeOptions } from './web-service/options'
 
 const startupReporter = createBackendStartupReporter()
+installBackendFatalDiagnostics(startupReporter)
 
 async function main(): Promise<void> {
   installMainPrereleaseLockdown()
@@ -332,7 +335,9 @@ async function main(): Promise<void> {
     const databaseStartup = createDatabaseStartupOwner({
       reportBlocked: databaseLogging.reportBlocked,
       verifyDatabase: async (onProgress) => {
-        await getProjectDbClient(configRoot, databaseLogging.migrationOptions(onProgress))
+        await traceDatabaseClientStartup(join(configRoot, 'logs'), () =>
+          getProjectDbClient(configRoot, databaseLogging.migrationOptions(onProgress))
+        )
       },
       buildDiagnostics: (error) =>
         buildStartupDiagnostics(error, { configRoot, dataRoot: startupSettings.dataRoot }),
@@ -632,7 +637,9 @@ async function main(): Promise<void> {
     }
     abortStartupIfStopping()
     const { createWebServiceController } = await import('./web-service')
-    remoteAccess = await RemoteAccessService.create({ getLocale: () => localeOwner.snapshot().locale })
+    remoteAccess = await RemoteAccessService.create({
+      getLocale: () => localeOwner.snapshot().locale
+    })
     runtime.bindRemoteAccess(remoteAccess)
     web = createWebServiceController({
       ...runtime,

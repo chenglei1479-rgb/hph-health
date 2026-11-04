@@ -1,3 +1,4 @@
+import { observeOwnedRuntimeProcess, runtimeExitCodeHex } from './runtime-process-diagnostics'
 import { runtimeStartupOptionsSchema } from './desktop-runtime-info'
 import { DesktopRuntimeStartupError } from './desktop-startup-recovery'
 import {
@@ -70,6 +71,16 @@ export class DesktopRuntimeStoppingError extends Error {
     super('The running Open-Science server is already shutting down.')
     this.name = 'DesktopRuntimeStoppingError'
   }
+}
+
+export const backendStartupExitMessage = (
+  child: Pick<ChildProcess, 'exitCode' | 'signalCode'>,
+  logs: string
+): string => {
+  // A signal-only exit has no numeric code, so there is no hex to report; "(null) [exitCodeHex=null]"
+  // told the reader nothing and looked like a defect in our own diagnostics.
+  const hex = runtimeExitCodeHex(child.exitCode)
+  return `Node backend exited during startup (${child.signalCode ?? child.exitCode})${hex === null ? '' : ` [exitCodeHex=${hex}]`}. See ${logs}.`
 }
 
 export type DesktopBackendLaunch = { endpoint: DesktopEndpoint; startedProcess?: ChildProcess }
@@ -402,11 +413,13 @@ export async function startOrAttachDesktopBackend(options: {
   let child: ChildProcess
   let failure: Error | undefined
   let status: BackendStartupStatus | undefined
+  let processObservation: ReturnType<typeof observeOwnedRuntimeProcess> | undefined
   const startedAt = Date.now()
   const onMessage = (message: unknown): void => {
     const result = backendStartupStatusSchema.safeParse(message)
     if (result.success && result.data.attemptId === attemptId && status?.kind !== 'failed') {
       status = result.data
+      processObservation?.phase(status.stage)
       try {
         options.onStatus?.({ ...status, elapsedMs: Date.now() - startedAt })
       } catch {
@@ -434,6 +447,7 @@ export async function startOrAttachDesktopBackend(options: {
         stdio: ['ignore', file.fd, file.fd, 'ipc']
       }
     )
+    processObservation = observeOwnedRuntimeProcess(child)
     // Spawn errors can fire before the asynchronous descriptor close settles.
     child.on('error', onError)
     child.on('message', onMessage)
@@ -470,7 +484,7 @@ export async function startOrAttachDesktopBackend(options: {
       }
       if (child.signalCode || child.exitCode !== null)
         throw new DesktopBackendStartupError(
-          `Node backend exited during startup (${child.signalCode ?? child.exitCode}). See ${logs}.`,
+          backendStartupExitMessage(child, logs),
           status?.stage ?? 'bootstrap',
           true,
           logs,

@@ -1,3 +1,4 @@
+import { observeOwnedRuntimeProcess } from './runtime-process-diagnostics'
 import { WEB_EVENT_STREAM_PROTOCOL_VERSION } from '../shared/web-rpc-contract'
 import { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
@@ -217,6 +218,14 @@ it('records an owned runtime shutdown close as informational', async () => {
   expect(mocks.warn).not.toHaveBeenCalled()
   expect(mocks.info).toHaveBeenCalledExactlyOnceWith('desktop runtime disconnected', {
     phase: 'shutdown',
+    runtimeProcess: {
+      pid: 42,
+      exitCode: null,
+      exitCodeHex: null,
+      signal: null,
+      uptimeMs: null,
+      startupPhase: null
+    },
     reason: 'transport-close',
     closeCode: 1006,
     pendingRequests: 0,
@@ -257,4 +266,37 @@ it.each([
   await expect(result).resolves.toBeNull()
   expect(JSON.stringify(mocks.warn.mock.calls)).not.toContain('private')
   client.close()
+})
+
+it('records the actual native exit after the WebSocket closes first', async () => {
+  const child = new ChildProcess()
+  Object.defineProperty(child, 'pid', { value: 42 })
+  let clock = 100
+  observeOwnedRuntimeProcess(child, () => clock).phase('database')
+  const { socket } = await setup(vi.fn(), child)
+  clock = 150
+  socket.emit('close', 1006, Buffer.from(''))
+  expect(mocks.warn).toHaveBeenCalledWith(
+    'desktop runtime disconnected',
+    expect.objectContaining({
+      closeCode: 1006,
+      runtimeProcess: expect.objectContaining({
+        exitCode: null,
+        signal: null,
+        uptimeMs: 50,
+        startupPhase: 'database'
+      })
+    })
+  )
+  clock = 200
+  child.emit('exit', null, 'SIGSEGV')
+  expect(mocks.warn).toHaveBeenCalledWith(
+    'desktop runtime process exited',
+    expect.objectContaining({
+      exitCode: null,
+      signal: 'SIGSEGV',
+      uptimeMs: 100,
+      startupPhase: 'database'
+    })
+  )
 })

@@ -2,8 +2,11 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import {
+  closeSync,
   copyFileSync,
-  createWriteStream,
+  fstatSync,
+  openSync,
+  readSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -21,6 +24,7 @@ import {
   DRA_LOGIN_READY_LINE,
   DRA_ONBOARDING_READY_LINE,
   DRA_TERMS_READY_LINE,
+  defaultPidAlive,
   waitForPackagedStartup
 } from './wait-for-packaged-startup.mjs'
 
@@ -142,6 +146,12 @@ export const signedOutSmokeEnv = (base, paths) => {
 // An upgraded beta.10 profile already has a workspace history file next to settings.
 export const beta10ResearchHistoryJson = () => '{"session":"retained"}\n'
 
+export const PRERELEASE_READY_LINES = [
+  DRA_HOME_READY_LINE,
+  DRA_TERMS_READY_LINE,
+  DRA_ONBOARDING_READY_LINE
+]
+
 export const SIGNED_OUT_READY_LINES = [
   DRA_HOME_READY_LINE,
   DRA_LOGIN_READY_LINE,
@@ -256,20 +266,186 @@ const seedBeta10UserData = ({ configRoot, dataRoot, userData }) => {
 }
 
 const mirrorAppLogs = (userData, workspaceLogs) => {
-  const logs = join(userData, 'logs')
-  if (!existsSync(logs)) return
-  const target = join(workspaceLogs, 'app-logs')
-  mkdirSync(target, { recursive: true })
-  for (const name of readdirSync(logs)) {
+  // The native shell moved to desktop-logs; retain legacy logs too, without name collisions.
+  for (const directory of ['desktop-logs', 'logs']) {
+    const logs = join(userData, directory)
+    if (!existsSync(logs)) continue
+    let names
     try {
-      copyFileSync(join(logs, name), join(target, name))
+      names = readdirSync(logs)
     } catch {
-      // Rotated logs can be directories. The main log is a file.
+      // The main-log tail below records a read error instead of masking the launch outcome.
+      continue
+    }
+    const target = join(workspaceLogs, 'app-logs', directory)
+    mkdirSync(target, { recursive: true })
+    for (const name of names) {
+      try {
+        copyFileSync(join(logs, name), join(target, name))
+      } catch {
+        // Rotated log directories are not regular files. diagnostics records main.log read errors.
+      }
     }
   }
 }
 
+const backendLogSources = (configRoot) => {
+  if (!configRoot) return []
+  const directory = join(configRoot, 'logs')
+  let names = []
+  try {
+    names = readdirSync(directory).filter((name) => /^desktop-backend-.*\.log$/.test(name))
+  } catch {
+    /* Missing logs are recorded below. */
+  }
+  return [
+    { kind: 'backend main', path: join(directory, 'main.log') },
+    { kind: 'database startup trace', path: join(directory, 'database-startup-trace.log') },
+    ...names.map((name) => ({ kind: 'backend stdout/stderr', path: join(directory, name) }))
+  ]
+}
+
+const mirrorBackendLogs = (configRoot, workspaceLogs) => {
+  if (!configRoot) return
+  const directory = join(configRoot, 'logs')
+  let names
+  try {
+    names = readdirSync(directory).filter((name) => name.endsWith('.log'))
+  } catch {
+    return
+  }
+  const target = join(workspaceLogs, 'app-logs', 'backend')
+  mkdirSync(target, { recursive: true })
+  for (const name of names) mirrorLog(join(directory, name), join(target, name))
+}
+
+const DIAGNOSTIC_TAIL_BYTES = 16 * 1024
+
+const logTail = (kind, path) => {
+  let fd
+  try {
+    fd = openSync(path, 'r')
+    const size = fstatSync(fd).size
+    const buffer = Buffer.alloc(Math.min(size, DIAGNOSTIC_TAIL_BYTES))
+    const length = readSync(fd, buffer, 0, buffer.length, Math.max(0, size - buffer.length))
+    return {
+      kind,
+      path,
+      state: 'read',
+      bytes: size,
+      tail: buffer.subarray(0, length).toString('utf8')
+    }
+  } catch (error) {
+    return {
+      kind,
+      path,
+      state: error.code === 'ENOENT' ? 'missing' : 'read-error',
+      error: String(error)
+    }
+  } finally {
+    if (fd !== undefined) closeSync(fd)
+  }
+}
+
+const exitCodeHex = (exitCode) =>
+  typeof exitCode === 'number' ? (exitCode >>> 0).toString(16).toUpperCase().padStart(8, '0') : null
+
+export const packagedProcessState = (child) => ({
+  pid: child.pid,
+  exitCode: child.exitCode,
+  exitCodeHex: exitCodeHex(child.exitCode),
+  signalCode: child.signalCode,
+  aliveBeforeCleanup: child.pid !== undefined && defaultPidAlive(child.pid)
+})
+
+// Job logs get only this allowlist. Paths, log tails and free-form error messages stay in artifacts.
+export const publishStartupDiagnosticSummary = (
+  diagnostics,
+  writeJobLog = (message) => {
+    process.stdout.write(message)
+  }
+) => {
+  const state = diagnostics.process ?? {}
+  const summary = {
+    label: diagnostics.label,
+    reason: diagnostics.reason,
+    expectedReadyLines: diagnostics.expectedReadyLines,
+    process: {
+      pid: typeof state.pid === 'number' ? state.pid : null,
+      exitCode: typeof state.exitCode === 'number' ? state.exitCode : null,
+      exitCodeHex: exitCodeHex(state.exitCode),
+      signalCode:
+        typeof state.signalCode === 'string' && /^SIG[A-Z0-9]+$/.test(state.signalCode)
+          ? state.signalCode
+          : null,
+      aliveBeforeCleanup:
+        typeof state.aliveBeforeCleanup === 'boolean' ? state.aliveBeforeCleanup : null
+    },
+    logs: diagnostics.logs.map(({ kind, state, bytes }) => ({
+      kind,
+      state,
+      ...(typeof bytes === 'number' ? { bytes } : {})
+    }))
+  }
+  writeJobLog(JSON.stringify(summary) + '\n')
+}
+
+const writeStartupDiagnostics = ({
+  workspaceLogs,
+  label,
+  result,
+  readyLines,
+  timeoutMs,
+  logFile,
+  stdoutPath,
+  stderrPath,
+  userData,
+  configRoot,
+  processState,
+  writeJobLog
+}) => {
+  const logs = [
+    logTail('startup marker', logFile),
+    logTail('stdout', stdoutPath),
+    logTail('stderr', stderrPath),
+    ...backendLogSources(configRoot).map(({ kind, path }) => logTail(kind, path)),
+    ...(userData
+      ? [
+          logTail('main (current)', join(userData, 'desktop-logs', 'main.log')),
+          logTail('main (legacy)', join(userData, 'logs', 'main.log'))
+        ]
+      : [])
+  ]
+  const diagnostics = {
+    label,
+    reason: result.reason,
+    timeoutMs,
+    expectedReadyLines: readyLines,
+    process: processState,
+    // These are observations, never additional sources of readiness.
+    logs
+  }
+  writeFileSync(
+    join(workspaceLogs, 'diagnostics.json'),
+    JSON.stringify(diagnostics, null, 2) + '\n'
+  )
+  const text =
+    [
+      `${label}: ${result.reason}`,
+      `Waiting for ANY of these exact ready lines (timeout ${timeoutMs}ms):`,
+      ...readyLines.map((line) => `  ${line}`),
+      `Process before cleanup: ${JSON.stringify(processState)}`,
+      ...logs.map(
+        (log) =>
+          `\n--- ${log.kind}: ${log.path} [${log.state}${log.bytes === undefined ? '' : `, ${log.bytes} bytes`}] ---\n${log.tail ?? log.error}`
+      )
+    ].join('\n') + '\n'
+  writeFileSync(join(workspaceLogs, 'diagnostics.txt'), text)
+  if (!result.ok) publishStartupDiagnosticSummary(diagnostics, writeJobLog)
+}
+
 const mirrorLog = (source, target) => {
+  if (resolve(source) === resolve(target)) return
   try {
     copyFileSync(source, target)
   } catch {
@@ -303,8 +479,9 @@ const signedOutPaths = (paths) => ({
   stderrPath: join(dirname(paths.stderrPath), 'stderr-signed-out.log')
 })
 
-const launchRecorded = async ({
+export const launchRecorded = async ({
   binary,
+  args = [],
   env,
   logFile,
   stdoutPath,
@@ -314,10 +491,61 @@ const launchRecorded = async ({
   label,
   userData,
   readyLines,
-  rejectAccountLoginAtHome = false
+  rejectAccountLoginAtHome = false,
+  writeJobLog
 }) => {
-  note(`Launching ${binary} (${label}).`)
-  const child = launchPackagedApp(binary, env)
+  const configRoot = env.OPEN_SCIENCE_CONFIG_ROOT
+  note(`Launching packaged app (${label}).`)
+  mkdirSync(workspaceLogs, { recursive: true })
+  // Capture directly in the upload directory, even if the outer CI step is cancelled.
+  stdoutPath = join(workspaceLogs, 'stdout.log')
+  stderrPath = join(workspaceLogs, 'stderr.log')
+  // Write context before spawning, including failures/cancellations before the waiter starts.
+  writeFileSync(
+    join(workspaceLogs, 'launch.json'),
+    JSON.stringify(
+      {
+        binary,
+        args,
+        label,
+        platform: process.platform,
+        arch: process.arch,
+        timeoutMs,
+        expectedReadyLines: readyLines,
+        logFile,
+        stdoutPath,
+        stderrPath,
+        userData,
+        configRoot
+      },
+      null,
+      2
+    ) + '\n'
+  )
+  let child
+  try {
+    child = await launchPackagedApp(binary, env, { args, stdoutPath, stderrPath })
+  } catch (error) {
+    const result = { ok: false, reason: 'spawn-error', detail: String(error) }
+    mirrorLog(stdoutPath, join(workspaceLogs, 'stdout.log'))
+    mirrorLog(stderrPath, join(workspaceLogs, 'stderr.log'))
+    writeFileSync(join(workspaceLogs, 'result.txt'), `${label}\n${result.reason}\n${result.detail}`)
+    writeStartupDiagnostics({
+      workspaceLogs,
+      label,
+      result,
+      readyLines,
+      timeoutMs,
+      logFile,
+      stdoutPath,
+      stderrPath,
+      userData,
+      configRoot,
+      processState: { error: String(error) },
+      writeJobLog
+    })
+    return 1
+  }
   return finish({
     child,
     logFile,
@@ -328,7 +556,9 @@ const launchRecorded = async ({
     label,
     userData,
     readyLines,
-    rejectAccountLoginAtHome
+    rejectAccountLoginAtHome,
+    configRoot,
+    writeJobLog
   })
 }
 
@@ -376,7 +606,7 @@ const launchPrereleaseThenSignedOut = async ({
     workspaceLogs,
     label: `${label} prerelease`,
     userData: paths.userData,
-    readyLines: [DRA_HOME_READY_LINE, DRA_TERMS_READY_LINE, DRA_ONBOARDING_READY_LINE]
+    readyLines: PRERELEASE_READY_LINES
   })
   if (homeCode !== 0) return homeCode
   const signedOut = signedOutPaths(paths)
@@ -396,16 +626,30 @@ const launchPrereleaseThenSignedOut = async ({
   })
 }
 
-const launchPackagedApp = (binary, env) => {
-  const child = spawn(binary, [], {
-    detached: true,
-    stdio: process.platform === 'win32' ? 'ignore' : ['ignore', 'pipe', 'pipe'],
-    env,
-    cwd: dirname(binary),
-    windowsHide: false
-  })
-  if (!child.pid) throw new Error(`Failed to launch ${binary}.`)
-  return child
+const launchPackagedApp = async (binary, env, { args, stdoutPath, stderrPath }) => {
+  const handles = []
+  try {
+    for (const path of [stdoutPath, stderrPath]) {
+      mkdirSync(dirname(path), { recursive: true })
+      handles.push(openSync(path, 'w'))
+    }
+    // Inherit file handles on every platform. Windows previously discarded both streams; file
+    // handles also avoid copying a pipe before its write stream has finished flushing.
+    const child = spawn(binary, args, {
+      detached: true,
+      stdio: ['ignore', ...handles],
+      env,
+      cwd: dirname(binary),
+      windowsHide: false
+    })
+    await new Promise((resolveSpawn, rejectSpawn) => {
+      child.once('spawn', resolveSpawn)
+      child.once('error', rejectSpawn)
+    })
+    return child
+  } finally {
+    for (const fd of handles) closeSync(fd)
+  }
 }
 
 const publishSummary = (label, result) => {
@@ -431,13 +675,14 @@ const finish = async ({
   workspaceLogs,
   label,
   userData,
+  configRoot,
   readyLines,
-  rejectAccountLoginAtHome = false
+  rejectAccountLoginAtHome = false,
+  writeJobLog
 }) => {
   mkdirSync(workspaceLogs, { recursive: true })
-  if (child.stdout) child.stdout.pipe(createWriteStream(stdoutPath))
-  if (child.stderr) child.stderr.pipe(createWriteStream(stderrPath))
   let result
+  let processState
   try {
     result = await waitForPackagedStartup({
       logPath: logFile,
@@ -446,15 +691,33 @@ const finish = async ({
       extraPaths: [stdoutPath, stderrPath],
       readyLines
     })
+  } catch (error) {
+    result = { ok: false, reason: 'wait-error', detail: error.stack ?? String(error) }
   } finally {
+    processState = packagedProcessState(child)
     stopPackagedApp(child.pid)
     mirrorLog(logFile, join(workspaceLogs, 'startup.log'))
     mirrorLog(stdoutPath, join(workspaceLogs, 'stdout.log'))
     mirrorLog(stderrPath, join(workspaceLogs, 'stderr.log'))
     if (userData) mirrorAppLogs(userData, workspaceLogs)
+    mirrorBackendLogs(configRoot, workspaceLogs)
   }
   if (rejectAccountLoginAtHome && userData)
     result = rejectHomeThatStillRequiredLogin(userData, result)
+  writeStartupDiagnostics({
+    workspaceLogs,
+    label,
+    result,
+    readyLines,
+    timeoutMs,
+    logFile,
+    stdoutPath,
+    stderrPath,
+    userData,
+    configRoot,
+    processState,
+    writeJobLog
+  })
   writeFileSync(join(workspaceLogs, 'result.txt'), `${label}\n${result.reason}\n${result.detail}`)
   publishSummary(label, result)
   return result.ok ? 0 : 1

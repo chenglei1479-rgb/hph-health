@@ -1,5 +1,5 @@
 import { appendFile, mkdir, open, rename, rm, stat } from 'node:fs/promises'
-import { appendFileSync, mkdirSync } from 'node:fs'
+import { openSync, writeSync, fsyncSync, closeSync, mkdirSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { extname, join } from 'node:path'
@@ -908,10 +908,11 @@ const flushLogs = (): Promise<LogFlushResult> => {
 const writeFatalLogSync = (scope: string, message: string, data?: unknown): void => {
   if (!config || LEVEL_ORDER.error < LEVEL_ORDER[config.minLevel]) return
 
+  let fd: number | undefined
   try {
     mkdirSync(config.logDir, { recursive: true })
-    appendFileSync(
-      join(config.logDir, config.fileName),
+    fd = openSync(join(config.logDir, config.fileName), 'a')
+    const record = Buffer.from(
       `${formatLine(
         'error',
         scope,
@@ -922,8 +923,25 @@ const writeFatalLogSync = (scope: string, message: string, data?: unknown): void
       )}\n`,
       'utf8'
     )
+    let offset = 0
+    while (offset < record.length) {
+      const written = writeSync(fd, record, offset, record.length - offset)
+      if (written <= 0) throw new Error('Fatal log write made no progress.')
+      offset += written
+    }
+    // Align with the team's fatal-evidence durability standard. Append-only data already survives
+    // a process kill on the same running machine; fsync strengthens power/kernel-failure durability.
+    fsyncSync(fd)
   } catch {
     // Fatal logging is best-effort and must never mask the original uncaught failure.
+  } finally {
+    if (fd !== undefined) {
+      try {
+        closeSync(fd)
+      } catch {
+        /* Never mask the fatal process failure. */
+      }
+    }
   }
 }
 
