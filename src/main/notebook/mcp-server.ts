@@ -799,6 +799,14 @@ const compactNotebookExecutionResult = (raw: unknown, input: unknown = {}): unkn
   const compactOutputs = compactExecutionOutputs(record.outputs, stream('traceback'))
   const workingFiles = compactWorkingFiles(record.workingFiles)
   const artifacts = compactArtifacts(record.artifacts)
+  // Interpreter warnings are evidence that a completed run still succeeded. Project them with the
+  // same cap as the environment-package projection (5 entries x 500 chars), and disclose what the
+  // cap dropped, so the next model step can tell "succeeded with warnings" apart from "no output".
+  const warningSource = Array.isArray(record.warnings) ? record.warnings : []
+  const warnings = warningSource
+    .filter((warning): warning is string => typeof warning === 'string')
+    .slice(0, 5)
+    .map((warning) => clipToolDiagnostic(warning, 500))
   const fileEvidence = compactFileEvidence(record.fileEvidence)
   const staleness = compactStaleness(record.staleness, EXECUTION_STALENESS_LIMITS)
   const filesOmitted =
@@ -871,6 +879,10 @@ const compactNotebookExecutionResult = (raw: unknown, input: unknown = {}): unkn
     ...(stdout.text ? { stdout: stdout.text } : {}),
     ...(stderr.text ? { stderr: stderr.text } : {}),
     ...(traceback.text ? { traceback: traceback.text } : {}),
+    ...(warnings.length ? { warnings } : {}),
+    ...(warningSource.length > warnings.length
+      ? { omittedWarningCount: warningSource.length - warnings.length }
+      : {}),
     ...(hint ? { hint } : {}),
     ...(compactOutputs.outputs.length ? { outputs: compactOutputs.outputs } : {}),
     ...(compactOutputs.omitted > 0 ? { omittedOutputCount: compactOutputs.omitted } : {}),

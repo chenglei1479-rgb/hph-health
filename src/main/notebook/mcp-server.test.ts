@@ -2914,6 +2914,46 @@ describe('compactNotebookExecutionResult', () => {
       compactNotebookExecutionResult({ errorCode: 'shell-cleanup-incomplete', exitCode: null })
     ).not.toHaveProperty('recovery')
   })
+  it('keeps bounded warnings beside an unchanged stderr for a completed run', () => {
+    const warning = '<cell>:5: UserWarning: FigureCanvasAgg is non-interactive'
+    const stderr = `${warning}\n`
+    const compact = compactNotebookExecutionResult({
+      runId: 'warning-run',
+      status: 'completed',
+      stderr,
+      warnings: [warning],
+      text: { stdout: '', stderr, traceback: '' }
+    }) as Record<string, unknown>
+    expect(compact.status).toBe('completed')
+    expect(compact.warnings).toEqual([warning])
+    // A warning is also a stderr byte run; compacting must never delete that evidence.
+    expect(compact.stderr).toBe(stderr)
+    expect(compact).not.toHaveProperty('traceback')
+    expect(compact).not.toHaveProperty('omittedWarningCount')
+  })
+  it('bounds agent-facing warnings and discloses how many it dropped', () => {
+    const warnings = Array.from({ length: 7 }, (_, index) => `warning-${index}`)
+    const compact = compactNotebookExecutionResult({ status: 'completed', warnings })
+    expect(compact).toMatchObject({ warnings: warnings.slice(0, 5), omittedWarningCount: 2 })
+  })
+  it('keeps a failed run failed with its complete traceback even when it also warned', () => {
+    const traceback = [
+      'Traceback (most recent call last):',
+      '  File "<cell>", line 2, in <module>',
+      'ValueError: real failure'
+    ].join('\n')
+    const compact = compactNotebookExecutionResult({
+      runId: 'failed-run',
+      status: 'failed',
+      warnings: ['<cell>:1: UserWarning: before failure'],
+      stderr: '<cell>:1: UserWarning: before failure\n',
+      traceback,
+      text: { stdout: '', stderr: '', traceback }
+    }) as Record<string, unknown>
+    expect(compact.status).toBe('failed')
+    expect(compact.traceback).toBe(traceback)
+    expect(compact.warnings).toEqual(['<cell>:1: UserWarning: before failure'])
+  })
   const runSummary = (text: {
     stdout?: string
     stderr?: string
