@@ -76,8 +76,12 @@ export class DesktopRuntimeStoppingError extends Error {
 export const backendStartupExitMessage = (
   child: Pick<ChildProcess, 'exitCode' | 'signalCode'>,
   logs: string
-): string =>
-  `Node backend exited during startup (${child.signalCode ?? child.exitCode}) [exitCodeHex=${runtimeExitCodeHex(child.exitCode)}]. See ${logs}.`
+): string => {
+  // A signal-only exit has no numeric code, so there is no hex to report; "(null) [exitCodeHex=null]"
+  // told the reader nothing and looked like a defect in our own diagnostics.
+  const hex = runtimeExitCodeHex(child.exitCode)
+  return `Node backend exited during startup (${child.signalCode ?? child.exitCode})${hex === null ? '' : ` [exitCodeHex=${hex}]`}. See ${logs}.`
+}
 
 export type DesktopBackendLaunch = { endpoint: DesktopEndpoint; startedProcess?: ChildProcess }
 

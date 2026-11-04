@@ -316,3 +316,13 @@ it.each([
   expect(message).toContain(`(${code})`)
   expect(message).toContain(`exitCodeHex=${hex}`)
 })
+
+it('omits the hex segment when a signal ended the backend with no numeric exit code', () => {
+  const message = backendStartupExitMessage(
+    { exitCode: null, signalCode: 'SIGTERM' },
+    '/artifact/logs'
+  )
+  expect(message).toContain('(SIGTERM)')
+  expect(message).not.toContain('exitCodeHex')
+  expect(message).not.toContain('null')
+})
