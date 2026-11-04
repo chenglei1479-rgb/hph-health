@@ -64,16 +64,136 @@ describe('LiteratureCitationFormatter', () => {
     ])
     const references = [{ id: 'names', item }]
     const [formatted] = await formatter.formatReferences(references, 'vancouver', 'en-US')
-    // The style can move particles after the initials; the name parts must survive.
-    expect(formatted?.reference).toContain('Dijk')
-    expect(formatted?.reference).toContain('van')
-    expect(formatted?.reference).toContain('Cruz')
-    expect(formatted?.reference).toContain('de la')
+    // Vancouver declares demote-non-dropping-particle="sort-only": the particle stays with the
+    // family name when shown and is demoted only while sorting. Pinning the whole line proves the
+    // order instead of just that both words are somewhere in it.
+    expect(formatted?.reference).toBe(
+      '[1] van Dijk J, de la Cruz A. Name preservation. Journal 2024.'
+    )
     const reimported = await formatter.parseReferences(
       await formatter.exportReferences(references, 'ris')
     )
     expect(reimported.errors).toEqual([])
     expect(reimported.items[0]?.creators).toEqual(item.creators)
+  })
+
+  // #135: APA declares demote-non-dropping-particle="never" (resources/apa.csl line 2), so the
+  // particle stays with the family name in both the reference list and the in-text citation.
+  // Before the CSL conversion split the particle out, the engine demoted it on its own terms: the
+  // reference list printed "Elm, E. von." and the citation said "(Elm, 2007)".
+  it('keeps a name particle with the family name in APA references and citations', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const parsed = await formatter.parseReferences(
+      'PMID- 12345678\nTI  - STROBE statement\nJT  - Annals of internal medicine\n' +
+        'FAU - von Elm, Erik\nAU  - von Elm E\nDP  - 2007 Oct 16\n'
+    )
+    expect(parsed.errors).toEqual([])
+    const item = parsed.items[0]!
+    // The import keeps the particle; the defect was in the conversion to CSL, not in the import.
+    expect(item.creators).toMatchObject([{ givenName: 'Erik', familyName: 'von Elm' }])
+
+    const [formatted] = await formatter.formatReferences([{ id: 'strobe', item }], 'apa', 'en-US')
+    expect(formatted?.reference).toContain('von Elm, E. (2007)')
+    expect(formatted?.reference).not.toContain('Elm, E. von')
+    expect(formatted?.inText).toBe('(von Elm, 2007)')
+  })
+
+  // The Library page exports through `exportReferences`, which also converts with `toCslItem`
+  // (citation-formatter.ts:337 and :352). The renderer suite that drives that path cannot be
+  // collected in this checkout (see the PR body), so the export half is pinned here with the same
+  // real formatter and the same record shape.
+  it('keeps the particle in RIS and BibTeX exports', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const parsed = await formatter.parseReferences(
+      'PMID- 12345678\nTI  - STROBE statement\nJT  - Annals of internal medicine\n' +
+        'FAU - von Elm, Erik\nAU  - von Elm E\nDP  - 2007 Oct 16\n'
+    )
+    const references = [{ id: 'strobe', item: parsed.items[0]! }]
+
+    expect(await formatter.exportReferences(references, 'ris')).toContain('AU  - von Elm, Erik')
+    expect(await formatter.exportReferences(references, 'bibtex')).toContain('{von Elm, Erik}')
+  })
+
+  it('leaves names without a particle exactly as they were', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const parsed = await formatter.parseReferences(
+      'PMID- 12345679\nTI  - Plain name\nJT  - Journal of Plain Names\nFAU - Yan, Shi-Qi\nDP  - 2024\n'
+    )
+    const item = parsed.items[0]!
+    const [formatted] = await formatter.formatReferences([{ id: 'plain', item }], 'apa', 'en-US')
+
+    expect(formatted?.reference).toContain('Yan, S.-Q. (2024)')
+    expect(formatted?.inText).toBe('(Yan, 2024)')
+  })
+
+  // The red line for this ticket: an unrecognised particle is carried through, not filtered by a
+  // hard-coded list. Losing a word from an author's name is worse than showing one too many.
+  it('keeps a particle it has never seen instead of dropping it', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const parsed = await formatter.parseReferences(
+      'PMID- 12345680\nTI  - Unlisted particle\nJT  - Journal of Unlisted Names\n' +
+        'FAU - qwerty Smith, Ana\nFAU - de la Cruz, Jan\nDP  - 2024\n'
+    )
+    const item = parsed.items[0]!
+    expect(item.creators).toMatchObject([
+      { givenName: 'Ana', familyName: 'qwerty Smith' },
+      { givenName: 'Jan', familyName: 'de la Cruz' }
+    ])
+
+    const [formatted] = await formatter.formatReferences([{ id: 'unlisted', item }], 'apa', 'en-US')
+    expect(formatted?.reference).toContain('qwerty Smith')
+    expect(formatted?.reference).toContain('de la Cruz')
+    expect(formatted?.inText).toContain('qwerty Smith')
+  })
+
+  it('converts a leading particle into the CSL field and reconstructs it losslessly', () => {
+    const base = { nameMode: 'person' as const, givenName: 'Erik', creatorType: 'author' as const }
+    expect(
+      toCslItem('x', { ...reference, creators: [{ ...base, familyName: 'von Elm' }] }).author
+    ).toEqual([{ family: 'Elm', given: 'Erik', 'non-dropping-particle': 'von' }])
+    expect(
+      toCslItem('x', { ...reference, creators: [{ ...base, familyName: 'de la Cruz' }] }).author
+    ).toEqual([{ family: 'Cruz', given: 'Erik', 'non-dropping-particle': 'de la' }])
+    expect(
+      toCslItem('x', { ...reference, creators: [{ ...base, familyName: 'Yan' }] }).author
+    ).toEqual([{ family: 'Yan', given: 'Erik' }])
+  })
+
+  // #152: RIS used to read `family` alone, so an editor or translator lost the particle the CSL
+  // conversion had moved into its own field. The round trip is the shape that catches it.
+  it('round-trips a particle editor and translator through RIS', async () => {
+    const formatter = new LiteratureCitationFormatter()
+    const creators = [
+      {
+        creatorType: 'editor' as const,
+        nameMode: 'person' as const,
+        givenName: 'Ada',
+        familyName: 'von Elm'
+      },
+      {
+        creatorType: 'translator' as const,
+        nameMode: 'person' as const,
+        givenName: 'Ada',
+        familyName: 'von Elm'
+      }
+    ]
+    const record: BibliographicRecord = {
+      ...reference,
+      itemType: 'book',
+      title: 'Edited volume',
+      issuedText: '2007',
+      issuedYear: 2007,
+      creators
+    }
+    const ris = await formatter.exportReferences([{ id: 'book', item: record }], 'ris')
+    const lines = ris.split('\n')
+    expect(lines).toContain('A3  - von Elm, Ada')
+    expect(lines).toContain('A4  - von Elm, Ada')
+    expect(lines).not.toContain('A3  - Elm, Ada')
+    expect(lines).not.toContain('A4  - Elm, Ada')
+    const reimported = await formatter.parseReferences(ris)
+    expect(reimported.errors).toEqual([])
+    expect(reimported.items[0]?.creators).toEqual(creators)
   })
 
   it('preserves PubMed journal abbreviations through RIS export and reimport', async () => {
