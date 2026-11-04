@@ -890,11 +890,35 @@ const LOCAL_CATALOG_COMMANDS = [
   'schema-notebook:patient-data-tags',
   'schema-notebook:save-output',
   'statistician-review:export-package',
+  'variable-definition:availability',
   'variable-definition:export-template',
   'variable-definition:generate',
   'writing-safeguards:get-ethics-approval',
   'writing-safeguards:set-ethics-approval'
 ] as const
+
+it('registers every LOCAL renderer contract in the application command composition', () => {
+  // Derive the inventory from production contracts, never the hand-maintained test list above.
+  const localCommands = RENDERER_CONTRACT_CATALOG.filter(
+    ({ channel, kind, surfaceInstallation }) =>
+      channel !== null &&
+      kind === 'method' &&
+      surfaceInstallation.localWeb === 'web-rpc' &&
+      surfaceInstallation.remoteWeb === 'rejecting-stub'
+  ).map(({ channel }) => channel!)
+  expect(localCommands).toContain('variable-definition:availability')
+  const declared = new Set(applicationCommandDeclaredNames())
+  expect(localCommands.filter((name) => !declared.has(name))).toEqual([])
+  const composition = createApplicationCommandComposition(dependencies())
+  try {
+    for (const name of localCommands) {
+      expect(composition.localWeb.commandNames()).toContain(name)
+      expect(composition.remoteWeb.rejectedCommandNames()).toContain(name)
+    }
+  } finally {
+    composition.dispose()
+  }
+})
 
 describe.each(['win32', 'darwin'] as const)('packaged command inventory on %s', (platform) => {
   it.each([undefined, '1'] as const)(
@@ -966,7 +990,9 @@ describe('local catalog commands', () => {
     const statisticianReview = {
       exportPackage: vi.fn(async (request: unknown) => ({ ok: true as const, request }))
     }
+    const availability = { status: 'not-configured' as const, missing: 'provider' as const }
     const variableDefinition = {
+      availability: vi.fn(async () => availability),
       generate: vi.fn(async (request: { projectId: string }) => ({
         projectId: request.projectId,
         variables: []
@@ -995,6 +1021,7 @@ describe('local catalog commands', () => {
       writingSafeguards.getEthicsApproval,
       writingSafeguards.setEthicsApproval,
       statisticianReview.exportPackage,
+      variableDefinition.availability,
       variableDefinition.generate,
       variableDefinition.exportTemplate
     ]
@@ -1060,6 +1087,10 @@ describe('local catalog commands', () => {
           args: [{ projectId: 'project-1' }]
         })
       ).resolves.toEqual({ ok: true, request: { projectId: 'project-1' } })
+      await expect(
+        composition.localWeb.invoke('variable-definition:availability', invocation())
+      ).resolves.toEqual(availability)
+      expect(variableDefinition.availability).toHaveBeenCalledExactlyOnceWith()
       await expect(
         composition.localWeb.invoke('variable-definition:generate', {
           ...invocation(),

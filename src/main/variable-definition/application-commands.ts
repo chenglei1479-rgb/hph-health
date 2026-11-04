@@ -10,6 +10,7 @@ import {
   type ApplicationCommandInstallation,
   type ApplicationCommandRegistrar
 } from '../application-command-router'
+import type { ModelRequirementCheck } from '../../shared/model-requirement'
 import type { CallerContext } from '../caller-context'
 import type { VariableDefinitionService } from './service'
 
@@ -18,6 +19,12 @@ const assertLocalCaller = (callerContext: CallerContext, commandName: string): v
     throw new Error(`Channel only available from the local app: ${commandName}`)
   }
 }
+
+const variableDefinitionAvailabilityCommand = defineApplicationCommand<
+  'variable-definition:availability',
+  readonly [],
+  ModelRequirementCheck
+>('variable-definition:availability')
 
 const variableDefinitionGenerateCommand = defineApplicationCommand<
   'variable-definition:generate',
@@ -33,7 +40,11 @@ const variableDefinitionExportTemplateCommand = defineApplicationCommand<
 
 const variableDefinitionApplicationCommandGroup = defineApplicationCommandGroup(
   'variable-definition',
-  [variableDefinitionExportTemplateCommand, variableDefinitionGenerateCommand] as const
+  [
+    variableDefinitionAvailabilityCommand,
+    variableDefinitionExportTemplateCommand,
+    variableDefinitionGenerateCommand
+  ] as const
 )
 
 const registerVariableDefinitionApplicationCommands = (
@@ -43,6 +54,10 @@ const registerVariableDefinitionApplicationCommands = (
   const scope = registrar.createScope()
   try {
     scope.registerGroup(variableDefinitionApplicationCommandGroup, {
+      'variable-definition:availability': (invocation) => {
+        assertLocalCaller(invocation.callerContext, variableDefinitionAvailabilityCommand.name)
+        return service.availability()
+      },
       'variable-definition:generate': (invocation) => {
         assertLocalCaller(invocation.callerContext, variableDefinitionGenerateCommand.name)
         return service.generate(invocation.args[0])
