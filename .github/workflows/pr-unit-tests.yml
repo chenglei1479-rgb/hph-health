@@ -59,12 +59,21 @@ jobs:
           src/shared
           src/renderer/src/i18n
           packages/diagnostics
+          scripts/ci/require-unit-test-results.test.ts
           --reporter=json
           --outputFile="$env:RUNNER_TEMP/unit-results-commands.json"
           --maxWorkers=2
-      # A run that matched nothing still exits 0, so the report itself is the evidence of work.
+      # A run that matched nothing still exits 0, so the report itself is the evidence of work. One
+      # sentinel per directory: a filter that stops matching (renamed file, moved directory) must red
+      # the job instead of quietly shrinking the set. The sentinels are stable suites nobody plans to
+      # delete; the readiness guard's own self-test is one of them so it can never go unrun again.
       - name: Require real test execution
         run: >-
           node scripts/ci/require-unit-test-results.mjs
           "$env:RUNNER_TEMP/unit-results-commands.json"
           --require src/main/application-command-composition.test.ts
+          --require scripts/ci/require-unit-test-results.test.ts
+          --require src/main/variable-definition/service.test.ts
+          --require src/shared/acp.test.ts
+          --require src/renderer/src/i18n/resources.test.ts
+          --require packages/diagnostics/src/logger.test.ts
