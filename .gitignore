@@ -103,6 +103,10 @@ dist-win-artifact/
 .scratch/
 .coding-*/
 
+# Shell-cell tests create a runtime root under the checkout instead of their temp directory. The
+# directory is a test artifact, never tracked; the tests themselves are reported separately.
+.open-science-test-runtime/
+
 .worktreeinclude
 
 # Per-platform micromamba is staged by CI at build time (electron-builder extraResources), never committed.
