@@ -93,17 +93,29 @@ describe('xlsx namespace prefixes', () => {
   })
 
   it('reads the default-namespace control into exactly the same rows', () => {
-    // The fix must not trade one shape for the other: both files, one result.
+    // The fix must not trade one shape for the other: both files, one result. The last line reads the
+    // prefixed file as well, so a prefix regression reds this control too; what proves the default
+    // namespace did not regress is the assertion above it, which only reads the control file.
     expect(strFromU8(unzipSync(defaultNsXlsx)['xl/workbook.xml'])).toContain('<sheet ')
     expect(readXlsxTable(defaultNsXlsx)).toEqual(acceptanceRows)
     expect(readXlsxTable(prefixedXlsx)).toEqual(readXlsxTable(defaultNsXlsx))
   })
 
-  it('reads a prefixed workbook part with a plain sheet part instead of an empty table', () => {
+  it('reads a prefixed workbook part with a plain sheet part', () => {
     // Each part carries its own namespace declaration, so a producer may prefix one and not the other.
-    // Before the fix this shape found the sheet but matched no rows, i.e. it returned an empty table.
+    // Before the fix this shape threw 'Workbook has no worksheets.' - the workbook's `<x:sheet` never
+    // matched - so it failed rather than returning anything.
     const files = unzipSync(prefixedXlsx)
     files['xl/worksheets/sheet1.xml'] = unzipSync(defaultNsXlsx)['xl/worksheets/sheet1.xml']
+    expect(readXlsxTable(zipSync(files))).toEqual(acceptanceRows)
+  })
+
+  it('reads a plain workbook part with a prefixed sheet part instead of an empty table', () => {
+    // The dangerous direction: before the fix the workbook resolved its sheet and then matched no rows,
+    // because sheet1.xml was prefixed. It returned 0 rows by 0 columns - a silent empty table, which the
+    // importer would have shown as a workbook with no data rather than an error.
+    const files = unzipSync(defaultNsXlsx)
+    files['xl/worksheets/sheet1.xml'] = unzipSync(prefixedXlsx)['xl/worksheets/sheet1.xml']
     expect(readXlsxTable(zipSync(files))).toEqual(acceptanceRows)
   })
 
