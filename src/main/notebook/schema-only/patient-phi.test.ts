@@ -4,7 +4,7 @@ import { detectPhi } from '../../phi/detect'
 import { installMachineApproval } from '../../phi/gate'
 import { PHI_OUTPUT_BLOCK_MESSAGE } from './notebook-phi-release'
 import { installNotebookModelTextReleaser, releaseNotebookModelText } from './release-model-text'
-import { detectPatientPhiSpans, formatBlockedImport, redactPatientPhi } from './patient-phi'
+import { detectPatientPhiSpans, foldWidth, formatBlockedImport, redactPatientPhi } from './patient-phi'
 
 afterEach(() => {
   installNotebookModelTextReleaser(null)
@@ -187,6 +187,28 @@ it('does not fabricate a phone from a full-width identifier or an area-code-less
     expect(redactPatientPhi(text)).toBe(text)
     expect(detectPatientPhiSpans(text)).toEqual([])
     expect(detectPhi(text).filter((span) => span.category === 'PHONE')).toEqual([])
+  }
+})
+
+// A year range is not a phone, and slicing one into `2[仮名化済み]` corrupts a number the model is
+// meant to receive — the failure #161 was opened for, reached through folding instead of a decimal.
+// The left guard wraps all three branches, so a match cannot start inside a longer digit run.
+it.each([
+  ['half-width years', '研究期間：2024-2025'],
+  ['full-width years with U+FF0D', '研究期間：２０２４\uff0d２０２５'],
+  ['full-width years with an em dash', '研究期間：２０２４\u2014２０２５']
+] as const)('leaves a %s range untouched', (_label, text) => {
+  expect(detectPatientPhiSpans(text)).toEqual([])
+  expect(redactPatientPhi(text)).toBe(text)
+})
+
+// The fold is one code unit to one code unit, and redaction offsets are taken from the folded string
+// and applied to the original. Adding a character that expands under NFKC (for example ㈱) would
+// silently shift every later offset, so the invariant is asserted rather than assumed.
+it('never expands a character while folding, so offsets stay exact', () => {
+  for (let code = 0; code <= 0xffff; code += 1) {
+    const char = String.fromCharCode(code)
+    expect(foldWidth(char).length).toBeLessThanOrEqual(char.length)
   }
 })
 

@@ -29,8 +29,14 @@ const RULES: Rule[] = [
     // `(2024)1234-5678` stays unmatched on purpose: the area-code branch requires a leading `0`, and
     // every Japanese area code has one. Widening that to any digits would swallow a date in
     // parentheses followed by two number groups.
+    //
+    // The left guard wraps all three branches, not just the first: alternation binds tighter than the
+    // lookbehind-less prefix once the pattern starts matching mid-number. Without it `2024-2025`
+    // matched from the second character (`024-2` + `025`) and a period was redacted into
+    // `2[仮名化済み]` — silent corruption of a number the model is meant to receive. The gate always
+    // had `(?<![\d])`; this brings the local layer in line.
     pattern:
-      /(?:\+81[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:\(0\d{1,4}\)[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})/g,
+      /(?<!\d)(?:(?:\+81[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:\(0\d{1,4}\)[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}))/g,
     group: 0
   },
   {
