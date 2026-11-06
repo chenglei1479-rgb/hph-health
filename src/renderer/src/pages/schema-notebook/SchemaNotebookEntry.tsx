@@ -15,17 +15,12 @@ import type {
   SchemaModelContext,
   SchemaNotebookRunOutput
 } from '../../../../shared/schema-notebook'
+import { failureText, importFailureCopy } from './schema-notebook-error-copy'
 import { deliverableCardCopy } from '../home/deliverable-packages'
 import { loadSchemaNotebookDraft, saveSchemaNotebookDraft } from './schema-notebook-draft'
 
-// A direct IPC rejection arrives as "Error invoking remote method '<channel>': Error: <text>".
-// The main process already renders the operable sentence with its stable code; show just that text so
-// the panel never repeats internal transport chrome.
-const failureText = (error: unknown): string =>
-  (error instanceof Error ? error.message : String(error)).replace(
-    /^Error invoking remote method '[^']*':\s*(?:[A-Za-z]*Error:\s*)?/u,
-    ''
-  )
+// The transport chrome and the two actionable sentences live in schema-notebook-error-copy, so each
+// branch has a direct test; this module only decides where the failure is shown.
 
 type SchemaNotebookApi = {
   importTable: (request: {
@@ -106,16 +101,11 @@ export const PatientDataBadge = (): React.JSX.Element => {
 
 export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React.JSX.Element => {
   const { t } = useTranslation()
-  // #167: the main process reports an import failure as a fixed English sentence, and the panel used
-  // to show it verbatim, so a Japanese interface carried English at the exact moment the doctor needs
-  // to act. The two sentences a reader can do something about are translated; anything else stays as
-  // written, because an unknown failure is a diagnostic and translating it would hide the text people
-  // search for.
+  // #167: two import sentences are actionable and get a catalogue entry; an unknown failure is shown
+  // verbatim, because translating a diagnostic would hide the text people search for in a report.
   const localizeImportFailure = (text: string): string => {
-    if (text === 'Workbook has no worksheets.') return t('This workbook has no worksheets.')
-    const missingPart = /^Workbook is missing (.+)\.$/u.exec(text)
-    if (missingPart) return t('This workbook is missing {{part}}.', { part: missingPart[1] })
-    return text
+    const copy = importFailureCopy(text)
+    return copy ? t(copy.key, copy.params) : text
   }
   const agentContext = useProjectStore(
     (state) => state.projects.find((project) => project.id === projectId)?.agentContext
