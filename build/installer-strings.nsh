@@ -1,4 +1,4 @@
-﻿# UTF-8 BOM: Unicode NSIS reads Japanese and Chinese without a system-code-page dependency.
+# UTF-8 BOM: Unicode NSIS reads Japanese and Chinese without a system-code-page dependency.
 # LCIDs: English 1033, Japanese 1041, Simplified Chinese 2052.
 !ifdef BUILD_UNINSTALLER
 LangString BaselioNotebookCleanupFailed 1033 "Baselio could not safely remove its owned Notebook isolation resources. The uninstall was stopped so the cleanup can be retried."
@@ -8,6 +8,15 @@ LangString BaselioDetail0 1033 "Baselio Notebook cleanup failure code=$0 sandbox
 LangString BaselioDetail0 1041 "Baselio Notebook クリーンアップ失敗 code=$0 sandboxRoot=$\"$INSTDIR\resources\notebook-network-sandbox\windows$\""
 LangString BaselioDetail0 2052 "Baselio Notebook 清理失败 code=$0 sandboxRoot=$\"$INSTDIR\resources\notebook-network-sandbox\windows$\""
 !else
+# #163: the two preflight refusals. Both run before any file is copied, so the last line of each says so.
+# $R1 is the chosen folder length, $R3 the number of payload files that would be too long, $R4 the longest
+# path that would result; the two ${...} values come from build/installer-path-budget.nsh.
+LangString BaselioPreflightPathTooLong 1033 "Baselio cannot install into this folder.$\r$\n$\r$\nThe folder is $R1 characters long. Baselio contains $R3 file(s) whose full path would exceed the Windows limit of $R2 characters; the longest would be $R4 characters.$\r$\n$\r$\nChoose a folder of at most $R5 characters (for example C:\Baselio), then run the installer again. Nothing has been installed."
+LangString BaselioPreflightPathTooLong 1041 "Baselio はこのフォルダーにインストールできません。$\r$\n$\r$\nこのフォルダーは $R1 文字です。Baselio には、フルパスが Windows の上限 $R2 文字を超えるファイルが $R3 件あり、最も長いもので $R4 文字になります。$\r$\n$\r$\n$R5 文字以内のフォルダー（例: C:\Baselio）を選び、インストーラーを再実行してください。まだ何もインストールされていません。"
+LangString BaselioPreflightPathTooLong 2052 "Baselio 无法安装到该文件夹。$\r$\n$\r$\n该文件夹路径为 $R1 个字符。Baselio 中有 $R3 个文件的完整路径会超过 Windows 的 $R2 字符上限，最长将达到 $R4 个字符。$\r$\n$\r$\n请选择不超过 $R5 个字符的文件夹（例如 C:\Baselio），然后重新运行安装程序。尚未安装任何内容。"
+LangString BaselioPreflightAppRunning 1033 "Baselio is still running.$\r$\n$\r$\nClose it first: right-click the Baselio icon in the notification area and choose Quit, or end Baselio.exe in Task Manager. Then run the installer again.$\r$\n$\r$\nNothing has been installed."
+LangString BaselioPreflightAppRunning 1041 "Baselio がまだ実行中です。$\r$\n$\r$\n先に終了してください: 通知領域の Baselio アイコンを右クリックして「終了」を選ぶか、タスク マネージャーで Baselio.exe を終了します。その後、インストーラーを再実行してください。$\r$\n$\r$\nまだ何もインストールされていません。"
+LangString BaselioPreflightAppRunning 2052 "Baselio 仍在运行。$\r$\n$\r$\n请先退出：右键单击通知区域中的 Baselio 图标并选择「退出」，或在任务管理器中结束 Baselio.exe。然后重新运行安装程序。$\r$\n$\r$\n尚未安装任何内容。"
 Var baselioMessageDir
 Var baselioMessageBackup
 Var baselioMessageFolder

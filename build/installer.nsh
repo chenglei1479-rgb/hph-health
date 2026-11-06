@@ -1,4 +1,7 @@
-﻿!include "${BUILD_RESOURCES_DIR}\installer-strings.nsh"
+# The preflight include pulls in the generated path budget, whose defines the installer strings below
+# interpolate (BASELIO_PATH_LIMIT, BASELIO_MAX_INSTALL_DIR_LENGTH), so it has to come first.
+!include "${BUILD_RESOURCES_DIR}\installer-preflight.nsh"
+!include "${BUILD_RESOURCES_DIR}\installer-strings.nsh"
 
 !macro customInstallMode
   # Notebook AppContainer profiles are per-user durable resources. A machine-wide installation
@@ -277,6 +280,12 @@ FunctionEnd
   Call normalizeRegisteredInstallPath
   Pop $perUserInstallDirCache
 
+  # #163: a fresh install while the app is running used to reach the install section, fill the progress
+  # bar and then fail with electron-builder's "cannot be closed". Refuse it before any page is shown,
+  # with the process name and the next step. Updates are exempt here on purpose (a registered
+  # installation in either hive) because the app starts the installer itself.
+  !insertmacro baselioPreflightRunningApp
+
   # Protect HKCU independently of the mode selected during .onInit: the user can still switch to
   # all-users on the assisted install-mode page, so that early mode is not the uninstall verdict.
   # One exception needs a non-destructive write probe: both registry entries may point at the
@@ -317,6 +326,9 @@ FunctionEnd
   # Page callbacks do not run in silent mode. There is no later user choice in that mode, so the
   # installMode selected by initMultiUser is already final and machine protection can run now.
   ${if} ${Silent}
+    # Silent installs run no page callbacks, so the target-folder preflight has to happen here, after
+    # the command line and the mode have fixed $INSTDIR.
+    !insertmacro baselioPreflightInstallPath
     Call ensureExistingUninstallerIsWritable
     !insertmacro protectMachineDataRootForSelectedMode
   ${endif}
@@ -379,6 +391,9 @@ FunctionEnd
     !ifdef openScienceOriginalInstFilesPre
       Call ${openScienceOriginalInstFilesPre}
     !endif
+    # #163: the folder the user picked is final here and nothing has been copied yet, so a target whose
+    # payload paths would exceed the Windows limit is refused now instead of stalling the progress bar.
+    !insertmacro baselioPreflightInstallPath
     Call ensureExistingUninstallerIsWritable
     !insertmacro protectMachineDataRootForSelectedMode
   FunctionEnd

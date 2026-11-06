@@ -796,3 +796,64 @@ it('protects both re-created branded data folders before retrying the old uninst
     recovery.indexOf('ExecWait')
   )
 })
+
+// #163: the installer decides whether a target folder is usable with a generated NSIS loop. The same
+// numbers are computed in TypeScript by build/installer-path-budget.cjs, so compiling the generated
+// include and running it is the only way to prove the two agree - a transcription error there would
+// silently pass or refuse every folder.
+describe.skipIf(!nsisCompiler)('NSIS installer target-path preflight (#163)', () => {
+  it('counts the same overflowing files as the build-time assessment', () => {
+    const root = mkdtempSync(join(tmpdir(), 'nsis-path-preflight-'))
+    try {
+      const payload = join(root, 'payload')
+      mkdirSync(join(payload, 'resources'), { recursive: true })
+      writeFileSync(join(payload, 'app.exe'), '')
+      writeFileSync(join(payload, 'resources', 'app.asar'), '')
+      writeFileSync(join(payload, 'resources', 'a-very-deep-name-0123456789.bin'), '')
+
+      const budget = require('./installer-path-budget.cjs')
+      const include = join(root, 'installer-path-budget.nsh')
+      const summary = budget.emit({ payloadDir: payload, out: include })
+
+      // 240 characters: \resources\app.asar lands exactly on 259 (it must still fit) and only the deep\n      // name overflows, so this also pins the boundary the TS side asserts.
+      const folder = 'C:\\' + 'x'.repeat(237)
+      expect(folder).toHaveLength(240)
+      const expected = budget.assessInstallTarget(folder, summary)
+      expect(expected.overflowFiles).toBe(1)
+
+      const output = join(root, 'result.txt')
+      const executable = join(root, 'probe.exe')
+      const source = join(root, 'probe.nsi')
+      writeFileSync(
+        source,
+        `\uFEFFUnicode true
+!include "LogicLib.nsh"
+Name "Installer path preflight probe"
+OutFile "${executable}"
+RequestExecutionLevel user
+SilentInstall silent
+!include "${include}"
+Section
+  FileOpen $9 "${output}" w
+  StrCpy $R1 ${folder.length}
+  !insertmacro baselioCountOverflowingFiles
+  FileWriteUTF16LE $9 "$R3"
+  FileClose $9
+  SetErrorLevel 0
+SectionEnd
+`
+      )
+      const compile = spawnSync(nsisCompiler!, ['/V2', source], {
+        encoding: 'utf8',
+        timeout: 15_000
+      })
+      expect(compile.error).toBeUndefined()
+      expect(compile.status, compile.stderr || compile.stdout).toBe(0)
+      const run = spawnSync(executable, [], { encoding: 'utf8', timeout: 60_000 })
+      expect(run.error).toBeUndefined()
+      expect(readFileSync(output, 'utf16le').trim()).toBe(String(expected.overflowFiles))
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
