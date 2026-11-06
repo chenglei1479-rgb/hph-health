@@ -1,6 +1,7 @@
 import { afterEach, expect, it } from 'vitest'
 
 import { installMachineApproval } from '../../phi/gate'
+import { PHI_OUTPUT_BLOCK_MESSAGE } from './notebook-phi-release'
 import { installNotebookModelTextReleaser, releaseNotebookModelText } from './release-model-text'
 import { detectPatientPhiSpans, formatBlockedImport, redactPatientPhi } from './patient-phi'
 
@@ -57,6 +58,32 @@ it.each([
   const released = redactPatientPhi(text)
   expect(released).toContain('[仮名化済み]')
   expect(released).not.toContain(value)
+})
+
+// #169 review: the token boundary may only excuse a match that could really be a slice of a longer
+// number. A hyphenated phone can never be embedded in a float literal, so sitting next to a digit or a
+// decimal point must not un-redact it — the first three shapes were released by the too-broad guard.
+// The age shape never regressed, and is here so a later change cannot start missing it.
+it.each([
+  ['a decimal point before it', '1.090-1234-5678'],
+  ['a decimal fraction after it', '090-1234-5678.5'],
+  ['a year after a sentence period', 'TEL 090-1234-5678.2024'],
+  ['an age right before it', '年齢40 090-1234-5678']
+] as const)('still redacts a hyphenated phone with %s', (_label, text) => {
+  expect(detectPatientPhiSpans(text).map((span) => span.category)).toContain('PHONE')
+  const released = redactPatientPhi(text)
+  expect(released).toContain('[仮名化済み]')
+  expect(released).not.toContain('090-1234-5678')
+})
+
+// Known trade-off, accepted deliberately: a bare digit run glued to a decimal is indistinguishable from
+// the fraction of a number, so the local layer keeps it rather than corrupt the statistic. It is not a
+// hole — the provider gate still sees the run and refuses the whole output.
+it('leaves a digit run glued to a decimal to the provider gate', async () => {
+  const text = '1.09012345678'
+  expect(detectPatientPhiSpans(text)).toEqual([])
+  expect(redactPatientPhi(text)).toBe(text)
+  expect(await releaseNotebookModelText(text, 'fiction')).toBe(PHI_OUTPUT_BLOCK_MESSAGE)
 })
 
 it('redacts a real phone next to statistics without touching the statistics', () => {

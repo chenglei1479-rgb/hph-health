@@ -79,6 +79,15 @@ const NUMERIC_CATEGORIES = new Set(['PHONE', 'MY_NUMBER', 'KARTE_NO', 'INSURER_N
 // True when the match is only a slice of a longer number: it touches a digit on either side, or sits
 // across a decimal point from one. Whole tokens ("090-1234-5678" between punctuation, a labelled
 // カルテ番号) are unaffected.
+//
+// Callers must also require the match to be digits only. A hyphenated phone cannot be a continuation
+// of a float literal, so skipping one would un-redact it: "1.090-1234-5678" and "TEL 090-1234-5678.2024"
+// both look "adjacent to a number" to this check but are real phone numbers.
+//
+// Known trade-off, accepted deliberately: a bare digit run glued to a decimal, such as "1.09012345678",
+// is still skipped as a continuation of the decimal. Hiding it would corrupt computed statistics,
+// which is the bug this guard exists to prevent. A real 11-digit number written that way is rare, and
+// the downstream PHI gate still scans it.
 const continuesNumber = (text: string, start: number, end: number): boolean => {
   const before = text[start - 1]
   const after = text[end]
@@ -114,7 +123,13 @@ export const detectPatientPhiSpans = (text: string): PatientPhiSpan[] => {
       const start = rule.group === 0 ? match.index : match.index + match[0].indexOf(piece)
       const end = start + piece.length
       if (overlaps(spans, start, end)) continue
-      if (NUMERIC_CATEGORIES.has(rule.category) && continuesNumber(text, start, end)) continue
+      // Only a digits-only match can be a slice of a longer number; see continuesNumber.
+      if (
+        NUMERIC_CATEGORIES.has(rule.category) &&
+        /^\d+$/u.test(piece) &&
+        continuesNumber(text, start, end)
+      )
+        continue
       spans.push({
         start,
         end,
