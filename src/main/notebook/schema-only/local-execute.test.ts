@@ -50,9 +50,13 @@ describe('executeLocalAnalysis runner contract', () => {
         'analysis.py',
         SCHEMA_NOTEBOOK_LOCAL_FILENAME
       ])
+      // #158: the child is told its stdio and implicit file encoding are UTF-8. Without this a
+      // Windows pipe uses the ANSI code page and every Japanese character comes back as mojibake.
       expect(env).toEqual({
         ...process.env,
-        DRA_SCHEMA_TABLE: join(cwd, SCHEMA_NOTEBOOK_LOCAL_FILENAME)
+        DRA_SCHEMA_TABLE: join(cwd, SCHEMA_NOTEBOOK_LOCAL_FILENAME),
+        PYTHONUTF8: '1',
+        PYTHONIOENCODING: 'utf-8:replace'
       })
       // The script writes one output with a relative path; the app must keep it.
       await writeFile(join(cwd, 'plot.png'), 'PNGDATA')

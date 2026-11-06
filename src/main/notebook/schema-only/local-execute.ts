@@ -62,6 +62,21 @@ export const RUN_RECORD_FILENAME = 'record.json'
 const clip = (text: string): string =>
   text.length > OUTPUT_LIMIT ? `${text.slice(0, OUTPUT_LIMIT)}\n[truncated]` : text
 
+// #158: a Windows child that writes to a pipe falls back to the ANSI code page (GBK on a Chinese
+// install, CP932 on a Japanese one), while this host decodes its stdout as UTF-8 and hands the script a
+// UTF-8 table copy. Left alone, every non-ASCII character came back as mojibake: `print`, tracebacks,
+// and files the script opened without an explicit encoding. The bytes were wrong on the child side of
+// one hop, so the child is told that hop is UTF-8; nothing on the host side guesses a code page.
+// pandas is not the culprit: it uses UTF-8 for its own file I/O regardless of locale, which is why the
+// columns still computed correctly while their printed form was unreadable.
+const UTF8_PYTHON_ENVIRONMENT = {
+  // Also makes an implicit `open(..., "w")` and `sys.getfilesystemencoding()` UTF-8, so a file the
+  // script leaves behind is readable by the app and by any editor. Requires Python 3.7 or newer.
+  PYTHONUTF8: '1',
+  // Covers interpreters older than 3.7 too, and keeps an unencodable surrogate from failing the run.
+  PYTHONIOENCODING: 'utf-8:replace'
+} as const
+
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
@@ -246,7 +261,9 @@ export const executeLocalAnalysis = async (input: {
     }
     const result = await run(command.command, scriptPath, directory, {
       ...process.env,
-      DRA_SCHEMA_TABLE: tablePath
+      DRA_SCHEMA_TABLE: tablePath,
+      // R is spawned through the same runner; these two names are inert for it.
+      ...UTF8_PYTHON_ENVIRONMENT
     })
     const stdout = clip(result.stdout)
     const head = /\.head\s*\(/.test(input.code) ? stdout : undefined
