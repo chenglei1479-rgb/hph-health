@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest'
+
+// #179 red proof: this assertion exists only to prove the notebook job turns red.
+it('red proof for the notebook unit-test job', () => {
+  expect(1).toBe(2)
+})
 import { mapLoopOutputs } from './loop-output-mapper'
 
 import {
