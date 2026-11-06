@@ -86,6 +86,30 @@ it('leaves a digit run glued to a decimal to the provider gate', async () => {
   expect(await releaseNotebookModelText(text, 'fiction')).toBe(PHI_OUTPUT_BLOCK_MESSAGE)
 })
 
+// #170: a summary the beta acceptance wrote was refused because a mean age and a per-N-years rate
+// denominator were read as a person's age. A group statistic reaches the model intact; a person's age
+// still does not.
+it.each([
+  '非欠測の平均年齢65歳',
+  '年齢10歳当たりOR 1.98',
+  'n=12、年齢欠測1例',
+  '非欠測の平均年齢65歳、年齢10歳当たりOR 1.98（95%CI 1.20-3.26）、n=12、年齢欠測1例。'
+])('releases an aggregate age unchanged: %s', async (text) => {
+  expect(await releaseNotebookModelText(text, 'fiction')).toBe(text)
+})
+
+it.each(['患者は65歳で糖尿病の既往がある。', '65歳、男性。', '65歳以上', '10歳代', '満65歳'])(
+  'still refuses a person age: %s',
+  async (text) => {
+    expect(await releaseNotebookModelText(text, 'fiction')).toBe(PHI_OUTPUT_BLOCK_MESSAGE)
+  }
+)
+
+it('still withholds a birth date from the model', async () => {
+  const released = await releaseNotebookModelText('生年月日：1970年4月1日', 'fiction')
+  expect(released).not.toContain('1970年4月1日')
+})
+
 it('redacts a real phone next to statistics without touching the statistics', () => {
   const text = `電話: 090-1234-5678、OR=1.9773051601268752`
   const released = redactPatientPhi(text)

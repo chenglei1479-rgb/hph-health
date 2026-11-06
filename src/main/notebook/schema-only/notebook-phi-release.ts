@@ -1,4 +1,4 @@
-import { detectPhi, type PhiSpan } from '../../phi/detect'
+import { detectPhi, isAggregateAgeRule, type PhiSpan } from '../../phi/detect'
 import { assertModelBoundTextReleased, PhiGateError } from '../../phi/gate'
 import { hasOnlyOrdinaryLabelPhi } from '../../phi/ordinary-label'
 
@@ -14,7 +14,12 @@ const isWholeStringNameGuess = (text: string, span: PhiSpan): boolean => {
 }
 
 export const hasReleasablePatientPhi = (text: string): boolean =>
-  detectPhi(text).some((span) => !isWholeStringNameGuess(text, span))
+  detectPhi(text).some(
+    (span) =>
+      !isWholeStringNameGuess(text, span) &&
+      // #170: a mean age or a per-N-years rate denominator is a group statistic, not patient data.
+      !isAggregateAgeRule(span.rule)
+  )
 
 export const PHI_OUTPUT_BLOCK_MESSAGE =
   '患者情報が含まれるため、この出力はモデルに渡しません。個人情報を除いた集計だけを出力してください。'

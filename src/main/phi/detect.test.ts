@@ -24,6 +24,44 @@ const namesOf = (text: string): string[] =>
     .filter((span) => span.category === 'PERSON_NAME')
     .map((span) => span.text)
 
+// #170: a group statistic is not a patient age. The rule id is the only signal the gate ever sees, so
+// the shape has to be recorded there; the gate and deidentify then treat exactly these ids differently.
+describe('aggregate ages carry their own rule id', () => {
+  const dateRules = (text: string): Array<string | undefined> =>
+    detectPhi(text)
+      .filter((span) => span.category === 'DATE')
+      .map((span) => span.rule)
+
+  it('records a mean age', () => {
+    expect(dateRules('非欠測の平均年齢65歳')).toEqual(['age-aggregate-mean'])
+    expect(dateRules('平均年齢は65歳')).toEqual(['age-aggregate-mean'])
+  })
+
+  it('records a per-N-years rate denominator', () => {
+    expect(dateRules('年齢10歳当たりOR 1.98')).toEqual(['age-ratio-per-years'])
+    expect(dateRules('10歳当たりの有病率は1.2%')).toEqual(['age-ratio-per-years'])
+  })
+
+  it('records both shapes in one summary', () => {
+    expect(dateRules('平均年齢は65歳、年齢10歳当たりOR 1.98')).toEqual([
+      'age-aggregate-mean',
+      'age-ratio-per-years'
+    ])
+  })
+
+  // An age that names a person or a cohort member keeps the plain rule and keeps blocking.
+  it.each([
+    '患者は65歳で糖尿病の既往がある。',
+    '65歳、男性。',
+    '65歳以上',
+    '10歳代',
+    '満65歳',
+    '年齢65歳'
+  ])('keeps a person age on age-sai: %s', (text) => {
+    expect(dateRules(text)).toEqual(['age-sai'])
+  })
+})
+
 // Separators that must never split a name, and the markers that must not be masked at all.
 describe('unlabeled names in a short record', () => {
   it.each([

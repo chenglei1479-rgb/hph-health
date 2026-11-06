@@ -32,6 +32,22 @@ describe('Japanese PHI de-identification', () => {
     expect(result.warnings).toEqual([MY_NUMBER_WARNING])
   })
 
+  // #170: masking a group statistic would corrupt the number, and it identifies nobody. A person's
+  // age must still be replaced.
+  it('leaves an aggregate age alone and still masks a person age', () => {
+    const store = createMemoryPhiVault().store('aggregate-age')
+    const mean = deidentify('非欠測の平均年齢65歳', store)
+    expect(mean.text).toBe('非欠測の平均年齢65歳')
+    expect(mean.replacements).toEqual([])
+
+    const rate = deidentify('年齢10歳当たりOR 1.98', store)
+    expect(rate.text).toBe('年齢10歳当たりOR 1.98')
+
+    const person = deidentify('患者は65歳で糖尿病の既往がある。', store)
+    expect(person.text).not.toContain('65歳')
+    expect(person.replacements).toHaveLength(1)
+  })
+
   it('keeps a structured address and ignores a prefecture that has no street', () => {
     const store = createMemoryPhiVault().store('address')
     const labeled = deidentify('住所：北海道札幌市中央区北一条西2丁目3-4', store)
