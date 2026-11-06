@@ -5,6 +5,9 @@ const path = require('node:path')
 exports.default = async function deploymentPack(context) {
   await require('./adhoc-sign.cjs').default(context)
   if (context.electronPlatformName !== 'win32') return
+  // #163: measure the Windows payload for the NSIS target-folder preflight. It has to run here, after
+  // extraResources (the staged Python runtime) are copied into appOutDir and before NSIS is compiled.
+  await require('./before-pack.cjs')(context)
   const source = path.join(context.packager.projectDir, 'resources/dra-update.yml')
   const config = require('./deployment-validation.cjs').readUpdate(context.packager.projectDir)
   // `enabled: false` is not a provider feed. Copying it would leave electron-updater
