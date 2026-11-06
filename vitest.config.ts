@@ -98,6 +98,12 @@ const VITEST_PORTABLE_CI_EXCLUDE_PATTERNS = [
 //
 // That is every candidate rejected, so there is no fallback root at all. The fix belongs in
 // `packages/environment/src/micromamba-cache.ts` (shorten the root directory, never raise the budget).
+//
+// The 5 failures in environment-startup.contract and the 16 in reproduction-runtime are the same
+// defect, not 21 separate ones: on CI every one of them lands on that single error, while both suites
+// pass locally even under a deep temporary root. #184's acceptance is therefore that both suites turn
+// green together - 21 tests (5 + 16) - and a fix that clears only the first 5 is not done.
+//
 // Remove both entries when #184 closes; they are a hole in this job until then.
 export const NOTEBOOK_PR_EXCLUDE_PATTERNS = [
   'src/main/notebook/auto-mode-budget.integration.test.ts',
@@ -108,9 +114,9 @@ export const NOTEBOOK_PR_EXCLUDE_PATTERNS = [
   'src/main/notebook/shell-cell-session.integration.test.ts',
   'src/main/notebook/windows-repl-termination.integration.test.ts',
   'src/main/notebook/windows-shell.integration.test.ts',
-  // #184 (remove when it closes): path-budget failures counted under this file, 5 of 12 locally.
+  // #184 (remove when it closes): 5 of its 12 tests land on the package-cache path budget.
   'src/main/notebook/environment-startup.contract.test.ts',
-  // #184 (remove when it closes): the 20 path-budget failures CI attributed to reproduction-runtime.
+  // #184 (remove when it closes): 16 of its 18 tests land on the same error.
   'src/main/notebook/reproduction-runtime.test.ts'
 ] as const
 
