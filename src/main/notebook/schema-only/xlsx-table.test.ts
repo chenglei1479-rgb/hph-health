@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 
@@ -45,6 +48,84 @@ describe('xlsx relationship parsing', () => {
         '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
         'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
         '<sheets></sheets></workbook>'
+    )
+    expect(() => readXlsxTable(zipSync(files))).toThrow('Workbook has no worksheets.')
+  })
+})
+
+// #157: these are the two files from the beta.21 acceptance pack (T10), copied byte for byte:
+//   synthetic.xlsx           - the reported file; every element of the main namespace carries `x:`.
+//   synthetic_defaultns.xlsx - the same workbook with the default namespace, byte-identical output.
+// Generated XML proved the tag patterns; a real producer's file proves the reader. Do not regenerate
+// these - a failure here should point at the acceptance record, not at a helper.
+const fixtureBytes = (name: string): Uint8Array =>
+  new Uint8Array(readFileSync(join(process.cwd(), 'src/main/notebook/schema-only/fixtures', name)))
+
+const prefixedXlsx = fixtureBytes('synthetic.xlsx')
+const defaultNsXlsx = fixtureBytes('synthetic_defaultns.xlsx')
+
+// The acceptance record: 13 rows including the header, 5 columns. Read out of the reported file with
+// the reader itself and then pinned, so a change in what the reader returns shows up here.
+const acceptanceRows = [
+  ['研究番号', '年齢', '性別', '30日再入院', '備考'],
+  ['SYN001', '40', '男', '0', '架空'],
+  ['SYN002', '45', '女', '0', '架空'],
+  ['SYN003', '50', '男', '1', '架空'],
+  ['SYN004', '55', '女', '0', '架空'],
+  ['SYN005', '60', '男', '1', '架空'],
+  ['SYN006', '65', '女', '0', '架空'],
+  ['SYN007', '70', '男', '1', '架空'],
+  ['SYN008', '75', '女', '1', '架空'],
+  ['SYN009', '80', '男', '0', '架空'],
+  ['SYN010', '85', '女', '1', '架空'],
+  ['SYN011', '90', '男', '1', '架空'],
+  ['SYN012', '', '女', '0', '架空']
+]
+
+describe('xlsx namespace prefixes', () => {
+  it('reads the reported file, whose main namespace is bound to a prefix', () => {
+    // Guard the fixture itself: without a prefix the case would pass on the old reader.
+    expect(strFromU8(unzipSync(prefixedXlsx)['xl/workbook.xml'])).toContain('<x:sheet ')
+    const rows = readXlsxTable(prefixedXlsx)
+    expect(rows).toHaveLength(13)
+    expect(rows[0]).toHaveLength(5)
+    expect(rows).toEqual(acceptanceRows)
+  })
+
+  it('reads the default-namespace control into exactly the same rows', () => {
+    // The fix must not trade one shape for the other: both files, one result. The last line reads the
+    // prefixed file as well, so a prefix regression reds this control too; what proves the default
+    // namespace did not regress is the assertion above it, which only reads the control file.
+    expect(strFromU8(unzipSync(defaultNsXlsx)['xl/workbook.xml'])).toContain('<sheet ')
+    expect(readXlsxTable(defaultNsXlsx)).toEqual(acceptanceRows)
+    expect(readXlsxTable(prefixedXlsx)).toEqual(readXlsxTable(defaultNsXlsx))
+  })
+
+  it('reads a prefixed workbook part with a plain sheet part', () => {
+    // Each part carries its own namespace declaration, so a producer may prefix one and not the other.
+    // Before the fix this shape threw 'Workbook has no worksheets.' - the workbook's `<x:sheet` never
+    // matched - so it failed rather than returning anything.
+    const files = unzipSync(prefixedXlsx)
+    files['xl/worksheets/sheet1.xml'] = unzipSync(defaultNsXlsx)['xl/worksheets/sheet1.xml']
+    expect(readXlsxTable(zipSync(files))).toEqual(acceptanceRows)
+  })
+
+  it('reads a plain workbook part with a prefixed sheet part instead of an empty table', () => {
+    // The dangerous direction: before the fix the workbook resolved its sheet and then matched no rows,
+    // because sheet1.xml was prefixed. It returned 0 rows by 0 columns - a silent empty table, which the
+    // importer would have shown as a workbook with no data rather than an error.
+    const files = unzipSync(defaultNsXlsx)
+    files['xl/worksheets/sheet1.xml'] = unzipSync(prefixedXlsx)['xl/worksheets/sheet1.xml']
+    expect(readXlsxTable(zipSync(files))).toEqual(acceptanceRows)
+  })
+
+  it('still fails loudly when a prefixed workbook has no sheet at all', () => {
+    const files = unzipSync(prefixedXlsx)
+    files['xl/workbook.xml'] = strToU8(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+        '<x:sheets></x:sheets></x:workbook>'
     )
     expect(() => readXlsxTable(zipSync(files))).toThrow('Workbook has no worksheets.')
   })
