@@ -390,6 +390,17 @@ function assertMachineMaySend(
 // - Releasing still rewrites `instructions` (that gap is closed by de-identifying it) and skips only
 //   the schema/transport scaffolding and identifiers.
 //
+// `client_metadata` is the Codex CLI's own transport envelope, not content: it is written by the CLI
+// (nothing in this app writes it), and a real request captured from the managed CLI (codex-cli 0.157.1,
+// the version beta.21 and main both pin) carried exactly installation/session/thread/turn/window ids,
+// `agent_name`, the request/thread/sandbox enums, booleans, a timestamp, the model name and a
+// `workspaces` object (folder path, remote URL, commit hash). Only the last part is environment text the
+// user chose, which is why blocking skips the field but releasing still rewrites it: a false positive
+// here does not merely look odd, it vetoes the whole turn (beta.21 #159: a `NN-NNNN-NN` fragment inside
+// this field failed every retry of a public literature query with PHI-BLOCK-01 behind a 502), while a
+// patient name inside a folder path is still masked before the body leaves the machine. It is therefore
+// in BLOCKING_SKIP_FIELDS only, and must never be added to RELEASE_SKIP_FIELDS.
+//
 // `tools`, `tool_choice`, `metadata` and identifier keys pass through untouched in both directions.
 // That boundary is deliberate: rewriting a tool schema breaks the provider protocol. It is also the
 // one known exit for content: patient text written into those fields is neither blocked nor
@@ -400,7 +411,13 @@ function assertMachineMaySend(
 // Everything else stays in scope, including `system`, `messages`, `input` and `prompt`: providers
 // disagree about which field carries the conversation, and whitelisting content fields leaked PHI
 // through Anthropic's `system`.
-const BLOCKING_SKIP_FIELDS = new Set(['tools', 'tool_choice', 'instructions', 'metadata'])
+const BLOCKING_SKIP_FIELDS = new Set([
+  'tools',
+  'tool_choice',
+  'instructions',
+  'metadata',
+  'client_metadata'
+])
 const RELEASE_SKIP_FIELDS = new Set(['tools', 'tool_choice', 'metadata'])
 const NON_CONTENT_KEYS = new Set([
   'id',
