@@ -112,6 +112,12 @@ jobs:
       # only `--reporter=json` the log said "Process completed with exit code 1" and nothing else, so a
       # red run could not be attributed to a test without downloading an artifact that is not uploaded
       # (#179 red proof). Both reporters run: the file stays machine-readable, the log stays evidence.
+      #
+      # 60 s instead of the 15 s default. The first CI run of this job (127880034774) timed out eleven
+      # tests in `local-rpc-server`, `runtime-service`, `python-command` and `input-registry` at exactly
+      # 15000ms, each of which runs in well under a second on a developer machine; two workers on a
+      # shared Windows runner is the difference, not the code. Recorded here so the next person reads
+      # the measurement rather than guessing, and so a real hang is not mistaken for a slow runner.
       - name: Run the notebook unit-test set
         env:
           OPEN_SCIENCE_NOTEBOOK_PR_JOB: '1'
@@ -121,6 +127,7 @@ jobs:
           --reporter=json
           --outputFile="$env:RUNNER_TEMP/unit-results-notebook.json"
           --reporter=default
+          --testTimeout=60000
           --maxWorkers=2
       # Two sentinels: the suite that guards the PHI fixes above, and the kernel protocol every notebook
       # execution goes through. Renaming or moving either one must red this job, not shrink the set.
