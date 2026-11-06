@@ -155,6 +155,50 @@ it('does not take a parenthesised year for an area code', () => {
   expect(detectPhi(text).filter((span) => span.category === 'PHONE')).toEqual([])
 })
 
+// #175: a Japanese IME types full-width digits and punctuation by default, and every rule was ASCII.
+// Folding happens before matching in both layers, so the same number now reads the same way everywhere.
+// U+2212 MINUS SIGN is its own row: Unicode normalization folds full-width digits but leaves it alone,
+// which is why the gate folded the digits and still missed the number.
+it.each([
+  ['full-width parens with U+2212', '電話: （０３）１２３４\u2212５６７８'],
+  ['full-width parens with U+FF0D', '電話: （０３）１２３４\uff0d５６７８'],
+  ['full-width parens with an ASCII hyphen', '電話: （０３）１２３４-５６７８'],
+  ['full-width digits with ASCII hyphens', '電話: ０３０-１２３４-５６７８'],
+  ['full-width digits with U+2212', '電話: ０３０\u2212１２３４\u2212５６７８'],
+  ['half-width digits with U+2212', '電話: 030\u22121234\u22125678'],
+  ['full-width plus and digits', '電話: ＋８１ ９０ １２３４ ５６７８']
+] as const)('redacts a %s number in both layers', (_label, text) => {
+  const [span] = detectPatientPhiSpans(text).filter((candidate) => candidate.category === 'PHONE')
+  expect(span).toBeDefined()
+  // Offsets and text index the original string, never the folded one.
+  expect(text.slice(span!.start, span!.end)).toBe(span!.text)
+  expect(span!.text).toMatch(/[０-９＋（）\u2212\uff0d]/u)
+
+  const released = redactPatientPhi(text)
+  expect(released).toContain('[仮名化済み]')
+  expect(released).not.toContain(span!.text)
+  expect(detectPhi(text).some((candidate) => candidate.category === 'PHONE')).toBe(true)
+})
+
+// Folding must not turn an ordinary number into a phone. Neither layer anchors on bare digits, so a
+// full-width identifier and a number without an area code stay untouched.
+it('does not fabricate a phone from a full-width identifier or an area-code-less number', () => {
+  for (const text of ['第１２３４号', '１２３４\u2212５６７８']) {
+    expect(redactPatientPhi(text)).toBe(text)
+    expect(detectPatientPhiSpans(text)).toEqual([])
+    expect(detectPhi(text).filter((span) => span.category === 'PHONE')).toEqual([])
+  }
+})
+
+// #161's known trade-off, unchanged by the fold: a digits-only run glued to a decimal is left to the
+// provider gate, in full width exactly as in half width.
+it('leaves a full-width decimal continuation to the provider gate, like the half-width one', async () => {
+  const text = '１.０９０１２３４５６７８'
+  expect(detectPatientPhiSpans(text)).toEqual([])
+  expect(redactPatientPhi(text)).toBe(text)
+  expect(await releaseNotebookModelText(text, 'fiction')).toBe(PHI_OUTPUT_BLOCK_MESSAGE)
+})
+
 // #161 requirement 4: a refusal names what fired, the stable rule id and where, never the value.
 it('names the category, rule and offsets in a refusal without the matched text', () => {
   const spans = detectPatientPhiSpans('患者氏名: 山田太郎、メール: taro@example.jp')
