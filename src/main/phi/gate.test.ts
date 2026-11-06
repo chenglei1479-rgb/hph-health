@@ -457,3 +457,138 @@ describe('PHI gate scan scope', () => {
     }
   })
 })
+
+// #159: a public literature query in a patient project died with PHI-BLOCK-01 behind a 502. The hit was
+// inside `client_metadata`, the Codex CLI's own transport envelope: a generated id fragment and a dated
+// workspace path, never the doctor's question. The envelope is skipped for blocking, but it stays in the
+// release projection, so anything patient-shaped parked there is still masked before the body is sent.
+describe('third-party transport envelope (#159)', () => {
+  const installIdentityGate = (): void => {
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+  }
+
+  // Keys, order and value shapes captured from a real request of the managed CLI (codex-cli 0.157.1).
+  // Only the machine-specific values are replaced; the dated workspace path is kept because it is what
+  // the detector used to flag (`DATE / date-bare-iso`, offset 667 of a 961-character value).
+  const codexEnvelope = (workspacePath = 'C:\\work\\2026-11-06\\hph-health'): string =>
+    JSON.stringify({
+      'x-codex-turn-metadata': JSON.stringify({
+        installation_id: '213de936-fdcb-4bc6-9de0-62bff721273a',
+        session_id: '01a1b1c7-a3ac-7c03-b767-e93bda2db4a3',
+        thread_id: '01a1b1c7-a3ac-7c03-b767-e93bda2db4a3',
+        agent_name: '/root',
+        turn_id: '01a1b1c7-a441-74f2-8c51-c9837b468a66',
+        window_id: '01a1b1c7-a3ac-7c03-b767-e93bda2db4a3:0',
+        window_number: 0,
+        context_window_id: '01a1b1c7-a3ac-7c03-b767-e94d678d308a',
+        request_kind: 'turn',
+        root_turn_id: '01a1b1c7-a441-74f2-8c51-c9837b468a66',
+        thread_source: 'user',
+        turn_trigger: 'exec',
+        sandbox: 'none',
+        sandbox_mode: 'read-only',
+        auto_review_enabled: false,
+        node_repl_auto_review_required: false,
+        node_repl_disabled: false,
+        workspaces: { [workspacePath]: { has_changes: false } },
+        turn_started_at_unix_ms: 1793984013388,
+        analytics_enabled: true,
+        model: 'gpt-5'
+      }),
+      'x-codex-window-id': '01a1b1c7-a3ac-7c03-b767-e93bda2db4a3:0',
+      thread_id: '01a1b1c7-a3ac-7c03-b767-e93bda2db4a3',
+      'x-codex-installation-id': '213de936-fdcb-4bc6-9de0-62bff721273a',
+      session_id: '01a1b1c7-a3ac-7c03-b767-e93bda2db4a3',
+      root_turn_id: '01a1b1c7-a441-74f2-8c51-c9837b468a66',
+      turn_id: '01a1b1c7-a441-74f2-8c51-c9837b468a66'
+    })
+
+  const literatureBody = (text: string, workspacePath?: string): string =>
+    JSON.stringify({
+      model: 'gpt-5',
+      instructions: 'Follow the hospital style guide.',
+      input: [
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text }] }
+      ],
+      tools: [],
+      tool_choice: 'auto',
+      parallel_tool_calls: true,
+      reasoning: { effort: 'none', summary: 'auto' },
+      store: false,
+      stream: true,
+      include: [],
+      prompt_cache_key: '1b1c-7352-92',
+      client_metadata: JSON.parse(codexEnvelope(workspacePath))
+    })
+
+  const query =
+    'PubMedで STROBE observational studies reporting guideline 2007 を検索し、J-STAGEで「再入院」を検索してください。'
+
+  it('sends a clean literature query from a patient project', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: literatureBody(query)
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+      const sent = JSON.parse((fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string)
+      // The envelope is not stripped: the CLI's protocol field keeps its place in the body.
+      expect(Object.keys(sent.client_metadata)).toContain('x-codex-turn-metadata')
+      expect(sent.input[0].content[0].text).toBe(query)
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+
+  it('still blocks patient information in the conversation', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    try {
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body: literatureBody('患者：山田 太郎、保険者番号 02123456 の再入院を調べてください。')
+        })
+      ).rejects.toThrow(PHI_BLOCK_CODE)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+
+  // The precondition for skipping the envelope when blocking: it is still released. This asserts the
+  // bytes handed to fetch, not the de-identification return value, because only the sent body matters.
+  it('masks patient information that sits inside the envelope', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const patientPath = 'C:\\clinic\\保険者番号 02123456\\2026-11-06'
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: literatureBody(query, patientPath)
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+      const sentBody = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+      // Not blocked, but the identifier never reaches the provider: the release pass rewrote the field.
+      expect(sentBody).not.toContain('02123456')
+      const sent = JSON.parse(sentBody)
+      const metadata = JSON.parse(sent.client_metadata['x-codex-turn-metadata'])
+      const [workspace] = Object.keys(metadata.workspaces)
+      expect(workspace).not.toContain('02123456')
+      expect(workspace).toContain('番号')
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+})

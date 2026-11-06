@@ -109,6 +109,27 @@ describe('describePromptError', () => {
   it('accepts a plain string error', () => {
     expect(describePromptError('boom')).toBe('boom')
   })
+
+  // #159: Codex wraps our bridge refusal in a status label and repeats the loopback URL. Neither helps
+  // the doctor, and the raw status code is what made the failure look like a transient gateway problem.
+  it('shows a policy refusal without the status label or the loopback url', () => {
+    const error = agentError(
+      'Internal error: unexpected status 400 Bad Request: この端末は病院に承認されていません。リクエストに患者情報が含まれていたため、送信しませんでした。診断番号：PHI-BLOCK-01, url: http://127.0.0.1:61419/v1/responses'
+    )
+
+    const text = describePromptError(error)
+
+    expect(text).toContain('PHI-BLOCK-01')
+    expect(text).toContain('患者情報')
+    expect(text).not.toContain('unexpected status')
+    expect(text).not.toContain('400')
+    expect(text).not.toContain('127.0.0.1')
+  })
+
+  it('leaves an unrelated status failure intact', () => {
+    const message = 'Internal error: unexpected status 502 Bad Gateway: upstream exploded'
+    expect(describePromptError(agentError(message))).toBe(message)
+  })
 })
 
 describe('isProviderPromptError', () => {

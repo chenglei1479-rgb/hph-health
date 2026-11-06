@@ -4,6 +4,7 @@ import {
   PROVIDER_CONNECTION_FAILED_PREFIX,
   PROVIDER_RESOURCE_NOT_FOUND_PREFIX
 } from '../../shared/run-error-classification'
+import { PHI_BLOCK_CODE } from '../../shared/phi-block'
 
 // Turns an agent prompt failure into user-visible text. Agents (opencode) relay an upstream provider
 // HTTP error wrapped as a JSON-RPC failure like
@@ -161,10 +162,31 @@ const isClaudeProviderApiError = (error: unknown): boolean =>
 const connectionFailureDetail = (message: string): string | undefined =>
   message.match(/\(([A-Za-z][A-Za-z0-9_-]{0,63})\)\s*$/)?.[1]
 
+// Codex relays a refusal from our provider bridge as
+//   `Internal error: unexpected status 502 Bad Gateway: <our sentence>, url: http://127.0.0.1:…/v1/responses`
+// (beta.21 showed exactly that). The status label and the loopback URL are transport noise for the
+// doctor: the sentence in the middle is our own localized refusal carrying the diagnostic code. Return
+// the wrapped refusal on its own, and only when it really is one — any other status text stays visible.
+const unwrapProviderRefusal = (message: string): string | undefined => {
+  if (!message.includes(PHI_BLOCK_CODE)) return undefined
+
+  const wrapped = message.match(/unexpected status \d{3}[^:]*:\s*([\s\S]*)$/i)?.[1] ?? message
+
+  return (
+    wrapped
+      .replace(/,\s*url:\s*\S+\s*$/i, '')
+      .trim() || undefined
+  )
+}
+
 // Produces the session-visible error text for a failed prompt: actionable guidance for recognized
 // provider configuration/connectivity failures, else the original message untouched.
 export const describePromptError = (error: unknown, ctx: PromptErrorContext = {}): string => {
   const raw = rawErrorMessage(error)
+  const refusal = unwrapProviderRefusal(raw)
+
+  if (refusal) return refusal
+
   const detail = extractUpstreamDetail(raw)
 
   if (isClaudeProviderApiError(error) && isClaudeApiConnectionFailure(raw)) {

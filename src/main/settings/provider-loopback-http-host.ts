@@ -9,6 +9,8 @@ import {
 
 import { createLogger, errorLogFields, type Logger } from '@aipoch/diagnostics/node'
 
+import { PhiPolicyError } from '../../shared/phi-block'
+
 // A turn may contain up to 24 MiB of base64 image data before frameworks add text, replayed history,
 // and tool declarations. Keep every authenticated Provider bridge on one memory-bounded envelope.
 const MAX_PROVIDER_LOOPBACK_REQUEST_BYTES = 64 * 1024 * 1024
@@ -47,6 +49,12 @@ class ProviderLoopbackRequestError extends Error {
     this.name = 'ProviderLoopbackRequestError'
   }
 }
+
+// A request the gate refused locally is the client's error, not a gateway failure. Answering 502 made the
+// agent CLI treat a decision that can never change as a transient upstream fault and retry it 30 times in
+// 25.5 s (#159), so every bridge maps a policy refusal to 400 alongside its own malformed-request errors.
+const providerLoopbackClientError = (error: unknown): boolean =>
+  error instanceof ProviderLoopbackRequestError || error instanceof PhiPolicyError
 
 const writeProviderLoopbackJson = (
   response: ServerResponse,
@@ -295,5 +303,10 @@ class ProviderLoopbackHttpHost<Connection extends ProviderLoopbackConnection> {
   }
 }
 
-export { ProviderLoopbackHttpHost, ProviderLoopbackRequestError, writeProviderLoopbackJson }
+export {
+  ProviderLoopbackHttpHost,
+  ProviderLoopbackRequestError,
+  providerLoopbackClientError,
+  writeProviderLoopbackJson
+}
 export type { ProviderLoopbackConnection, ProviderLoopbackHttpRequest, ProviderLoopbackJsonObject }
