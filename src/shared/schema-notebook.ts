@@ -47,6 +47,8 @@ export type PatientPhiSpan = {
   category: string
   text: string
   reason: string
+  /** Stable id of the local rule that fired, e.g. `schema-phone`. The refusal message names it. */
+  rule?: string
 }
 
 // CSV bytes arrive from the renderer and are decoded in the main process: Excel on a Japanese Windows

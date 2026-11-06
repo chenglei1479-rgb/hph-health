@@ -437,9 +437,12 @@ describe('schema-only notebook', () => {
       'KARTE_NO',
       'PERSON_NAME'
     ])
-    expect(blocked.spans.find((span) => span.category === 'PERSON_NAME')?.reason).toContain(
-      '山田太郎'
-    )
+    // #161: the refusal names the category and offsets, and the matched values stay in the main
+    // process. Neither the message nor the returned spans may carry the patient text.
+    expect(blocked.message).toContain('PERSON_NAME')
+    expect(blocked.message).not.toContain('山田太郎')
+    expect(blocked.message).not.toContain('a@example.jp')
+    for (const span of blocked.spans) expect(span.text).toBe('')
     expect(createPatientDataTagStore(join(root, 'patient-data-tags.jsonl')).has('study-1')).toBe(
       false
     )

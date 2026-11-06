@@ -288,7 +288,14 @@ export const createSchemaNotebookService = (options: {
       const table = imported.table
       const spans = detectPatientPhiSpans(imported.scanText)
       if (spans.length > 0 && !approved()) {
-        return { ok: false, blocked: true, message: formatBlockedImport(spans), spans }
+        // The refusal names the categories and offsets; the matched text stays in this process. The
+        // renderer has no use for it and must not receive patient values.
+        return {
+          ok: false,
+          blocked: true,
+          message: formatBlockedImport(spans),
+          spans: spans.map((span) => ({ ...span, text: '' }))
+        }
       }
       const profile = profileTable(table)
       const identifierWarnings = findDirectIdentifierColumns(table.columns, table.rows)
