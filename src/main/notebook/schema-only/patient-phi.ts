@@ -29,8 +29,14 @@ const RULES: Rule[] = [
     // `(2024)1234-5678` stays unmatched on purpose: the area-code branch requires a leading `0`, and
     // every Japanese area code has one. Widening that to any digits would swallow a date in
     // parentheses followed by two number groups.
+    //
+    // The left guard wraps all three branches, not just the first: alternation binds tighter than the
+    // lookbehind-less prefix once the pattern starts matching mid-number. Without it `2024-2025`
+    // matched from the second character (`024-2` + `025`) and a period was redacted into
+    // `2[仮名化済み]` — silent corruption of a number the model is meant to receive. The gate always
+    // had `(?<![\d])`; this brings the local layer in line.
     pattern:
-      /(?:\+81[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:\(0\d{1,4}\)[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})/g,
+      /(?<!\d)(?:(?:\+81[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:\(0\d{1,4}\)[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}))/g,
     group: 0
   },
   {
@@ -116,6 +122,29 @@ const continuesNumber = (text: string, start: number, end: number): boolean => {
   )
 }
 
+// #175: a Japanese IME produces full-width digits and punctuation by default, while every rule below is
+// written in ASCII, so a number typed that way reached the rules unfolded and matched nothing. Folding
+// runs before matching and is strictly one code unit to one code unit, so an offset in the folded
+// string is the same offset in the original: the redacted text keeps the characters the user typed and
+// a refusal still reports true offsets.
+//
+// The dash family is folded as well. U+2212 MINUS SIGN and U+FF0D FULLWIDTH HYPHEN-MINUS look like the
+// ASCII hyphen and both occur in Japanese input, and Unicode normalization leaves U+2212 (and
+// U+2010..U+2015) alone — which is why the gate folded the digits but still missed the number.
+const DASH_EQUIVALENTS = /[\u2010\u2011\u2013\u2014\u2015\u2212\uff0d]/gu
+const WIDTH_FOLD = /[\uff10-\uff19\uff0b\uff08\uff09]/gu
+
+export const foldWidth = (text: string): string =>
+  text
+    .replace(WIDTH_FOLD, (char) => {
+      const code = char.charCodeAt(0)
+      // Full-width digits are exactly 0xFEE0 above their ASCII forms.
+      if (code >= 0xff10 && code <= 0xff19) return String.fromCharCode(code - 0xfee0)
+      if (char === '＋') return '+'
+      return char === '（' ? '(' : ')'
+    })
+    .replace(DASH_EQUIVALENTS, '-')
+
 /**
  * TODO(phi-gate): PR #7 adds `detectPhi` in `src/main/phi/detect.ts` and filters
  * patient categories inside `patientSpans` in `src/main/phi/gate.ts`. When that
@@ -124,26 +153,30 @@ const continuesNumber = (text: string, start: number, end: number): boolean => {
  */
 export const detectPatientPhiSpans = (text: string): PatientPhiSpan[] => {
   const spans: PatientPhiSpan[] = []
+  // Rules see the folded string; spans, offsets and text stay in the original.
+  const folded = foldWidth(text)
   for (const rule of RULES) {
     rule.pattern.lastIndex = 0
-    for (const match of text.matchAll(rule.pattern)) {
+    for (const match of folded.matchAll(rule.pattern)) {
       const piece = match[rule.group]
       if (!piece || match.index === undefined) continue
       const start = rule.group === 0 ? match.index : match.index + match[0].indexOf(piece)
       const end = start + piece.length
       if (overlaps(spans, start, end)) continue
-      // Only a digits-only match can be a slice of a longer number; see continuesNumber.
+      // Only a digits-only match can be a slice of a longer number; see continuesNumber. The guard runs
+      // on the folded string too, so a full-width decimal continuation behaves like a half-width one.
       if (
         NUMERIC_CATEGORIES.has(rule.category) &&
         /^\d+$/u.test(piece) &&
-        continuesNumber(text, start, end)
+        continuesNumber(folded, start, end)
       )
         continue
       spans.push({
         start,
         end,
         category: rule.category,
-        text: piece,
+        // The original characters, not the folded ones: the user sees what they typed in a refusal.
+        text: text.slice(start, end),
         rule: rule.rule,
         // The reason is shown to the user when an import is refused, so it names the category, the
         // rule and the offsets only. The matched text is never part of it.

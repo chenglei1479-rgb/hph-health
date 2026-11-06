@@ -69,6 +69,12 @@ const ERA: Array<[string, string, number]> = [
   ['明治', 'M', 1867]
 ]
 
+// #175: NFKC folds full-width digits, brackets and `＋`, but it leaves the dash range alone — so a
+// number typed as ０３−１２３４−５６７８ (U+2212 MINUS SIGN) folded every digit and still failed on the
+// separator. Folding the whole dash family to the ASCII hyphen keeps this layer in step with the local
+// redactor in `notebook/schema-only/patient-phi.ts`; both list the same characters.
+const DASH_EQUIVALENTS = /[\u2010\u2011\u2013\u2014\u2015\u2212\uff0d]/gu
+
 function normalizeWithMap(input: string): NormMap {
   const startOrig = []
   const endOrig = []
@@ -78,7 +84,11 @@ function normalizeWithMap(input: string): NormMap {
     const cp = input.charCodeAt(i)
     const next = input.charCodeAt(i + 1)
     if (cp >= 0xff66 && cp <= 0xff9d && (next === 0xff9e || next === 0xff9f)) len = 2
-    const norm = input.slice(i, i + len).normalize('NFKC')
+    // Each folded character stays one UTF-16 unit, so the offset map below is still exact.
+    const norm = input
+      .slice(i, i + len)
+      .normalize('NFKC')
+      .replace(DASH_EQUIVALENTS, '-')
     for (let k = 0; k < norm.length; k++) {
       startOrig.push(i)
       endOrig.push(i + len)
