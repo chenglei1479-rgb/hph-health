@@ -87,27 +87,13 @@ const VITEST_PORTABLE_CI_EXCLUDE_PATTERNS = [
 // fails it while using the runner's short TEMP, the correct fix is to make that test use a short root -
 // not to add it back to this list.
 //
-// Two entries below are a product bug, not an environment gap: #184, "package cache root exceeds the
-// Windows path budget". CI run 127880034774 (94c6b1b5) failed 25 tests with, verbatim:
-//
-//   Error: No trusted writable package cache fits the managed runtime path budget.
-//   Candidate diagnostics:
-//     C:\Deep Research AgentTmp\m-6988b1v2: exceeds the Windows path budget by 2 characters
-//     C:\Users\runneradmin\AppData\Local\Temp\Deep Research AgentTmp\m-…: by 39 characters
-//     C:\Users\runneradmin\os-tmp\m-…: by 4 characters
-//
-// That is every candidate rejected, so there is no fallback root at all. The fix belongs in
-// `packages/environment/src/micromamba-cache.ts` (shorten the root directory, never raise the budget).
-//
-// The 5 failures in environment-startup.contract and the 16 in reproduction-runtime are the same
-// defect, not 21 separate ones: on CI every one of them lands on that single error, while both suites
-// pass locally even under a deep temporary root. That is why the entries below are a temporary
-// concession for a real bug, and not an environment gap like the eight above them: the job loses the
-// 7 healthy tests of the first suite plus all 18 of the second - 25 tests of coverage - while #184 is
-// open.
-//
-// Remove both entries when #184 closes; they are a hole in this job until then, and the removal belongs
-// in the same PR as the fix.
+// #184 removed two temporary entries from this list. The package cache root used to be 36 characters
+// ('C:\Deep Research AgentTmp\m-xxxxxxxx'), over the 34 that the conservative 225-character pack budget
+// leaves out of 259, so every machine and every user name got "No trusted writable package cache fits
+// the managed runtime path budget" - CI run 127880034774 failed 25 tests on it. The root is now 21
+// characters and does not depend on the user name; environment-startup.contract and
+// reproduction-runtime run here again, and their 21 tests are why that entry had to be removed in the
+// same change as the fix rather than later.
 export const NOTEBOOK_PR_EXCLUDE_PATTERNS = [
   'src/main/notebook/auto-mode-budget.integration.test.ts',
   'src/main/notebook/file-evidence-publication.integration.test.ts',
@@ -116,12 +102,7 @@ export const NOTEBOOK_PR_EXCLUDE_PATTERNS = [
   'src/main/notebook/runtime-service.rpc-retirement.test.ts',
   'src/main/notebook/shell-cell-session.integration.test.ts',
   'src/main/notebook/windows-repl-termination.integration.test.ts',
-  'src/main/notebook/windows-shell.integration.test.ts',
-  // #184 (remove when it closes): 5 of its 12 tests land on the package-cache path budget.
-  'src/main/notebook/environment-startup.contract.test.ts',
-  // #184 (remove when it closes): 16 after the 60s change (20 before it), same cause as the 5 in
-  // environment-startup; #184 requires all 21 to go green together, not just the 5.
-  'src/main/notebook/reproduction-runtime.test.ts'
+  'src/main/notebook/windows-shell.integration.test.ts'
 ] as const
 
 function portableTestScopeFor(env: NodeJS.ProcessEnv): 'host' | 'packages' | undefined {

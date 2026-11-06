@@ -58,8 +58,16 @@ type CacheMarker = { schema?: number; canonicalRoot?: string; userIdentity?: str
 
 type TempParentMarker = { schema?: number; kind?: string; userIdentity?: string }
 
-const WINDOWS_TEMP_PARENT = 'Deep Research AgentTmp'
-const LEGACY_WINDOWS_TEMP_PARENT = 'MedResearchAgentTmp'
+// #184: a cache root must leave room for the pack's longest relative path inside the Windows limit:
+// 259 - maxCacheRelativePath (225 for a manifest without per-pack metadata) leaves 34 characters. The
+// parent used to be 'Deep Research AgentTmp', 22 characters, which put the primary candidate at 36 and
+// every fallback at 38 or more - over the budget on every machine and for every user name, so the
+// selection threw for everyone. 'Baselio' makes the primary 21 characters and, unlike the two
+// fallbacks, does not depend on the length of the user's profile path at all.
+const WINDOWS_TEMP_PARENT = 'Baselio'
+// Names this cache lived under before. They are never created again, but an existing cache there must
+// still be recognised and cleaned up, otherwise upgrading the app orphans gigabytes on user machines.
+const LEGACY_WINDOWS_TEMP_PARENTS = ['Deep Research AgentTmp', 'MedResearchAgentTmp'] as const
 const TEMP_PARENT_MARKER_FILE = '.open-science-temp.json'
 const TEMP_PARENT_MARKER_KIND = 'micromamba-working-cache-parent'
 
@@ -519,8 +527,21 @@ const candidatePaths = (
     path: win32.join(runtimeVolume, tempParent, leaf),
     managedParent: true
   }
+  // #184: every other candidate carries a variable-length piece (a drive letter is always 3, but a UNC
+  // volume, a TEMP root or the user profile can be arbitrarily long). When the runtime sits on such a
+  // volume, the system drive is the one root whose length does not depend on the installation or the
+  // user, so it is added as the guaranteed-short fallback. Drive-letter runtimes already have it as the
+  // primary, so nothing is added for them and the candidate list is unchanged.
+  const systemVolume = env.SystemDrive
+    ? win32.parse(win32.normalize(env.SystemDrive)).root
+    : undefined
+  const guaranteedFallback =
+    systemVolume && !/^[A-Za-z]:[\\/]?$/.test(runtimeVolume)
+      ? [{ path: win32.join(systemVolume, tempParent, leaf), managedParent: true }]
+      : []
   return [
     primary,
+    ...guaranteedFallback,
     ...perUserTemps.map((perUserTemp) => ({
       path: win32.join(perUserTemp, tempParent, leaf),
       profileBoundary: perUserTemp,
@@ -575,12 +596,8 @@ export const micromambaWorkingCachePaths = (
     ...new Set(
       [
         ...candidatePaths(identity.canonicalRoot, identity.leaf, env, canonicalize),
-        ...candidatePaths(
-          identity.canonicalRoot,
-          identity.leaf,
-          env,
-          canonicalize,
-          LEGACY_WINDOWS_TEMP_PARENT
+        ...LEGACY_WINDOWS_TEMP_PARENTS.flatMap((tempParent) =>
+          candidatePaths(identity.canonicalRoot, identity.leaf, env, canonicalize, tempParent)
         )
       ].map((candidate) => candidate.path)
     )
@@ -626,9 +643,13 @@ export const selectMicromambaCache = (
       }
     })
   // Reuse an existing, ownership-verified cache without creating any old-brand path on new installs.
+  // Each legacy parent is looked at separately, and the current name is last: a cache created by the
+  // previous brand or by the previous build is reused before anything new is created.
   const candidates = [
-    ...candidatePaths(canonicalRoot, leaf, env, canonicalize, LEGACY_WINDOWS_TEMP_PARENT).filter(
-      (candidate) => candidate.path.includes(LEGACY_WINDOWS_TEMP_PARENT) && exists(candidate.path)
+    ...LEGACY_WINDOWS_TEMP_PARENTS.flatMap((tempParent) =>
+      candidatePaths(canonicalRoot, leaf, env, canonicalize, tempParent).filter(
+        (candidate) => candidate.path.includes(tempParent) && exists(candidate.path)
+      )
     ),
     ...candidatePaths(canonicalRoot, leaf, env, canonicalize)
   ]
@@ -680,9 +701,17 @@ export const selectMicromambaCache = (
     return { path: physical, lockKey: micromambaCacheLockKey(physical, { platform, canonicalize }) }
   }
 
+  // #184: say what the numbers mean and what the reader can do. The roots come from the volume holding
+  // the data folder and a fixed folder name - the user name is not part of any candidate - so moving the
+  // data folder to another drive does not shorten them; only a different volume would, and a UNC install
+  // already falls back to the system drive. When this message appears, support needs the diagnostics.
   throw new Error(
-    'No trusted writable package cache fits the managed runtime path budget. ' +
-      `Candidate diagnostics: ${rejections.join('; ')}.`
+    `No trusted writable package cache fits the managed runtime path budget: Windows allows ${WINDOWS_MAX_USABLE_PATH} ` +
+      `characters and this pack's longest path inside the cache needs ${maxCacheRelativePath}, which leaves ` +
+      `${WINDOWS_MAX_USABLE_PATH - maxCacheRelativePath} for the cache root. ` +
+      `These roots come from the volume holding the data folder (a drive letter, or the system drive for a UNC ` +
+      `install) and the fixed folder name, so moving the data folder does not shorten them. ` +
+      `Please report this message with the diagnostics below. Candidate diagnostics: ${rejections.join('; ')}.`
   )
 }
 
@@ -742,11 +771,10 @@ export const isTrustedMicromambaWorkingCacheForRoot = (
 
   const parent = win32.dirname(normalized)
   const parentLeaf = win32.basename(parent).toLowerCase()
-  if (
-    parentLeaf !== WINDOWS_TEMP_PARENT.toLowerCase() &&
-    parentLeaf !== LEGACY_WINDOWS_TEMP_PARENT.toLowerCase() &&
-    parentLeaf !== 'os-tmp'
+  const knownParents = [WINDOWS_TEMP_PARENT, ...LEGACY_WINDOWS_TEMP_PARENTS].map((name) =>
+    name.toLowerCase()
   )
+  if (!knownParents.includes(parentLeaf) && parentLeaf !== 'os-tmp')
     return reject('parent-location')
   const profile = env.USERPROFILE ? win32.normalize(canonicalize(env.USERPROFILE)) : undefined
   if (parentLeaf === 'os-tmp' && (!profile || !isInside(profile, parent)))
@@ -941,13 +969,11 @@ export const removeMicromambaCacheForRoot = (
     deps.remove ?? ((path: string): void => rmSync(path, { recursive: true, force: true }))
   const cleanupCandidates = [
     ...candidatePaths(identity.canonicalRoot, identity.leaf, env, canonicalize),
-    ...candidatePaths(
-      identity.canonicalRoot,
-      identity.leaf,
-      env,
-      canonicalize,
-      LEGACY_WINDOWS_TEMP_PARENT
-    ).filter((candidate) => candidate.path.includes(LEGACY_WINDOWS_TEMP_PARENT)),
+    ...LEGACY_WINDOWS_TEMP_PARENTS.flatMap((tempParent) =>
+      candidatePaths(identity.canonicalRoot, identity.leaf, env, canonicalize, tempParent).filter(
+        (candidate) => candidate.path.includes(tempParent)
+      )
+    ),
     ...legacyCleanupCandidatePaths(
       identity.canonicalRoot,
       identity.legacyLeaf,

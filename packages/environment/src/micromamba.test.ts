@@ -289,7 +289,7 @@ describe('caBundleEnv', () => {
 
 describe('micromambaSpawnEnv', () => {
   it('keeps the Windows package cache ASCII-only for a non-ASCII user profile', () => {
-    const env = micromambaSpawnEnv('C:\\Users\\甲乙\\OpenScience\\runtime', undefined, {
+    const env = micromambaSpawnEnv('C:\\Users\\甲乙\\Baselio\\runtime', undefined, {
       platform: 'win32',
       env: {
         USERNAME: '甲乙',
@@ -301,11 +301,11 @@ describe('micromambaSpawnEnv', () => {
       verifyOwnership: () => true
     })
 
-    expect(env.CONDA_PKGS_DIRS).toMatch(/^C:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(env.CONDA_PKGS_DIRS).toMatch(/^C:\\Baselio\\m-[0-9a-hjkmnp-tv-z]{8}$/)
   })
 
   it('cleans inherited conda/mamba values before injecting the Windows app cache and CA vars', () => {
-    const env = micromambaSpawnEnv('D:\\OpenScience\\runtime', '/ca.pem', {
+    const env = micromambaSpawnEnv('D:\\Baselio\\runtime', '/ca.pem', {
       platform: 'win32',
       env: {
         PATH: 'C:\\Windows',
@@ -327,13 +327,13 @@ describe('micromambaSpawnEnv', () => {
       CURL_CA_BUNDLE: '/ca.pem'
     })
     expect(env.conda_prefix).toBeUndefined()
-    expect(env.MAMBA_ROOT_PREFIX).toBe('D:\\OpenScience\\runtime')
+    expect(env.MAMBA_ROOT_PREFIX).toBe('D:\\Baselio\\runtime')
   })
 
   it.each(['darwin', 'linux', 'win32'] as const)(
     'confines all managed Micromamba state to the runtime on %s',
     (platform) => {
-      const root = platform === 'win32' ? 'D:\\OpenScience\\runtime' : '/runtime'
+      const root = platform === 'win32' ? 'D:\\Baselio\\runtime' : '/runtime'
       const runtimePath = platform === 'win32' ? win32 : posix
       const cache = runtimePath.join(root, 'coordinated-pkgs')
       const home = runtimePath.join(root, 'home')
