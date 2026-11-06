@@ -101,10 +101,13 @@ const VITEST_PORTABLE_CI_EXCLUDE_PATTERNS = [
 //
 // The 5 failures in environment-startup.contract and the 16 in reproduction-runtime are the same
 // defect, not 21 separate ones: on CI every one of them lands on that single error, while both suites
-// pass locally even under a deep temporary root. #184's acceptance is therefore that both suites turn
-// green together - 21 tests (5 + 16) - and a fix that clears only the first 5 is not done.
+// pass locally even under a deep temporary root. That is why the entries below are a temporary
+// concession for a real bug, and not an environment gap like the eight above them: the job loses the
+// 7 healthy tests of the first suite plus all 18 of the second - 25 tests of coverage - while #184 is
+// open.
 //
-// Remove both entries when #184 closes; they are a hole in this job until then.
+// Remove both entries when #184 closes; they are a hole in this job until then, and the removal belongs
+// in the same PR as the fix.
 export const NOTEBOOK_PR_EXCLUDE_PATTERNS = [
   'src/main/notebook/auto-mode-budget.integration.test.ts',
   'src/main/notebook/file-evidence-publication.integration.test.ts',
@@ -116,7 +119,8 @@ export const NOTEBOOK_PR_EXCLUDE_PATTERNS = [
   'src/main/notebook/windows-shell.integration.test.ts',
   // #184 (remove when it closes): 5 of its 12 tests land on the package-cache path budget.
   'src/main/notebook/environment-startup.contract.test.ts',
-  // #184 (remove when it closes): 16 of its 18 tests land on the same error.
+  // #184 (remove when it closes): 16 after the 60s change (20 before it), same cause as the 5 in
+  // environment-startup; #184 requires all 21 to go green together, not just the 5.
   'src/main/notebook/reproduction-runtime.test.ts'
 ] as const
 
