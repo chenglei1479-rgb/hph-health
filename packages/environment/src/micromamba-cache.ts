@@ -62,9 +62,9 @@ type TempParentMarker = { schema?: number; kind?: string; userIdentity?: string 
 // 259 - maxCacheRelativePath (225 for a manifest without per-pack metadata) leaves 34 characters. The
 // parent used to be 'Deep Research AgentTmp', 22 characters, which put the primary candidate at 36 and
 // every fallback at 38 or more - over the budget on every machine and for every user name, so the
-// selection threw for everyone. 'OpenScience' makes the primary 25 characters and, unlike the two
+// selection threw for everyone. 'Baselio' makes the primary 21 characters and, unlike the two
 // fallbacks, does not depend on the length of the user's profile path at all.
-const WINDOWS_TEMP_PARENT = 'OpenScience'
+const WINDOWS_TEMP_PARENT = 'Baselio'
 // Names this cache lived under before. They are never created again, but an existing cache there must
 // still be recognised and cleaned up, otherwise upgrading the app orphans gigabytes on user machines.
 const LEGACY_WINDOWS_TEMP_PARENTS = ['Deep Research AgentTmp', 'MedResearchAgentTmp'] as const

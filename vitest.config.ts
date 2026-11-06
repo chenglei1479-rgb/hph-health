@@ -90,7 +90,7 @@ const VITEST_PORTABLE_CI_EXCLUDE_PATTERNS = [
 // #184 removed two temporary entries from this list. The package cache root used to be 36 characters
 // ('C:\Deep Research AgentTmp\m-xxxxxxxx'), over the 34 that the conservative 225-character pack budget
 // leaves out of 259, so every machine and every user name got "No trusted writable package cache fits
-// the managed runtime path budget" - CI run 127880034774 failed 25 tests on it. The root is now 25
+// the managed runtime path budget" - CI run 127880034774 failed 25 tests on it. The root is now 21
 // characters and does not depend on the user name; environment-startup.contract and
 // reproduction-runtime run here again, and their 21 tests are why that entry had to be removed in the
 // same change as the fix rather than later.
