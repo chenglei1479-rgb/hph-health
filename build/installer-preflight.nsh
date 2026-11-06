@@ -50,7 +50,13 @@
   # FileSeek each refusal overwrote the previous one and the log kept only the last attempt.
   FileOpen $R6 "$TEMP\${BASELIO_PREFLIGHT_LOG}" a
   ${If} ${Errors}
+    # The fallback exists for the case where TEMP cannot be written, so it must produce the same readable
+    # file: decide the byte-order mark for THIS path again instead of carrying the TEMP path's verdict. A
+    # fallback file without the mark reads as mojibake in exactly the situation it was added for.
     StrCpy $R7 "0"
+    ${IfNot} ${FileExists} "$EXEDIR\${BASELIO_PREFLIGHT_LOG}"
+      StrCpy $R7 "1"
+    ${EndIf}
     ClearErrors
     FileOpen $R6 "$EXEDIR\${BASELIO_PREFLIGHT_LOG}" a
   ${EndIf}

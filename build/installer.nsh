@@ -386,6 +386,7 @@ FunctionEnd
 
     ensureExistingUninstallerIsWritable_cancel:
       # customInit may already have moved nested user data outside the old installation.
+      !insertmacro baselioLogPreflightRefusal "refusal reason=uninstaller-not-writable windows-error=$R1 install-folder=$\"$INSTDIR$\" action=close-the-process-holding-the-uninstaller-and-rerun"
       !insertmacro restoreAllNestedDataRoots
       SetErrorLevel 2
       Quit
@@ -450,6 +451,7 @@ FunctionEnd
         StrCpy $baselioMessageFolder "${FOLDER}"
         DetailPrint "$(BaselioDetail6)"
         MessageBox MB_OK|MB_ICONEXCLAMATION "$(BaselioRetryPreservationFailed)"
+        !insertmacro baselioLogPreflightRefusal "refusal reason=retry-preserve-failed path=$\"$baselioMessageDir\$baselioMessageFolder$\" install-folder=$\"$INSTDIR$\""
         !insertmacro restoreAllNestedDataRoots
         SetErrorLevel 2
         Quit
@@ -481,6 +483,7 @@ FunctionEnd
           DetailPrint "$(BaselioDetail10)"
           StrCpy $baselioMessageBackup "${BACKUP}"
           MessageBox MB_OK|MB_ICONSTOP "$(BaselioRetryRestoreFailed)"
+          !insertmacro baselioLogPreflightRefusal "refusal reason=retry-restore-failed backup=$\"$baselioMessageBackup$\" install-folder=$\"$INSTDIR$\""
           !insertmacro restoreAllNestedDataRoots
           SetErrorLevel 2
           Quit
@@ -578,6 +581,7 @@ FunctionEnd
       ${else}
         MessageBox MB_OK|MB_ICONEXCLAMATION "$(BaselioUninstallFailed)"
         DetailPrint "$(BaselioDetail20)"
+        !insertmacro baselioLogPreflightRefusal "refusal reason=uninstall-recovery-failed uninstaller-exit=$R0 install-folder=$\"${DIR}$\""
         !insertmacro restoreAllNestedDataRoots
         SetErrorLevel 2
         Quit
@@ -629,6 +633,7 @@ FunctionEnd
     ${if} $perUserInstallDirCache == ""
       MessageBox MB_OK|MB_ICONEXCLAMATION "$(BaselioUninstallFailed)"
       DetailPrint "$(BaselioDetail20)"
+      !insertmacro baselioLogPreflightRefusal "refusal reason=uninstall-registry-location-unknown uninstaller-exit=$R0 install-folder=$\"$INSTDIR$\""
       !insertmacro restoreAllNestedDataRoots
       SetErrorLevel 2
       Quit

@@ -1158,6 +1158,7 @@ Var dataRestoreFailed
 Var retryLegacyDataBackup
 Var retryBrandedDataBackup
 !define UNINSTALL_FILENAME "Uninstall Baselio.exe"
+!define APP_EXECUTABLE_FILENAME "medresearch-agent.exe"
 LangString uninstallFailed 1033 "Uninstall failed"
 !include "${preflight}"
 ${strings}
@@ -1191,6 +1192,98 @@ SectionEnd
       expect(include.match(/reason=data-protection-failed/g) ?? []).toHaveLength(2)
     } finally {
       rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  // The fallback exists for the case where TEMP cannot be written, so it has to produce the same readable
+  // file: a fallback log without its own byte-order mark reads as mojibake exactly when it is the only
+  // copy left. The probe makes the TEMP log unopenable by putting a directory in its place.
+  it('writes a readable fallback log beside the installer when TEMP cannot take it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'nsis-refusal-fallback-'))
+    try {
+      const payload = join(root, 'payload')
+      mkdirSync(join(payload, 'resources'), { recursive: true })
+      writeFileSync(join(payload, 'app.exe'), '')
+      writeFileSync(join(payload, 'resources', 'a-very-deep-name-0123456789.bin'), '')
+      const budget = require('./installer-path-budget.cjs')
+      const summary = budget.emit({
+        payloadDir: payload,
+        out: join(root, 'installer-path-budget.nsh')
+      })
+      const preflight = join(root, 'installer-preflight.nsh')
+      copyFileSync(join(repoRoot, 'build/installer-preflight.nsh'), preflight)
+
+      // A directory with the log's name: FileOpen in TEMP fails, so the code must fall back to $EXEDIR.
+      const logTemp = join(root, 'temp-log')
+      mkdirSync(join(logTemp, 'Baselio-install-preflight.log'), { recursive: true })
+      const folder = 'C:\\' + 'x'.repeat(237)
+      expect(budget.assessInstallTarget(folder, summary).overflowFiles).toBe(1)
+
+      const executable = join(root, 'probe.exe')
+      const source = join(root, 'probe.nsi')
+      writeFileSync(
+        source,
+        `\uFEFFUnicode true
+!include "LogicLib.nsh"
+Name "Preflight fallback log probe"
+OutFile "${executable}"
+RequestExecutionLevel user
+SilentInstall silent
+!include "${preflight}"
+Section
+  StrCpy $INSTDIR "${folder}"
+  !insertmacro baselioPreflightInstallPath
+  SetErrorLevel 0
+SectionEnd
+`
+      )
+      const compile = spawnSync(nsisCompiler!, ['/V2', source], {
+        encoding: 'utf8',
+        timeout: 15_000
+      })
+      expect(compile.error).toBeUndefined()
+      expect(compile.status, compile.stderr || compile.stdout).toBe(0)
+      const run = spawnSync(executable, [], {
+        encoding: 'utf8',
+        timeout: 60_000,
+        env: { ...process.env, TEMP: logTemp, TMP: logTemp }
+      })
+      expect(run.error).toBeUndefined()
+      expect(run.status, run.stderr).toBe(3)
+
+      // $EXEDIR is the probe's folder.
+      const fallback = readFileSync(join(root, 'Baselio-install-preflight.log'))
+      expect(fallback.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xfe]))
+      expect(fallback.toString('utf16le')).toContain('reason=path-too-long')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  // "End Baselio.exe in Task Manager" pointed at a process that does not exist: the installer ships
+  // medresearch-agent.exe (APP_EXECUTABLE_FILENAME). The log line already used the define, which is exactly
+  // why the mismatch stayed invisible - the message has to use it too.
+  it('names the shipped executable in the running-app message', () => {
+    const strings = readFileSync(join(repoRoot, 'build/installer-strings.nsh'), 'utf8')
+    expect(strings).not.toMatch(/Baselio\.exe/u)
+    expect(strings.split('${APP_EXECUTABLE_FILENAME}')).toHaveLength(4)
+  })
+
+  // Every exit 2 is a silent failure in /S mode. Each one must leave its reason in the same log, so a
+  // reader never has to reproduce an install to learn why it stopped. Comment lines are dropped first: a
+  // commented-out call still contains the macro name and would otherwise pass this guard.
+  it('leaves a reason before every non-preflight silent exit', () => {
+    const include = readFileSync(join(repoRoot, 'build/installer.nsh'), 'utf8')
+    const active = include
+      .split(/\r?\n/u)
+      .filter((line) => !line.trimStart().startsWith('#'))
+      .join('\n')
+    const exits = active.split('SetErrorLevel 2')
+    expect(exits.length).toBeGreaterThan(1)
+    for (const [index, chunk] of exits.slice(0, -1).entries()) {
+      expect(chunk.slice(-400), `SetErrorLevel 2 #${index + 1} has no logged reason`).toContain(
+        'baselioLogPreflightRefusal'
+      )
     }
   })
 })
