@@ -2050,6 +2050,7 @@
     "Loading recorded evidence…": "記録された証拠を読み込んでいます…",
     "Invalid text geometry": "テキストの位置情報が無効",
     "This workbook has no worksheets.": "このブックにはワークシートがありません。",
+    "This workbook is missing {{part}}.": "このブックには {{part}} がありません。",
     "R access verified": "R のアクセス権を検証しました",
     "Skill installation blocked": "スキルのインストールがブロックされています",
     "Marketplace snapshot is no longer available": "マーケットプレイスのスナップショットは利用できなくなりました",

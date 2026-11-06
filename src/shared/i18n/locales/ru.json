@@ -2191,6 +2191,7 @@
     "Loading recorded evidence…": "Загрузка записанных свидетельств…",
     "Invalid text geometry": "Некорректная геометрия текста",
     "This workbook has no worksheets.": "В этой книге нет листов.",
+    "This workbook is missing {{part}}.": "В этой книге отсутствует {{part}}.",
     "R access verified": "Доступ R проверен",
     "Skill installation blocked": "Установка навыка заблокирована",
     "Marketplace snapshot is no longer available": "Снимок маркетплейса больше недоступен",

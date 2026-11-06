@@ -106,6 +106,17 @@ export const PatientDataBadge = (): React.JSX.Element => {
 
 export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React.JSX.Element => {
   const { t } = useTranslation()
+  // #167: the main process reports an import failure as a fixed English sentence, and the panel used
+  // to show it verbatim, so a Japanese interface carried English at the exact moment the doctor needs
+  // to act. The two sentences a reader can do something about are translated; anything else stays as
+  // written, because an unknown failure is a diagnostic and translating it would hide the text people
+  // search for.
+  const localizeImportFailure = (text: string): string => {
+    if (text === 'Workbook has no worksheets.') return t('This workbook has no worksheets.')
+    const missingPart = /^Workbook is missing (.+)\.$/u.exec(text)
+    if (missingPart) return t('This workbook is missing {{part}}.', { part: missingPart[1] })
+    return text
+  }
   const agentContext = useProjectStore(
     (state) => state.projects.find((project) => project.id === projectId)?.agentContext
   )
@@ -325,7 +336,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     } catch (error) {
       // Strip the IPC transport chrome so the panel shows the main process sentence, not
       // "Error invoking remote method 'schema-notebook:import-table': ...".
-      showImportFailure(failureText(error))
+      showImportFailure(localizeImportFailure(failureText(error)))
     } finally {
       setBusy(false)
     }

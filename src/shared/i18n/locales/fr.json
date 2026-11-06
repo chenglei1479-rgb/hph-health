@@ -2152,6 +2152,7 @@
     "Loading recorded evidence…": "Chargement des éléments de preuve enregistrés…",
     "Invalid text geometry": "Géométrie du texte invalide",
     "This workbook has no worksheets.": "Ce classeur ne contient aucune feuille de calcul.",
+    "This workbook is missing {{part}}.": "Ce classeur ne contient pas {{part}}.",
     "R access verified": "Accès à R vérifié",
     "Skill installation blocked": "Installation de la compétence bloquée",
     "Marketplace snapshot is no longer available": "L’instantané de la place de marché n’est plus disponible",

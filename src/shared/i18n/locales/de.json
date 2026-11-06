@@ -2098,6 +2098,7 @@
     "Loading recorded evidence…": "Aufgezeichnete Belege werden geladen…",
     "Invalid text geometry": "Ungültige Textgeometrie",
     "This workbook has no worksheets.": "Diese Arbeitsmappe enthält keine Arbeitsblätter.",
+    "This workbook is missing {{part}}.": "In dieser Arbeitsmappe fehlt {{part}}.",
     "R access verified": "R-Zugriff überprüft",
     "Skill installation blocked": "Installation der Fähigkeit blockiert",
     "Marketplace snapshot is no longer available": "Der Marktplatz-Snapshot ist nicht mehr verfügbar",

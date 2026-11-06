@@ -310,7 +310,7 @@ describe('schema notebook panel restore', () => {
 
     // The failed file is not the stored table: its preview goes away, its reference stays.
     expect(container?.textContent).not.toContain('行数: 3')
-    expect(container?.textContent).toContain('Workbook has no worksheets.')
+    expect(container?.textContent).toContain('このブックにはワークシートがありません。')
     expect(runButton(container)?.disabled).toBe(true)
     expect(loadSchemaNotebookDraft('study-1').tableId).toBe('table-1')
 

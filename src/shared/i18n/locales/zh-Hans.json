@@ -2050,6 +2050,7 @@
     "Loading recorded evidence…": "正在加载记录的证据…",
     "Invalid text geometry": "文字位置数据无效",
     "This workbook has no worksheets.": "此工作簿没有工作表。",
+    "This workbook is missing {{part}}.": "此工作簿缺少 {{part}}。",
     "R access verified": "R 访问权限已验证",
     "Skill installation blocked": "技能安装受阻",
     "Marketplace snapshot is no longer available": "市场快照已失效",
