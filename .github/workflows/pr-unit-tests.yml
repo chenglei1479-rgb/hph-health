@@ -17,9 +17,11 @@ name: PR unit tests
 # `src/main/notebook` used to be left out: measured locally it was 181 files / 6536 tests / 63 failing,
 # and those failures were environment-bound (real kernels, shell and REPL processes, the npm registry,
 # packaged Electron) or stale expectations. It now runs as its own job so its failures are attributable
-# and its 10-minute cost does not push this job into its timeout. The environment-bound suites are
-# excluded by name in `vitest.config.ts` (NOTEBOOK_PR_EXCLUDE_PATTERNS) and each is listed with its
-# reason there; everything else in the directory runs.
+# and its ~7-minute cost does not push this job into its timeout. On this developer machine the job's
+# set is 175 files / 6465 reported tests (2996 executed, 3469 skipped) in 398 s with two workers; the
+# remaining local failures there are the sandbox's own (no symlink privilege, and a temporary root deep
+# enough to overflow the Windows path limit), not code. The eight suites that need a live environment
+# are excluded by name in `vitest.config.ts` (NOTEBOOK_PR_EXCLUDE_PATTERNS), each with its reason.
 on:
   pull_request:
   merge_group:

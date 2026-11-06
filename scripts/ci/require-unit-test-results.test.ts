@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { NOTEBOOK_PR_EXCLUDE_PATTERNS } from '../../vitest.config'
 import {
   REQUIRED_TEST_FILE,
   executedTestCount,
@@ -108,5 +109,15 @@ describe('require-unit-test-results CLI', () => {
     })
     expect(run.status).toBe(1)
     expect(run.stderr).toContain('Unit-test evidence is unreadable')
+  })
+})
+
+// #179: an exclusion that no longer names a file is fail-open (the suite quietly starts running again),
+// but it still misleads the next reader into thinking the suite is covered somewhere else.
+describe('notebook PR exclusions', () => {
+  it('names a file that exists', () => {
+    for (const pattern of NOTEBOOK_PR_EXCLUDE_PATTERNS) {
+      expect(existsSync(join(process.cwd(), pattern)), pattern).toBe(true)
+    }
   })
 })

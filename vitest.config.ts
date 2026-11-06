@@ -77,9 +77,17 @@ const VITEST_PORTABLE_CI_EXCLUDE_PATTERNS = [
 // real kernel, a live PowerShell/REPL, the npm registry, or a packaged Electron. The list is explicit
 // and narrow on purpose: a new suite is included by default (and therefore red), so it takes a
 // deliberate edit here to leave one out.
-const NOTEBOOK_PR_EXCLUDE_PATTERNS = [
+//
+// It is exported so a test can assert every entry still names a real file. A stale entry is fail-open
+// (the suite would simply start running again), but a rotted list makes the next reader believe those
+// suites are covered somewhere else.
+//
+// Rule for `working-file-observer.test.ts`, which is deliberately NOT here: it fails on this developer
+// machine only because the temporary root is deep enough to overflow the Windows path limit. If CI also
+// fails it while using the runner's short TEMP, the correct fix is to make that test use a short root -
+// not to add it back to this list.
+export const NOTEBOOK_PR_EXCLUDE_PATTERNS = [
   'src/main/notebook/auto-mode-budget.integration.test.ts',
-  'src/main/notebook/compute-evidence-recovery.integration.test.ts',
   'src/main/notebook/file-evidence-publication.integration.test.ts',
   'src/main/notebook/host-mcp.integration.test.ts',
   'src/main/notebook/runtime-repair.windows.integration.test.ts',
