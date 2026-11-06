@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from 'vitest'
 
+import { detectPhi } from '../../phi/detect'
 import { installMachineApproval } from '../../phi/gate'
 import { PHI_OUTPUT_BLOCK_MESSAGE } from './notebook-phi-release'
 import { installNotebookModelTextReleaser, releaseNotebookModelText } from './release-model-text'
@@ -115,6 +116,43 @@ it('redacts a real phone next to statistics without touching the statistics', ()
   const released = redactPatientPhi(text)
   expect(released).not.toContain('090-1234-5678')
   expect(released).toContain('OR=1.9773051601268752')
+})
+
+// #171: the same number has to be recognized by both layers. The local redactor and the provider gate
+// are independent rule sets; a shape only one of them sees either leaks in the panel or trips the gate
+// on text the panel already showed. The international shapes lost their leading zero after `+81`, and
+// the parenthesised shape hid it behind `(`.
+it.each([
+  [
+    'international with spaces',
+    '電話: +81 90 1234 5678',
+    '+81 90 1234 5678',
+    'phone-international'
+  ],
+  [
+    'international with hyphens',
+    '電話: +81 90-1234-5678',
+    '+81 90-1234-5678',
+    'phone-international'
+  ],
+  ['parenthesised area code', '電話: (03)1234-5678', '(03)1234-5678', 'phone-parenthesized-area'],
+  ['domestic hyphenated', '電話: 090-1234-5678', '090-1234-5678', 'phone-bare-hyphenated']
+] as const)('catches a %s number in both layers', (_label, text, value, gateRule) => {
+  const released = redactPatientPhi(text)
+  expect(released).toContain('[仮名化済み]')
+  expect(released).not.toContain(value)
+  expect(detectPatientPhiSpans(text).map((span) => span.category)).toContain('PHONE')
+  const gate = detectPhi(text).filter((span) => span.category === 'PHONE')
+  expect(gate.map((span) => span.rule)).toEqual([gateRule])
+  expect(gate.map((span) => span.text)).toEqual([value])
+})
+
+// A year in parentheses is not an area code. Requiring the area code to start with `0` is what keeps
+// this shape out of both layers; widening it to any digits would take this whole string as a phone.
+it('does not take a parenthesised year for an area code', () => {
+  const text = '抄録(2024)1234-5678'
+  expect(detectPatientPhiSpans(text)).toEqual([])
+  expect(detectPhi(text).filter((span) => span.category === 'PHONE')).toEqual([])
 })
 
 // #161 requirement 4: a refusal names what fired, the stable rule id and where, never the value.
