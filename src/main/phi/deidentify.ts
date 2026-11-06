@@ -1,5 +1,5 @@
 import type { PhiCategory, PhiSpan } from './detect'
-import { detectPhi } from './detect'
+import { detectPhi, isAggregateAgeRule } from './detect'
 import { formatShiftedDate } from './dates'
 import { isPhiPlaceholder, PHI_PLACEHOLDER_LABELS as LABELS, type PhiStore } from './store'
 
@@ -78,6 +78,9 @@ export function deidentify(
       store.log('allow', { [span.category]: 1 })
       continue
     }
+    // #170: a mean age or a per-N-years rate denominator is a group statistic. Replacing it would
+    // corrupt a number the model needs, and it identifies nobody.
+    if (isAggregateAgeRule(span.rule)) continue
     if (span.category === 'DATE' && span.kind === 'document') continue
     if (span.category === 'DATE' && (span.ageGe90 || span.kind === 'age')) {
       const value = span.ageGe90 ? '90歳以上' : store.placeholder('DATE', span.text, LABELS.AGE)

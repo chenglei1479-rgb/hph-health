@@ -332,6 +332,28 @@ export function detectPhi(original: string): PhiSpan[] {
   return resolve(spans)
 }
 
+// #170: a mean age and a "per N years" ratio unit are statistics about a group, not a person's age.
+// Both used to reach the gate as `age-sai`, and the gate refused the whole summary (beta.21 E27/E28
+// reported an aggregate as a patient date). `kind` and `labeled` never survive to the gate, so the
+// shape is recorded in the rule id — the only signal that reaches it — and the gate and deidentify
+// treat exactly these two ids as non-patient.
+//
+// Only a fixed context releases an age. `65歳以上`, `10歳代`, `満65歳` and `年齢65歳` still name a person
+// or a cohort member and keep `age-sai`; a mean or a rate denominator is what the context adds.
+const AGGREGATE_AGE_RULES = new Set(['age-aggregate-mean', 'age-ratio-per-years'])
+
+export const isAggregateAgeRule = (rule: string | undefined): boolean =>
+  rule !== undefined && AGGREGATE_AGE_RULES.has(rule)
+
+const MEAN_AGE_BEFORE = /平均年[齢令]\s*(?:[はがも：:]\s*)?$/u
+const PER_YEARS_AFTER = /^\s*(?:当たり|あたり|当り)/u
+
+const aggregateAgeRule = (text: string, start: number, end: number): string | null => {
+  if (MEAN_AGE_BEFORE.test(text.slice(Math.max(0, start - 10), start))) return 'age-aggregate-mean'
+  if (PER_YEARS_AFTER.test(text.slice(end, end + 6))) return 'age-ratio-per-years'
+  return null
+}
+
 function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void {
   // Age shapes also carry a rule id now. Without one, a beta.20 block report named only
   // category/offset/length, and working out that `Age 18` came from the English age pattern took
@@ -389,7 +411,8 @@ function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void 
         ageGe90: age >= 90,
         kind: 'age',
         labeled,
-        rule
+        // A mean or a per-N-years unit keeps its own id so the gate can tell it from a person's age.
+        rule: aggregateAgeRule(norm, start, end) ?? rule
       })
     }
   }

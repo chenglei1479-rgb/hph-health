@@ -14,7 +14,7 @@ import {
   type PhiSpanMark
 } from './confirm'
 import { deidentify, type PhiReplacement, type PhiResult } from './deidentify'
-import { detectPhi, type PhiCategory, type PhiSpan } from './detect'
+import { detectPhi, isAggregateAgeRule, type PhiCategory, type PhiSpan } from './detect'
 import type { PhiStore } from './store'
 import { hasOnlyOrdinaryLabelPhi, isOrdinaryLabel } from './ordinary-label'
 
@@ -251,7 +251,13 @@ function contained(inner: PhiSpan, outer: PhiSpan): boolean {
 }
 
 function patientSpans(text: string): PhiBlockedSpan[] {
-  const detected = detectPhi(text).filter((span) => PATIENT_PHI.has(span.category))
+  const detected = detectPhi(text).filter(
+    (span) =>
+      PATIENT_PHI.has(span.category) &&
+      // #170: a mean age or a "per N years" rate denominator is a group statistic, not a person's age.
+      // Only those two rule ids qualify; every other age keeps blocking.
+      !isAggregateAgeRule(span.rule)
+  )
   return detected
     .filter((span) => !detected.some((other) => contained(span, other)))
     .map((span) => ({
