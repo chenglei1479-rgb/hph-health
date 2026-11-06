@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs'
-import { mkdtemp, readFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, mkdtemp, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
@@ -31,7 +30,12 @@ const notebookFor = async (): Promise<{
   directory: string
   tableId: string
 }> => {
-  const directory = await mkdtemp(join(tmpdir(), 'schema-notebook-encoding-'))
+  // The run directory stays inside the worktree: the bundled interpreter writes files here, and a
+  // session that only allows workspace writes turns a temp-rooted run into `PermissionError: [Errno
+  // 13]`, which reads as a failing fix. `.scratch/` is gitignored.
+  const scratchRoot = join(process.cwd(), '.scratch', 'vitest-tmp')
+  await mkdir(scratchRoot, { recursive: true })
+  const directory = await mkdtemp(join(scratchRoot, 'schema-notebook-encoding-'))
   const notebook = createSchemaNotebookService({
     directory,
     approvalLogPath: join(directory, 'machine-approval.jsonl'),
