@@ -295,7 +295,15 @@ export function detectPhi(original: string): PhiSpan[] {
   // Phone.
   take('内線\\s*\\d{3,5}', 'PHONE')
   take('(?:TEL|Tel)\\s*\\+?\\d[\\d\\-\\s]{8,}\\d', 'PHONE')
-  take('\\+81[\\-\\s]?\\d{1,4}[\\-\\s]?\\d{3,4}[\\-\\s]?\\d{3,4}', 'PHONE')
+  take('\\+81[\\-\\s]?\\d{1,4}[\\-\\s]?\\d{3,4}[\\-\\s]?\\d{3,4}', 'PHONE', 0, {
+    rule: 'phone-international'
+  })
+  // #171: a parenthesised area code hides the leading zero behind `(`, so the hyphenated rule below
+  // never saw it. The area code must still start with `0`: widening it to any digits would take
+  // `(2024)1234-5678` — a year in parentheses followed by two number groups — as a phone.
+  take('(?<![\\d])\\(0\\d{1,4}\\)[\\-\\s]?\\d{2,4}-\\d{3,4}(?!\\d)', 'PHONE', 0, {
+    rule: 'phone-parenthesized-area'
+  })
   take('(?<![\\d])0\\d{1,3}-\\d{2,4}-\\d{3,4}(?!\\d)', 'PHONE', 0, {
     rule: 'phone-bare-hyphenated'
   })

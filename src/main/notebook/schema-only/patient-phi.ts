@@ -21,7 +21,16 @@ const RULES: Rule[] = [
   {
     category: 'PHONE',
     rule: 'schema-phone',
-    pattern: /(?:\+81[-\s]?)?0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}/g,
+    // Three shapes, because a Japanese number is written three ways and the carrier of the leading
+    // zero moves between them (#171). An international number drops that zero, so requiring it after
+    // `+81` missed the whole shape; a parenthesised area code hides it behind `(`. The domestic shape
+    // keeps its leading `0` right where it was, so nothing that matched before matches less.
+    //
+    // `(2024)1234-5678` stays unmatched on purpose: the area-code branch requires a leading `0`, and
+    // every Japanese area code has one. Widening that to any digits would swallow a date in
+    // parentheses followed by two number groups.
+    pattern:
+      /(?:\+81[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:\(0\d{1,4}\)[-\s]?\d{1,4}[-\s]?\d{3,4})|(?:0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})/g,
     group: 0
   },
   {
