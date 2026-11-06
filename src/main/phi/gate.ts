@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash } from 'node:crypto'
 import { createLogger } from '@aipoch/diagnostics/node'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
-import { PHI_BLOCK_CODE } from '../../shared/phi-block'
+import { PHI_BLOCK_CODE, PhiPolicyError } from '../../shared/phi-block'
 import { formatUnapprovedBlock } from './approval'
 import {
   applyManualSpans,
@@ -27,7 +27,7 @@ export interface PhiBlockedSpan {
   rule?: string
 }
 
-export class PhiGateError extends Error {
+export class PhiGateError extends PhiPolicyError {
   readonly spans: readonly PhiBlockedSpan[]
 
   constructor(message: string, spans: readonly PhiBlockedSpan[] = []) {

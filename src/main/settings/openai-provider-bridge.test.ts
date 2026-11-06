@@ -7,6 +7,8 @@ import { fetch as nodeFetch } from 'undici'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { adaptCodeBuddyChatCompletionsRequest } from './codebuddy-chat-request-adapter'
+import { createVaultBackedGate, installMachineApproval, installPhiGate } from '../phi/gate'
+import { createMemoryPhiVault } from '../phi/store'
 import { OpenAiProviderBridge, type OpenAiProviderBridgeTarget } from './openai-provider-bridge'
 import { OPENCODE_TOOL_IMAGE_REQUEST_FIXTURE } from './provider-tool-image-wire.test-fixtures'
 
@@ -609,6 +611,73 @@ it('refuses a persisted remote HTTP target before forwarding a prompt or credent
     expect(response.ok).toBe(false)
     expect(await response.text()).toContain('HTTPS')
   } finally {
+    await bridge.close()
+  }
+})
+
+// #159: a PHI refusal is a decision about the request itself, so the loopback must answer 400. As 502 the
+// agent CLI read it as a transient gateway failure and re-sent the same refused body 30 times in 25.5 s
+// before the user saw anything.
+it('answers a PHI refusal with 400 so the client stops after one attempt', async () => {
+  installMachineApproval(null)
+  installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+  const upstream = vi.fn<typeof fetch>(async () => new Response('{}'))
+  const bridge = new OpenAiProviderBridge(
+    [
+      {
+        id: 'phi',
+        wire: 'responses',
+        endpoint: 'https://gateway.invalid/v1/responses',
+        model: 'gpt-5'
+      }
+    ],
+    'phi',
+    upstream
+  )
+  const connection = await bridge.start()
+  // The retry set the CLI retries on: 429 and 5xx. 400 is deliberately outside it.
+  const retryable = new Set([429, 500, 502, 503, 504])
+  try {
+    let attempts = 0
+    let status = 0
+    let body: { error?: { type?: string; message?: string } } = {}
+    do {
+      attempts += 1
+      const response = await fetch(`${connection.baseUrl}/v1/responses`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${connection.token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-5',
+          input: [
+            {
+              type: 'message',
+              role: 'user',
+              content: [{ type: 'input_text', text: '患者：山田 太郎、保険者番号 02123456' }]
+            }
+          ]
+        })
+      })
+      status = response.status
+      body = (await response.json()) as typeof body
+    } while (retryable.has(status) && attempts < 5)
+
+    expect(status).toBe(400)
+    // Exactly one attempt: the refusal is deterministic, so nothing is resent.
+    expect(attempts).toBe(1)
+    // The client's error type, not "api_error" (the transient-upstream class).
+    expect(body.error?.type).toBe('invalid_request_error')
+    // The user-facing reason travels with it, and never the matched text.
+    expect(body.error?.message).toContain('PHI-BLOCK-01')
+    expect(body.error?.message).not.toContain('山田')
+    expect(body.error?.message).not.toContain('02123456')
+    // Nothing left the machine.
+    expect(upstream).not.toHaveBeenCalled()
+  } finally {
+    installMachineApproval(null)
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
     await bridge.close()
   }
 })

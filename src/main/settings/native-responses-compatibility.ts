@@ -30,6 +30,7 @@ import {
   writeProviderLoopbackJson as json,
   ProviderLoopbackHttpHost,
   ProviderLoopbackRequestError,
+  providerLoopbackClientError,
   type ProviderLoopbackHttpRequest
 } from './provider-loopback-http-host'
 import type { ResponsesBridgeNamespacedTool } from './responses-bridge'
@@ -812,7 +813,7 @@ export class NativeResponsesCompatibilityProxy {
           response.destroy()
           return
         }
-        const requestError = error instanceof ProviderLoopbackRequestError
+        const requestError = providerLoopbackClientError(error)
         json(response, requestError ? 400 : 502, {
           error: {
             type: requestError ? 'invalid_request_error' : 'api_error',
