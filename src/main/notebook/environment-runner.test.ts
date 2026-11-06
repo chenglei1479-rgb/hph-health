@@ -6,6 +6,7 @@ import { dirname, join, sep } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createMicromambaRunnerResolver, type MicromambaRunnerCandidate } from '@aipoch/environment'
+import { DEV_SESSION_DIR_NAME } from '../../shared/config-root'
 import { createProductionMicromambaRunner } from './environment-runner'
 
 const sha256 = (value: string): string => createHash('sha256').update(value).digest('hex')
@@ -181,9 +182,11 @@ it('keeps the development config home separate from a custom research disk', asy
       env: { LOCALAPPDATA: join(root, 'local'), OPEN_SCIENCE_MICROMAMBA_BIN: binary.path },
       preflight: async () => undefined
     })
+    // #179: the development config root is DEV_SESSION_DIR_NAME. The literal that used to sit here
+    // named the directory from before it was renamed, so the test failed while the resolver was right.
     expect(
       (await runner!.resolve()).startsWith(
-        join(root, 'user-home', '.open-science-project', 'tools', 'micromamba') + sep
+        join(root, 'user-home', DEV_SESSION_DIR_NAME, 'tools', 'micromamba') + sep
       )
     ).toBe(true)
   } finally {

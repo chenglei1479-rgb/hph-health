@@ -202,9 +202,38 @@ describe('HostArtifactsService', () => {
       count: 1,
       artifacts: [{ latestVersionId: 'shared-v2', agentFrameId: 'frame-b' }]
     })
-    await expect(service.list({ version_id: 'shared-v1' }, context)).rejects.toThrow(
-      'unknown option'
+    // #179: `version_id` is a supported filter — the service hands it to the catalog and binds it into
+    // the cursor key. This expectation used to demand a rejection from before the feature existed.
+    await expect(service.list({ version_id: 'shared-v1' }, context)).resolves.toMatchObject({
+      count: 1,
+      artifacts: [{ latestVersionId: 'shared-v1', agentFrameId: 'frame-a' }]
+    })
+  })
+
+  it('scopes a requested Version to the calling Project', async () => {
+    const owned = artifact({ versionId: 'shared-v1' })
+    const readHostArtifactCatalog = vi.fn(
+      async ({ projectId, versionId }: { projectId: string; versionId?: string }) =>
+        projectId === owned.projectId && versionId === owned.versionId ? [owned] : []
     )
+    const service = new HostArtifactsService(
+      { readHostArtifactCatalog } as HostArtifactCatalog,
+      { stageVersion: vi.fn() }
+    )
+
+    await expect(service.list({ version_id: 'shared-v1' }, context)).resolves.toMatchObject({
+      count: 1,
+      artifacts: [{ latestVersionId: 'shared-v1' }]
+    })
+    // The risk of a Version filter is reaching another Project's Version by guessing its id. The
+    // catalog is asked with both values together, and the other Project's ask comes back empty.
+    await expect(
+      service.list({ version_id: 'shared-v1' }, { ...context, projectId: 'project-b' })
+    ).resolves.toMatchObject({ count: 0, artifacts: [] })
+    expect(readHostArtifactCatalog.mock.calls.map(([request]) => request)).toEqual([
+      { projectId: 'project-a', versionId: 'shared-v1' },
+      { projectId: 'project-b', versionId: 'shared-v1' }
+    ])
   })
 
   it('uses the shared fuzzy score for ordering without exposing scores', async () => {
@@ -273,11 +302,9 @@ describe('HostArtifactsService', () => {
     )
   })
 
-  it('rejects historical Version filtering and every mixed or malformed option', async () => {
+  it('rejects every mixed or malformed option', async () => {
     const { service } = harness()
     for (const options of [
-      { version_id: 'artifact-version-1' },
-      { version_id: 'v1', limit: 1 },
       { project_id: 'all' },
       { search: 'r', filename: 'r' },
       { exact: true },

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, posix, win32 } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { createLogger } from '@aipoch/diagnostics/node'
@@ -43,15 +43,23 @@ export const schemaNotebookPythonSubdir = (
   return `${platform}-${arch}`
 }
 
+// Every path below is built for the platform that was asked for, not for the host: the resolver takes
+// `platform` as a parameter, and path.join would put backslashes into a macOS prefix (or the reverse)
+// whenever the two differ. In production they never do, so this changes nothing at runtime; it makes
+// the other platforms' layouts testable from one machine (#179).
+const pathFor = (platform: NodeJS.Platform): typeof win32 =>
+  (platform === 'win32' ? win32 : posix) as typeof win32
+
 export const bundledPythonExecutable = (
   root: string,
   platform: NodeJS.Platform = process.platform,
   arch: string = process.arch
 ): string => {
   const subdir = schemaNotebookPythonSubdir(platform, arch)
+  const path = pathFor(platform)
   return platform === 'win32'
-    ? join(root, subdir, 'python.exe')
-    : join(root, subdir, 'bin', 'python')
+    ? path.join(root, subdir, 'python.exe')
+    : path.join(root, subdir, 'bin', 'python')
 }
 
 /** Dev checkout of resources/schema-notebook-python. Absent inside a packaged asar. */
@@ -116,8 +124,9 @@ export const resolveSchemaNotebookPython = async (
     (typeof process.resourcesPath === 'string' && process.resourcesPath.length > 0
       ? process.resourcesPath
       : undefined)
+  const path = pathFor(platform)
   const roots = [
-    ...(resourcesPath ? [join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR)] : []),
+    ...(resourcesPath ? [path.join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR)] : []),
     ...(deps.devRoots ?? schemaNotebookPythonDevRoots())
   ]
   // A prefix under the packaged resources directory is the one the installer ships. If that
@@ -125,7 +134,9 @@ export const resolveSchemaNotebookPython = async (
   // hides the cause and usually yields a pandas error that blames the script instead of the runtime.
   // A developer checkout is different — it legitimately has no packaged prefix, so it still falls
   // through to PATH.
-  const packagedRoot = resourcesPath ? join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR) : undefined
+  const packagedRoot = resourcesPath
+    ? path.join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR)
+    : undefined
   for (const root of roots) {
     const command = bundledPythonExecutable(root, platform, arch)
     if (!exists(command)) continue
@@ -150,7 +161,7 @@ export const resolveSchemaNotebookPython = async (
     return { ok: true, command: system, source: 'system', version }
   }
   const expected = bundledPythonExecutable(
-    join(resourcesPath ?? '<resources>', SCHEMA_NOTEBOOK_PYTHON_DIR),
+    path.join(resourcesPath ?? '<resources>', SCHEMA_NOTEBOOK_PYTHON_DIR),
     platform,
     arch
   )
