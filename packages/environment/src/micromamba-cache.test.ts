@@ -152,6 +152,28 @@ describe('selectMicromambaCache', () => {
     )
   })
 
+  it('reuses an existing cache under a legacy parent and never creates the new brand', () => {
+    const prepare = vi.fn((path: string) => path)
+
+    const cache = selectMicromambaCache(
+      'D:\\Baselio\\runtime',
+      // A real manifest carries the pack's exact budget; 200 is below the 223 that lets the old 36-char
+      // parent fit, which is why that parent no longer suits the conservative 225 default (see #184).
+      200,
+      windowsDeps({
+        // A cache the previous build left behind on this volume.
+        exists: (path) => path.startsWith('D:\\Deep Research AgentTmp\\m-'),
+        prepare
+      })
+    )
+
+    expect(cache.path).toMatch(/^D:\\Deep Research AgentTmp\\m-[0-9a-hjkmnp-tv-z]{8}$/)
+    expect(prepare).toHaveBeenCalledOnce()
+    expect(prepare).toHaveBeenCalledWith(cache.path, expect.any(Object))
+    // Nothing was prepared under the current parent, so upgrading does not create a second cache.
+    expect(prepare.mock.calls.some(([path]) => path.startsWith('D:\\Baselio\\'))).toBe(false)
+  })
+
   it('tries TMP after an unusable TEMP before falling back to the user profile', () => {
     const prepare = vi.fn((path: string) =>
       path.startsWith('D:\\') || path.startsWith('C:\\Temp')
@@ -280,8 +302,13 @@ describe('selectMicromambaCache', () => {
     expect(message).toContain(`Windows allows ${WINDOWS_MAX_USABLE_PATH} characters`)
     expect(message).toContain("pack's longest path inside the cache needs 250")
     expect(message).toContain('leaves 9 for the cache root')
-    // A data folder does not change these paths, so the message must not suggest moving it.
-    expect(message).toContain('a different data folder would not change them')
+    // The roots follow the volume that holds the data folder, not the folder path itself, so moving the
+    // data folder to another place on the same drive does not shorten them. Saying otherwise would send
+    // the user to do something that cannot help.
+    expect(message).toContain(
+      'These roots come from the volume holding the data folder (a drive letter, or the system drive ' +
+        'for a UNC install) and the fixed folder name, so moving the data folder does not shorten them.'
+    )
     expect(message).toContain('report this message')
     expect(message).toContain('Candidate diagnostics:')
   })

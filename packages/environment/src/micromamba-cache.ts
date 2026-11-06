@@ -701,14 +701,16 @@ export const selectMicromambaCache = (
     return { path: physical, lockKey: micromambaCacheLockKey(physical, { platform, canonicalize }) }
   }
 
-  // #184: say what the numbers mean and what the reader can do. The paths come from the system drive
-  // and the user name, so "move your data folder" would be bad advice and is deliberately not offered;
-  // when this message appears nothing local can shorten them, and support needs the diagnostics.
+  // #184: say what the numbers mean and what the reader can do. The roots come from the volume holding
+  // the data folder and a fixed folder name - the user name is not part of any candidate - so moving the
+  // data folder to another drive does not shorten them; only a different volume would, and a UNC install
+  // already falls back to the system drive. When this message appears, support needs the diagnostics.
   throw new Error(
     `No trusted writable package cache fits the managed runtime path budget: Windows allows ${WINDOWS_MAX_USABLE_PATH} ` +
       `characters and this pack's longest path inside the cache needs ${maxCacheRelativePath}, which leaves ` +
       `${WINDOWS_MAX_USABLE_PATH - maxCacheRelativePath} for the cache root. ` +
-      `These roots are built from the system drive and the user name, so a different data folder would not change them. ` +
+      `These roots come from the volume holding the data folder (a drive letter, or the system drive for a UNC ` +
+      `install) and the fixed folder name, so moving the data folder does not shorten them. ` +
       `Please report this message with the diagnostics below. Candidate diagnostics: ${rejections.join('; ')}.`
   )
 }
