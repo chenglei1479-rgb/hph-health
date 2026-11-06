@@ -13,6 +13,17 @@ const XML_ESCAPE: Record<string, string> = {
 export const escapeXml = (value: string): string =>
   value.replace(/[&<>"']/g, (char) => XML_ESCAPE[char] ?? char)
 
+// #157: OOXML lets a producer bind the main namespace to a prefix — `<x:workbook xmlns:x="…">` — and
+// Excel, LibreOffice and openpyxl all read such a file. Every tag below used to be matched without a
+// prefix, so that document matched nothing and the importer reported "Workbook has no worksheets."
+// while the file had a sheet with data. Prefixes are therefore optional in the tag patterns, and
+// attributes are looked up by their local name so a producer may prefix those too.
+const QNAME = '(?:[\\w.-]+:)?'
+const TAG = (local: string): string => `<${QNAME}${local}\\b`
+const END_TAG = (local: string): string => `</${QNAME}${local}>`
+
+const localName = (name: string): string => name.slice(name.lastIndexOf(':') + 1)
+
 const decodeXml = (value: string): string =>
   value
     .replace(/&lt;/g, '<')
@@ -34,13 +45,20 @@ const readXml = (files: Record<string, Uint8Array>, path: string): string => {
   return strFromU8(bytes)
 }
 
-/** Attribute lookup that does not depend on order; the OOXML schema does not fix one. */
+/** Attribute lookup that does not depend on order, or on the prefix the producer gave the name. */
 const attributes = (source: string): Map<string, string> => {
   const attrs = new Map<string, string>()
   for (const match of source.matchAll(/([^\s=/]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
     attrs.set(match[1], match[2] ?? match[3] ?? '')
   }
   return attrs
+}
+
+const attribute = (attrs: Map<string, string>, local: string): string | undefined => {
+  const direct = attrs.get(local)
+  if (direct !== undefined) return direct
+  for (const [name, value] of attrs) if (localName(name) === local) return value
+  return undefined
 }
 
 // Relationship elements are read in two steps: first the element, then each attribute by name.
@@ -52,19 +70,20 @@ const sheetTargets = (
   relsXml: string
 ): Array<{ name: string; path: string }> => {
   const rels = new Map<string, string>()
-  for (const match of relsXml.matchAll(/<Relationship\b([^>]*?)\/?>/g)) {
+  for (const match of relsXml.matchAll(new RegExp(`${TAG('Relationship')}([^>]*?)\\/?>`, 'g'))) {
     const attrs = attributes(match[1])
-    const id = attrs.get('Id')
-    const target = attrs.get('Target')
+    const id = attribute(attrs, 'Id')
+    const target = attribute(attrs, 'Target')
     if (!id || !target) continue
     const normalized = target.replace(/^\//, '')
     rels.set(id, normalized.startsWith('xl/') ? normalized : `xl/${normalized}`)
   }
   const sheets: Array<{ name: string; path: string }> = []
-  for (const match of workbookXml.matchAll(/<sheet\b([^>]*?)\/?>/g)) {
+  for (const match of workbookXml.matchAll(new RegExp(`${TAG('sheet')}([^>]*?)\\/?>`, 'g'))) {
     const attrs = attributes(match[1])
-    const name = attrs.get('name')
-    const id = attrs.get('r:id')
+    const name = attribute(attrs, 'name')
+    // The relationship id is `r:id` as a rule, but the prefix belongs to the producer.
+    const id = attribute(attrs, 'id')
     if (!name || !id) continue
     const path = rels.get(id)
     if (path) sheets.push({ name: decodeXml(name), path })
@@ -74,18 +93,22 @@ const sheetTargets = (
 
 const sharedStrings = (xml: string | undefined): string[] => {
   if (!xml) return []
-  return [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((match) =>
-    decodeXml([...match[1].matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((text) => text[1]).join(''))
+  return [...xml.matchAll(new RegExp(`${TAG('si')}[^>]*>([\\s\\S]*?)${END_TAG('si')}`, 'g'))].map(
+    (match) =>
+      decodeXml(
+        [...match[1].matchAll(new RegExp(`${TAG('t')}[^>]*>([\\s\\S]*?)${END_TAG('t')}`, 'g'))]
+          .map((text) => text[1])
+          .join('')
+      )
   )
 }
 
 const cellValue = (body: string, type: string | undefined, strings: string[]): string => {
+  const text = new RegExp(`${TAG('t')}[^>]*>([\\s\\S]*?)${END_TAG('t')}`, 'g')
   if (type === 'inlineStr') {
-    return decodeXml(
-      [...body.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((match) => match[1]).join('')
-    )
+    return decodeXml([...body.matchAll(text)].map((match) => match[1]).join(''))
   }
-  const raw = /<v\b[^>]*>([\s\S]*?)<\/v>/.exec(body)?.[1]
+  const raw = new RegExp(`${TAG('v')}[^>]*>([\\s\\S]*?)${END_TAG('v')}`).exec(body)?.[1]
   if (raw === undefined) return ''
   if (type === 's') return strings[Number(raw)] ?? ''
   return decodeXml(raw)
@@ -93,9 +116,11 @@ const cellValue = (body: string, type: string | undefined, strings: string[]): s
 
 const rowsFromSheet = (xml: string, strings: string[]): string[][] => {
   const rows: string[][] = []
-  for (const rowMatch of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
+  const rowPattern = new RegExp(`${TAG('row')}[^>]*>([\\s\\S]*?)${END_TAG('row')}`, 'g')
+  const cellPattern = new RegExp(`${TAG('c')}([^>]*?)(?:\\/>|>([\\s\\S]*?)${END_TAG('c')})`, 'g')
+  for (const rowMatch of xml.matchAll(rowPattern)) {
     const cells: string[] = []
-    for (const cellMatch of rowMatch[1].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+    for (const cellMatch of rowMatch[1].matchAll(cellPattern)) {
       const attrs = cellMatch[1]
       const ref = /\br="([A-Z]+)\d+"/.exec(attrs)?.[1] ?? ''
       const type = /\bt="([^"]+)"/.exec(attrs)?.[1]
