@@ -206,6 +206,8 @@ FunctionEnd
 
 !macro quitIfDataRestoreFailed
   ${if} $dataRestoreFailed != "0"
+    # Same reasoning as the protection failure: a silent install would otherwise only return exit code 2.
+    !insertmacro baselioLogPreflightRefusal "refusal reason=data-restore-failed install-folder=$\"$INSTDIR$\" backup=$\"$baselioMessageBackup$\""
     SetErrorLevel 2
     Quit
   ${endif}
@@ -231,6 +233,7 @@ FunctionEnd
   ${endif}
   ${if} $dataProtectionFailed != "0"
     # Undo any earlier successful move before refusing to start either old uninstaller.
+    !insertmacro baselioLogPreflightRefusal "refusal reason=data-protection-failed install-folder=$\"$INSTDIR$\""
     !insertmacro restoreAllNestedDataRoots
     SetErrorLevel 2
     Quit
@@ -283,7 +286,8 @@ FunctionEnd
   # #163: a fresh install while the app is running used to reach the install section, fill the progress
   # bar and then fail with electron-builder's "cannot be closed". Refuse it before any page is shown,
   # with the process name and the next step. Updates are exempt here on purpose (a registered
-  # installation in either hive) because the app starts the installer itself.
+  # installation in either hive whose folder still holds the executable) because the app starts the
+  # installer itself; a stale registry value alone does not count as an update.
   !insertmacro baselioPreflightRunningApp
 
   # Protect HKCU independently of the mode selected during .onInit: the user can still switch to
@@ -319,6 +323,9 @@ FunctionEnd
   ${endif}
 
   ${if} $dataProtectionFailed != "0"
+    # A silent install shows no dialog for this path either, so it leaves the reason in the same log as the
+    # two preflights instead of only exit code 2.
+    !insertmacro baselioLogPreflightRefusal "refusal reason=data-protection-failed install-folder=$\"$INSTDIR$\""
     !insertmacro restoreAllNestedDataRoots
     SetErrorLevel 2
     Quit

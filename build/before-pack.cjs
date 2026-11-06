@@ -1,9 +1,9 @@
 /* electron-builder beforePack hook: measure the staged app directory and emit the NSIS path budget (#163).
  *
  * It runs after the app directory is staged (appOutDir) and before the NSIS script is compiled, which is
- * the only window where the payload's real file layout exists and the installer still does not. Without
- * this step build/installer-preflight.nsh compiles with a warning and the target-folder preflight is
- * skipped, so a broken Windows build is loud rather than silent.
+ * the only window where the payload's real file layout exists and the installer still does not. A build
+ * that skips this step fails: installer-preflight.nsh raises !error when the generated include is missing,
+ * so a Windows build without the preflight cannot be produced silently.
  */
 const path = require('node:path')
 

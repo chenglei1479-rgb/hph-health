@@ -8,6 +8,12 @@
 #
 # The path budget is measured at packaging time (build/installer-path-budget.cjs, rewritten by the
 # beforePack hook); this file only does arithmetic on it and shows one localized message.
+#
+# A refusal also writes one line to %TEMP%\Baselio-install-preflight.log. Measured with this toolchain:
+# a silent install (/S) shows no dialog AND writes nothing to stdout or stderr (a probe printing
+# DetailPrint and exiting 3 produced 0 bytes on both streams), so exit code 3 on its own is
+# indistinguishable from a crash. The line is English with stable ids (reason=..., action=...) because it
+# is read by whoever handles the report, not by the UI language.
 
 !if /FileExists "${__FILEDIR__}\installer-path-budget.nsh"
   !include "${__FILEDIR__}\installer-path-budget.nsh"
@@ -27,6 +33,42 @@
   Quit
 !macroend
 
+!define BASELIO_PREFLIGHT_LOG "Baselio-install-preflight.log"
+
+# Appends one line to the refusal log. %TEMP% first (always exists for the installing user), then the
+# installer's own folder for a deployment where TEMP is read-only. A log that cannot be written must never
+# change the verdict or the exit code, so every failure here is cleared and ignored.
+!macro baselioLogPreflightRefusal LINE
+  Push $R6
+  Push $R7
+  StrCpy $R7 "0"
+  ${IfNot} ${FileExists} "$TEMP\${BASELIO_PREFLIGHT_LOG}"
+    StrCpy $R7 "1"
+  ${EndIf}
+  ClearErrors
+  # Mode "a" does not seek on this NSIS (v3.04): the handle starts at offset 0, so without the explicit
+  # FileSeek each refusal overwrote the previous one and the log kept only the last attempt.
+  FileOpen $R6 "$TEMP\${BASELIO_PREFLIGHT_LOG}" a
+  ${If} ${Errors}
+    StrCpy $R7 "0"
+    ClearErrors
+    FileOpen $R6 "$EXEDIR\${BASELIO_PREFLIGHT_LOG}" a
+  ${EndIf}
+  ${IfNot} ${Errors}
+    FileSeek $R6 0 END
+    ${If} $R7 == "1"
+      # UTF-16LE byte-order mark on the first line only, matching what FileWriteUTF16LE writes.
+      FileWriteByte $R6 0xFF
+      FileWriteByte $R6 0xFE
+    ${EndIf}
+    FileWriteUTF16LE $R6 "${LINE}$\r$\n"
+    FileClose $R6
+  ${EndIf}
+  ClearErrors
+  Pop $R7
+  Pop $R6
+!macroend
+
 # Refuses a target folder where any payload file would exceed the limit. $R1/$R3/$R4 are read by the
 # localized message, so they must still hold their values when MessageBox returns.
 !macro baselioPreflightInstallPath
@@ -39,6 +81,8 @@
     !insertmacro baselioCountOverflowingFiles
     ${If} $R3 > 0
       IntOp $R4 $R1 + ${BASELIO_MAX_RELATIVE_PATH}
+      # Logged before the dialog so the numbers survive a user who dismisses it.
+      !insertmacro baselioLogPreflightRefusal "refusal reason=path-too-long folder-length=$R1 overflowing-files=$R3 longest-path=$R4 limit=$R2 longest-usable-folder=$R5 install-folder=$\"$INSTDIR$\" action=rerun-the-installer-with-a-shorter-folder"
       MessageBox MB_ICONSTOP|MB_OK "$(BaselioPreflightPathTooLong)" /SD IDOK
       !insertmacro baselioRefuseBeforeCopy "path-too-long"
     ${EndIf}
@@ -47,17 +91,34 @@
 
 # Refuses a fresh install while the app is running, and names the process and the next step. An in-app
 # update installs while the app is opening the installer on purpose; electron-builder's own
-# CHECK_APP_RUNNING closes it there, so this preflight stays out of that path (a registered installation
-# in either hive means update).
+# CHECK_APP_RUNNING closes it there, so this preflight stays out of that path. The exemption needs a
+# registered location AND the executable still present: an unclean uninstall leaves InstallLocation behind,
+# and trusting the mere value let a fresh install into a stale folder skip this check and reach the stall
+# this ticket is about.
 !macro baselioPreflightRunningApp
   !ifmacrodef FIND_PROCESS
-    ${If} $perMachineInstallDirCache == ""
-    ${AndIf} $perUserInstallDirCache == ""
-      !insertmacro FIND_PROCESS "${APP_EXECUTABLE_FILENAME}" $R0
-      ${If} $R0 == 0
-        MessageBox MB_ICONSTOP|MB_OK "$(BaselioPreflightAppRunning)" /SD IDOK
-        !insertmacro baselioRefuseBeforeCopy "app-running"
-      ${EndIf}
-    ${EndIf}
+  !else
+    # Fail closed like the path budget: a missing FIND_PROCESS used to compile the check out silently.
+    !error "FIND_PROCESS is missing, so the running-app preflight would not run at all. electron-builder defines it in allowOnlyOneInstallerInstance.nsh."
   !endif
+  # $R8 = 1 when a registered installation really is on disk (update), so the check below is skipped.
+  StrCpy $R8 "0"
+  ${If} $perMachineInstallDirCache != ""
+    ${If} ${FileExists} "$perMachineInstallDirCache\${APP_EXECUTABLE_FILENAME}"
+      StrCpy $R8 "1"
+    ${EndIf}
+  ${EndIf}
+  ${If} $perUserInstallDirCache != ""
+    ${If} ${FileExists} "$perUserInstallDirCache\${APP_EXECUTABLE_FILENAME}"
+      StrCpy $R8 "1"
+    ${EndIf}
+  ${EndIf}
+  ${If} $R8 == "0"
+    !insertmacro FIND_PROCESS "${APP_EXECUTABLE_FILENAME}" $R0
+    ${If} $R0 == 0
+      !insertmacro baselioLogPreflightRefusal "refusal reason=app-running process=${APP_EXECUTABLE_FILENAME} install=fresh action=quit-Baselio-then-rerun-the-installer"
+      MessageBox MB_ICONSTOP|MB_OK "$(BaselioPreflightAppRunning)" /SD IDOK
+      !insertmacro baselioRefuseBeforeCopy "app-running"
+    ${EndIf}
+  ${EndIf}
 !macroend
