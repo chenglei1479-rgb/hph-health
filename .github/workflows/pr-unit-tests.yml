@@ -14,11 +14,12 @@ name: PR unit tests
 # incident suite, it cannot be isolated from a directory, and the guard fails the job when it is
 # missing from the results. Renaming it is therefore a red build, not a silent no-op.
 #
-# `src/main/notebook` is not in this first version. Measured locally with the same command: 181
-# files, 6536 reported tests, 63 failing, 611 s. The failures are environment-dependent
-# (real kernels, managed Python packs, macOS path assertions in `schema-only/bundled-python.test.ts`,
-# Windows symlink/path-length limits) and need their own ticket before this job can report on them
-# honestly. Adding the directory now would bury real regressions in that noise.
+# `src/main/notebook` used to be left out: measured locally it was 181 files / 6536 tests / 63 failing,
+# and those failures were environment-bound (real kernels, shell and REPL processes, the npm registry,
+# packaged Electron) or stale expectations. It now runs as its own job so its failures are attributable
+# and its 10-minute cost does not push this job into its timeout. The environment-bound suites are
+# excluded by name in `vitest.config.ts` (NOTEBOOK_PR_EXCLUDE_PATTERNS) and each is listed with its
+# reason there; everything else in the directory runs.
 on:
   pull_request:
   merge_group:
@@ -77,3 +78,46 @@ jobs:
           --require src/shared/acp.test.ts
           --require src/renderer/src/i18n/resources.test.ts
           --require packages/diagnostics/src/logger.test.ts
+
+  # #179: the Notebook suites guard the PHI and output-path fixes that landed in one week (a corrupted
+  # statistic, a refused aggregate age, two phone-rule layers, mojibake from a Python pipe). No job ran
+  # them before, so a regression in any of those would have reached a beta unnoticed. A separate job
+  # keeps its ~10 minutes off the job above and leaves a red result attributable to this directory.
+  unit-tests-notebook:
+    name: Unit tests (notebook)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: node scripts/ci/npm-ci.mjs --install-links
+      - name: Build workspace packages
+        run: node scripts/build-dev-packages.mjs
+      # The variable switches on NOTEBOOK_PR_EXCLUDE_PATTERNS: a written list of the suites that need a
+      # real kernel, shell, REPL, npm registry, packaged Electron or symlink privilege. Without it the
+      # whole directory runs, which is what a developer wants locally.
+      - name: Run the notebook unit-test set
+        env:
+          OPEN_SCIENCE_NOTEBOOK_PR_JOB: '1'
+        run: >-
+          node node_modules/vitest/vitest.mjs run
+          src/main/notebook
+          --reporter=json
+          --outputFile="$env:RUNNER_TEMP/unit-results-notebook.json"
+          --maxWorkers=2
+      # Two sentinels: the suite that guards the PHI fixes above, and the kernel protocol every notebook
+      # execution goes through. Renaming or moving either one must red this job, not shrink the set.
+      - name: Require real test execution
+        run: >-
+          node scripts/ci/require-unit-test-results.mjs
+          "$env:RUNNER_TEMP/unit-results-notebook.json"
+          --require src/main/notebook/schema-only/patient-phi.test.ts
+          --require src/main/notebook/kernel-protocol.test.ts

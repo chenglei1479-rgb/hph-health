@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, posix, win32 } from 'node:path'
 
 import { describe, expect, it, vi } from 'vitest'
 
@@ -135,7 +135,9 @@ describe('schema-notebook bundled Python', () => {
       platform: 'win32' as const,
       arch: 'x64',
       resourcesPath: 'D:/DRA/medresearch-agent/resources',
-      executable: 'D:/DRA/medresearch-agent/resources/schema-notebook-python/win-x64/python.exe'
+      // Windows' own separator: the resolver builds this path with win32.join, whatever the host is.
+      executable:
+        'D:\\DRA\\medresearch-agent\\resources\\schema-notebook-python\\win-x64\\python.exe'
     },
     {
       platform: 'darwin' as const,
@@ -194,10 +196,10 @@ describe('schema-notebook bundled Python', () => {
   ] as const)(
     'reports a broken packaged runtime for the %s %s prefix instead of using PATH',
     async (platform, arch, resourcesPath) => {
-      // Same helper the resolver uses: a hand-written POSIX literal would not match on Windows,
-      // where join() produces backslashes, and the case would silently test the PATH fallback.
+      // Same platform-aware join the resolver uses: a host join() would put backslashes into a POSIX
+      // prefix, and the case would silently test the PATH fallback instead of the packaged prefix.
       const executable = bundledPythonExecutable(
-        join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR),
+        (platform === 'win32' ? win32 : posix).join(resourcesPath, SCHEMA_NOTEBOOK_PYTHON_DIR),
         platform,
         arch
       )
