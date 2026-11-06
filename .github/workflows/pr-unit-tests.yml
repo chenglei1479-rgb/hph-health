@@ -65,6 +65,7 @@ jobs:
           scripts/ci/require-unit-test-results.test.ts
           --reporter=json
           --outputFile="$env:RUNNER_TEMP/unit-results-commands.json"
+          --reporter=default
           --maxWorkers=2
       # A run that matched nothing still exits 0, so the report itself is the evidence of work. One
       # sentinel per directory: a filter that stops matching (renamed file, moved directory) must red
@@ -84,7 +85,8 @@ jobs:
   # #179: the Notebook suites guard the PHI and output-path fixes that landed in one week (a corrupted
   # statistic, a refused aggregate age, two phone-rule layers, mojibake from a Python pipe). No job ran
   # them before, so a regression in any of those would have reached a beta unnoticed. A separate job
-  # keeps its ~10 minutes off the job above and leaves a red result attributable to this directory.
+  # keeps its measured ~7 minutes off the job above and leaves a red result attributable to this
+  # directory.
   unit-tests-notebook:
     name: Unit tests (notebook)
     runs-on: windows-latest
@@ -106,6 +108,10 @@ jobs:
       # The variable switches on NOTEBOOK_PR_EXCLUDE_PATTERNS: a written list of the suites that need a
       # real kernel, shell, REPL, npm registry, packaged Electron or symlink privilege. Without it the
       # whole directory runs, which is what a developer wants locally.
+      # The JSON report feeds the guard; the default reporter is what makes a job log readable. With
+      # only `--reporter=json` the log said "Process completed with exit code 1" and nothing else, so a
+      # red run could not be attributed to a test without downloading an artifact that is not uploaded
+      # (#179 red proof). Both reporters run: the file stays machine-readable, the log stays evidence.
       - name: Run the notebook unit-test set
         env:
           OPEN_SCIENCE_NOTEBOOK_PR_JOB: '1'
@@ -114,6 +120,7 @@ jobs:
           src/main/notebook
           --reporter=json
           --outputFile="$env:RUNNER_TEMP/unit-results-notebook.json"
+          --reporter=default
           --maxWorkers=2
       # Two sentinels: the suite that guards the PHI fixes above, and the kernel protocol every notebook
       # execution goes through. Renaming or moving either one must red this job, not shrink the set.
