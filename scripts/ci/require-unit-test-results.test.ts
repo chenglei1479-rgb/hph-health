@@ -9,6 +9,7 @@ import { NOTEBOOK_PR_EXCLUDE_PATTERNS } from '../../vitest.config'
 import {
   REQUIRED_TEST_FILE,
   executedTestCount,
+  unusedSkipAllowances,
   verifyUnitTestReport
 } from './require-unit-test-results.mjs'
 
@@ -136,6 +137,82 @@ describe('verifyUnitTestReport with --no-skips', () => {
     expect(problems).toEqual([
       'The report claims 2 skipped or pending tests but lists none of them, so this run cannot prove what did not run.'
     ])
+  })
+})
+
+// #213: a mixed directory (platform-gated skips) cannot use `--no-skips`, so the skips are named
+// instead. Every skip prints; an unlisted one fails; an allowance that stops matching only prints.
+describe('--allow-skip', () => {
+  const withSkip = {
+    numTotalTests: 2,
+    numPendingTests: 1,
+    testResults: [
+      {
+        name: '/home/runner/work/hph-health/scripts/ci/mirror-channel-publication.test.ts',
+        assertionResults: [
+          { status: 'passed', fullName: 'keeps publication isolated' },
+          { status: 'skipped', fullName: 'website channel publication preserves bytes' }
+        ]
+      }
+    ]
+  }
+  const pattern =
+    'scripts/ci/mirror-channel-publication.test.ts > website channel publication preserves bytes'
+
+  it('fails a skip that no allowance names', () => {
+    const problems = verifyUnitTestReport(withSkip, {
+      required: [],
+      allowSkips: [{ pattern: 'something else', reason: 'x' }]
+    })
+    expect(problems).toEqual([
+      'UNEXPECTED SKIP /home/runner/work/hph-health/scripts/ci/mirror-channel-publication.test.ts > website channel publication preserves bytes'
+    ])
+  })
+
+  it('accepts a skip an allowance names, and reports the allowance as unused when it matches nothing', () => {
+    expect(
+      verifyUnitTestReport(withSkip, { required: [], allowSkips: [{ pattern, reason: 'posix' }] })
+    ).toEqual([])
+    expect(
+      unusedSkipAllowances(withSkip, [{ pattern: 'gone > test', reason: 'stale entry' }])
+    ).toEqual([{ pattern: 'gone > test', reason: 'stale entry' }])
+    expect(unusedSkipAllowances(withSkip, [{ pattern, reason: 'posix' }])).toEqual([])
+  })
+
+  it('prints every skip and every unused allowance through the CLI', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'unit-test-guard-'))
+    directories.push(directory)
+    const allowList = join(directory, 'allow.json')
+    writeFileSync(
+      allowList,
+      JSON.stringify({
+        allowed: [
+          { pattern, reason: 'publication harness is POSIX-only' },
+          { pattern: 'gone > test', reason: 'stale entry' }
+        ]
+      })
+    )
+    const reportFile = join(directory, 'results.json')
+    writeFileSync(reportFile, JSON.stringify(withSkip))
+    const run = spawnSync(
+      process.execPath,
+      [
+        script,
+        reportFile,
+        '--require',
+        'scripts/ci/mirror-channel-publication.test.ts',
+        '--allow-skip',
+        allowList
+      ],
+      {
+      encoding: 'utf8'
+    })
+    expect(run.status).toBe(0)
+    expect(run.stdout).toContain(
+      'SKIP /home/runner/work/hph-health/scripts/ci/mirror-channel-publication.test.ts > website channel publication preserves bytes'
+    )
+    expect(run.stdout).toContain('UNUSED SKIP ALLOWANCE gone > test: stale entry')
+    expect(run.stdout).toContain('allowed skips')
   })
 })
 
