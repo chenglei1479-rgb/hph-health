@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { load } from 'js-yaml'
 import { afterEach, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
@@ -98,9 +99,28 @@ it('skips unused consent and terms files on a prerelease build and still blocks 
   ).toThrow(/usage-notice\.ja\.md/)
 })
 
+// The check used to be the `beforePack` value itself. Since the upstream merge (#33) it is the first
+// statement of `build/stage-desktop-runtime.cjs`, and `beforePack` names that hook. Asserting the old
+// literal therefore proved nothing while the file still said something else. Follow the chain the
+// project actually ships: the config names a hook, and that hook must call this check before it stages
+// anything. Moving the check behind a different hook, or into `afterPack`, must red here.
 it('is wired into electron-builder before the package is assembled', () => {
-  const config = readFileSync('electron-builder.yml', 'utf8')
-  expect(config).toContain('beforePack: build/assert-placeholder-brackets.cjs')
+  const config = load(readFileSync('electron-builder.yml', 'utf8')) as {
+    beforePack?: string
+    afterPack?: string
+  }
+  expect(config.beforePack).toEqual(expect.any(String))
+  expect(config.afterPack).not.toContain('assert-placeholder-brackets')
+
+  const hook = readFileSync(config.beforePack!, 'utf8')
+  // First statement of the exported hook, not merely present somewhere in the file.
+  expect(hook).toMatch(
+    /module\.exports\s*=\s*async\s*\([^)]*\)\s*=>\s*\{\s*await\s+require\('\.\/assert-placeholder-brackets\.cjs'\)\.default\(/
+  )
+  // And what the hook calls is a real function, not a typo that fails only during packaging.
+  expect(typeof (require('./assert-placeholder-brackets.cjs') as { default: unknown }).default).toBe(
+    'function'
+  )
 })
 
 it('follows the shipped privacy notice, so unfinished placeholder brackets fail a packaged build', () => {

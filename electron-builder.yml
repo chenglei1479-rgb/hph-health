@@ -106,6 +106,11 @@ extraResources:
 # electron-builder edits/signs the launcher. Existing helper/vendor signatures are preserved.
 win:
   forceCodeSigning: true
+  # Pinned explicitly, not inherited from electron-builder's default. #48 removed the development name
+  # from every user-visible surface, and the upstream merge (#33) took this line with it; the guard in
+  # `scripts/electron-builder-config.test.ts` is what noticed. There is still no publisherName: the
+  # beta ships unsigned, so verification must come from the signature state, not a name we invent.
+  verifyUpdateCodeSignature: true
   # Windows ProgID is a persisted association identity; other platforms use a display name.
   fileAssociations:
     - ext: science

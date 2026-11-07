@@ -1,4 +1,4 @@
-# UTF-8 BOM: Unicode NSIS reads Japanese and Chinese without a system-code-page dependency.
+﻿# UTF-8 BOM: Unicode NSIS reads Japanese and Chinese without a system-code-page dependency.
 # LCIDs: English 1033, Japanese 1041, Simplified Chinese 2052.
 !ifdef BUILD_UNINSTALLER
 LangString BaselioNotebookCleanupFailed 1033 "Baselio could not safely remove its owned Notebook isolation resources. The uninstall was stopped so the cleanup can be retried."

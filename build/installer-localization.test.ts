@@ -31,7 +31,11 @@ const tokens = (text: string): string[] =>
 
 describe('NSIS localization integration', () => {
   it('provides all three languages and retains every runtime path/error token', () => {
-    expect(translations.size).toBe(38)
+    // Counted, not derived: this is the guard against a whole block disappearing from the strings
+    // file. It is a deliberate edit. #190 added the two preflight refusals
+    // (BaselioPreflightAppRunning, BaselioPreflightPathTooLong) and left this behind at 38, which is
+    // why the suite had to go red somewhere before the next person trusted it.
+    expect(translations.size).toBe(40)
     for (const values of translations.values()) {
       expect([...values.keys()].sort()).toEqual(['1033', '1041', '2052'])
       for (const text of values.values()) {

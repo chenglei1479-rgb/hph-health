@@ -271,7 +271,7 @@ describe('electron-builder native image processing', () => {
     expect(config.mac?.extraResources).toHaveLength(1)
     expect(config.linux?.extraResources).toEqual([
       { from: 'resources/bin/linux/${arch}/micromamba', to: 'micromamba' },
-      { from: 'build/deb-cli-launcher', to: 'medresearch-agent-cli' }
+      { from: 'build/deb-cli-launcher', to: 'open-science-cli' }
     ])
   })
 
@@ -394,12 +394,18 @@ describe('electron-builder Windows targets', () => {
       join(process.cwd(), 'build', 'windows-notebook-sandbox-uninstall.ps1'),
       'utf8'
     )
+    // #190 moved the user-facing copy into installer-strings.nsh so the three installer languages
+    // say it themselves. The sentence is still the contract; only its home moved.
+    const strings = readFileSync(join(process.cwd(), 'build', 'installer-strings.nsh'), 'utf8')
 
     expect(config).toContain('from: build/windows-notebook-sandbox-uninstall.ps1')
     expect(include).toContain('windows-notebook-sandbox-uninstall.ps1')
     expect(include).toContain('${ifNot} ${isUpdated}')
     expect(include).toContain('notebookSandboxCleanupComplete')
-    expect(include).toContain('The uninstall was stopped so the cleanup can be retried.')
+    expect(include).toContain('MessageBox MB_OK|MB_ICONSTOP "$(BaselioNotebookCleanupFailed)"')
+    expect(strings).toMatch(
+      /^LangString BaselioNotebookCleanupFailed 1033 ".*The uninstall was stopped so the cleanup can be retried\."$/m
+    )
     expect(cleanup).toContain('-ArgumentList $quotedArguments')
     expect(cleanup).toContain(
       '@($Command, $installationId, $ownershipRoot) | ForEach-Object { ConvertTo-WindowsArgument $_ }'
