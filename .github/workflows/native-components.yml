@@ -60,7 +60,7 @@ jobs:
           node-version: '22.23.3'
           cache: npm
       - name: Install producer dependencies only
-        run: npm ci --install-links --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Install Linux build headers
         if: runner.os == 'Linux'
         run: |

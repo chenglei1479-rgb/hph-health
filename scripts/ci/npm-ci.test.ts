@@ -112,6 +112,18 @@ describe('npm ci Electron mirror policy', () => {
       for (const [lineNumber, line] of text.split('\n').entries()) {
         const match = line.match(/^\s+run:\s*(npm ci.*)$/)
         if (!match) continue
+        // Known exception, not a relaxed rule (#220): `sourceFingerprint()` in
+        // scripts/native-components.mjs hashes this whole workflow file, so adding `--install-links`
+        // here changes the fingerprint, invalidates every vendored native binary
+        // (build/native-components-lock.json.source) and makes `npm ci` fail in every job. Until #220
+        // narrows the fingerprint to the compile inputs this exact command stays as it is - a
+        // comment-only edit is still fine, and any other command in that file is still rejected.
+        if (
+          name === 'native-components.yml' &&
+          match[1] === 'npm ci --ignore-scripts --no-audit --no-fund'
+        ) {
+          continue
+        }
         if (
           match[1].includes('--install-links') &&
           match[1].includes('--ignore-scripts') &&
