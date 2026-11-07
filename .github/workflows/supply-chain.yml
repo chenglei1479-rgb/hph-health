@@ -2,6 +2,13 @@ name: Supply chain
 
 on:
   pull_request:
+  # #208: merges into main ran nothing. The egress allowlist is the half that matters here - a direct
+  # or squashed commit could introduce a host without any pull request to review it. The licence scan
+  # re-verifies on main rather than diffing: its baseline is `origin/main`, which on a main push is
+  # the commit being checked, so it proves the installed tree is clean rather than that nothing new
+  # arrived.
+  push:
+    branches: [main]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:

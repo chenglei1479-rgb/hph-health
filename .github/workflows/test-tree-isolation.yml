@@ -17,6 +17,13 @@ name: Test tree isolation
 # time, and this guard must not depend on that edit landing first.
 on:
   pull_request:
+  # #208: merges into main ran nothing, and this guard exists because a test run once destroyed 3328
+  # tracked files in this repository. The commit main receives deserves the same check as the pull
+  # request that proposed it. The concurrency group below falls back to `github.ref` off a pull
+  # request, so a main push and a pull request never cancel each other; a newer main push does cancel
+  # an older main run, whose tree the newer commit already contains.
+  push:
+    branches: [main]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:

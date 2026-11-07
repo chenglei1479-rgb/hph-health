@@ -2,6 +2,10 @@ name: Japanese PHI dev eval
 
 on:
   pull_request:
+  # #208: merges into main ran nothing, so a scoring regression that slipped through a pull request
+  # had no second chance to be seen. The eval is one Ubuntu job on a fixed, fictional data set.
+  push:
+    branches: [main]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
