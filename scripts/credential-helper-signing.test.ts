@@ -13,17 +13,44 @@ const require = createRequire(import.meta.url)
 const builderRequire = createRequire(require.resolve('electron-builder/package.json'))
 const appBuilderRequire = createRequire(builderRequire.resolve('app-builder-lib/package.json'))
 
-function loadHook(file: string): (context: unknown) => Promise<void> {
-  const exports: { default?: (context: unknown) => Promise<void> } = {}
+// `afterPack` is `build/deployment-pack.cjs`, and its first statement is
+// `require('./adhoc-sign.cjs')`. A hook's sibling ids are relative to the hook, not to this test
+// file: falling through to the real `require` resolved `./adhoc-sign.cjs` here and failed with
+// MODULE_NOT_FOUND, so the guard never ran (#213). Evaluate siblings inside the same sandbox
+// instead, so the stubs below keep applying to them.
+type HookExports = { default?: (context: unknown) => Promise<void> }
+
+function evaluateHook(file: string): HookExports & Record<string, unknown> {
+  // The siblings this loads are CommonJS, and they disagree on how to export: `deployment-pack.cjs`
+  // uses `exports.default`, `before-pack.cjs` uses `module.exports = fn` then `.default = fn`.
+  // Give the sandbox a real `module`, and return `module.exports` rather than the object we seeded,
+  // or the second shape would be lost.
+  const module: { exports: HookExports & Record<string, unknown> } = { exports: {} }
   runInNewContext(readFileSync(file, 'utf8'), {
-    exports,
+    module,
+    exports: module.exports,
     Buffer,
+    // `deployment-validation.cjs` evaluates the parsed deployment in its own context and expects
+    // `URL`, which is a Node global in production.
+    URL,
     __dirname: dirname(file),
     console,
-    require: (id: string) =>
-      id === './verify-native-components.cjs' ? async () => new Set() : require(id)
+    require: (id: string) => {
+      if (id === './verify-native-components.cjs') return async () => new Set()
+      // `afterPack` also runs `before-pack.cjs` (the #163 path budget and the #164 host-binary check).
+      // Those are covered by `build/packaging.test.ts`; running the real hook here would additionally
+      // write `build/installer-path-budget.nsh` into the checkout, which #156 forbids. This test is
+      // about the credential-helper signatures, so the sibling is stubbed rather than satisfied.
+      if (id === './before-pack.cjs') return async () => {}
+      if (id.startsWith('.')) return evaluateHook(join(dirname(file), id))
+      return require(id)
+    }
   })
-  return exports.default!
+  return module.exports
+}
+
+function loadHook(file: string): (context: unknown) => Promise<void> {
+  return evaluateHook(file).default!
 }
 
 it('edits the Windows launcher before signing and signs each bundled PE only once', async () => {
@@ -68,6 +95,11 @@ it('edits the Windows launcher before signing and signs each bundled PE only onc
     electronPlatformName: 'win32',
     appOutDir: directory,
     packager: {
+      // `deployment-pack.cjs` reads the update deployment after the signing hook and returns early
+      // when the feed is disabled, which `resources/dra-update.yml` is (`enabled: false`). The real
+      // hook always has a project directory, so the fixture supplies one instead of the hook
+      // tolerating its absence.
+      projectDir: process.cwd(),
       appInfo: { productFilename: 'open-science' },
       platformSpecificBuildOptions: { azureSignOptions: {} },
       signIf
