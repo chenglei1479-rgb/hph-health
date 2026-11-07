@@ -83,6 +83,62 @@ describe('verifyUnitTestReport', () => {
   })
 })
 
+// #192 follow-up: `--require` proves a file ran, not that the case that matters inside it ran. A
+// skipped release-blocker case (the #205 shape) left every other assertion in the file to keep the
+// job green. `--no-skips` is the second, complementary gate, and it is opt-in because the PHI job has
+// one legitimate skip.
+describe('verifyUnitTestReport with --no-skips', () => {
+  const named = (name: string, entries: Array<[Status, string]>) => ({
+    name: `/home/runner/work/hph-health/${name}`,
+    assertionResults: entries.map(([status, fullName]) => ({ status, fullName }))
+  })
+
+  it('accepts a report with no skipped cases', () => {
+    expect(
+      verifyUnitTestReport(report([result(REQUIRED_TEST_FILE, ['passed'])]), { noSkips: true })
+    ).toEqual([])
+  })
+
+  it('still accepts skips when the flag is not set', () => {
+    const withSkip = report([result(REQUIRED_TEST_FILE, ['passed', 'skipped'])])
+    expect(verifyUnitTestReport(withSkip)).toEqual([])
+  })
+
+  it('names every skipped case instead of counting them', () => {
+    const problems = verifyUnitTestReport(
+      {
+        numTotalTests: 4,
+        numPendingTests: 2,
+        testResults: [
+          named('build/packaging.test.ts', [
+            ['passed', 'compiles the preflight (-WX)'],
+            ['skipped', 'the preflight compiles before electron-builder declares its variables']
+          ]),
+          named('build/installer-localization.test.ts', [
+            ['skipped', 'provides all three languages'],
+            ['passed', 'resolves every custom visible message']
+          ])
+        ]
+      },
+      { noSkips: true, required: [] }
+    )
+    expect(problems).toEqual([
+      'SKIP /home/runner/work/hph-health/build/packaging.test.ts > the preflight compiles before electron-builder declares its variables',
+      'SKIP /home/runner/work/hph-health/build/installer-localization.test.ts > provides all three languages'
+    ])
+  })
+
+  it('rejects a report that claims skips it does not list', () => {
+    const problems = verifyUnitTestReport(
+      { numTotalTests: 1, numPendingTests: 2, testResults: [result(REQUIRED_TEST_FILE, ['passed'])] },
+      { noSkips: true }
+    )
+    expect(problems).toEqual([
+      'The report claims 2 skipped or pending tests but lists none of them, so this run cannot prove what did not run.'
+    ])
+  })
+})
+
 describe('require-unit-test-results CLI', () => {
   it('exits 0 and reports the executed count for a valid report', () => {
     const run = spawnSync(
@@ -109,6 +165,42 @@ describe('require-unit-test-results CLI', () => {
     })
     expect(run.status).toBe(1)
     expect(run.stderr).toContain('Unit-test evidence is unreadable')
+  })
+
+  it('exits 0 with --no-skips when nothing was skipped', () => {
+    const run = spawnSync(
+      process.execPath,
+      [script, writeReport(report([result(REQUIRED_TEST_FILE, ['passed'])])), '--no-skips'],
+      { encoding: 'utf8' }
+    )
+    expect(run.status).toBe(0)
+    expect(run.stdout).toContain('no skips allowed and none found')
+  })
+
+  it('exits 1 with --no-skips and names the skipped case', () => {
+    const reportWithSkip = {
+      numTotalTests: 2,
+      numPendingTests: 1,
+      testResults: [
+        {
+          name: '/home/runner/work/hph-health/build/packaging.test.ts',
+          assertionResults: [
+            { status: 'passed', fullName: 'packages the fallback DOCX' },
+            {
+              status: 'skipped',
+              fullName: 'the preflight compiles before electron-builder declares its variables'
+            }
+          ]
+        }
+      ]
+    }
+    const run = spawnSync(process.execPath, [script, writeReport(reportWithSkip), '--no-skips'], {
+      encoding: 'utf8'
+    })
+    expect(run.status).toBe(1)
+    expect(run.stderr).toContain(
+      'FAIL SKIP /home/runner/work/hph-health/build/packaging.test.ts > the preflight compiles before electron-builder declares its variables'
+    )
   })
 })
 

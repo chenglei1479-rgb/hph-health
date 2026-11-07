@@ -240,6 +240,15 @@ jobs:
           --maxWorkers=2
       # Sentinels for the two inputs this job exists to protect: the installer script itself and the
       # electron-builder configuration that decides what gets packaged.
+      #
+      # `--no-skips` is the second gate, and it is only here. `--require` proves a file ran with at
+      # least one executed assertion; it does not prove the case that matters inside that file ran.
+      # Without it this job goes green when `prepare-nsis-toolchain.mjs` succeeds but
+      # `packaging.test.ts`'s own lookup disagrees with it and the `-WX` ordering case skips itself -
+      # which is the #205 shape exactly: the probe exists, the guarded thing never ran, the job is
+      # green. Measured here: 0 skipped with the toolchain prepared, so any skip is a real finding.
+      # The PHI job keeps its one legitimate skip (a real Electron window that cannot be created
+      # everywhere), which is why this is a flag and not the default.
       - name: Require real test execution
         run: >-
           node scripts/ci/require-unit-test-results.mjs
@@ -248,3 +257,4 @@ jobs:
           --require build/installer-localization.test.ts
           --require build/assert-placeholder-brackets.test.ts
           --require scripts/electron-builder-config.test.ts
+          --no-skips

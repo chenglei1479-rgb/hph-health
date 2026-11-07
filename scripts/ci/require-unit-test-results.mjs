@@ -12,9 +12,19 @@
  *      unregistered application command kept that inventory suite red for a day while PR CI had no
  *      unit-test job at all.
  *
+ * `--no-skips` (opt-in, per job) adds a fourth: the run must not have skipped anything at all.
+ *
+ * Why it is opt-in rather than the default: `--require` proves a file ran, not that the case that
+ * matters inside it ran. A suite can keep one executed assertion and skip the release-blocker case
+ * behind `it.skipIf(envMissing)`, which is exactly the #205 shape - the probe existed, the thing it
+ * guarded never ran, and the job was green. Jobs that measured zero skips can say so; jobs with a
+ * legitimate skip (the real-Electron-window PHI case) must not, which is why this is a flag and not
+ * a rule.
+ *
  * A requirement may be a file or a directory; a directory matches any result inside it.
  *
  * Usage: node scripts/ci/require-unit-test-results.mjs <vitest-json-report> [--require <path>]...
+ *        [--no-skips]
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -46,7 +56,22 @@ export const executedTestCount = (report) =>
     0
   )
 
-export function verifyUnitTestReport(report, { required = [REQUIRED_TEST_FILE] } = {}) {
+// Named, not counted: a gate that reports "1 skipped" without saying which case leaves the next person
+// reading the whole log to find out what did not run.
+export const skippedAssertions = (report) =>
+  (Array.isArray(report?.testResults) ? report.testResults : []).flatMap((result) =>
+    (Array.isArray(result?.assertionResults) ? result.assertionResults : [])
+      .filter((assertion) => SKIPPED_STATUSES.has(String(assertion?.status)))
+      .map((assertion) => ({
+        file: normalized(result?.name),
+        name: String(assertion?.fullName ?? assertion?.title ?? '(unnamed test)')
+      }))
+  )
+
+export function verifyUnitTestReport(
+  report,
+  { required = [REQUIRED_TEST_FILE], noSkips = false } = {}
+) {
   if (!report || typeof report !== 'object')
     return ['The Vitest JSON report is missing or unreadable.']
   const problems = []
@@ -61,24 +86,45 @@ export function verifyUnitTestReport(report, { required = [REQUIRED_TEST_FILE] }
     else if (matched.every((result) => executedAssertionCount(result) === 0))
       problems.push(`${requirement} ran but executed no assertions.`)
   }
+  if (noSkips) {
+    const skipped = skippedAssertions(report)
+    // The count and the per-assertion statuses come from the same report, so a report that claims
+    // skips it does not list is a shape change, not a pass.
+    const reportedPending = Number(report.numPendingTests ?? 0)
+    if (skipped.length === 0 && Number.isFinite(reportedPending) && reportedPending > 0)
+      problems.push(
+        `The report claims ${reportedPending} skipped or pending tests but lists none of them, ` +
+          'so this run cannot prove what did not run.'
+      )
+    for (const entry of skipped) problems.push(`SKIP ${entry.file} > ${entry.name}`)
+  }
   return problems
 }
 
-const requirements = () => {
-  const values = []
-  for (let index = 2; index < process.argv.length; index++) {
-    if (process.argv[index] === '--require' && process.argv[index + 1])
-      values.push(process.argv[++index])
+const USAGE =
+  'Usage: node scripts/ci/require-unit-test-results.mjs <vitest-json-report> [--require <path>]... [--no-skips]'
+
+const parseArgs = (argv) => {
+  const positional = []
+  const required = []
+  let noSkips = false
+  for (let index = 2; index < argv.length; index++) {
+    const value = argv[index]
+    if (value === '--require' && argv[index + 1]) required.push(argv[++index])
+    else if (value === '--no-skips') noSkips = true
+    else if (!value.startsWith('--')) positional.push(value)
   }
-  return values.length ? values : [REQUIRED_TEST_FILE]
+  return {
+    file: positional[0],
+    required: required.length ? required : [REQUIRED_TEST_FILE],
+    noSkips
+  }
 }
 
 const main = () => {
-  const file = process.argv[2] && process.argv[2] !== '--require' ? process.argv[2] : undefined
+  const { file, required, noSkips } = parseArgs(process.argv)
   if (!file) {
-    console.error(
-      'Usage: node scripts/ci/require-unit-test-results.mjs <vitest-json-report> [--require <path>]...'
-    )
+    console.error(USAGE)
     process.exit(2)
   }
   let report
@@ -88,15 +134,15 @@ const main = () => {
     console.error(`Unit-test evidence is unreadable at ${file}: ${error.message}`)
     process.exit(1)
   }
-  const required = requirements()
-  const problems = verifyUnitTestReport(report, { required })
+  const problems = verifyUnitTestReport(report, { required, noSkips })
   if (problems.length) {
     for (const problem of problems) console.error(`FAIL ${problem}`)
     process.exit(1)
   }
   console.log(
     `Unit tests executed: ${executedTestCount(report)} assertions across ${report.testResults.length} files ` +
-      `(reported total ${report.numTotalTests}); required paths present: ${required.join(', ')}.`
+      `(reported total ${report.numTotalTests}); required paths present: ${required.join(', ')}` +
+      `${noSkips ? '; no skips allowed and none found' : ''}.`
   )
 }
 
