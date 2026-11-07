@@ -39,6 +39,12 @@ afterAll(async () => {
 // developer sandbox can forbid the interpreter writing into the OS temp dir. Tests must not write into
 // the checkout, so the root is `os.tmpdir()` again; where the interpreter genuinely cannot write there
 // the suite skips with this line instead of leaving files in the worktree.
+//
+// Neither this machine nor the notebook unit-test job executes these assertions. The bundled interpreter
+// (`resources/schema-notebook-python/**`) is gitignored, and that job only checks out, installs and runs
+// vitest, so `pythonAvailable` is false there too and the suite skips. Running it needs a job that stages
+// the bundled interpreter first; that coverage gap belongs with the CI-coverage tickets (#192/#202), not
+// with this isolation change.
 const interpreterCanWriteTempDir = (): boolean => {
   if (!pythonAvailable) return false
   let probe: string | undefined
@@ -59,7 +65,11 @@ const interpreterCanWriteTempDir = (): boolean => {
 }
 
 const tempRootWritable = interpreterCanWriteTempDir()
-if (pythonAvailable && !tempRootWritable) {
+if (!pythonAvailable) {
+  console.warn(
+    '[schema-notebook] skipping the text-encoding suite: the bundled interpreter is not present here. resources/schema-notebook-python/** is gitignored and the notebook unit-test job does not stage it, so this case runs only where the interpreter has been staged (#156).'
+  )
+} else if (!tempRootWritable) {
   console.warn(
     '[schema-notebook] skipping the text-encoding suite: the bundled interpreter cannot write inside the OS temp directory on this machine, and the suite must not write into the checkout (#156).'
   )

@@ -111,11 +111,15 @@ describe('the tree-isolation guard is wired into CI', () => {
 
   it('snapshots the tree around the guard run', () => {
     expect(workflow).toContain('scripts/ci/pkg-suite-snapshot.mjs before')
-    expect(workflow).toContain('scripts/ci/pkg-suite-snapshot.mjs after')
+    // The `if: always()` has to belong to the comparison step itself. A loose `toContain` stayed green
+    // after moving it to another step or deleting it from this one, which is exactly how the guard would
+    // silently lose "a red guard still reports a destroyed tree": anchor the two lines together.
+    expect(workflow).toMatch(
+      /if: always\(\)\s*\n\s*run: node scripts\/ci\/pkg-suite-snapshot\.mjs after/u
+    )
     // A destroyed tree that is allowed to continue is not guarded: the comparison step must be able to
-    // fail the job, and it must run even when the guards above already failed.
+    // fail the job.
     expect(workflow).not.toContain('continue-on-error')
-    expect(workflow).toContain('if: always()')
   })
 
   it('runs the guard by directory and requires real execution', () => {
