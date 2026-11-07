@@ -1,150 +1,47 @@
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process'
-import { chmod, copyFile, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { load } from 'js-yaml'
+import { describe, expect, it } from 'vitest'
 
-const roots: string[] = []
-afterEach(async () => {
-  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
-})
+// #212: the Debian packaging contract that does not need a Linux host. The POSIX wrapper and the real
+// `update-alternatives` lifecycle live in `deb-cli-launcher.posix.test.ts`; those cannot run on the
+// `windows-latest` runner that owns the `Unit tests (build)` job, so they are separate rather than
+// skipped - a report-wide "no skips" gate cannot tell a legitimate platform skip from a silenced one.
+const read = (path: string): string => readFileSync(path, 'utf8')
 
-// Exercise the POSIX wrapper locally as well as on its Linux target.
-describe.skipIf(process.platform === 'win32')('Debian CLI launcher', () => {
-  it('runs the bundled CLI through ordinary Node without a desktop executable and preserves arguments and exit status', async () => {
-    const root = await realpath(await mkdtemp(join(tmpdir(), 'deb-cli-')))
-    roots.push(root)
-    const app = join(root, "Open-Science ' 数据")
-    const resources = join(app, 'resources')
-    const bin = join(root, 'bin')
-    await mkdir(resources, { recursive: true })
-    await mkdir(bin)
-    await copyFile(resolve('build/deb-cli-launcher'), join(resources, 'open-science-cli'))
-    await chmod(join(resources, 'open-science-cli'), 0o755)
-    await mkdir(join(resources, 'node-runtime'))
-    const executable = join(resources, 'node-runtime/node')
-    await writeFile(
-      executable,
-      '#!/bin/sh\nprintf "%s\\n" "$ELECTRON_RUN_AS_NODE" "$OPEN_SCIENCE_APP_PATH" "$@"\nexit 23\n',
-      { mode: 0o755 }
-    )
-    const command = join(bin, 'medresearch-agent')
-    await symlink(join(resources, 'medresearch-agent-cli'), command)
-    const result = spawnSync(command, ['run', '--prompt', 'spaces; $(never-run) "quoted"', ''], {
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        OPEN_SCIENCE_APP_PATH: '/wrong/application',
-        ELECTRON_RUN_AS_NODE: '1',
-        DISPLAY: ''
-      }
-    })
-    expect(result.error).toBeUndefined()
-    expect(result.status).toBe(23)
-    expect(result.stderr).toBe('')
-    expect(result.stdout.split('\n')).toEqual([
-      '',
-      '',
-      join(resources, 'backend/cli.mjs'),
-      'run',
-      '--prompt',
-      'spaces; $(never-run) "quoted"',
-      '',
-      ''
-    ])
-  })
-})
+type PackagingConfig = {
+  deb: { afterInstall: string; afterRemove: string }
+  linux: { executableName?: string; extraResources: { from: string; to: string }[] }
+}
 
-// Run the real rendered post-install script with OS commands captured at the boundary.
-// This is portable and never changes the host's alternatives, MIME database or sandbox mode.
-it.skipIf(process.platform === 'win32')(
-  'registers its CLI without cleaning old-brand alternatives',
-  async () => {
-    const { readFile } = await import('node:fs/promises')
-    const root = await realpath(await mkdtemp(join(tmpdir(), 'deb-coexist-')))
-    roots.push(root)
-    const bin = join(root, 'bin')
-    await mkdir(bin)
-    const calls = join(root, 'calls')
-    const command = join(root, 'usr/bin/medresearch-agent')
-    const current = join(root, 'opt/MedResearch-Agent')
-    const oldTargets = ['Open Science', 'OpenScience'].flatMap((name) => [
-      `${root}/opt/${name}/medresearch-agent`,
-      `${root}/opt/${name}/resources/medresearch-agent-cli`
-    ])
-    const state = join(root, 'state')
-    await writeFile(
-      state,
-      [
-        `Link: ${command}`,
-        ...[`${current}/medresearch-agent`, ...oldTargets].map((target) => `Alternative: ${target}`)
-      ].join('\n') + '\n'
-    )
-    await writeFile(
-      join(bin, 'update-alternatives'),
-      `#!/bin/sh
-if [ "$1" = '--query' ]; then cat "$FIXTURE_STATE"; else printf '%s\\n' "$@" >> "$FIXTURE_CALLS"; fi
-`,
-      { mode: 0o755 }
-    )
-    for (const name of [
-      'chmod',
-      'unshare',
-      'update-mime-database',
-      'update-desktop-database',
-      'apparmor_status'
-    ]) {
-      await writeFile(join(bin, name), `#!/bin/sh\nexit ${name === 'apparmor_status' ? 1 : 0}\n`, {
-        mode: 0o755
-      })
-    }
-    const hook = join(root, 'install')
-    await writeFile(
-      hook,
-      (await readFile('build/deb-after-install.tpl', 'utf8'))
-        .replaceAll('${executable}', 'medresearch-agent')
-        .replaceAll('${sanitizedProductName}', 'MedResearch-Agent')
-        .replaceAll('/usr/bin/', `${root}/usr/bin/`)
-        .replaceAll('/etc/alternatives/', `${root}/etc/alternatives/`)
-        .replaceAll('/opt/', `${root}/opt/`)
-    )
-    const result = spawnSync('/bin/bash', [hook, 'configure'], {
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        PATH: `${bin}:/usr/bin:/bin`,
-        FIXTURE_STATE: state,
-        FIXTURE_CALLS: calls
-      }
-    })
-    expect(result.status, result.stderr).toBe(0)
-    expect((await readFile(calls, 'utf8')).trim().split('\n')).toEqual([
-      '--install',
-      command,
-      'medresearch-agent',
-      `${current}/resources/medresearch-agent-cli`,
-      '100',
-      '--remove',
-      'medresearch-agent',
-      `${current}/medresearch-agent`
-    ])
-  }
-)
+const config = (): PackagingConfig => load(read('electron-builder.yml')) as PackagingConfig
 
-// Preserve electron-builder's platform setup while replacing only command registration.
+// The CLI resource the deb templates register with `update-alternatives`, as
+// `/opt/${sanitizedProductName}/resources/<name>`. Only the registration counts, not every path under
+// `resources/` (the AppArmor profile lives there too). The install hook passes the `cli_target`
+// variable, the remove hook passes the literal, so both shapes are read.
+const registeredCliResources = (text: string): string[] => [
+  ...new Set([
+    ...[...text.matchAll(/^cli_target='\/opt\/\$\{sanitizedProductName\}\/resources\/([^']+)'$/gmu)].map(
+      (match) => match[1]
+    ),
+    ...[
+      ...text.matchAll(
+        /^.*update-alternatives --(?:install|remove)[^\n]*\/opt\/\$\{sanitizedProductName\}\/resources\/([^'"\s]+)/gmu
+      )
+    ].map((match) => match[1])
+  ])
+]
+
 describe('Debian packaging contract', () => {
-  it('keeps the upstream sandbox, MIME and AppArmor setup and installs a separate CLI entry', async () => {
-    const { readFile } = await import('node:fs/promises')
-    const { load } = await import('js-yaml')
-    const config = load(await readFile('electron-builder.yml', 'utf8')) as {
-      deb: { afterInstall: string; afterRemove: string }
-      linux: { executableName?: string; extraResources: { from: string; to: string }[] }
-    }
-    expect(config.deb.afterInstall).toBe('build/deb-after-install.tpl')
-    expect(config.deb.afterRemove).toBe('build/deb-after-remove.tpl')
-    expect(config.linux.executableName).toBeUndefined()
-    expect(config.linux.extraResources).toContainEqual({
+  it('keeps the upstream sandbox, MIME and AppArmor setup and installs a separate CLI entry', () => {
+    const loaded = config()
+    expect(loaded.deb.afterInstall).toBe('build/deb-after-install.tpl')
+    expect(loaded.deb.afterRemove).toBe('build/deb-after-remove.tpl')
+    // The command must stay `medresearch-agent` (metadata.name); declaring a Linux executableName would
+    // silently move /usr/bin and the alternatives group.
+    expect(loaded.linux.executableName).toBeUndefined()
+    expect(loaded.linux.extraResources).toContainEqual({
       from: 'build/deb-cli-launcher',
       to: 'medresearch-agent-cli'
     })
@@ -152,155 +49,32 @@ describe('Debian packaging contract', () => {
       ['after-install.tpl', '# Check if user namespaces'],
       ['after-remove.tpl', 'APPARMOR_PROFILE_DEST=']
     ]) {
-      const upstream = await readFile(
-        `node_modules/app-builder-lib/templates/linux/${filename}`,
-        'utf8'
-      )
-      const owned = await readFile(`build/deb-${filename}`, 'utf8')
+      const upstream = read(`node_modules/app-builder-lib/templates/linux/${filename}`)
+      const owned = read(`build/deb-${filename}`)
       expect(owned.slice(owned.indexOf(marker)).trim()).toBe(
         upstream.slice(upstream.indexOf(marker)).trim()
       )
     }
   })
-})
 
-describe.skipIf(process.platform !== 'linux')('Debian alternatives lifecycle', () => {
-  const fixture = async (): Promise<{
-    root: string
-    alternativeLink: string
-    target: string
-    legacy: string
-    command: string
-    run: (args: string[]) => SpawnSyncReturns<string>
-    hook: (kind: string, argument: string) => SpawnSyncReturns<string>
-  }> => {
-    const { readFile } = await import('node:fs/promises')
-    const root = await realpath(await mkdtemp(join(tmpdir(), 'deb-alternatives-')))
-    roots.push(root)
-    const bin = join(root, 'bin')
-    const alternatives = join(root, 'etc/alternatives')
-    const admin = join(root, 'var/lib/dpkg/alternatives')
-    const resources = join(root, 'opt/MedResearch-Agent/resources')
-    for (const dir of [bin, alternatives, admin, resources, join(root, 'usr/bin')]) {
-      await mkdir(dir, { recursive: true })
-    }
-    const legacy = join(root, 'opt/MedResearch-Agent/medresearch-agent')
-    const target = join(resources, 'medresearch-agent-cli')
-    const command = join(root, 'usr/bin/medresearch-agent')
-    await writeFile(legacy, 'legacy')
-    await writeFile(target, 'cli')
-    await writeFile(join(root, 'opt/MedResearch-Agent/chrome-sandbox'), '')
-    await writeFile(
-      join(bin, 'update-alternatives'),
-      `#!/bin/sh\nexec /usr/bin/update-alternatives --altdir '${alternatives}' --admindir '${admin}' "$@"\n`,
-      { mode: 0o755 }
+  // #212: the guard that would have caught this. `#33` renamed the resource in the config and left both
+  // deb scripts pointing at `medresearch-agent-cli`, so the deb installed successfully and left
+  // `/usr/bin/medresearch-agent` on a path nothing wrote (`update-alternatives --install` does not check
+  // that its target exists). A guard that pins the config but not the scripts that consume it cannot see
+  // that class of drift, so this one reads all three files and requires them to agree.
+  it('registers an alternatives target that the package actually ships', () => {
+    const shipped = config().linux.extraResources.filter(
+      (resource) => resource.from === 'build/deb-cli-launcher'
     )
-    for (const [name, status] of [
-      ['apparmor_status', 1],
-      ['update-mime-database', 0],
-      ['update-desktop-database', 0],
-      ['unshare', 0]
-    ]) {
-      await writeFile(join(bin, String(name)), `#!/bin/sh\nexit ${status}\n`, { mode: 0o755 })
+    expect(shipped).toHaveLength(1)
+    expect(existsSync(shipped[0].from), shipped[0].from).toBe(true)
+
+    const registered = {
+      'build/deb-after-install.tpl': registeredCliResources(read('build/deb-after-install.tpl')),
+      'build/deb-after-remove.tpl': registeredCliResources(read('build/deb-after-remove.tpl'))
     }
-    const env = { ...process.env, PATH: `${bin}:/usr/bin:/bin`, LC_ALL: 'C' }
-    const run = (args: string[]): SpawnSyncReturns<string> =>
-      spawnSync(join(bin, 'update-alternatives'), args, { env, encoding: 'utf8' })
-    const scripts: Record<string, string> = {}
-    for (const kind of ['install', 'remove']) {
-      const text = (await readFile(`build/deb-after-${kind}.tpl`, 'utf8'))
-        .replaceAll('${executable}', 'medresearch-agent')
-        .replaceAll('${sanitizedProductName}', 'MedResearch-Agent')
-        .replaceAll('/usr/bin/', `${root}/usr/bin/`)
-        .replaceAll('/etc/alternatives/', `${alternatives}/`)
-        .replaceAll('/opt/', `${root}/opt/`)
-        .replaceAll('/etc/apparmor.d/', `${root}/etc/apparmor.d/`)
-      scripts[kind] = join(root, kind)
-      await writeFile(scripts[kind], text)
+    for (const [file, names] of Object.entries(registered)) {
+      expect(names, `${file} must name exactly one CLI resource`).toEqual([shipped[0].to])
     }
-    const hook = (kind: string, argument: string): SpawnSyncReturns<string> =>
-      spawnSync('/bin/bash', [scripts[kind], argument], { env, encoding: 'utf8' })
-    return {
-      root,
-      alternativeLink: join(alternatives, 'open-science'),
-      target,
-      legacy,
-      command,
-      run,
-      hook
-    }
-  }
-
-  it('supports fresh install, reinstall, upgrade postrm, remove and repeated purge', async () => {
-    const f = await fixture()
-    for (let i = 0; i < 2; i++) {
-      expect(f.hook('install', 'configure').status).toBe(0)
-      expect(await realpath(f.command)).toBe(f.target)
-    }
-    expect(f.hook('remove', 'upgrade').status).toBe(0)
-    expect(await realpath(f.command)).toBe(f.target)
-    await rm(f.target) // dpkg removes payload before postrm.
-    expect(f.hook('remove', 'remove').status).toBe(0)
-    await expect(realpath(f.command)).rejects.toThrow()
-    expect(f.hook('remove', 'purge').status).toBe(0)
-  })
-
-  it.each(['auto', 'manual'])('migrates only the legacy %s alternative', async (mode) => {
-    const f = await fixture()
-    expect(f.run(['--install', f.command, 'open-science', f.legacy, '100']).status).toBe(0)
-    if (mode === 'manual') expect(f.run(['--set', 'open-science', f.legacy]).status).toBe(0)
-    expect(f.hook('install', 'configure').status).toBe(0)
-    expect(await realpath(f.command)).toBe(f.target)
-    const query = f.run(['--query', 'open-science']).stdout
-    expect(query).not.toContain(`Alternative: ${f.legacy}\n`)
-  })
-
-  it('preserves another manually selected alternative through install and uninstall', async () => {
-    const f = await fixture()
-    const other = join(f.root, 'another-cli')
-    await writeFile(other, 'user choice')
-    expect(f.run(['--install', f.command, 'open-science', f.legacy, '100']).status).toBe(0)
-    expect(f.run(['--install', f.command, 'open-science', other, '200']).status).toBe(0)
-    expect(f.run(['--set', 'open-science', other]).status).toBe(0)
-    expect(f.hook('install', 'configure').status).toBe(0)
-    expect(await realpath(f.command)).toBe(other)
-    expect(f.hook('remove', 'remove').status).toBe(0)
-    expect(await realpath(f.command)).toBe(other)
-  })
-
-  it('fails closed when an unmanaged symlink replaces the command before uninstall', async () => {
-    const f = await fixture()
-    expect(f.hook('install', 'configure').status).toBe(0)
-    await rm(f.command)
-    await symlink(f.legacy, f.command)
-    await rm(f.target)
-    for (const phase of ['remove', 'purge']) {
-      expect(f.hook('remove', phase).status).toBe(1)
-      expect(await realpath(f.command)).toBe(f.legacy)
-    }
-  })
-
-  it('preserves an unregistered replacement of the alternatives link itself', async () => {
-    const f = await fixture()
-    expect(f.hook('install', 'configure').status).toBe(0)
-    const other = join(f.root, 'unregistered-cli')
-    await writeFile(other, 'user command')
-    await rm(f.alternativeLink)
-    await symlink(other, f.alternativeLink)
-    expect(f.hook('install', 'configure').status).toBe(1)
-    expect(f.hook('remove', 'remove').status).toBe(1)
-    expect(await realpath(f.command)).toBe(other)
-  })
-
-  it.each(['file', 'symlink'])('refuses to replace an unmanaged %s', async (kind) => {
-    const f = await fixture()
-    if (kind === 'file') await writeFile(f.command, 'user command')
-    else await symlink(f.legacy, f.command)
-    const { lstat, readFile, readlink } = await import('node:fs/promises')
-    const before = await lstat(f.command)
-    expect(f.hook('install', 'configure').status).toBe(1)
-    expect((await lstat(f.command)).ino).toBe(before.ino)
-    if (kind === 'file') expect(await readFile(f.command, 'utf8')).toBe('user command')
-    else expect(await readlink(f.command)).toBe(f.legacy)
   })
 })

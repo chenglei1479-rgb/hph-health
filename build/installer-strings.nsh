@@ -1,4 +1,6 @@
-﻿# UTF-8 BOM: Unicode NSIS reads Japanese and Chinese without a system-code-page dependency.
+﻿# UTF-8 BOM: keep the encoding in the file. electron-builder passes -INPUTCHARSET UTF8, so its builds
+# do not need it; a bare makensis, and the inline .nsi probes in build/packaging.test.ts, fall back to
+# the system code page without it.
 # LCIDs: English 1033, Japanese 1041, Simplified Chinese 2052.
 !ifdef BUILD_UNINSTALLER
 LangString BaselioNotebookCleanupFailed 1033 "Baselio could not safely remove its owned Notebook isolation resources. The uninstall was stopped so the cleanup can be retried."

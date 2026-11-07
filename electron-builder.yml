@@ -261,8 +261,13 @@ linux:
     - from: resources/bin/linux/${arch}/micromamba
       to: micromamba
     # Debian registers this CLI entry; AppImage retains its explicit user launcher workflow.
+    # The name is part of the contract: both `build/deb-after-install.tpl` and
+    # `build/deb-after-remove.tpl` register `/opt/${sanitizedProductName}/resources/<this name>` as the
+    # alternatives target, and `scripts/deb-cli-launcher.test.ts` fails when the three disagree (#212).
+    # The standalone Linux CLI package (`scripts/linux-cli-packages.mjs`) is a different artefact and
+    # keeps the upstream `open-science-cli` name.
     - from: build/deb-cli-launcher
-      to: open-science-cli
+      to: medresearch-agent-cli
 appImage:
   artifactName: Baselio-${version}-linux-${arch}.${ext}
 deb:

@@ -11,7 +11,11 @@ import { pathToFileURL } from 'node:url'
 const run = (command, args) =>
   execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
 const command = '/usr/bin/medresearch-agent'
-const appRoot = '/opt/MedResearch-Agent'
+// #212: the install root is `${sanitizedProductName}` from `productName`, which is `Baselio`. This used
+// to be `/opt/MedResearch-Agent`, a directory the package never creates, so the certification fixture
+// described a layout that could not exist.
+const appRootName = 'Baselio'
+const appRoot = `/opt/${appRootName}`
 const legacyTarget = `${appRoot}/medresearch-agent`
 const cliTarget = `${appRoot}/resources/medresearch-agent-cli`
 
@@ -53,7 +57,7 @@ const main = async (deb) => {
     const fixture = async (version, legacy) => {
       const tree = join(root, version)
       await mkdir(join(tree, 'DEBIAN'), { recursive: true })
-      await mkdir(join(tree, 'opt/MedResearch-Agent/resources'), { recursive: true })
+      await mkdir(join(tree, 'opt', appRootName, 'resources'), { recursive: true })
       await writeFile(
         join(tree, 'DEBIAN/control'),
         `Package: medresearch-agent\nVersion: ${version}\nArchitecture: all\nMaintainer: AIPOCH\nDescription: Debian CLI lifecycle certification fixture\n`
@@ -69,14 +73,14 @@ const main = async (deb) => {
               )
             )
               .replaceAll('${executable}', 'medresearch-agent')
-              .replaceAll('${sanitizedProductName}', 'MedResearch-Agent')
+              .replaceAll('${sanitizedProductName}', appRootName)
           : generated[name]
         const path = join(tree, 'DEBIAN', name)
         await writeFile(path, text)
         await chmod(path, 0o755)
       }
       for (const file of ['medresearch-agent', 'resources/medresearch-agent-cli', 'chrome-sandbox']) {
-        await writeFile(join(tree, 'opt/MedResearch-Agent', file), '#!/bin/sh\nexit 0\n', {
+        await writeFile(join(tree, 'opt', appRootName, file), '#!/bin/sh\nexit 0\n', {
           mode: 0o755
         })
       }

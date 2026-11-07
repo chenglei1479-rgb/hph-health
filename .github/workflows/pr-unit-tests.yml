@@ -251,6 +251,7 @@ jobs:
           build/
           scripts/electron-builder-config.test.ts
           scripts/credential-helper-signing.test.ts
+          scripts/deb-cli-launcher.test.ts
           --reporter=json
           --outputFile="$env:RUNNER_TEMP/unit-results-build.json"
           --reporter=default
@@ -275,4 +276,5 @@ jobs:
           --require build/assert-placeholder-brackets.test.ts
           --require scripts/electron-builder-config.test.ts
           --require scripts/credential-helper-signing.test.ts
+          --require scripts/deb-cli-launcher.test.ts
           --no-skips
