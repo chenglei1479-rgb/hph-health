@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
-import { bibliographicRecordSchema } from '../../../packages/literature-citations/src/contracts.js'
-import { exportRisType } from '../../../packages/literature-citations/src/citation-exchange.js'
-import { LiteratureCitationFormatter } from '../../../packages/literature-citations/src/citation-formatter.js'
+import { LiteratureCitationFormatter } from '@aipoch/literature-citations'
+import { bibliographicRecordSchema } from '@aipoch/literature-citations/contracts'
+import { exportRisType } from '@aipoch/literature-citations/exchange'
 
 const types = ['journalArticle', 'conferencePaper', 'thesis'] as const
 const references = types.map((itemType) => ({
