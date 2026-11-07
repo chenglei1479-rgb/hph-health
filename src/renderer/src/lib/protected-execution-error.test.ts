@@ -10,9 +10,11 @@ describe('doctor-facing protected execution copy', () => {
     const copy = describeProtectedExecutionFailure(
       'ApplicationCommandError: Windows runtime is incompatible with protected execution.'
     )
-    expect(copy).toContain('保護実行を開始できませんでした')
-    // The two capabilities are reported separately: Python still runs, the protected runtime does not.
-    expect(copy).toContain('Notebook の Python 実行はそのまま使えます')
+    expect(copy).toContain('保護された実行を開始できませんでした')
+    // The two capabilities are reported separately and narrowly: only the schema-table Python (import
+    // and statistics) works without the protected runtime, so the copy must not say "Notebook still runs".
+    expect(copy).toContain('表の取り込みと集計はそのまま使えます')
+    expect(copy).not.toContain('Python 実行はそのまま使えます')
     expect(copy).toContain('設定 > ネットワーク')
     // Both fixes the product actually has, and no instruction to simply retry.
     expect(copy).toContain('もう一度実行してください')
