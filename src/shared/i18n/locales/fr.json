@@ -4314,7 +4314,7 @@
     "{{count}} running background tasks_many": "{{count}} tâches en arrière-plan en cours",
     "Candidates": "Candidates",
     "Format citations": "Mettre en forme les citations",
-    "Cited PDFs: {{included}} included, {{omitted}} excluded, {{unavailable}} unavailable.": "PDF cités\u00a0: {{included}} inclus, {{omitted}} exclus, {{unavailable}} indisponibles.",
+    "Cited PDFs: {{included}} included, {{omitted}} excluded, {{unavailable}} unavailable.": "PDF cités : {{included}} inclus, {{omitted}} exclus, {{unavailable}} indisponibles.",
     "PDF included in this package": "PDF inclus dans ce paquet",
     "PDF left out of this package": "PDF exclu de ce paquet",
     "No PDF was available on the computer that exported this package": "Aucun PDF n'était disponible sur l'ordinateur qui a exporté ce paquet",
@@ -8079,6 +8079,11 @@
     "Checking whether this feature can run…": "Vérification de la possibilité d’exécuter cette fonction…",
     "PDF translation needs a model.": "La traduction de PDF nécessite un modèle.",
     "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "Aucun modèle n’est configuré pour la traduction. Ajoutez un modèle API ou d’abonnement dans Paramètres > Modèles, puis revenez à ce PDF.",
-    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "Le texte de la légende du tableau apparaît aussi dans une cellule. Il est affiché tel qu’extrait, car la mise en page ne peut pas être scindée de façon fiable."
+    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "Le texte de la légende du tableau apparaît aussi dans une cellule. Il est affiché tel qu’extrait, car la mise en page ne peut pas être scindée de façon fiable.",
+    "Previous run": "Exécution précédente",
+    "This is the output saved by the last run on this device, not a new execution. Run again to update it.": "Cette sortie a été enregistrée lors de la dernière exécution sur cet appareil ; ce n’est pas une nouvelle exécution. Relancez le code pour la mettre à jour.",
+    "The code in the editor has changed since that run, so this result belongs to the earlier code.": "Le code de l’éditeur a changé depuis cette exécution ; ce résultat correspond au code précédent.",
+    "Error output": "Sortie d’erreur",
+    "This run did not finish successfully (exit code {{code}}).": "Cette exécution ne s’est pas terminée correctement (code de sortie {{code}})."
   }
 }

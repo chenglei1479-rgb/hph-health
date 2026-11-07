@@ -13,7 +13,8 @@ import type {
   ExecuteAnalysisResponse,
   ImportTableResponse,
   SchemaModelContext,
-  SchemaNotebookRunOutput
+  SchemaNotebookRunOutput,
+  SchemaNotebookRunRecord
 } from '../../../../shared/schema-notebook'
 import { failureText, importFailureCopy } from './schema-notebook-error-copy'
 import { deliverableCardCopy } from '../home/deliverable-packages'
@@ -51,7 +52,7 @@ type SchemaNotebookApi = {
   lastRun: (request: {
     projectId: string
     tableId: string
-  }) => Promise<{ runId: string; outputs: SchemaNotebookRunOutput[] } | null>
+  }) => Promise<SchemaNotebookRunRecord | null>
   modelContext: (request: { projectId: string; tableId: string }) => Promise<SchemaModelContext>
   patientDataTags: () => Promise<Array<{ projectId: string }>>
 }
@@ -66,6 +67,14 @@ const formatBytes = (bytes: number): string => {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`
   return `${bytes} B`
+}
+
+// When a stored run finished. Empty for a record whose timestamp cannot be parsed, so the heading never
+// shows "Invalid Date"; the record itself is still listed.
+const formatRunTime = (iso: string | undefined): string => {
+  if (!iso) return ''
+  const at = new Date(iso)
+  return Number.isNaN(at.getTime()) ? '' : at.toLocaleString()
 }
 
 // CSV bytes travel to the main process, which owns decoding. Excel on a Japanese Windows writes
@@ -136,6 +145,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     runId: string
     outputs: SchemaNotebookRunOutput[]
   } | null>(null)
+  // The newest stored run itself, not just its files. It carries the local output text (#162), which is
+  // shown as history, never as the result of an execution in this session.
+  const [previousRun, setPreviousRun] = useState<SchemaNotebookRunRecord | null>(null)
   const [outputNotice, setOutputNotice] = useState<string | null>(null)
   const [outputError, setOutputError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -157,16 +169,11 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
 
   // Reads the newest run record for one table. Callers own the state update so they can guard against
   // a project switch that lands mid-read.
-  const fetchLastRunOutputs = async (
-    tableId: string
-  ): Promise<{ runId: string; outputs: SchemaNotebookRunOutput[] } | null> => {
+  const fetchLastRun = async (tableId: string): Promise<SchemaNotebookRunRecord | null> => {
     const notebook = api()
     if (!notebook) return null
     try {
-      const previous = await notebook.lastRun({ projectId, tableId })
-      return previous && previous.outputs.length > 0
-        ? { runId: previous.runId, outputs: previous.outputs }
-        : null
+      return await notebook.lastRun({ projectId, tableId })
     } catch {
       return null
     }
@@ -179,6 +186,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     setContext(null)
     setResult(null)
     setRunOutputs(null)
+    setPreviousRun(null)
     setOutputNotice(null)
     setOutputError(null)
     setBlocked(null)
@@ -194,9 +202,14 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     // leaves its figures listed (#121 review).
     const hydrate = (tableId: string | undefined): void => {
       if (!tableId) return
-      void fetchLastRunOutputs(tableId).then((previous) => {
+      void fetchLastRun(tableId).then((previous) => {
         if (cancelled) return
-        setRunOutputs(previous)
+        setPreviousRun(previous)
+        setRunOutputs(
+          previous && previous.outputs.length > 0
+            ? { runId: previous.runId, outputs: previous.outputs }
+            : null
+        )
       })
     }
     if (!draft.tableId || !notebook?.modelContext) {
@@ -231,7 +244,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     return () => {
       cancelled = true
     }
-    // fetchLastRunOutputs closes over api()/projectId only; the effect re-runs per project.
+    // fetchLastRun closes over api()/projectId only; the effect re-runs per project.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
@@ -320,9 +333,16 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       // A different table means the listed files belong to someone else: clear them before reading this
       // table's own newest run, so table A's figures can never sit beside table B's schema (#121 review).
       setRunOutputs(null)
+      setPreviousRun(null)
       setOutputNotice(null)
       setOutputError(null)
-      setRunOutputs(await fetchLastRunOutputs(response.context.tableId))
+      const previous = await fetchLastRun(response.context.tableId)
+      setPreviousRun(previous)
+      setRunOutputs(
+        previous && previous.outputs.length > 0
+          ? { runId: previous.runId, outputs: previous.outputs }
+          : null
+      )
     } catch (error) {
       // Strip the IPC transport chrome so the panel shows the main process sentence, not
       // "Error invoking remote method 'schema-notebook:import-table': ...".
@@ -352,6 +372,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
       })
       setResult(executed)
       setRunSourceTableId(context.tableId)
+      // A new execution replaces the historical block: from here on, what is on screen is this run's, and
+      // the doctor must never read the stored output as if it had just been produced.
+      setPreviousRun(null)
       setRunOutputs(
         executed.local.outputs.length > 0
           ? { runId: executed.runId, outputs: executed.local.outputs }
@@ -564,6 +587,59 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                   <pre aria-label={t('Masking check')}>{JSON.stringify(result.forModel)}</pre>
                   <p>{t('Pseudonymized')}</p>
                 </div>
+              ) : null}
+            </div>
+          ) : null}
+          {/* A restart used to keep the code and the figures but lose the result itself (#162). This is
+              the stored output of the last run, rendered OUTSIDE the `context` branch for the same reason
+              the file list is: the record and its text do not depend on the table csv, so a table that
+              cannot be reopened still leaves the last result readable. It is labelled as history on
+              purpose; a run in this session clears it and shows `result` instead. */}
+          {/* Gate on text, not on "the record has a stdout field": a v2 record from a run that printed
+              nothing would otherwise render an empty history block with a heading and no content. */}
+          {previousRun && (previousRun.stdout || previousRun.stderr) ? (
+            <div data-testid="schema-notebook-previous-run" className="space-y-1">
+              <p className="text-xs font-medium">
+                {t('Previous run')}
+                <span className="ml-2 font-normal text-[#5a6b6c]">
+                  {formatRunTime(previousRun.startedAt)}
+                </span>
+              </p>
+              <p className="text-xs leading-5 text-[#5a6b6c]">
+                {t(
+                  'This is the output saved by the last run on this device, not a new execution. Run again to update it.'
+                )}
+              </p>
+              {previousRun.code !== undefined && previousRun.code !== code ? (
+                <p
+                  data-testid="schema-notebook-previous-run-code-changed"
+                  className="text-xs leading-5 text-[#9a5046]"
+                >
+                  {t(
+                    'The code in the editor has changed since that run, so this result belongs to the earlier code.'
+                  )}
+                </p>
+              ) : null}
+              {previousRun.stdout ? (
+                <pre aria-label={t('Previous run')}>{previousRun.stdout}</pre>
+              ) : null}
+              {previousRun.stderr ? (
+                <div className="space-y-1">
+                  <p className="text-xs">{t('Error output')}</p>
+                  <pre className="whitespace-pre-wrap text-xs text-[#9a5046]">
+                    {previousRun.stderr}
+                  </pre>
+                </div>
+              ) : null}
+              {previousRun.exitCode !== null && previousRun.exitCode !== 0 ? (
+                <p
+                  data-testid="schema-notebook-previous-run-exit"
+                  className="text-xs text-[#9a5046]"
+                >
+                  {t('This run did not finish successfully (exit code {{code}}).', {
+                    code: previousRun.exitCode
+                  })}
+                </p>
               ) : null}
             </div>
           ) : null}

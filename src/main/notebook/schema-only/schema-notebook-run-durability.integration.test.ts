@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   SCHEMA_NOTEBOOK_RUN_OUTPUT_MISSING_CODE,
@@ -107,9 +107,20 @@ describe('schema Notebook run outputs survive the app', () => {
     expect(record).not.toBeNull()
     expect(record!.runId).toBe(executed.runId)
     expect(record!.outputs).toEqual(executed.local.outputs)
-    // The record holds no stdout/stderr text: those can quote rows, and this file outlives the panel.
-    expect(Object.keys(record!)).not.toContain('stdout')
-    expect(Object.keys(record!)).not.toContain('stderr')
+    // #162 changed the old "no text in the record" rule: the record now carries the run's own output,
+    // code and input hash, so reopening the project shows the result without a re-run. This assertion is
+    // the one that must go red if someone trims the record back to the file list.
+    expect(record!.schemaVersion).toBe(2)
+    expect(record!.stdout).toBe('3')
+    expect(record!.stderr).toBe('')
+    expect(record!.code).toBe('print(1)')
+    // The hash names the exact table copy the script read, not the file the user picked: the app stores a
+    // re-serialized UTF-8 copy, so hashing the original bytes would name a file the run never saw.
+    expect(record!.inputSha256).toBe(
+      createHash('sha256')
+        .update(await readFile(join(directory, 'tables', `${tableId}.csv`), 'utf8'), 'utf8')
+        .digest('hex')
+    )
 
     // A saved copy must hash to the checksum the run recorded.
     await expect(
@@ -265,6 +276,89 @@ describe('schema Notebook run outputs survive the app', () => {
       notebook.saveOutput({ projectId, runId: executed.runId, relativePath: 'run.json' })
     ).resolves.toEqual({ saved: true })
     await expect(readFile(destination, 'utf8')).resolves.toBe(userBytes)
+  })
+
+  // #162: the beta.21 acceptance lost the printed regression and Kaplan-Meier values across a restart
+  // while the code and the table came back. The stored record is what removes the re-run, so the reopened
+  // service must return the output while executing nothing at all.
+  it('restores the last run output without running anything again', async () => {
+    const directory = await storageRoot()
+    const printed = 'marker: beta21\nHR 0.62 (95% CI 0.41-0.93)'
+    const first = service(directory, {
+      run: async () => ({ stdout: printed, stderr: '', code: 0 })
+    })
+    const { projectId, tableId } = await importTable(first)
+    const executed = await first.execute({
+      projectId,
+      tableId,
+      language: 'python',
+      code: 'print("marker: beta21")'
+    })
+
+    const run = vi.fn<CommandRunner>(async () => ({ stdout: 'unexpected', stderr: '', code: 0 }))
+    const restarted = service(directory, { run })
+    const record = await restarted.lastRun(projectId, tableId)
+
+    // The acceptance requirement in one line: seeing the result must not require running the code.
+    expect(run).not.toHaveBeenCalled()
+    expect(record).toMatchObject({
+      schemaVersion: 2,
+      runId: executed.runId,
+      exitCode: 0,
+      code: 'print("marker: beta21")',
+      stdout: printed,
+      stderr: ''
+    })
+    expect(record!.inputSha256).toBe(
+      createHash('sha256')
+        .update(await readFile(join(directory, 'tables', `${tableId}.csv`), 'utf8'), 'utf8')
+        .digest('hex')
+    )
+  })
+
+  it('keeps the exit status and error text of a failed run across a restart', async () => {
+    const directory = await storageRoot()
+    const notebook = service(directory, {
+      run: async () => ({ stdout: 'partial output', stderr: 'ValueError: boom', code: 1 })
+    })
+    const { projectId, tableId } = await importTable(notebook)
+    await notebook.execute({ projectId, tableId, language: 'python', code: 'raise ValueError' })
+
+    // A failure that is only remembered as exitCode 1 would tell the doctor nothing; the sentence that
+    // explains it has to survive too.
+    await expect(service(directory).lastRun(projectId, tableId)).resolves.toMatchObject({
+      exitCode: 1,
+      stdout: 'partial output',
+      stderr: 'ValueError: boom'
+    })
+  })
+
+  it('still reads a run record written before the output was stored', async () => {
+    const directory = await storageRoot()
+    const legacyDirectory = join(directory, 'runs', 'run-legacy', '.run')
+    await mkdir(legacyDirectory, { recursive: true })
+    await writeFile(
+      join(legacyDirectory, 'record.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        runId: 'run-legacy',
+        projectId: 'project-legacy',
+        tableId: 'table-legacy',
+        language: 'python',
+        startedAt: '2026-11-01T00:00:00.000Z',
+        endedAt: '2026-11-01T00:00:01.000Z',
+        exitCode: 0,
+        outputs: []
+      }),
+      'utf8'
+    )
+
+    // Upgrading must not turn an existing install's history into an error, and it must not invent an
+    // empty output either: this record was written when only the file list was stored.
+    const record = await service(directory).lastRun('project-legacy', 'table-legacy')
+    expect(record).toMatchObject({ schemaVersion: 1, runId: 'run-legacy' })
+    expect(record!.stdout).toBeUndefined()
+    expect(record!.code).toBeUndefined()
   })
 })
 

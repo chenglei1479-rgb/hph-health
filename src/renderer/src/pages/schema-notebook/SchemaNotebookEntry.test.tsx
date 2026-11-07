@@ -975,4 +975,307 @@ describe('SchemaNotebookEntry', () => {
       relativePath: 'plot.png'
     })
   })
+
+  // #162: after a restart the panel restored the code and the figures but lost the result itself, so a
+  // doctor had to re-run to prove it existed. The stored record now carries the output; it must appear
+  // without running anything, and it must be labelled as history rather than as this session's result.
+  it('shows the last run output after a restart without re-running, labelled as history', async () => {
+    const copy = COPY
+    const execute = vi.fn()
+    const lastRun = vi.fn(async () => ({
+      schemaVersion: 2 as const,
+      runId: 'run-saved',
+      projectId: 'study-1',
+      tableId: 'table-1',
+      language: 'python' as const,
+      startedAt: '2026-11-06T02:04:47.722Z',
+      endedAt: '2026-11-06T02:04:59.084Z',
+      exitCode: 1,
+      code: 'print(1)',
+      inputSha256: 'a'.repeat(64),
+      stdout: 'marker: beta21\nHR 0.62 (95% CI 0.41-0.93)',
+      stderr: 'ValueError: boom',
+      outputs: []
+    }))
+    localStorage.setItem(
+      schemaNotebookDraftKey('study-1'),
+      JSON.stringify({ tableId: 'table-1', filename: 'study.csv', code: 'print(1)', language: 'python' })
+    )
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute,
+        modelContext: vi.fn(async () => ({
+          mode: 'schema-only' as const,
+          tableId: 'table-1',
+          rowCount: 3,
+          columns: [{ name: 'age', dtype: 'integer' as const }],
+          syntheticSampleRows: [['900001']],
+          syntheticSampleNote: 'synthetic',
+          localFilename: 'table.csv' as const
+        })),
+        lastRun
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    // The whole point of the ticket: the result is on screen with no execution at all.
+    expect(execute).not.toHaveBeenCalled()
+    const history = container.querySelector('[data-testid="schema-notebook-previous-run"]')
+    expect(history?.textContent).toContain('marker: beta21')
+    expect(history?.textContent).toContain('HR 0.62 (95% CI 0.41-0.93)')
+    // Labelled as the stored run, so the doctor cannot read it as a fresh one.
+    expect(history?.textContent).toContain('前回の実行')
+    expect(history?.textContent).toContain('今回の実行結果ではありません')
+    // A failed run keeps its error text and its exit status, so the failure is not turned into a success.
+    expect(history?.textContent).toContain('エラー出力')
+    expect(history?.textContent).toContain('ValueError: boom')
+    expect(history?.textContent).toContain('終了コード 1')
+    // The current-run block stays absent: history never borrows its label.
+    expect(container.querySelector('[aria-label="手元の結果"]')).toBeNull()
+  })
+
+  it('notes that the stored result belongs to older code, and replaces it once the editor runs', async () => {
+    const copy = COPY
+    const execute = vi.fn(async (): Promise<ExecuteAnalysisResponse> => ({
+      local: { stdout: 'NEW-RESULT', stderr: '', exitCode: 0, outputs: [] },
+      forModel: {},
+      runId: 'run-new'
+    }))
+    const lastRun = vi.fn(async () => ({
+      schemaVersion: 2 as const,
+      runId: 'run-old',
+      projectId: 'study-1',
+      tableId: 'table-1',
+      language: 'python' as const,
+      startedAt: '2026-11-06T02:04:47.722Z',
+      endedAt: '2026-11-06T02:04:59.084Z',
+      exitCode: 0,
+      code: 'print("old")',
+      inputSha256: 'b'.repeat(64),
+      stdout: 'OLD-RESULT',
+      stderr: '',
+      outputs: []
+    }))
+    localStorage.setItem(
+      schemaNotebookDraftKey('study-1'),
+      JSON.stringify({
+        tableId: 'table-1',
+        filename: 'study.csv',
+        code: 'print("new")',
+        language: 'python'
+      })
+    )
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute,
+        modelContext: vi.fn(async () => ({
+          mode: 'schema-only' as const,
+          tableId: 'table-1',
+          rowCount: 3,
+          columns: [{ name: 'age', dtype: 'integer' as const }],
+          syntheticSampleRows: [['900001']],
+          syntheticSampleNote: 'synthetic',
+          localFilename: 'table.csv' as const
+        })),
+        lastRun
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(container.textContent).toContain('OLD-RESULT')
+    // The stored result was produced by other code than the editor now holds; saying so is what keeps
+    // "the result is still there" from becoming "this result is yours".
+    expect(
+      container.querySelector('[data-testid="schema-notebook-previous-run-code-changed"]')?.textContent
+    ).toBe('あの実行からコードが変わっています。この結果は以前のコードのものです。')
+
+    const run = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.run
+    )
+    await act(async () => {
+      run?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      await execute.mock.results.at(-1)?.value
+    })
+
+    // A run in this session replaces the historical block instead of sitting next to it.
+    expect(execute).toHaveBeenCalledWith({
+      projectId: 'study-1',
+      tableId: 'table-1',
+      language: 'python',
+      code: 'print("new")'
+    })
+    expect(container.querySelector('[data-testid="schema-notebook-previous-run"]')).toBeNull()
+    expect(container.textContent).toContain('NEW-RESULT')
+    expect(container.textContent).not.toContain('OLD-RESULT')
+  })
+
+  it('shows the stored files but no result block for a run recorded before output was stored', async () => {
+    const copy = COPY
+    const execute = vi.fn()
+    // A beta.21 record: the file list exists (the figure is still on disk and still saveable), the text
+    // was never written. The history block must not appear just because `outputs` has content, or an
+    // upgrade would present an empty result as a restored one.
+    const lastRun = vi.fn(async () => ({
+      schemaVersion: 1 as const,
+      runId: 'run-v1',
+      projectId: 'study-1',
+      tableId: 'table-1',
+      language: 'python' as const,
+      startedAt: '2026-11-06T03:08:09.633Z',
+      endedAt: '2026-11-06T03:08:47.236Z',
+      exitCode: 0,
+      outputs: [
+        {
+          relativePath: 'km-curve.png',
+          sizeBytes: 12_779,
+          sha256: 'c'.repeat(64),
+          mimeType: 'image/png'
+        }
+      ]
+    }))
+    localStorage.setItem(
+      schemaNotebookDraftKey('study-1'),
+      JSON.stringify({ tableId: 'table-1', filename: 'study.csv', code: 'print(1)', language: 'python' })
+    )
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute,
+        modelContext: vi.fn(async () => ({
+          mode: 'schema-only' as const,
+          tableId: 'table-1',
+          rowCount: 3,
+          columns: [{ name: 'age', dtype: 'integer' as const }],
+          syntheticSampleRows: [['900001']],
+          syntheticSampleNote: 'synthetic',
+          localFilename: 'table.csv' as const
+        })),
+        lastRun
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(container.querySelector('[data-testid="schema-notebook-previous-run"]')).toBeNull()
+    // The figure is still listed and saveable: that is existing behaviour and must survive the change.
+    const files = container.querySelectorAll('[data-testid="schema-notebook-output"]')
+    expect(files).toHaveLength(1)
+    expect(files[0]?.textContent).toContain('km-curve.png')
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('does not render an empty history block for a run that printed nothing', async () => {
+    const copy = COPY
+    const execute = vi.fn()
+    // A v2 record can legitimately carry empty text (a run that only wrote a file, or printed nothing).
+    const lastRun = vi.fn(async () => ({
+      schemaVersion: 2 as const,
+      runId: 'run-quiet',
+      projectId: 'study-1',
+      tableId: 'table-1',
+      language: 'python' as const,
+      startedAt: '2026-11-06T03:08:09.633Z',
+      endedAt: '2026-11-06T03:08:47.236Z',
+      exitCode: 0,
+      code: 'print(1)',
+      inputSha256: 'd'.repeat(64),
+      stdout: '',
+      stderr: '',
+      outputs: []
+    }))
+    localStorage.setItem(
+      schemaNotebookDraftKey('study-1'),
+      JSON.stringify({ tableId: 'table-1', filename: 'study.csv', code: 'print(1)', language: 'python' })
+    )
+    window.api = {
+      schemaNotebook: {
+        patientDataTags: tags,
+        importTable,
+        optInCategorical: vi.fn(),
+        execute,
+        modelContext: vi.fn(async () => ({
+          mode: 'schema-only' as const,
+          tableId: 'table-1',
+          rowCount: 3,
+          columns: [{ name: 'age', dtype: 'integer' as const }],
+          syntheticSampleRows: [['900001']],
+          syntheticSampleNote: 'synthetic',
+          localFilename: 'table.csv' as const
+        })),
+        lastRun
+      }
+    } as unknown as Window['api']
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root?.render(<SchemaNotebookEntry projectId="study-1" />)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const open = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === copy.open
+    )
+    await act(async () => {
+      open?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    // Nothing to show means no heading, no explanation and no empty <pre>.
+    expect(container.querySelector('[data-testid="schema-notebook-previous-run"]')).toBeNull()
+    expect(container.querySelector('[aria-label="前回の実行"]')).toBeNull()
+    expect(container.textContent).not.toContain('前回の実行')
+    expect(execute).not.toHaveBeenCalled()
+  })
 })

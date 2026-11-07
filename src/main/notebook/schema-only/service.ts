@@ -140,7 +140,10 @@ export const createSchemaNotebookService = (options: {
 
   // One durable directory per run holds everything the script wrote (#121). The run record is the
   // single source of truth for the output list: the panel saves a copy against it, and the run history
-  // in #123 reads the same file. It deliberately stores no stdout/stderr text, which can quote rows.
+  // in #123 reads the same file. Since #162 it also holds the run's own code, the input hash and the
+  // complete local stdout/stderr, so a restart no longer loses the result. That text stays on this
+  // device on the same terms as the output files beside it: `lastRun` is a LOCAL-only command and the
+  // record never contributes to `forModel`.
   const runsDirectory = join(options.directory, 'runs')
   const now = options.now ?? (() => new Date())
 
@@ -373,10 +376,14 @@ export const createSchemaNotebookService = (options: {
       // Sortable and unique, so the run history in #123 can order runs without reading every record.
       const startedAt = now()
       const runId = `run-${startedAt.toISOString().replace(/[:.]/gu, '-')}-${randomUUID().slice(0, 8)}`
+      // Read the input once: the same string is written into the run directory for the script, so its
+      // hash names the exact bytes the result came from (#162).
+      const tableCsv = readCsv(tableId)
+      const inputSha256 = createHash('sha256').update(tableCsv, 'utf8').digest('hex')
       const localRun = await executeLocalAnalysis({
         language: request.language,
         code,
-        tableCsv: readCsv(tableId),
+        tableCsv,
         runId,
         runsDirectory,
         resolvePython: options.resolvePython,
@@ -387,7 +394,7 @@ export const createSchemaNotebookService = (options: {
       // history cannot is exactly the state this ticket removes. A failed write therefore fails the
       // run instead of returning a list nothing points at.
       writeRunRecord({
-        schemaVersion: 1,
+        schemaVersion: 2,
         runId: localRun.runId,
         projectId,
         tableId,
@@ -395,6 +402,12 @@ export const createSchemaNotebookService = (options: {
         startedAt: startedAt.toISOString(),
         endedAt: now().toISOString(),
         exitCode: localRun.exitCode,
+        code,
+        inputSha256,
+        // Complete local output, so reopening the project shows the result without a re-run. The runner
+        // caps it and appends `[truncated]`, so a capped record never claims to be the whole output.
+        stdout: localRun.stdout,
+        stderr: localRun.stderr,
         outputs: localRun.outputs,
         ...(localRun.interpreter === undefined ? {} : { interpreter: localRun.interpreter })
       })
