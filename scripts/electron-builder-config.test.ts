@@ -271,7 +271,7 @@ describe('electron-builder native image processing', () => {
     expect(config.mac?.extraResources).toHaveLength(1)
     expect(config.linux?.extraResources).toEqual([
       { from: 'resources/bin/linux/${arch}/micromamba', to: 'micromamba' },
-      { from: 'build/deb-cli-launcher', to: 'open-science-cli' }
+      { from: 'build/deb-cli-launcher', to: 'medresearch-agent-cli' }
     ])
   })
 
