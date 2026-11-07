@@ -36,13 +36,15 @@ describe('PHI pre-send confirmation', () => {
     expect(preview.text).toBe('患者：[患者1]')
     expect(preview.highlights).toEqual([{ start: 3, end: 8, category: 'PERSON_NAME' }])
     const script = buildConfirmInstaller(
-      { text: `${preview.text}</script>`, highlights: preview.highlights },
+      { text: `${preview.text}</script>`, highlights: preview.highlights, applicationReplacements: 0 },
       {
         title: 'Review de-identified text',
         explanation: 'Highlighted text was replaced before sending.',
         confirm: 'Confirm send',
         cancel: 'Cancel',
-        mark: 'Mark selection'
+        mark: 'Mark selection',
+        details: 'Show the request being sent',
+        applicationNote: 'Text replaced inside the application instructions was handled automatically.'
       }
     )
     expect(script).toContain('\\u003c/script>')
@@ -191,6 +193,41 @@ describe('PHI pre-send confirmation', () => {
         restore: (text) => text
       })
     }
+  })
+
+  // #160: the page shows the changed snippets first, keeps the whole request behind a detail, and its
+  // buttons sit in a footer that cannot be scrolled away. The window used to open with the entire request
+  // JSON in a growing <pre>, so the buttons could end up outside the viewport.
+  it('summarises the changed snippets, hides the full request behind a detail and pins the buttons', () => {
+    const script = buildConfirmInstaller(
+      {
+        text: '{"model":"gpt-5","instructions":"APP","input":[{"text":"患者：[患者1]"}]}',
+        highlights: [{ start: 55, end: 60, category: 'PERSON_NAME' }],
+        applicationReplacements: 2
+      },
+      {
+        title: 'Review de-identified text',
+        explanation: 'Highlighted text was replaced before sending.',
+        confirm: 'Confirm send',
+        cancel: 'Cancel',
+        mark: 'Mark selection',
+        details: 'Show the request being sent',
+        applicationNote: 'Text replaced inside the application instructions was handled automatically.'
+      }
+    )
+    expect(script).toContain("document.createElement('ul')")
+    expect(script).toContain("snippets.id = 'snippets'")
+    expect(script).toContain("document.createElement('details')")
+    expect(script).toContain('payload.labels.details')
+    // Application-prompt replacements are reported, not listed as review work.
+    expect(script).toContain('payload.applicationReplacements > 0')
+    expect(script).toContain('payload.labels.applicationNote')
+    // The footer is a flex child outside the scrolling <main>, so it cannot be pushed off screen.
+    expect(script).toContain('main{flex:1 1 auto;overflow:auto')
+    expect(script).toContain('footer{flex:none;display:flex')
+    // Escape cancels, and the safe action owns the initial focus.
+    expect(script).toContain("event.key === 'Escape'")
+    expect(script).toContain('cancel.autofocus = true')
   })
 
   it('asks for confirmation from the desktop startup path', () => {

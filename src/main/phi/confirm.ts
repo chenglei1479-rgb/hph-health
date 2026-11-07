@@ -9,8 +9,16 @@ export interface PhiHighlight {
 }
 
 export interface PhiPreview {
+  /** The complete released body, shown in the expandable detail. */
   text: string
+  /** Replacements inside user-facing content: the only marks a doctor is asked to review. */
   highlights: PhiHighlight[]
+  /**
+   * Replacements applied inside application-owned prompt text (the CLI's `instructions`). They are
+   * already masked, and they are reported to the reviewer as handled - never shown as review work: the
+   * doctor did not write that text (#160).
+   */
+  applicationReplacements: number
 }
 
 export interface PhiSpanMark {
@@ -34,6 +42,10 @@ export interface PhiConfirmLabels {
   confirm: string
   cancel: string
   mark: string
+  /** Summary of the expandable full-request detail. */
+  details: string
+  /** One line shown when application-owned text was also rewritten (never listed for review). */
+  applicationNote: string
 }
 
 export function phiConfirmLabels(translate: NativeTranslator): PhiConfirmLabels {
@@ -44,7 +56,11 @@ export function phiConfirmLabels(translate: NativeTranslator): PhiConfirmLabels 
     ),
     confirm: translate('Confirm send'),
     cancel: translate('Cancel'),
-    mark: translate('Mark selection')
+    mark: translate('Mark selection'),
+    details: translate('Show the request being sent'),
+    applicationNote: translate(
+      'Text replaced inside the application instructions was handled automatically and is not shown for review.'
+    )
   }
 }
 
@@ -139,18 +155,39 @@ function isSpanMark(value: unknown): value is PhiSpanMark {
 
 // Installs the review page into an already-loaded blank document. The payload is JSON so the
 // de-identified text cannot break out of the script.
+// Installs the review page into an already-loaded blank document. The payload is JSON so the
+// de-identified text cannot break out of the script.
+//
+// Layout contract (#160): the reviewer sees the changed snippets first and the complete request only in
+// the expandable detail, and the action buttons live in a non-scrolling footer. The window used to open
+// with the whole request JSON, so a doctor was asked to read application instructions and Skill
+// descriptions to approve a literature search; and a growing <pre> could push the buttons off screen,
+// which is an accessibility boundary, not a cosmetic one.
 export function buildConfirmInstaller(preview: PhiPreview, labels: PhiConfirmLabels): string {
   const payload = JSON.stringify({
     text: preview.text,
     highlights: preview.highlights,
+    applicationReplacements: preview.applicationReplacements,
     labels,
     prefix: CONFIRM_PREFIX
   }).replace(/</g, '\\u003c')
   return `(() => {
     const payload = ${payload}
     const extras = []
+    const CONTEXT = 90
     const style = document.createElement('style')
-    style.textContent = 'body{margin:0;font:14px/1.5 sans-serif;color:#1c1917;background:#fafaf9}header,footer{padding:12px 16px}header p{margin:8px 0 0;color:#44403c}pre{margin:0;padding:16px;white-space:pre-wrap;word-break:break-word;min-height:240px}mark{background:#fde68a;border-radius:2px}.extra{background:#fecaca}footer{display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #e7e5e4}button{font:inherit;padding:6px 12px}'
+    style.textContent = [
+      'html,body{height:100%}body{margin:0;display:flex;flex-direction:column;font:14px/1.5 sans-serif;color:#1c1917;background:#fafaf9}',
+      'header{flex:none;padding:12px 16px 0}header p{margin:8px 0 0;color:#44403c}',
+      'main{flex:1 1 auto;overflow:auto;padding:12px 16px;min-height:0}',
+      '.note{margin:0 0 8px;color:#44403c}',
+      'ul{margin:0;padding:0;list-style:none}li{margin:0 0 8px;padding:8px 10px;background:#fff;border:1px solid #e7e5e4;border-radius:6px;white-space:pre-wrap;word-break:break-word}',
+      'details{margin:12px 0 0}summary{cursor:pointer}',
+      'pre{margin:8px 0 0;padding:12px;background:#fff;border:1px solid #e7e5e4;border-radius:6px;white-space:pre-wrap;word-break:break-word}',
+      'mark{background:#fde68a;border-radius:2px}.extra{background:#fecaca}',
+      'footer{flex:none;display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid #e7e5e4;background:#fafaf9}',
+      'button{font:inherit;padding:6px 12px}button:focus-visible,summary:focus-visible{outline:2px solid #1d4ed8;outline-offset:2px}'
+    ].join('')
     document.head.replaceChildren(style)
     document.title = payload.labels.title
     const header = document.createElement('header')
@@ -159,8 +196,25 @@ export function buildConfirmInstaller(preview: PhiPreview, labels: PhiConfirmLab
     const explanation = document.createElement('p')
     explanation.textContent = payload.labels.explanation
     header.append(heading, explanation)
+    const main = document.createElement('main')
+    if (payload.applicationReplacements > 0) {
+      const note = document.createElement('p')
+      note.className = 'note'
+      note.id = 'application-note'
+      note.textContent = payload.labels.applicationNote
+      main.append(note)
+    }
+    const snippets = document.createElement('ul')
+    snippets.id = 'snippets'
+    main.append(snippets)
+    const details = document.createElement('details')
+    details.id = 'request-details'
+    const summary = document.createElement('summary')
+    summary.textContent = payload.labels.details
     const pre = document.createElement('pre')
     pre.id = 'preview'
+    details.append(summary, pre)
+    main.append(details)
     const footer = document.createElement('footer')
     const mark = document.createElement('button')
     mark.type = 'button'
@@ -170,14 +224,36 @@ export function buildConfirmInstaller(preview: PhiPreview, labels: PhiConfirmLab
     cancel.type = 'button'
     cancel.id = 'cancel'
     cancel.textContent = payload.labels.cancel
+    // The safe action keeps the default focus: Enter on a stale focus must not send.
+    cancel.autofocus = true
     const confirm = document.createElement('button')
     confirm.type = 'button'
     confirm.id = 'confirm'
     confirm.textContent = payload.labels.confirm
     footer.append(mark, cancel, confirm)
-    document.body.replaceChildren(header, pre, footer)
+    document.body.replaceChildren(header, main, footer)
     const ranges = () => [...payload.highlights.map((item) => ({ ...item, kind: 'phi' })), ...extras.map((item) => ({ ...item, kind: 'extra', category: 'MANUAL' }))].sort((a, b) => a.start - b.start || a.end - b.end)
-    const render = () => {
+    const renderSnippets = () => {
+      snippets.replaceChildren()
+      for (const range of ranges()) {
+        if (range.end > payload.text.length || range.end <= range.start) continue
+        const from = Math.max(0, range.start - CONTEXT)
+        const to = Math.min(payload.text.length, range.end + CONTEXT)
+        const item = document.createElement('li')
+        item.dataset.start = String(range.start)
+        if (from > 0) item.append('…')
+        item.append(payload.text.slice(from, range.start))
+        const markNode = document.createElement('mark')
+        if (range.kind === 'extra') markNode.className = 'extra'
+        markNode.dataset.start = String(range.start)
+        markNode.textContent = payload.text.slice(range.start, range.end)
+        item.append(markNode)
+        item.append(payload.text.slice(range.end, to))
+        if (to < payload.text.length) item.append('…')
+        snippets.append(item)
+      }
+    }
+    const renderFull = () => {
       pre.replaceChildren()
       let cursor = 0
       for (const range of ranges()) {
@@ -191,6 +267,10 @@ export function buildConfirmInstaller(preview: PhiPreview, labels: PhiConfirmLab
         cursor = range.end
       }
       if (cursor < payload.text.length) pre.append(payload.text.slice(cursor))
+    }
+    const render = () => {
+      renderSnippets()
+      renderFull()
     }
     const offsetOf = (node, offset) => {
       const host = node.nodeType === Node.TEXT_NODE ? node.parentElement : node
@@ -207,6 +287,8 @@ export function buildConfirmInstaller(preview: PhiPreview, labels: PhiConfirmLab
       return start + offset
     }
     mark.addEventListener('click', () => {
+      // Marking works on the full request, so open the detail instead of failing silently.
+      details.open = true
       const selection = document.getSelection()
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return
       const range = selection.getRangeAt(0)
@@ -218,8 +300,15 @@ export function buildConfirmInstaller(preview: PhiPreview, labels: PhiConfirmLab
       render()
     })
     const report = (confirmed) => console.log(payload.prefix + JSON.stringify({ confirmed, extraSpans: extras }))
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        report(false)
+      }
+    })
     confirm.addEventListener('click', () => report(true))
     cancel.addEventListener('click', () => report(false))
     render()
+    cancel.focus()
   })()`
 }

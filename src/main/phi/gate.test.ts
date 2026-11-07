@@ -9,6 +9,7 @@ import {
   createClosedGate,
   createVaultBackedGate,
   installMachineApproval,
+  installPhiConfirmer,
   installPhiGate,
   MODEL_RELEASE_RETRY_MESSAGE,
   releaseModelText,

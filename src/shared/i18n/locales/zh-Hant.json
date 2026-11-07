@@ -112,6 +112,8 @@
     "Temporary files could not be removed. Try cleanup again.": "無法移除暫存檔案，請重試清理。",
     "Connector configuration": "連接器設定",
     "Review de-identified text": "審閱去識別文字",
+    "Show the request being sent": "顯示要傳送的請求",
+    "Text replaced inside the application instructions was handled automatically and is not shown for review.": "應用程式指令中替換的文字已自動處理，未作為確認對象顯示。",
     "Show": "顯示",
     "Import Environment lock": "匯入環境鎖定檔",
     "Quit while disconnected?": "在連線中斷時結束？",

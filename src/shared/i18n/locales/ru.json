@@ -114,6 +114,8 @@
     "Temporary files could not be removed. Try cleanup again.": "Не удалось удалить временные файлы. Повторите очистку.",
     "Connector configuration": "Конфигурация коннектора",
     "Review de-identified text": "Проверьте обезличенный текст",
+    "Show the request being sent": "Показать отправляемый запрос",
+    "Text replaced inside the application instructions was handled automatically and is not shown for review.": "Заменённый текст в инструкциях приложения обработан автоматически и не показывается для проверки.",
     "Show": "Показать",
     "Import Environment lock": "Импортировать блокировку окружения",
     "Quit while disconnected?": "Выйти при отсутствии соединения?",

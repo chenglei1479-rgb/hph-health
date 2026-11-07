@@ -112,6 +112,8 @@
     "Temporary files could not be removed. Try cleanup again.": "임시 파일을 제거할 수 없습니다. 정리를 다시 시도하세요.",
     "Connector configuration": "커넥터 구성",
     "Review de-identified text": "비식별화된 텍스트 검토",
+    "Show the request being sent": "전송할 요청 표시",
+    "Text replaced inside the application instructions was handled automatically and is not shown for review.": "앱 지침에서 바뀐 텍스트는 자동으로 처리되어 확인 대상으로 표시하지 않습니다.",
     "Show": "표시",
     "Import Environment lock": "환경 잠금 가져오기",
     "Quit while disconnected?": "연결이 끊어진 상태에서 종료할까요?",
