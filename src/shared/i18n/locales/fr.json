@@ -113,6 +113,8 @@
     "Temporary files could not be removed. Try cleanup again.": "Les fichiers temporaires n’ont pas pu être supprimés. Réessayez le nettoyage.",
     "Connector configuration": "Configuration du connecteur",
     "Review de-identified text": "Vérifier le texte dé-identifié",
+    "Show the request being sent": "Afficher la requête à envoyer",
+    "Text replaced inside the application instructions was handled automatically and is not shown for review.": "Le texte remplacé dans les instructions de l’application a été traité automatiquement et n’est pas présenté à la vérification.",
     "Show": "Afficher",
     "Import Environment lock": "Importer le verrou d’environnement",
     "Quit while disconnected?": "Quitter sans connexion ?",

@@ -676,16 +676,23 @@ function detectNames(spans: PhiSpan[], map: NormMap, norm: string): void {
   while ((match = initial.exec(norm) as IndexedMatch | null))
     addSpan(spans, map, match.indices[1][0], match.indices[1][1], 'PERSON_NAME')
 
-  const roles =
-    '(?:担当医|主治医|執刀医|助手|麻酔科医|指導医|研修医|看護師|薬剤師|検査技師|臨床検査技師|記載者|院長|研究責任者|署名|紹介元：[^\\n]{0,16}?院長|PI|Dr\\.|医師|CRC)'
-  const roleRe = withIndices(`${roles}\\s*[:：]?\\s*([^\\n\\u3000（(]{1,24})`)
+  // ASCII role tokens must stand alone. Without the left boundary the `PI` inside `API` matched, and the
+  // 24-character capture that follows then swallowed English prose ("API route definitions ...") as a
+  // physician name; the application's own instructions arrived as `[職員N]` replacements and the review
+  // window asked a doctor to check our prompt (#160). Japanese labels keep their existing shape.
+  const japaneseRoles =
+    '(?:担当医|主治医|執刀医|助手|麻酔科医|指導医|研修医|看護師|薬剤師|検査技師|臨床検査技師|記載者|院長|研究責任者|署名|紹介元：[^\\n]{0,16}?院長|医師)'
+  const asciiRoles = '(?<![A-Za-z])(?:PI|CRC|Dr\\.)(?![A-Za-z0-9])'
+  const roleRe = withIndices(
+    `(?:${japaneseRoles}|${asciiRoles})\\s*[:：]?\\s*([^\\n\\u3000（(]{1,24})`
+  )
   while ((match = roleRe.exec(norm) as IndexedMatch | null)) {
     const name = match[1].replace(/\s*(先生|医師|部長).*$/, (suffix) => suffix)
     const local = match[0].lastIndexOf(match[1])
     const start = match.index + local
     const end = start + match[1].length
     if (occupied(spans, map.startOrig[start], map.endOrig[end - 1])) continue
-    addSpan(spans, map, start, end, 'PHYSICIAN_NAME')
+    addSpan(spans, map, start, end, 'PHYSICIAN_NAME', { rule: 'role-label-name' })
     void name
   }
   const suffix = withIndices('([\\u4e00-\\u9fff]{1,4})(医師|部長)(?![\\u4e00-\\u9fff])')

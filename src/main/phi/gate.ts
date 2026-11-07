@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash } from 'node:crypto'
 import { createLogger } from '@aipoch/diagnostics/node'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
-import { PHI_BLOCK_CODE, PhiPolicyError } from '../../shared/phi-block'
+import { PHI_BLOCK_CODE, PHI_REVIEW_EXCLUDED_CODE, PhiPolicyError } from '../../shared/phi-block'
 import { formatUnapprovedBlock } from './approval'
 import {
   applyManualSpans,
@@ -620,7 +620,7 @@ export function guardProviderBody(
 async function guardProviderBodyImpl(
   body: BodyInit | null | undefined,
   projectId: string,
-  tokens: PhiReplacement[] = []
+  collectors: ReviewCollectors = { tokens: [], review: { tokens: [], texts: [] } }
 ): Promise<BodyInit | null | undefined> {
   if (body == null) {
     await assertModelBoundTextReleased('', projectId)
@@ -641,7 +641,7 @@ async function guardProviderBodyImpl(
     const texts = collectModelContentStrings(parsed)
     assertMachineMaySend(texts)
     if (texts.length === 0) await releaseThroughInstalledGate('', projectId)
-    const walked = await walkReleaseContent(parsed, projectId, tokens)
+    const walked = await walkReleaseContent(parsed, projectId, collectors)
     const text = JSON.stringify(walked)
     return text
   } catch (error) {
@@ -673,8 +673,9 @@ export function sendPhiChecked<T>(
     const reviewer = confirmer
     const approvalReader = machineApproved
     const approved = approvalReader()
-    const tokens: PhiReplacement[] = []
-    const released = await guardProviderBodyImpl(body, projectId, tokens)
+    const collectors: ReviewCollectors = { tokens: [], review: { tokens: [], texts: [] } }
+    const tokens = collectors.tokens
+    const released = await guardProviderBodyImpl(body, projectId, collectors)
     const text = typeof released === 'string' ? released : ''
     // Vault provenance retains marks from earlier preparation and manual masking.
     // Restore only for the local approval check; the restored value is never sent.
@@ -698,14 +699,35 @@ export function sendPhiChecked<T>(
       sources.push(JSON.stringify([token.category, token.replacement, token.original]))
       replacementIdentities.set(key, sources)
     }
-    const highlights = installed.highlights?.(text, projectId) ?? []
+    // Only user-facing content is reviewed. A vault mark is kept when the marked text also appears in a
+    // reviewed content string, so a placeholder that exists only inside the application prompt cannot
+    // drag a doctor into a review of our own instructions.
+    const reviewTexts = collectors.review.texts.join('\n')
+    const highlights = (installed.highlights?.(text, projectId) ?? []).filter((mark) =>
+      reviewTexts.includes(text.slice(mark.start, mark.end))
+    )
     // Custom scanners also contribute their replacements without needing a vault.
     const unique = new Map<string, PhiHighlight>()
-    for (const mark of [...highlights, ...highlightTokens(text, tokens)]) {
+    for (const mark of [...highlights, ...highlightTokens(text, collectors.review.tokens)]) {
       unique.set(JSON.stringify([mark.start, mark.end, mark.category]), mark)
+    }
+    // Replacements inside application-owned prompt text are released but never reviewed. The window does
+    // not open for them at all, so without this line the case would leave no trace anywhere: record the
+    // stable id, the count and the categories - never the replaced text (#160).
+    const applicationTokens = collectors.tokens.filter(
+      (token) => !collectors.review.tokens.includes(token)
+    )
+    if (applicationTokens.length > 0) {
+      phiBlockLog.info('application prompt text released without review', {
+        code: PHI_REVIEW_EXCLUDED_CODE,
+        hits: applicationTokens.length,
+        categories: [...new Set(applicationTokens.map((token) => token.category))]
+      })
     }
     const preview = {
       text,
+      // Replacements inside the application prompt are reported, never reviewed.
+      applicationReplacements: applicationTokens.length,
       highlights: [...unique.values()].filter((mark) => {
         const key = identity(text, mark)
         const sources = replacementIdentities.get(key)
@@ -927,13 +949,26 @@ function defineReleasedKey(next: Record<string, unknown>, key: string, value: un
 // blocking scan — and copies schema/transport scaffolding through untouched. Object keys are released
 // as well: arbitrary JSON carried in a body can put data in a key, and the de-identify pass must not
 // leave patient text there either.
+// `instructions` is the agent prompt the CLI composes (our base instructions, the registered Skill
+// catalog, project AGENTS.md). It is released like every other text — the scan does not skip it — but its
+// replacements belong to application-owned prompt text, not to the request a doctor wrote, so they are
+// never put in front of a human for review (#160). Everything outside it stays reviewable.
+const APPLICATION_TEXT_KEYS = new Set(['instructions'])
+
+type ReviewCollectors = {
+  /** Every replacement, application text included: the release bookkeeping. */
+  tokens: PhiReplacement[]
+  /** Replacements inside user-facing content, plus the released strings they came from. */
+  review: { tokens: PhiReplacement[]; texts: string[] }
+}
+
 async function walkReleaseContent(
   body: unknown,
   projectId: string,
-  tokens: PhiReplacement[]
+  collectors: ReviewCollectors
 ): Promise<unknown> {
   if (typeof body === 'string' || Array.isArray(body)) {
-    return releaseContentValue(body, projectId, tokens)
+    return releaseContentValue(body, projectId, collectors)
   }
   if (!body || typeof body !== 'object') return body
   const next: Record<string, unknown> = {}
@@ -942,11 +977,14 @@ async function walkReleaseContent(
       next[key] = value
       continue
     }
-    const releasedKey = await releaseContentValue(key, projectId, tokens)
+    const scope = APPLICATION_TEXT_KEYS.has(key)
+      ? { ...collectors, review: { tokens: [], texts: [] } }
+      : collectors
+    const releasedKey = await releaseContentValue(key, projectId, collectors)
     defineReleasedKey(
       next,
       typeof releasedKey === 'string' ? releasedKey : key,
-      await releaseContentValue(value, projectId, tokens)
+      await releaseContentValue(value, projectId, scope)
     )
   }
   return next
@@ -955,17 +993,22 @@ async function walkReleaseContent(
 async function releaseContentValue(
   value: unknown,
   projectId: string,
-  tokens: PhiReplacement[]
+  collectors: ReviewCollectors
 ): Promise<unknown> {
   if (typeof value === 'string') {
     const result = await releaseThroughInstalledGate(value, projectId)
     if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
-    tokens.push(...result.replacements)
+    // One pass over the replacements: callers instrument them with an iterator, and the two collectors
+    // must observe the same list rather than a second traversal.
+    const replacements = [...result.replacements]
+    collectors.tokens.push(...replacements)
+    collectors.review.tokens.push(...replacements)
+    collectors.review.texts.push(result.text)
     return result.text
   }
   if (Array.isArray(value)) {
     const released: unknown[] = []
-    for (const item of value) released.push(await releaseContentValue(item, projectId, tokens))
+    for (const item of value) released.push(await releaseContentValue(item, projectId, collectors))
     return released
   }
   if (value && typeof value === 'object') {
@@ -975,11 +1018,11 @@ async function releaseContentValue(
         next[key] = child
         continue
       }
-      const releasedKey = await releaseContentValue(key, projectId, tokens)
+      const releasedKey = await releaseContentValue(key, projectId, collectors)
       defineReleasedKey(
         next,
         typeof releasedKey === 'string' ? releasedKey : key,
-        await releaseContentValue(child, projectId, tokens)
+        await releaseContentValue(child, projectId, collectors)
       )
     }
     return next

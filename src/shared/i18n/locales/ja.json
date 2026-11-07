@@ -112,6 +112,8 @@
     "Temporary files could not be removed. Try cleanup again.": "一時ファイルを削除できませんでした。後処理を再試行してください。",
     "Connector configuration": "コネクタ構成",
     "Review de-identified text": "仮名化済みテキストの確認",
+    "Show the request being sent": "送信するリクエストを表示",
+    "Text replaced inside the application instructions was handled automatically and is not shown for review.": "アプリの指示内で置き換えたテキストは自動で処理済みのため、確認対象として表示していません。",
     "Show": "表示",
     "Import Environment lock": "環境ロックをインポート",
     "Quit while disconnected?": "切断したまま終了しますか？",
