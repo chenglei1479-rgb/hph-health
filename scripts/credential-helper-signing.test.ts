@@ -31,8 +31,12 @@ function evaluateHook(file: string): HookExports & Record<string, unknown> {
     exports: module.exports,
     Buffer,
     // `deployment-validation.cjs` evaluates the parsed deployment in its own context and expects
-    // `URL`, which is a Node global in production.
+    // `URL`, and `deployment-pack.cjs` reads `process.env.DRA_SIGNING_PUBLISHER`; both are Node globals
+    // in production. The publisher line is unreachable today because the feed is disabled, but a
+    // sandbox missing a global production always has is the same defect as the `MODULE_NOT_FOUND`
+    // this change fixes - it would surface as `process is not defined` the day the feed is enabled.
     URL,
+    process,
     __dirname: dirname(file),
     console,
     require: (id: string) => {
@@ -94,6 +98,10 @@ it('edits the Windows launcher before signing and signs each bundled PE only onc
   const context = {
     electronPlatformName: 'win32',
     appOutDir: directory,
+    // A real `AfterPackContext` always carries `arch`; `adhoc-sign.cjs` reads `Arch[context.arch]`
+    // for its log lines and `before-pack.cjs` passes it to the host-binary guard. Supplying it keeps
+    // the fixture the production shape instead of letting a stub absorb `undefined`.
+    arch: 1,
     packager: {
       // `deployment-pack.cjs` reads the update deployment after the signing hook and returns early
       // when the feed is disabled, which `resources/dra-update.yml` is (`enabled: false`). The real
