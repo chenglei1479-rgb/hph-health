@@ -81,15 +81,32 @@ describe('review scope for application-owned prompt text', () => {
 })
 
 describe('physician role boundaries', () => {
-  it('does not read the PI inside API as a physician name', async () => {
+  it('does not read PI inside a word or a chemical name as a physician name', async () => {
     const { detectPhi } = await import('./detect')
-    const hits = detectPhi('now checking the API route definitions now')
-    expect(hits.some((span) => span.category === 'PHYSICIAN_NAME')).toBe(false)
+    // `API` covers the original bug (PI inside a word); `PI3K` covers the right-hand boundary: a compound
+    // name must not be read as a role label followed by a 24-character name.
+    for (const text of [
+      'now checking the API route definitions now',
+      'The PI3K/AKT pathway is central to this analysis.',
+      'PI3K inhibitors were discussed.'
+    ]) {
+      const hits = detectPhi(text)
+      expect(
+        hits.some((span) => span.category === 'PHYSICIAN_NAME'),
+        text
+      ).toBe(false)
+    }
   })
 
   it('keeps a standalone role label as a physician name', async () => {
     const { detectPhi } = await import('./detect')
-    for (const text of ['PI 山田 太郎', 'CRC 佐藤 花子', '担当医 山田 太郎']) {
+    for (const text of [
+      'PI: 山田',
+      'PI 山田 太郎',
+      'CRC: 佐藤 花子',
+      'Dr. 山田 太郎',
+      '担当医 山田 太郎'
+    ]) {
       const hits = detectPhi(text)
       expect(
         hits.some((span) => span.category === 'PHYSICIAN_NAME'),

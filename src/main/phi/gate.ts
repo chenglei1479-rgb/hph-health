@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash } from 'node:crypto'
 import { createLogger } from '@aipoch/diagnostics/node'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
-import { PHI_BLOCK_CODE, PhiPolicyError } from '../../shared/phi-block'
+import { PHI_BLOCK_CODE, PHI_REVIEW_EXCLUDED_CODE, PhiPolicyError } from '../../shared/phi-block'
 import { formatUnapprovedBlock } from './approval'
 import {
   applyManualSpans,
@@ -711,10 +711,23 @@ export function sendPhiChecked<T>(
     for (const mark of [...highlights, ...highlightTokens(text, collectors.review.tokens)]) {
       unique.set(JSON.stringify([mark.start, mark.end, mark.category]), mark)
     }
+    // Replacements inside application-owned prompt text are released but never reviewed. The window does
+    // not open for them at all, so without this line the case would leave no trace anywhere: record the
+    // stable id, the count and the categories - never the replaced text (#160).
+    const applicationTokens = collectors.tokens.filter(
+      (token) => !collectors.review.tokens.includes(token)
+    )
+    if (applicationTokens.length > 0) {
+      phiBlockLog.info('application prompt text released without review', {
+        code: PHI_REVIEW_EXCLUDED_CODE,
+        hits: applicationTokens.length,
+        categories: [...new Set(applicationTokens.map((token) => token.category))]
+      })
+    }
     const preview = {
       text,
       // Replacements inside the application prompt are reported, never reviewed.
-      applicationReplacements: tokens.length - collectors.review.tokens.length,
+      applicationReplacements: applicationTokens.length,
       highlights: [...unique.values()].filter((mark) => {
         const key = identity(text, mark)
         const sources = replacementIdentities.get(key)

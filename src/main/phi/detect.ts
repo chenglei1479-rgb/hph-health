@@ -682,7 +682,7 @@ function detectNames(spans: PhiSpan[], map: NormMap, norm: string): void {
   // window asked a doctor to check our prompt (#160). Japanese labels keep their existing shape.
   const japaneseRoles =
     '(?:担当医|主治医|執刀医|助手|麻酔科医|指導医|研修医|看護師|薬剤師|検査技師|臨床検査技師|記載者|院長|研究責任者|署名|紹介元：[^\\n]{0,16}?院長|医師)'
-  const asciiRoles = '(?<![A-Za-z])(?:PI|CRC|Dr\\.)'
+  const asciiRoles = '(?<![A-Za-z])(?:PI|CRC|Dr\\.)(?![A-Za-z0-9])'
   const roleRe = withIndices(
     `(?:${japaneseRoles}|${asciiRoles})\\s*[:：]?\\s*([^\\n\\u3000（(]{1,24})`
   )
