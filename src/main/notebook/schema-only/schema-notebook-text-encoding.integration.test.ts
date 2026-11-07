@@ -1,8 +1,10 @@
-import { existsSync } from 'node:fs'
-import { mkdir, mkdtemp, readFile } from 'node:fs/promises'
+import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { spawnSync } from 'node:child_process'
 
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 
 import { createSchemaNotebookService } from './service'
 
@@ -25,17 +27,51 @@ const pythonAvailable = process.platform === 'win32' && existsSync(bundledPython
 
 const CSV = ['区分,値', '研究,10', '対照,20'].join('\n')
 
+const runDirectories: string[] = []
+
+afterAll(async () => {
+  for (const directory of runDirectories.splice(0)) {
+    await rm(directory, { recursive: true, force: true }).catch(() => undefined)
+  }
+})
+
+// #156: this suite used to keep its run directory in `<checkout>/.scratch/vitest-tmp`, because a
+// developer sandbox can forbid the interpreter writing into the OS temp dir. Tests must not write into
+// the checkout, so the root is `os.tmpdir()` again; where the interpreter genuinely cannot write there
+// the suite skips with this line instead of leaving files in the worktree.
+const interpreterCanWriteTempDir = (): boolean => {
+  if (!pythonAvailable) return false
+  let probe: string | undefined
+  try {
+    probe = mkdtempSync(join(tmpdir(), 'schema-notebook-encoding-probe-'))
+    const target = join(probe, 'probe.txt')
+    const result = spawnSync(
+      bundledPython,
+      ['-c', `open(${JSON.stringify(target)}, 'w').write('ok')`],
+      { timeout: 30_000 }
+    )
+    return result.status === 0 && existsSync(target)
+  } catch {
+    return false
+  } finally {
+    if (probe) rmSync(probe, { recursive: true, force: true })
+  }
+}
+
+const tempRootWritable = interpreterCanWriteTempDir()
+if (pythonAvailable && !tempRootWritable) {
+  console.warn(
+    '[schema-notebook] skipping the text-encoding suite: the bundled interpreter cannot write inside the OS temp directory on this machine, and the suite must not write into the checkout (#156).'
+  )
+}
+
 const notebookFor = async (): Promise<{
   notebook: ReturnType<typeof createSchemaNotebookService>
   directory: string
   tableId: string
 }> => {
-  // The run directory stays inside the worktree: the bundled interpreter writes files here, and a
-  // session that only allows workspace writes turns a temp-rooted run into `PermissionError: [Errno
-  // 13]`, which reads as a failing fix. `.scratch/` is gitignored.
-  const scratchRoot = join(process.cwd(), '.scratch', 'vitest-tmp')
-  await mkdir(scratchRoot, { recursive: true })
-  const directory = await mkdtemp(join(scratchRoot, 'schema-notebook-encoding-'))
+  const directory = await mkdtemp(join(tmpdir(), 'schema-notebook-encoding-'))
+  runDirectories.push(directory)
   const notebook = createSchemaNotebookService({
     directory,
     approvalLogPath: join(directory, 'machine-approval.jsonl'),
@@ -51,7 +87,7 @@ const notebookFor = async (): Promise<{
   return { notebook, directory, tableId: imported.context.tableId }
 }
 
-describe.skipIf(!pythonAvailable)('Japanese text survives a local run as UTF-8', () => {
+describe.skipIf(!tempRootWritable)('Japanese text survives a local run as UTF-8', () => {
   it('prints Japanese, keeps the columns and values it computed with, and writes a UTF-8 file', async () => {
     const { notebook, directory, tableId } = await notebookFor()
     const executed = await notebook.execute({

@@ -360,7 +360,7 @@ it.skipIf(!enabled).each(['powershell', 'node-pipes', 'repl-loop'] as const)(
            if (result.status !== 0) process.exit(1);
            console.log(process.cwd()); console.log(result.stdout);
            console.log('NPM=' + cp.execSync('npm --version', { encoding: 'utf8', timeout: 10000 }).trim());
-           console.log(cp.execSync('npm install -g ./fixture --offline --install-links --ignore-scripts --no-audit --no-fund', { encoding: 'utf8', timeout: 20000 }));
+           console.log(cp.execSync('npm install -g ./fixture --prefix "' + process.env.NPM_CONFIG_PREFIX + '" --offline --install-links --ignore-scripts --no-audit --no-fund', { encoding: 'utf8', timeout: 20000 }));
            assert.equal(fs.existsSync(require('node:path').join(process.env.NPM_CONFIG_PREFIX, 'node_modules', 'fixture-local-cli', 'cli.js')), true);
            console.log(cp.execSync('fixture-cli.cmd', { encoding: 'utf8', timeout: 10000 }));
            assert.throws(() => fs.readFileSync(${JSON.stringify(join(blocked, 'secret.txt'))}), (error) => ['EACCES', 'EPERM'].includes(error.code));
@@ -512,7 +512,7 @@ it.skipIf(!enabled).each(['temporary', 'checkout'] as const)(
             const path = require('node:path');
             const cp = require('node:child_process');
             const options = { encoding: 'utf8', timeout: 30000 };
-            ${install ? "cp.execSync('npm.cmd install -g ./fixture --offline --install-links --no-audit --no-fund', options);" : ''}
+            ${install ? `cp.execSync('npm.cmd install -g ./fixture --prefix "' + process.env.NPM_CONFIG_PREFIX + '" --offline --install-links --no-audit --no-fund', options);` : ''}
             const installed = path.join(process.env.NPM_CONFIG_PREFIX, 'node_modules', 'fixture-local-cli');
             const marker = JSON.parse(fs.readFileSync(path.join(installed, 'installed.json'), 'utf8'));
             assert.equal(marker.node, process.version);

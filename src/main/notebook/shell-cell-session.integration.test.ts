@@ -77,6 +77,10 @@ describe('persistent platform shell cells', () => {
       const workspace = join(root, 'workspace')
       const secondWorkspace = join(root, 'second-workspace')
       await mkdir(secondWorkspace)
+      // #156: every install names its destination explicitly. A test must never let npm fall back to
+      // the repository it was started from, so the shared tools prefix and the per-session workspace
+      // are both spelled out on the command line instead of being inherited.
+      const { prefix } = shellNpmPaths(join(root, 'runtime'), process.platform)
       const second = (code: string): NotebookShellProcessRequest => ({
         ...request(code, 'two'),
         cwd: secondWorkspace,
@@ -110,7 +114,7 @@ describe('persistent platform shell cells', () => {
       expect(packed, JSON.stringify(packed)).toMatchObject({ exitCode: 0 })
       const installed = await adapter.execute(
         request(
-          `${npm} install -g ./open-science-npm-fixture-1.0.0.tgz --offline --ignore-scripts --no-audit --no-fund`
+          `${npm} install -g ./open-science-npm-fixture-1.0.0.tgz --prefix ${quote(prefix)} --offline --ignore-scripts --no-audit --no-fund`
         )
       )
       expect(installed, JSON.stringify(installed)).toMatchObject({ exitCode: 0 })
@@ -131,7 +135,7 @@ describe('persistent platform shell cells', () => {
       )
       const local = await adapter.execute(
         second(
-          `${npm} install ./open-science-npm-fixture-1.0.0.tgz --offline --ignore-scripts --no-audit --no-fund`
+          `${npm} install ./open-science-npm-fixture-1.0.0.tgz --prefix ${quote(secondWorkspace)} --offline --ignore-scripts --no-audit --no-fund`
         )
       )
       expect(local, JSON.stringify(local)).toMatchObject({ exitCode: 0 })
@@ -142,7 +146,6 @@ describe('persistent platform shell cells', () => {
         )
       )
       expect(localPackage.name).toBe('open-science-npm-fixture')
-      const { prefix } = shellNpmPaths(join(root, 'runtime'), process.platform)
       await expect(
         access(
           join(
