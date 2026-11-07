@@ -101,12 +101,30 @@
 # registered location AND the executable still present: an unclean uninstall leaves InstallLocation behind,
 # and trusting the mere value let a fresh install into a stale folder skip this check and reach the stall
 # this ticket is about.
+#
+# The lookup is ours, not electron-builder's FIND_PROCESS. That macro reads $IsPowerShellAvailable,
+# $PowerShellPath and $CmdPath, and CHECK_APP_RUNNING declares all three. The assembled script inserts
+# customInit in .onInit (installer.nsi) and CHECK_APP_RUNNING only later, from installSection.nsh, so a
+# reference here expands before the declaration: makensis emits `warning 6000: unknown variable/constant
+# "IsPowerShellAvailable"` and electron-builder compiles with -WX, which failed the whole Windows build
+# (release blocker: no installer could be produced). This calls the nsProcess plugin instead - the same
+# plugin electron-builder itself uses for the checks - which needs no globals and answers in ~0.3 s,
+# where a tasklist pipeline through nsExec::Exec measured ~20 s here. A probe may define
+# baselioFindRunningProcess before including the file to simulate a running app.
+!ifndef nsProcess::FindProcess
+  # electron-builder already adds its include directory before this file is included.
+  !include "nsProcess.nsh"
+!endif
+
+!ifmacrondef baselioFindRunningProcess
+!macro baselioFindRunningProcess _RETURN
+  # `!insertmacro` targets the macro in nsProcess.nsh; the bare `nsProcess::FindProcess` form is parsed as
+  # a plugin function and fails with "Plugin function not found".
+  !insertmacro nsProcess::FindProcess `${APP_EXECUTABLE_FILENAME}` ${_RETURN}
+!macroend
+!endif
+
 !macro baselioPreflightRunningApp
-  !ifmacrodef FIND_PROCESS
-  !else
-    # Fail closed like the path budget: a missing FIND_PROCESS used to compile the check out silently.
-    !error "FIND_PROCESS is missing, so the running-app preflight would not run at all. electron-builder defines it in allowOnlyOneInstallerInstance.nsh."
-  !endif
   # $R8 = 1 when a registered installation really is on disk (update), so the check below is skipped.
   StrCpy $R8 "0"
   ${If} $perMachineInstallDirCache != ""
@@ -120,7 +138,7 @@
     ${EndIf}
   ${EndIf}
   ${If} $R8 == "0"
-    !insertmacro FIND_PROCESS "${APP_EXECUTABLE_FILENAME}" $R0
+    !insertmacro baselioFindRunningProcess $R0
     ${If} $R0 == 0
       !insertmacro baselioLogPreflightRefusal "refusal reason=app-running process=${APP_EXECUTABLE_FILENAME} install=fresh action=quit-Baselio-then-rerun-the-installer"
       MessageBox MB_ICONSTOP|MB_OK "$(BaselioPreflightAppRunning)" /SD IDOK
