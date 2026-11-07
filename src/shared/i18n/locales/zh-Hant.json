@@ -7651,7 +7651,7 @@
     "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "用於倫理審查前的開題溝通：研究問題、設計和下次要向指導醫師確認的事項。不強制填寫批准號。資料分析請從「分析自己的資料」開始。",
     "Details_privacy": "詳細",
     "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "測試版不提供自動更新。新版本由發佈方公布。",
-    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "無法在此電腦上啟動受保護的執行。請在「設定 > 網路」中完成 Notebook 保護的設定，然後重試。（{{code}}）",
+    "Protected execution could not start on this PC. Notebook Python still runs, but anything that needs the protected runtime (public literature search, for example) cannot work until this is fixed. Open Settings > Network and run the Notebook protection setup again; if it still fails, reinstall the app to update the protection component. ({{code}})": "無法在此電腦上啟動受保護的執行。Notebook 的 Python 執行仍可使用，但公開文獻檢索等需要受保護執行的功能在問題解決前無法運作。請在「設定 > 網路」中重新完成 Notebook 保護的設定；若仍然失敗，請重新安裝應用程式以更新保護元件。（{{code}}）",
     "The app could not finish that action. Retry. If it keeps failing, reload the app. (Code: {{code}})": "應用程式未能完成該操作。請重試。若仍持續失敗，請重新載入應用程式。（代碼：{{code}}）",
     "The app is not connected to its backend right now. Wait a moment, then retry. (Code: {{code}})": "應用程式目前未連線至後端。請稍候片刻，然後重試。（代碼：{{code}}）",
     "Settings could not be saved on this device. Check free disk space and folder permissions, then retry. (Code: {{code}})": "無法將設定儲存到這部裝置。請檢查磁碟可用空間與資料夾權限，然後重試。（代碼：{{code}}）",
