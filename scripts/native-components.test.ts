@@ -152,7 +152,13 @@ it.each(['corrupted', 'truncated', 'oversized', 'unavailable'])(
           status: kind === 'unavailable' ? 404 : 200
         })
     )
-    await expect(stageNativeComponents({ ...options, target: 'linux-x64' })).rejects.toThrow()
+    // The fixture ships no vendored bytes, and only the refresh branch downloads, so without this
+    // flag the call rejects because the vendor file is missing - before any download happens - and
+    // the case would assert nothing about a bad response. See the same reason on the staging cases.
+    await expect(
+      stageNativeComponents({ ...options, target: 'linux-x64', refreshVendor: true })
+    ).rejects.toThrow()
+    expect(options.fetchImpl).toHaveBeenCalled()
     await expect(
       stat(join(options.directory, 'packages/credential-identity-probe-native/build'))
     ).rejects.toMatchObject({ code: 'ENOENT' })
