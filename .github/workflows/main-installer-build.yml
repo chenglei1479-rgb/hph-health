@@ -1,0 +1,109 @@
+name: Main installer build
+
+# #208: a plain merge into main ran no check at all. The Windows NSIS installer was only ever compiled
+# on a pull request (as a side effect of the prerelease workflow) and on a `v*-beta*` tag, so a change
+# that stops the installer from building could sit in main until the next release attempt. #205 is the
+# precedent: the tag-push build was the first honest signal, days after the merge.
+#
+# This workflow compiles that installer for every push to main and publishes nothing. It has no release
+# job, no write permission and no artifact upload: the output is the verdict, not a build to collect.
+# The signing refusal below is the same one the prerelease build uses, so this job cannot quietly start
+# producing a signed package either.
+#
+# The steps are a deliberate copy of the `win` matrix entry in `prerelease.yml`. Extract a shared
+# `workflow_call` job only together with that file: the release path is the one thing that must not be
+# edited to make a guard easier to write.
+#
+# A newer push to main cancels an older run of this workflow. The newer commit contains the older one,
+# and a 25-minute build that is cancelled halfway answers nothing about the tree that is there now.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: main-installer-build
+  cancel-in-progress: true
+
+jobs:
+  windows-nsis:
+    name: Unsigned Windows x64 NSIS
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      DRA_PRERELEASE: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Refuse a signing certificate
+        shell: bash
+        run: |
+          if [ -n "${CSC_LINK:-}" ] || [ -n "${WIN_CSC_LINK:-}" ] || [ -n "${CSC_KEY_PASSWORD:-}" ] || [ -n "${WIN_CSC_KEY_PASSWORD:-}" ] || [ -n "${DRA_SIGNING_PUBLISHER:-}" ]; then
+            echo "This build must not use a signing certificate." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        # package-lock.json packs the file: native packages. npm ci only accepts that lockfile when it is
+        # given the same --install-links flag.
+        shell: bash
+        run: node scripts/ci/npm-ci.mjs --install-links
+
+      # No version bump: a main push has no tag. The installer keeps the version package.json records,
+      # which is what makes this a compile check rather than a release.
+      - name: Build the app
+        shell: bash
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          npm run build:web
+          npx electron-vite build
+
+      - name: Bundle the offline schema-notebook Python
+        shell: bash
+        env:
+          SCHEMA_NOTEBOOK_PLATFORM: win
+          SCHEMA_NOTEBOOK_ARCH: x64
+        run: node scripts/stage-schema-notebook-python.mjs
+
+      # stage-backend.mjs and electron-builder extraResources both require the pinned micromamba binary.
+      # It is gitignored and fetched from the official GitHub release.
+      - name: Stage pinned micromamba
+        shell: bash
+        run: |
+          set -euo pipefail
+          export MICROMAMBA_VERSION=$(node -p "require('./scripts/micromamba-versions.json').version")
+          echo "using pinned micromamba $MICROMAMBA_VERSION"
+          node scripts/fetch-micromamba.mjs win-64 "resources/bin/win/x64/micromamba.exe"
+          node scripts/fetch-micromamba.mjs win-64 "resources/bin/win/x64/micromamba-compat.exe" compatibility
+
+      - name: Package the unsigned NSIS installer
+        shell: bash
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: npx electron-builder --config build/prerelease-electron-builder.cjs --win nsis --x64
+
+      # A build that produced no installer is not a successful build. One file, exact pattern.
+      - name: Check the installer file name
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(dist/Baselio-*-win-x64-setup.exe)
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "Expected one Baselio Windows installer; found ${#files[@]}." >&2
+            ls -1 dist >&2 || true
+            exit 1
+          fi
+          echo "Installer file: ${files[0]}"
