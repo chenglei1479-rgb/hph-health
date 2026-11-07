@@ -1,4 +1,5 @@
-import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import { execFile, execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { EventEmitter } from 'node:events'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -283,7 +284,33 @@ it('does not restart for stale NetLog evidence', async () => {
 })
 
 
-it.skipIf(process.platform !== 'win32').each([0, 7])(
+// The two real-shell cases below need PowerShell 7 (`pwsh`) on PATH. Both call sites use `-Command`,
+// so the execution policy is not the constraint - Windows PowerShell 5.1 alone cannot run them.
+// A red job nobody can explain gets ignored, so a missing `pwsh` is a named skip instead:
+// scripts/ci/scripts-job-skip-allowances.json carries the reason, and #221 decides whether a 5.1
+// fallback is worth the syntax differences.
+const pwshAvailable =
+  process.platform === 'win32' &&
+  spawnSync('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', 'exit 0']).status === 0
+
+it('names a missing pwsh instead of reporting a bare exit 1', async () => {
+  vi.mocked(spawn).mockImplementation(() => {
+    const child = new EventEmitter()
+    queueMicrotask(() =>
+      child.emit('error', Object.assign(new Error('spawn pwsh ENOENT'), { code: 'ENOENT' }))
+    )
+    return child as unknown as ChildProcess
+  })
+  vi.mocked(execFile).mockImplementation(() => {
+    throw new Error('diagnostics unavailable')
+  })
+  expect(await runWindowsBrowserDiagnostics('layout.tmp', output)).toBe(1)
+  expect(records()).toContainEqual(
+    expect.objectContaining({ status: 'error', reason: 'pwsh-missing', code: 'ENOENT' })
+  )
+})
+
+it.skipIf(!pwshAvailable).each([0, 7])(
   'preserves native exit %i through the real PowerShell shell',
   async (code) => {
     vi.mocked(spawn).mockImplementation(actual.spawn)
@@ -299,6 +326,8 @@ it.skipIf(process.platform !== 'win32').each([0, 7])(
   }
 )
 
+// This one only needs `powershell.exe` for the query: it substitutes the layout child via `layout(0)`,
+// so a missing `pwsh` must not silence it.
 it.skipIf(process.platform !== 'win32')(
   'collects an actual Windows process and TCP sample',
   async () => {

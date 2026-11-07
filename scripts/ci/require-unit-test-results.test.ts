@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { NOTEBOOK_PR_EXCLUDE_PATTERNS } from '../../vitest.config'
 import {
   REQUIRED_TEST_FILE,
+  allowSkipPattern,
   executedTestCount,
   unusedSkipAllowances,
   verifyUnitTestReport
@@ -213,6 +214,122 @@ describe('--allow-skip', () => {
     )
     expect(run.stdout).toContain('UNUSED SKIP ALLOWANCE gone > test: stale entry')
     expect(run.stdout).toContain('allowed skips')
+  })
+})
+
+// #213 review: `includes('')` is true for every skip, so one malformed entry turned the whole
+// allow-list into a blanket amnesty while the run still reported "N allowed skips". Refutation: the
+// same skip must pass under a named pattern and fail under a blank one - the only difference is the
+// pattern text. A guard that cannot tell those two runs apart is not guarding anything.
+describe('--allow-skip refuses a pattern that would match every skip', () => {
+  const skipped = {
+    numTotalTests: 2,
+    numPendingTests: 1,
+    testResults: [
+      {
+        name: '/home/runner/work/hph-health/scripts/ci/mirror-channel-publication.test.ts',
+        assertionResults: [
+          { status: 'passed', fullName: 'keeps publication isolated' },
+          { status: 'skipped', fullName: 'website channel publication preserves bytes' }
+        ]
+      }
+    ]
+  }
+  const pattern =
+    'scripts/ci/mirror-channel-publication.test.ts > website channel publication preserves bytes'
+
+  it('passes the skip when the pattern names it', () => {
+    expect(
+      verifyUnitTestReport(skipped, { required: [], allowSkips: [{ pattern, reason: 'posix' }] })
+    ).toEqual([])
+  })
+
+  it('fails the same skip when the pattern is empty, and says why', () => {
+    for (const allowance of [
+      { pattern: '', reason: 'looks reviewed' },
+      { pattern: '   ', reason: 'whitespace' },
+      { reason: 'pattern key dropped' },
+      {}
+    ]) {
+      const problems = verifyUnitTestReport(skipped, { required: [], allowSkips: [allowance] })
+      expect(problems.join('\n'), JSON.stringify(allowance)).toContain(
+        'An --allow-skip entry has an empty pattern, which would match every skip.'
+      )
+      expect(problems.join('\n'), JSON.stringify(allowance)).toContain(
+        'UNEXPECTED SKIP /home/runner/work/hph-health/scripts/ci/mirror-channel-publication.test.ts > website channel publication preserves bytes'
+      )
+    }
+  })
+
+  it('throws from the pattern accessor rather than silently matching', () => {
+    expect(() => allowSkipPattern({ pattern: '' })).toThrow('empty pattern')
+    expect(() => unusedSkipAllowances(skipped, [{ pattern: '', reason: 'x' }])).toThrow(
+      'empty pattern'
+    )
+  })
+
+  it('exits 2 from the CLI when the allow-list file carries an empty pattern', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'unit-test-guard-'))
+    directories.push(directory)
+    const allowList = join(directory, 'allow.json')
+    writeFileSync(
+      allowList,
+      JSON.stringify({ allowed: [{ pattern: '', reason: 'one bad entry used to disable the gate' }] })
+    )
+    const run = spawnSync(
+      process.execPath,
+      [script, writeReport(skipped), '--require', 'scripts/ci/mirror-channel-publication.test.ts', '--allow-skip', allowList],
+      { encoding: 'utf8' }
+    )
+    expect(run.status).toBe(2)
+    expect(run.stderr).toContain('FAIL An --allow-skip entry has an empty pattern')
+  })
+
+  it('exits 2 from the CLI for an inline empty pattern', () => {
+    const run = spawnSync(process.execPath, [script, writeReport(skipped), '--allow-skip', ''], {
+      encoding: 'utf8'
+    })
+    expect(run.status).toBe(2)
+    expect(run.stderr).toContain('FAIL An --allow-skip entry has an empty pattern')
+  })
+
+  it('exits 2 when --allow-skip is given no value at all', () => {
+    const run = spawnSync(process.execPath, [script, writeReport(skipped), '--allow-skip'], {
+      encoding: 'utf8'
+    })
+    expect(run.status).toBe(2)
+    expect(run.stderr).toContain('--allow-skip needs a pattern or an allow-list file')
+  })
+
+  // The job's own list must not be the reason the gate looks healthy: every entry has to name
+  // something, the reason is what makes the skip reviewable, and the header count must match.
+  it('every entry in the scripts job allow-list names a skip and gives a reason', () => {
+    const list = JSON.parse(
+      readFileSync(join(process.cwd(), 'scripts/ci/scripts-job-skip-allowances.json'), 'utf8')
+    ) as { count: number; allowed: Array<{ pattern: string; reason: string }> }
+    expect(list.count).toBe(list.allowed.length)
+    expect(list.allowed.length).toBeGreaterThan(0)
+    for (const entry of list.allowed) {
+      expect(allowSkipPattern(entry)).toBe(entry.pattern)
+      expect(entry.reason.trim().length, entry.pattern).toBeGreaterThan(0)
+    }
+  })
+
+  it('rejects an allow-list whose header count disagrees with its entries', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'unit-test-guard-'))
+    directories.push(directory)
+    const allowList = join(directory, 'allow.json')
+    writeFileSync(
+      allowList,
+      JSON.stringify({ count: 31, allowed: [{ pattern, reason: 'posix' }] })
+    )
+    const run = spawnSync(
+      process.execPath,
+      [script, writeReport(skipped), '--allow-skip', allowList],
+      { encoding: 'utf8' }
+    )
+    expect(run.status).toBe(2)
+    expect(run.stderr).toContain('declares 31 allowed skips but lists 1')
   })
 })
 

@@ -1,5 +1,23 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
+/*
+ * Runs one Playwright layout script and samples runner resources while it runs.
+ *
+ * Shell boundary, stated precisely because "test red on my machine" was once explained as a policy
+ * problem and was not one:
+ *   - The layout child is `pwsh` (PowerShell 7) from PATH. Both PowerShell call sites in this file use
+ *     `-Command` and never `-File`, and an execution policy only constrains script files, so a
+ *     restricted machine can run either one. `-ExecutionPolicy Bypass` would be a no-op that implies
+ *     the wrong cause, so it is deliberately absent.
+ *   - The sampler uses `powershell.exe` (Windows PowerShell 5.1, present on every Windows runner)
+ *     because the query is plain CIM/NetworkInformation.
+ *   - A Windows machine with only 5.1 therefore cannot run the layout: `pwsh` has to be installed. The
+ *     two real-shell tests are skipped there and named in scripts/ci/scripts-job-skip-allowances.json;
+ *     #221 decides whether a 5.1 fallback is worth the syntax differences.
+ *   - A missing `pwsh` is recorded as `{ status: 'error', reason: 'pwsh-missing' }` rather than
+ *     collapsing into the same exit 1 the layout itself can produce.
+ */
+
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { appendFileSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -131,6 +149,7 @@ export async function runWindowsBrowserDiagnostics(
     // Read the runner's script explicitly: its temporary file need not have a .ps1 extension.
     const quotedPath = resolve(scriptPath).replaceAll("'", "''")
     const runLayout = () => {
+      const startedAt = new Date().toISOString()
       const child = spawn(
         'pwsh',
         [
@@ -143,7 +162,20 @@ export async function runWindowsBrowserDiagnostics(
         { stdio: 'inherit' }
       )
       return new Promise((done) => {
-        child.once('error', () => done(1))
+        // A bare `done(1)` on spawn failure is indistinguishable from the layout itself exiting 1, so
+        // the one case that is not evidence about the product (no PowerShell 7 on PATH) reads as a
+        // product regression. Both call sites use `-Command`, so the execution policy cannot cause
+        // this: ENOENT means `pwsh` is missing, not that a script is blocked.
+        child.once('error', (error) => {
+          record({
+            startedAt,
+            endedAt: new Date().toISOString(),
+            status: 'error',
+            reason: error?.code === 'ENOENT' ? 'pwsh-missing' : 'layout-spawn-failed',
+            code: error?.code ?? null
+          })
+          done(1)
+        })
         child.once('exit', (code) => done(code ?? 1))
       })
     }

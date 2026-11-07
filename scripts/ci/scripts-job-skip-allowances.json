@@ -1,4 +1,6 @@
 {
+  "$comment": "Named skips for the `Unit tests (scripts)` job, not debt: a skip that no entry names fails the job, and an entry that stops matching is printed (not fatal) so this list cannot rot in silence. Every entry names one case and says which environment would run it. A pattern that matches everything (empty, or only a file name) is rejected before any report is read, because one such entry would make the whole list a blanket amnesty. 33 entries.",
+  "count": 33,
   "allowed": [
     {
       "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication does not bootstrap when another channel pointer is missing",
@@ -123,6 +125,14 @@
     {
       "pattern": "scripts/ci/run-macos-packaged-e2e.test.ts > packaged macOS test Keychain restores the search list and deletes only its own Keychain after test-failure",
       "reason": "runs a packaged macOS app through Playwright and the macOS Keychain; needs a macOS runner and a signed app bundle, neither of which exists on windows-latest"
+    },
+    {
+      "pattern": "scripts/ci/run-windows-browser-diagnostics.test.ts > preserves native exit 0 through the real PowerShell shell",
+      "reason": "requires PowerShell 7 (pwsh) on PATH; both call sites use -Command so execution policy is not the constraint - see #221"
+    },
+    {
+      "pattern": "scripts/ci/run-windows-browser-diagnostics.test.ts > preserves native exit 7 through the real PowerShell shell",
+      "reason": "requires PowerShell 7 (pwsh) on PATH; both call sites use -Command so execution policy is not the constraint - see #221"
     }
   ]
 }

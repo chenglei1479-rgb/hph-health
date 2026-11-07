@@ -75,10 +75,24 @@ export const skippedAssertions = (report) =>
 // the next person would delete entries to get green instead of reading them.
 export const skipKey = (entry) => `${entry.file} > ${entry.name}`
 
+// A blank pattern makes `key.includes('')` true for every skip, so one malformed allow-list entry would
+// turn the whole mechanism into a blanket amnesty - the one failure mode that is worse than a red run,
+// because it looks like a reviewed exemption. Reject it wherever a pattern is read; the count of
+// allowances is not evidence that any of them is meaningful.
+export const allowSkipPattern = (allowance) => {
+  const pattern = String(allowance?.pattern ?? '')
+  if (pattern.trim() === '')
+    throw new Error(
+      'An --allow-skip entry has an empty pattern, which would match every skip. ' +
+        'Name the exact "<file> > <test name>" fragment, or remove the entry.'
+    )
+  return pattern
+}
+
 export const unusedSkipAllowances = (report, allowSkips = []) => {
   const skipped = skippedAssertions(report).map(skipKey)
   return allowSkips.filter(
-    (allowance) => !skipped.some((key) => key.includes(String(allowance.pattern)))
+    (allowance) => !skipped.some((key) => key.includes(allowSkipPattern(allowance)))
   )
 }
 
@@ -112,9 +126,17 @@ export function verifyUnitTestReport(
       )
     for (const entry of skipped) problems.push(`SKIP ${entry.file} > ${entry.name}`)
   } else if (allowSkips.length > 0) {
+    // Resolve the patterns once, and let a blank one fail the run instead of silently matching
+    // everything. Verification keeps its "return problems" contract so callers see the reason.
+    let patterns = []
+    try {
+      patterns = allowSkips.map((allowance) => allowSkipPattern(allowance))
+    } catch (error) {
+      problems.push(error.message)
+    }
     for (const entry of skippedAssertions(report)) {
       const key = skipKey(entry)
-      if (!allowSkips.some((allowance) => key.includes(String(allowance.pattern))))
+      if (!patterns.some((pattern) => key.includes(pattern)))
         problems.push(`UNEXPECTED SKIP ${key}`)
     }
   }
@@ -127,12 +149,19 @@ const USAGE =
 
 // An allow-list file is `{ "allowed": [{ "pattern": "scripts/… > test name", "reason": "…" }] }`. The
 // reason is carried so the next reader knows why the skip is legitimate; a pattern without one would
-// just be a quieter way of hiding it.
+// just be a quieter way of hiding it. A pattern without a value is rejected here, before any report is
+// read, so a corrupt list cannot be mistaken for a wide exemption.
 const readAllowList = (file) => {
   const parsed = JSON.parse(readFileSync(resolve(file), 'utf8'))
   const allowed = Array.isArray(parsed?.allowed) ? parsed.allowed : []
+  // A stale count is how a trimmed list still reads as the full one, so the header is evidence too.
+  if (parsed?.count !== undefined && Number(parsed.count) !== allowed.length)
+    throw new Error(
+      `${file} declares ${parsed.count} allowed skips but lists ${allowed.length}. ` +
+        'Update the count together with the list.'
+    )
   return allowed.map((entry) => ({
-    pattern: String(entry.pattern ?? ''),
+    pattern: allowSkipPattern(entry),
     reason: String(entry.reason ?? '')
   }))
 }
@@ -144,11 +173,12 @@ const parseArgs = (argv) => {
   let noSkips = false
   for (let index = 2; index < argv.length; index++) {
     const value = argv[index]
-    if (value === '--require' && argv[index + 1]) required.push(argv[++index])
-    else if (value === '--allow-skip' && argv[index + 1]) {
+    if (value === '--require' && argv[index + 1] !== undefined) required.push(argv[++index])
+    else if (value === '--allow-skip') {
       const target = argv[++index]
+      if (target === undefined) throw new Error('--allow-skip needs a pattern or an allow-list file.')
       if (target.endsWith('.json')) allowSkips.push(...readAllowList(target))
-      else allowSkips.push({ pattern: target, reason: '' })
+      else allowSkips.push({ pattern: allowSkipPattern({ pattern: target }), reason: '' })
     } else if (value === '--no-skips') noSkips = true
     else if (!value.startsWith('--')) positional.push(value)
   }
@@ -191,4 +221,13 @@ const main = () => {
   )
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main()
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    main()
+  } catch (error) {
+    // Nothing above may degrade into "allow everything" when its own input is malformed: an unusable
+    // flag or allow-list is exit 2, distinct from exit 1 which means the run itself is not evidence.
+    console.error(`FAIL ${error.message}`)
+    process.exit(2)
+  }
+}
