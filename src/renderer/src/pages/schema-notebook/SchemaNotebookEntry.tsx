@@ -595,7 +595,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
               the file list is: the record and its text do not depend on the table csv, so a table that
               cannot be reopened still leaves the last result readable. It is labelled as history on
               purpose; a run in this session clears it and shows `result` instead. */}
-          {previousRun && typeof previousRun.stdout === 'string' ? (
+          {/* Gate on text, not on "the record has a stdout field": a v2 record from a run that printed
+              nothing would otherwise render an empty history block with a heading and no content. */}
+          {previousRun && (previousRun.stdout || previousRun.stderr) ? (
             <div data-testid="schema-notebook-previous-run" className="space-y-1">
               <p className="text-xs font-medium">
                 {t('Previous run')}
@@ -618,7 +620,9 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
                   )}
                 </p>
               ) : null}
-              <pre aria-label={t('Previous run')}>{previousRun.stdout}</pre>
+              {previousRun.stdout ? (
+                <pre aria-label={t('Previous run')}>{previousRun.stdout}</pre>
+              ) : null}
               {previousRun.stderr ? (
                 <div className="space-y-1">
                   <p className="text-xs">{t('Error output')}</p>
