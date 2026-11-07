@@ -51,6 +51,32 @@ function findNsisCompiler(): string | undefined {
 
 const nsisCompiler = findNsisCompiler()
 
+// The preflight calls the nsProcess plugin (the same one electron-builder uses for the app-running
+// checks) and includes its macro file from electron-builder's template directory. Probes that stub the
+// lookup still parse the include, so the directory is always passed; only the real lookup needs the
+// plugin directory at compile time.
+const appBuilderIncludeDir = join(appBuilderLibRoot, 'templates/nsis/include')
+
+function findNsisPluginsDir(): string | undefined {
+  if (process.platform !== 'win32') return undefined
+  const cache =
+    process.env.ELECTRON_BUILDER_CACHE ??
+    join(process.env.LOCALAPPDATA ?? '', 'electron-builder', 'Cache')
+  if (!existsSync(cache)) return undefined
+  for (const entry of readdirSync(cache, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith('nsis-resources')) continue
+    const root = join(cache, entry.name)
+    for (const child of readdirSync(root, { withFileTypes: true })) {
+      if (!child.isDirectory()) continue
+      const plugins = join(root, child.name, 'plugins', 'x86-unicode')
+      if (existsSync(join(plugins, 'nsProcess.dll'))) return plugins
+    }
+  }
+  return undefined
+}
+
+const nsisPluginsDir = findNsisPluginsDir()
+
 it('packages the single R8 fallback DOCX template', () => {
   const config = load(readFileSync(join(repoRoot, 'electron-builder.yml'), 'utf8')) as {
     extraResources: Array<{ from: string; to: string }>
@@ -117,6 +143,7 @@ describe.skipIf(!nsisCompiler).each(['MedResearchAgent', 'MedResearch-Agent'])(
           source,
           `\uFEFFUnicode true
 !include "LogicLib.nsh"
+!addincludedir "${appBuilderIncludeDir}"
 Name "Isolated data preservation regression"
 OutFile "${executable}"
 RequestExecutionLevel user
@@ -829,6 +856,7 @@ describe.skipIf(!nsisCompiler)('NSIS installer target-path preflight (#163)', ()
         source,
         `\uFEFFUnicode true
 !include "LogicLib.nsh"
+!addincludedir "${appBuilderIncludeDir}"
 Name "Installer path preflight probe"
 OutFile "${executable}"
 RequestExecutionLevel user
@@ -892,6 +920,7 @@ SectionEnd
         source,
         `\uFEFFUnicode true
 !include "LogicLib.nsh"
+!addincludedir "${appBuilderIncludeDir}"
 Name "Preflight refusal log probe"
 OutFile "${executable}"
 RequestExecutionLevel user
@@ -962,6 +991,7 @@ SectionEnd
         source,
         `\uFEFFUnicode true
 !include "LogicLib.nsh"
+!addincludedir "${appBuilderIncludeDir}"
 Name "Preflight refusal append probe"
 OutFile "${executable}"
 RequestExecutionLevel user
@@ -1031,7 +1061,7 @@ SectionEnd
         const executable = join(root, `${name}.exe`)
         const source = join(root, `${name}.nsi`)
         const finder = withFinder
-          ? `!macro FIND_PROCESS FILE RETURN
+          ? `!macro baselioFindRunningProcess RETURN
   StrCpy ${'$'}{RETURN} 0
 !macroend
 `
@@ -1040,6 +1070,7 @@ SectionEnd
           source,
           `\uFEFFUnicode true
 !include "LogicLib.nsh"
+!addincludedir "${appBuilderIncludeDir}"
 Name "Running-app preflight probe ${name}"
 OutFile "${executable}"
 RequestExecutionLevel user
@@ -1109,13 +1140,122 @@ SectionEnd
       expect(allowed.status).toBe(0)
       expect(allowed.log).toBe('')
 
-      // Fail closed: without electron-builder's macro the check must break the build instead of compiling
-      // itself away - the silent skip this ticket replaced.
-      const missing = runProbe('no-finder', stale, false)
-      expect(missing.compileStatus).not.toBe(0)
-      expect(missing.compileOutput).toContain('FIND_PROCESS is missing')
+      // The finder is ours now (baselioFindRunningProcess), so there is no "missing electron-builder
+      // macro" case any more: without a stub the probe runs the real tasklist lookup. That is covered
+      // by the assembled-order compile below instead.
     } finally {
       rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  // Release blocker: the running-app preflight used electron-builder's FIND_PROCESS, whose body reads
+  // $IsPowerShellAvailable, $PowerShellPath and $CmdPath. Those are declared by CHECK_APP_RUNNING, and the
+  // assembled script inserts customInit in .onInit BEFORE installSection.nsh inserts CHECK_APP_RUNNING. So
+  // the reference came first: makensis emitted `warning 6000: unknown variable/constant
+  // "IsPowerShellAvailable"` and electron-builder compiles NSIS with -WX, which stopped every Windows
+  // installer from building. The probe above stubs the finder, which is exactly why it stayed green.
+  //
+  // This probe mirrors the ordering with warnings as errors and no stub: our file must compile with only
+  // NSIS built-ins available. The old implementation fails here even before the warning, because
+  // FIND_PROCESS does not exist yet at this point in the assembled script.
+  it.skipIf(!nsisPluginsDir)(
+    'the preflight compiles before electron-builder declares its process-scan variables (-WX)',
+    { timeout: 60_000 },
+    () => {
+    const root = mkdtempSync(join(tmpdir(), 'nsis-preflight-order-'))
+    try {
+      const payload = join(root, 'payload')
+      mkdirSync(payload)
+      writeFileSync(join(payload, 'app.exe'), '')
+      const budget = require('./installer-path-budget.cjs')
+      budget.emit({ payloadDir: payload, out: join(root, 'installer-path-budget.nsh') })
+      const preflight = join(root, 'installer-preflight.nsh')
+      copyFileSync(join(repoRoot, 'build/installer-preflight.nsh'), preflight)
+
+      const logRoot = join(root, 'logroot')
+      mkdirSync(logRoot)
+      const executable = join(root, 'probe.exe')
+      const source = join(root, 'probe.nsi')
+      writeFileSync(
+        source,
+        `\uFEFFUnicode true
+!include "LogicLib.nsh"
+!addincludedir "${appBuilderIncludeDir}"
+!addplugindir "${nsisPluginsDir}"
+!define APP_EXECUTABLE_FILENAME "BaselioOrderingProbe.exe"
+!define UNINSTALL_FILENAME "Uninstall BaselioOrderingProbe.exe"
+LangString BaselioPreflightPathTooLong 1033 "Target folder is too long"
+LangString BaselioPreflightAppRunning 1033 "Baselio is still running"
+!include "${preflight}"
+Name "Preflight ordering probe"
+OutFile "${executable}"
+RequestExecutionLevel user
+SilentInstall silent
+Var perMachineInstallDirCache
+Var perUserInstallDirCache
+Section
+  StrCpy $perMachineInstallDirCache ""
+  StrCpy $perUserInstallDirCache ""
+  !insertmacro baselioPreflightRunningApp
+SectionEnd
+`
+      )
+      const compile = spawnSync(nsisCompiler!, ['-WX', '/V2', source], {
+        encoding: 'utf8',
+        timeout: 20_000
+      })
+      expect(compile.error).toBeUndefined()
+      expect(compile.status, `${compile.stdout}${compile.stderr}`).toBe(0)
+
+      // The lookup is real here (no stub): a process with this name does not run, so the installer must
+      // continue instead of refusing every fresh install.
+      const run = spawnSync(executable, [], {
+        encoding: 'utf8',
+        timeout: 60_000,
+        env: { ...process.env, TEMP: logRoot, TMP: logRoot }
+      })
+      expect(run.error).toBeUndefined()
+      expect(run.status, `${run.stdout}${run.stderr}`).toBe(0)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('the installed electron-builder still inserts customInit before CHECK_APP_RUNNING', () => {
+    // The ordering is the whole reason the preflight must be self-contained: customInit runs from
+    // .onInit, installSection.nsh (which inserts CHECK_APP_RUNNING and therefore declares its globals) is
+    // included later. If a future electron-builder moved this, the comment above would be wrong and the
+    // dependency could become safe — this test says the premise changed instead of silently keeping it.
+    const installerNsi = readFileSync(join(appBuilderLibRoot, 'templates/nsis/installer.nsi'), 'utf8')
+    const installSection = readFileSync(
+      join(appBuilderLibRoot, 'templates/nsis/installSection.nsh'),
+      'utf8'
+    )
+    expect(installSection).toContain('!insertmacro CHECK_APP_RUNNING')
+    expect(installerNsi.indexOf('!insertmacro customInit')).toBeLessThan(
+      installerNsi.indexOf('!include "installSection.nsh"')
+    )
+  })
+
+  it('the preflight and installer include never reference electron-builder globals declared later', () => {
+    // Same failure, caught statically: a reference to these names from our files is compiled before
+    // electron-builder declares them. Comment lines may name them while explaining, so they are stripped.
+    for (const file of ['installer.nsh', 'installer-preflight.nsh']) {
+      const code = readFileSync(join(repoRoot, 'build', file), 'utf8')
+        .split('\n')
+        .filter((line) => !/^\s*#/.test(line))
+        .join('\n')
+      for (const symbol of [
+        '$IsPowerShellAvailable',
+        '$PowerShellPath',
+        '$CmdPath',
+        'FIND_PROCESS',
+        'KILL_PROCESS',
+        'CHECK_APP_RUNNING',
+        'IS_POWERSHELL_AVAILABLE'
+      ]) {
+        expect(code, `${file} must not reference ${symbol}`).not.toContain(symbol)
+      }
     }
   })
 
@@ -1150,6 +1290,7 @@ SectionEnd
         source,
         `\uFEFFUnicode true
 !include "LogicLib.nsh"
+!addincludedir "${appBuilderIncludeDir}"
 Name "Data failure log probe"
 OutFile "${executable}"
 RequestExecutionLevel user
@@ -1225,6 +1366,7 @@ SectionEnd
         source,
         `\uFEFFUnicode true
 !include "LogicLib.nsh"
+!addincludedir "${appBuilderIncludeDir}"
 Name "Preflight fallback log probe"
 OutFile "${executable}"
 RequestExecutionLevel user
