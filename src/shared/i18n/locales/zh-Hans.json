@@ -7651,7 +7651,7 @@
     "For discussion before ethics review: the research question, the design, and what to confirm with your mentor next. An approval number is not required. For data analysis, start from \"Analyze your own data\".": "用于伦理审查前的开题沟通：研究问题、设计和下次要向指导医师确认的事项。不强制填写批准号。数据分析请从「分析自己的数据」开始。",
     "Details_privacy": "详细",
     "Automatic updates are disabled in the beta build. New versions are announced by the distributor.": "测试版不提供自动更新。新版本由分发方公布。",
-    "Protected execution could not start on this PC. Open Settings > Network, finish the Notebook protection setup, then retry. ({{code}})": "无法在此电脑上启动受保护的执行。请在“设置 > 网络”中完成 Notebook 保护的设置，然后重试。（{{code}}）",
+    "Protected execution could not start on this PC. Table import and statistics still work, but anything that needs the protected runtime (public literature search, for example) cannot work until this is fixed. Open Settings > Network and run the Notebook protection setup again; if it still fails, reinstall the app to update the protection component. ({{code}})": "无法在此电脑上启动受保护的执行。表格导入和统计仍可使用，但公开文献检索等需要受保护的执行的功能在问题解决前无法运行。请在“设置 > 网络”中重新完成 Notebook 保护的设置；若仍然失败，请重新安装应用以更新保护组件。（{{code}}）",
     "The app could not finish that action. Retry. If it keeps failing, reload the app. (Code: {{code}})": "应用未能完成该操作。请重试。如果仍然失败，请重新加载应用。（代码：{{code}}）",
     "The app is not connected to its backend right now. Wait a moment, then retry. (Code: {{code}})": "应用当前未连接到后端。请稍候片刻，然后重试。（代码：{{code}}）",
     "Settings could not be saved on this device. Check free disk space and folder permissions, then retry. (Code: {{code}})": "无法将设置保存到这台设备。请检查磁盘可用空间和文件夹权限，然后重试。（代码：{{code}}）",
