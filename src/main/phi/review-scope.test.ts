@@ -3,17 +3,34 @@
 // physician-name rule used to read English prose inside it as a name ("API route definitions" matched the
 // `PI` inside `API`), so a clean project's literature request opened a review window full of our own
 // prompt. The release scan still rewrites that text; it is just not review work.
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { fetchProviderRequest } from '../settings/provider-fetch'
-import { createVaultBackedGate, installMachineApproval, installPhiConfirmer, installPhiGate } from './gate'
-import { createMemoryPhiVault } from './store'
+const { loggerInfo } = vi.hoisted(() => ({ loggerInfo: vi.fn() }))
 
-const installIdentityGate = (): void => {
-  installPhiGate({
-    release: (text) => ({ text, replacements: [], warnings: [] }),
-    restore: (text) => text
+// The notice below is the only compensation for releasing prompt text without review: it is what support
+// has when a doctor never sees a window. It must be asserted, and the assertion must also hold its
+// PHI-adjacent invariant - the replaced text itself may never reach the log.
+vi.mock('@aipoch/diagnostics/node', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@aipoch/diagnostics/node')>()),
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: loggerInfo,
+    warn: vi.fn(),
+    error: vi.fn()
   })
+}))
+
+// `test/setup-phi.ts` installs the gate before this file runs, so `gate.ts` - and the module-scoped
+// `createLogger('phi')` const inside it - is already evaluated against the real diagnostics factory by
+// the time these mocks register. Import the graph again after resetting the registry so the logger above
+// is the one the gate actually uses; otherwise the call is unobservable and the assertion below can only
+// ever pass by accident. Each test gets its own graph, which also removes the need to uninstall state.
+const loadPhi = async () => {
+  vi.resetModules()
+  const gate = await import('./gate')
+  const { createMemoryPhiVault } = await import('./store')
+  const { fetchProviderRequest } = await import('../settings/provider-fetch')
+  return { gate, createMemoryPhiVault, fetchProviderRequest }
 }
 
 const body = (instructions: string, input: string): string =>
@@ -26,57 +43,68 @@ const body = (instructions: string, input: string): string =>
 const literatureQuery = 'PubMedで「再入院」を検索し、J-STAGEで「再入院」を検索してください。'
 
 describe('review scope for application-owned prompt text', () => {
+  beforeEach(() => {
+    loggerInfo.mockClear()
+  })
+
   it('sends without review when only the application prompt was rewritten', async () => {
-    installMachineApproval(null)
-    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const { gate, createMemoryPhiVault, fetchProviderRequest } = await loadPhi()
+    gate.installMachineApproval(null)
+    gate.installPhiGate(gate.createVaultBackedGate(createMemoryPhiVault()))
     const confirm = vi.fn(async () => ({ confirmed: true, extraSpans: [] }))
-    installPhiConfirmer(confirm)
+    gate.installPhiConfirmer(confirm)
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
-    try {
-      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
-        method: 'POST',
-        body: body('保険者番号 02123456 を参照する API route definitions。', literatureQuery)
-      })
-      expect(confirm).not.toHaveBeenCalled()
-      expect(fetchImpl).toHaveBeenCalledOnce()
-      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
-      // Still masked: not reviewing it is not the same as sending it.
-      expect(sent).not.toContain('02123456')
-    } finally {
-      installPhiConfirmer(null)
-      installMachineApproval(null)
-      installIdentityGate()
-    }
+    await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+      method: 'POST',
+      body: body('保険者番号 02123456 を参照する API route definitions。', literatureQuery)
+    })
+    expect(confirm).not.toHaveBeenCalled()
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+    // Still masked: not reviewing it is not the same as sending it.
+    expect(sent).not.toContain('02123456')
+    // Zero-notice case, so this line is the whole record: assert it exists, carries the stable id, the
+    // count and the categories, and that no original text leaked into it.
+    expect(loggerInfo).toHaveBeenCalledOnce()
+    const notice = loggerInfo.mock.calls[0] as [string, Record<string, unknown>]
+    expect(notice[0]).toBe('application prompt text released without review')
+    expect(notice[1]).toMatchObject({
+      code: 'PHI-REVIEW-SKIP-01',
+      hits: 1,
+      categories: ['INSURER_NO']
+    })
+    const serialized = JSON.stringify(notice)
+    expect(serialized).not.toContain('02123456')
+    expect(serialized).not.toContain('保険者番号')
   })
 
   it('still reviews a replacement in the user content, and reports prompt hits as handled', async () => {
+    const { gate, createMemoryPhiVault, fetchProviderRequest } = await loadPhi()
     // Approved machine: the point of this case is the review path, not the approval block above it.
-    installMachineApproval(() => true)
-    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    gate.installMachineApproval(() => true)
+    gate.installPhiGate(gate.createVaultBackedGate(createMemoryPhiVault()))
     const previews: unknown[] = []
-    installPhiConfirmer(async (preview) => {
+    gate.installPhiConfirmer(async (preview) => {
       previews.push(preview)
       return { confirmed: true, extraSpans: [] }
     })
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
-    try {
-      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
-        method: 'POST',
-        body: body('保険者番号 02123456 を参照する。', '患者：山田 太郎 の再入院を調べてください。')
-      })
-      expect(previews).toHaveLength(1)
-      const preview = previews[0] as { highlights: unknown[]; applicationReplacements: number }
-      // Only the user's own replacement is review work; the prompt's replacement is counted separately.
-      expect(preview.highlights).toHaveLength(1)
-      expect(preview.applicationReplacements).toBe(1)
-      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
-      expect(sent).not.toContain('山田 太郎')
-      expect(sent).not.toContain('02123456')
-    } finally {
-      installPhiConfirmer(null)
-      installMachineApproval(null)
-      installIdentityGate()
-    }
+    await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+      method: 'POST',
+      body: body('保険者番号 02123456 を参照する。', '患者：山田 太郎 の再入院を調べてください。')
+    })
+    expect(previews).toHaveLength(1)
+    const preview = previews[0] as { highlights: unknown[]; applicationReplacements: number }
+    // Only the user's own replacement is review work; the prompt's replacement is counted separately.
+    expect(preview.highlights).toHaveLength(1)
+    expect(preview.applicationReplacements).toBe(1)
+    // The prompt's replacement is still reported to support even when the window does open for another
+    // reason: one notice, still without the replaced text.
+    expect(loggerInfo).toHaveBeenCalledOnce()
+    expect(JSON.stringify(loggerInfo.mock.calls[0])).not.toContain('02123456')
+    const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+    expect(sent).not.toContain('山田 太郎')
+    expect(sent).not.toContain('02123456')
   })
 })
 
