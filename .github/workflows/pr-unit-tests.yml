@@ -137,3 +137,51 @@ jobs:
           "$env:RUNNER_TEMP/unit-results-notebook.json"
           --require src/main/notebook/schema-only/patient-phi.test.ts
           --require src/main/notebook/kernel-protocol.test.ts
+
+  # #202: six PHI criteria changed in one release window (#159, #160, #170, #171, #175, #161) and every
+  # acceptance run was local evidence: `src/main/phi` was in no PR job's vitest target, so a change to
+  # what is treated as patient information could merge with a green PR. That is the #150 shape again.
+  # A separate job keeps the red result attributable to this directory; the suite itself is cheap.
+  #
+  # Measured on this developer machine: 16 files, 320 reported tests, 319 executed, 1 skipped (the
+  # real-Electron-window case, which probes window creation and prints a warning when it cannot run),
+  # 7.5 s. The suite does not import a kernel, shell or registry, so nothing here depends on runner
+  # timing the way the notebook set does.
+  unit-tests-phi:
+    name: Unit tests (phi)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: node scripts/ci/npm-ci.mjs --install-links
+      - name: Build workspace packages
+        run: node scripts/build-dev-packages.mjs
+      # A directory, not a file: a new suite under src/main/phi is included by default, and a renamed one
+      # has to be dealt with here rather than silently leaving the set (#179 rule). No
+      # `--passWithNoTests`: a filter that matches nothing must fail, and the sentinels below make a
+      # silently shrinking set red too.
+      - name: Run the phi unit-test set
+        run: >-
+          node node_modules/vitest/vitest.mjs run
+          src/main/phi
+          --reporter=json
+          --outputFile="$env:RUNNER_TEMP/unit-results-phi.json"
+          --reporter=default
+          --maxWorkers=2
+      # Two sentinels for the two layers: detect.test.ts guards what counts as PHI, gate.test.ts guards
+      # whether a turn is blocked, reviewed or released. Renaming or moving either one must red this job.
+      - name: Require real test execution
+        run: >-
+          node scripts/ci/require-unit-test-results.mjs
+          "$env:RUNNER_TEMP/unit-results-phi.json"
+          --require src/main/phi/detect.test.ts
+          --require src/main/phi/gate.test.ts
