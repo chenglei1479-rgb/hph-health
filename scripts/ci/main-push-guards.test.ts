@@ -20,11 +20,16 @@ const GUARDED = [
   'main-installer-build.yml'
 ] as const
 
+type Job = {
+  steps?: Array<Record<string, unknown>>
+  strategy?: { matrix?: { include?: Array<Record<string, string>> } }
+}
+
 type Workflow = {
   on?: Record<string, unknown>
   permissions?: Record<string, string>
   concurrency?: { group?: string; 'cancel-in-progress'?: boolean | string }
-  jobs?: Record<string, { steps?: Array<Record<string, unknown>> }>
+  jobs?: Record<string, Job>
 }
 
 const root = join(process.cwd(), '.github', 'workflows')
@@ -72,5 +77,44 @@ describe('main push guards', () => {
     expect(runsOf(file).filter((run) => run.includes('electron-builder'))).toEqual([
       'npx electron-builder --config build/prerelease-electron-builder.cjs --win nsis --x64'
     ])
+  })
+
+  // A main push has no tag, so there is nothing to derive a version from and nothing to publish it as.
+  // `npm version` in this workflow would rewrite package.json mid-build and change the artifact name;
+  // the release workflow owns that, on a tag.
+  it('does not bump the version on a main push', () => {
+    const offending = runsOf('main-installer-build.yml').filter((run) =>
+      /npm\s+version/u.test(run)
+    )
+    expect(offending).toEqual([])
+    // The build must not read a release tag it never has.
+    expect(readText('main-installer-build.yml')).not.toMatch(/DRA_RELEASE_TAG|inputs\.tag/u)
+  })
+
+  // CTO review on #210: this workflow is a copy of the `win` row in `prerelease.yml`, so the packaging
+  // command has to be the same one. Otherwise `prerelease.yml` can gain a required flag (or change the
+  // config file) and the main-push guard keeps testing a pipeline that no longer exists - green, and
+  // about nothing. Rendering the matrix row makes the comparison exact instead of "both mention nsis".
+  it('runs the same packaging command as the Windows prerelease build', () => {
+    const prerelease = readWorkflow('prerelease.yml')
+    const buildJob = prerelease.jobs?.build
+    expect(buildJob).toBeDefined()
+
+    const winRow = buildJob?.strategy?.matrix?.include?.find((row) => row.os === 'windows-latest')
+    expect(winRow, 'prerelease.yml has no windows-latest matrix row').toBeDefined()
+
+    const template = (buildJob?.steps ?? [])
+      .map((step) => String(step.run ?? ''))
+      .find((run) => run.includes('electron-builder'))
+    expect(template, 'the prerelease build has no electron-builder command').toBeDefined()
+
+    const rendered = template!.replace(
+      /\$\{\{\s*matrix\.(\w+)\s*\}\}/gu,
+      (_match, key: string) => String(winRow?.[key] ?? `missing-matrix-value:${key}`)
+    )
+    expect(rendered).toContain('build/prerelease-electron-builder.cjs')
+    expect(runsOf('main-installer-build.yml').filter((run) => run.includes('electron-builder'))).toEqual(
+      [rendered]
+    )
   })
 })
