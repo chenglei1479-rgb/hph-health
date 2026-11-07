@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import * as fsPromises from 'node:fs/promises'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFile, spawn } from 'node:child_process'
 import { once } from 'node:events'
@@ -9,7 +10,7 @@ import { promisify } from 'node:util'
 import * as processTree from '../process-tree'
 import { build } from 'esbuild'
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, describe, expect, it, vi } from 'vitest'
 
 import {
   NotebookShellProcessAdapter,
@@ -26,6 +27,7 @@ import { NotebookNetworkSandboxOwner } from './network-sandbox-owner'
 import { DEFAULT_NOTEBOOK_NETWORK_SETTINGS } from '../../shared/notebook-network'
 import { NotebookNetworkSandbox } from '@aipoch/notebook-network-sandbox'
 import { createRootNotebookLane } from './lane-identity'
+import { shellNpmPaths } from './shell-npm-environment'
 import { configureTestRuntimeMetadata } from '../../../test/runtime-metadata'
 
 configureTestRuntimeMetadata()
@@ -112,13 +114,29 @@ const shellRequest = (root: string): NotebookShellProcessRequest => ({
   timeoutMs: POWERSHELL_PROCESS_TIMEOUT_MS
 })
 
+// #156: this helper used to run from the checkout and point its runtime root at
+// `<checkout>/.open-science-test-runtime`, so one test run left npm/workload-cache directories inside
+// the worktree. The shell only needs *some* writable root: every path it prepares now lives under one
+// temporary directory that is removed when the file finishes.
+let shellHelperRoot: string | undefined
+
+const shellHelperTempRoot = (): string => {
+  shellHelperRoot ??= mkdtempSync(join(tmpdir(), 'windows-shell-helper-'))
+  return shellHelperRoot
+}
+
+afterAll(() => {
+  if (shellHelperRoot) rmSync(shellHelperRoot, { recursive: true, force: true })
+  shellHelperRoot = undefined
+})
+
 const runPowerShell = (command: string, version?: '7.6'): ReturnType<typeof runShellCommand> =>
   runShellCommand({
     command,
     ...(version ? { runtimeBinding: { kind: 'powershell' as const, version } } : {}),
-    cwd: process.cwd(),
-    handoffDir: process.cwd(),
-    runtimeRoot: join(process.cwd(), '.open-science-test-runtime'),
+    cwd: shellHelperTempRoot(),
+    handoffDir: shellHelperTempRoot(),
+    runtimeRoot: join(shellHelperTempRoot(), 'runtime'),
     sessionId: 'windows-shell-session',
     projectId: 'windows-shell-project',
     // Cold Windows PowerShell 5.1 module discovery on hosted runners can exceed Vitest's 15-second
@@ -177,13 +195,23 @@ describe.runIf(process.platform === 'win32')('Windows notebook shell integration
           exitCode: 0,
           stdout: 'SESSION_READY'
         })
+        // #156: an install must never inherit the checkout as its destination. The command names its
+        // prefix explicitly and runs inside the session workspace, so an interrupted install can only
+        // leave a half-written prefix under this test's temporary root.
+        const toolsPrefix = shellNpmPaths(runtimeRoot, 'win32').prefix
+        const checkoutPackage = readFileSync(join(process.cwd(), 'package.json'))
+        const checkoutLock = readFileSync(join(process.cwd(), 'package-lock.json'))
         const installed = await adapter.execute(
           request(
             first,
-            'npm.cmd install -g ./fixture --offline --install-links --ignore-scripts --no-audit --no-fund'
+            `npm.cmd install -g ./fixture --prefix "${toolsPrefix}" --offline --install-links --ignore-scripts --no-audit --no-fund`
           )
         )
         expect(installed, JSON.stringify(installed)).toMatchObject({ exitCode: 0 })
+        // The repository the run was started from is not an install target, even when the install
+        // command above is the one that fails or is killed.
+        expect(readFileSync(join(process.cwd(), 'package.json'))).toEqual(checkoutPackage)
+        expect(readFileSync(join(process.cwd(), 'package-lock.json'))).toEqual(checkoutLock)
         const shared = await adapter.execute(request(second, 'fixture-cli.cmd'))
         expect(shared, JSON.stringify(shared)).toMatchObject({
           exitCode: 0,

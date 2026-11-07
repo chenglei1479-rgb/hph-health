@@ -18,6 +18,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -27,7 +28,12 @@ const argument = (name, fallback) => {
 }
 
 const root = resolve(argument('--root', resolve(dirname(fileURLToPath(import.meta.url)), '../..')))
-const statePath = resolve(argument('--state', join(root, '.scratch', 'pkg-suite-snapshot.json')))
+// The snapshot is scratch state, not evidence: it belongs in the OS temp directory. Writing it under
+// `.scratch/` inside the checkout would make the guard the one thing still writing into the tree it
+// exists to protect (#156).
+const statePath = resolve(
+  argument('--state', join(tmpdir(), 'open-science-pkg-suite-snapshot.json'))
+)
 
 const git = (args) => {
   try {

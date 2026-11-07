@@ -16,6 +16,15 @@ afterEach(() => {
   }
 })
 
+// #156: a test must never hand the checkout to code that may create runtime state. These cases only
+// need *a* runtime root, not the repository; with the mock replaced by something that writes, the
+// checkout would be the thing that gets written.
+const temporaryRoot = (): string => {
+  const directory = mkdtempSync(join(tmpdir(), 'open-science-package-root-'))
+  temporaryDirectories.push(directory)
+  return directory
+}
+
 describe('sandboxedPackageSpawn', () => {
   it('passes GUI-authorized roots to the package sandbox with their access mode', async () => {
     const storageRoot = mkdtempSync(join(tmpdir(), 'open-science-package-grants-'))
@@ -110,8 +119,8 @@ describe('sandboxedPackageSpawn', () => {
     const spawn = sandboxedPackageSpawn({
       processSandbox,
       request: { language: 'python', packages: ['example'] },
-      runtimeRoot: process.cwd(),
-      storageRoot: process.cwd()
+      runtimeRoot: temporaryRoot(),
+      storageRoot: temporaryRoot()
     })
     const cancellation = new AbortController()
     cancellation.abort(new DOMException('Request cancelled.', 'AbortError'))
@@ -152,8 +161,8 @@ describe('sandboxedPackageSpawn', () => {
     const spawn = sandboxedPackageSpawn({
       processSandbox,
       request: { language: 'python', packages: ['example'] },
-      runtimeRoot: process.cwd(),
-      storageRoot: process.cwd()
+      runtimeRoot: temporaryRoot(),
+      storageRoot: temporaryRoot()
     })
     const cancellation = new AbortController()
     const onChild = vi.fn()
@@ -250,7 +259,7 @@ describe('sandboxedPackageSpawn', () => {
         cleanup
       }))
     }
-    const storageRoot = process.cwd()
+    const storageRoot = temporaryRoot()
     const packageCache = mkdtempSync(join(tmpdir(), 'open-science-package-cache-'))
     const matplotlibCache = join(packageCache, 'matplotlib')
     const lockCwd = join(packageCache, 'locks')
@@ -267,7 +276,7 @@ describe('sandboxedPackageSpawn', () => {
         projectId: 'project-1',
         workspaceCwd: packageCache
       },
-      runtimeRoot: join(storageRoot, '.open-science-test-runtime', 'package-sandbox', 'runtime'),
+      runtimeRoot: join(storageRoot, 'package-sandbox', 'runtime'),
       storageRoot
     })
     const onOutput = vi.fn()
@@ -355,8 +364,8 @@ describe('sandboxedPackageSpawn', () => {
     const spawn = sandboxedPackageSpawn({
       processSandbox,
       request: { language: 'python', packages: ['example'] },
-      runtimeRoot: process.cwd(),
-      storageRoot: process.cwd()
+      runtimeRoot: temporaryRoot(),
+      storageRoot: temporaryRoot()
     })
     const cancellation = new AbortController()
     await expect(
@@ -400,8 +409,8 @@ describe('sandboxedPackageSpawn', () => {
     const spawn = sandboxedPackageSpawn({
       processSandbox,
       request: { language: 'python', packages: ['example'] },
-      runtimeRoot: process.cwd(),
-      storageRoot: process.cwd()
+      runtimeRoot: temporaryRoot(),
+      storageRoot: temporaryRoot()
     })
     const cancellation = new AbortController()
     const reason = Object.freeze(new DOMException('Package operation cancelled.', 'AbortError'))
@@ -445,8 +454,8 @@ describe('sandboxedPackageSpawn', () => {
         pypiIndex: 'https://pypi.example.org/simple',
         cranMirror: 'https://cran.example.org/CRAN/'
       },
-      runtimeRoot: process.cwd(),
-      storageRoot: process.cwd()
+      runtimeRoot: temporaryRoot(),
+      storageRoot: temporaryRoot()
     })
 
     await spawn(process.execPath, ['-e', 'process.exit(0)'], process.env)
@@ -483,8 +492,8 @@ describe('sandboxedPackageSpawn', () => {
       processSandbox,
       request: { language: 'python', packages: ['example'] },
       mirror: { pypiIndex },
-      runtimeRoot: process.cwd(),
-      storageRoot: process.cwd()
+      runtimeRoot: temporaryRoot(),
+      storageRoot: temporaryRoot()
     })
 
     await spawn(process.execPath, ['-e', 'process.exit(0)'], process.env)
@@ -510,8 +519,8 @@ describe('sandboxedPackageSpawn', () => {
     const spawn = sandboxedPackageSpawn({
       processSandbox,
       request: { language: 'python', packages: ['example'] },
-      runtimeRoot: process.cwd(),
-      storageRoot: process.cwd()
+      runtimeRoot: temporaryRoot(),
+      storageRoot: temporaryRoot()
     })
     let childPid: number | undefined
 
