@@ -1,0 +1,72 @@
+name: Test tree isolation
+
+# #156: three test runs wrote into the checkout, and one of them destroyed 3328 tracked files under
+# `packages/**`. The ticket ruled out the two popular explanations, so this job does not try to
+# re-derive the cause. It guards the invariant instead:
+#
+#   1. `scripts/ci/tree-isolation` holds the static guards (no scratch root inside the checkout, no
+#      local-path npm install without an explicit `--prefix`) and the snapshot tool's own self-test.
+#   2. The snapshot runs around this job's own work: `git status`, the tracked file count under
+#      `packages/**` and the installed dependency directories are compared before and after, and any
+#      decrease fails the job while naming the paths that disappeared.
+#
+# `--require` sentinels keep a renamed or deleted guard from turning the job green: a filter that
+# matches nothing still exits 0. The vitest target is a directory, never a single file.
+#
+# This is a separate workflow on purpose. The PR unit-test jobs were being changed for #202 at the same
+# time, and this guard must not depend on that edit landing first.
+on:
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-tree-isolation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    name: Tests keep the checkout intact
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: node scripts/ci/npm-ci.mjs --install-links
+      - name: Build workspace packages
+        run: node scripts/build-dev-packages.mjs
+      # The snapshot is state, not evidence. It goes to RUNNER_TEMP so the guard does not become the
+      # writer it is checking for.
+      - name: Snapshot the tree before the guard run
+        run: node scripts/ci/pkg-suite-snapshot.mjs before --state "$env:RUNNER_TEMP/tree-before.json"
+      - name: Run the tree-isolation guards
+        run: >-
+          node node_modules/vitest/vitest.mjs run
+          scripts/ci/tree-isolation
+          --reporter=json
+          --outputFile="$env:RUNNER_TEMP/tree-isolation-results.json"
+          --reporter=default
+          --maxWorkers=2
+      - name: Require real test execution
+        run: >-
+          node scripts/ci/require-unit-test-results.mjs
+          "$env:RUNNER_TEMP/tree-isolation-results.json"
+          --require scripts/ci/tree-isolation/pkg-suite-snapshot.test.ts
+          --require scripts/ci/tree-isolation/checkout-write-guard.test.ts
+      # Run this even when the guards above failed: a red guard and a destroyed tree are different
+      # facts, and the log must say which one happened.
+      - name: Fail when anything disappeared from the tree
+        if: always()
+        run: node scripts/ci/pkg-suite-snapshot.mjs after --state "$env:RUNNER_TEMP/tree-before.json"

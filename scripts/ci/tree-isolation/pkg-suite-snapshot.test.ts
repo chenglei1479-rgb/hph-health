@@ -1,11 +1,11 @@
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 
-const script = fileURLToPath(new URL('./pkg-suite-snapshot.mjs', import.meta.url))
+const script = fileURLToPath(new URL('../pkg-suite-snapshot.mjs', import.meta.url))
 const roots: string[] = []
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
@@ -61,5 +61,23 @@ describe('pkg-suite-snapshot', () => {
     const after = run(root, 'after')
     expect(after.status).toBe(2)
     expect(after.stderr).toContain('No snapshot recorded')
+  })
+
+  // #156: the tool is itself part of the run that must not write into the checkout, so its default
+  // state file lives in the OS temp directory. A tree that gets inspected gains no `.scratch/`.
+  it('records its state outside the tree it inspects', () => {
+    const root = tree()
+    const statePath = join(tmpdir(), 'open-science-pkg-suite-snapshot.json')
+    rmSync(statePath, { force: true })
+    try {
+      const before = spawnSync(process.execPath, [script, 'before', '--root', root], {
+        encoding: 'utf8'
+      })
+      expect(before.status).toBe(0)
+      expect(existsSync(join(root, '.scratch'))).toBe(false)
+      expect(existsSync(statePath)).toBe(true)
+    } finally {
+      rmSync(statePath, { force: true })
+    }
   })
 })
