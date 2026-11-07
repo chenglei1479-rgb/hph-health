@@ -7910,6 +7910,11 @@
     "Checking whether this feature can run…": "Es wird geprüft, ob diese Funktion ausgeführt werden kann…",
     "PDF translation needs a model.": "Die PDF-Übersetzung benötigt ein Modell.",
     "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "Für die Übersetzung ist kein Modell konfiguriert. Fügen Sie in Einstellungen > Modelle ein API- oder Abonnementmodell hinzu, und kehren Sie dann zu diesem PDF zurück.",
-    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "Der Text der Tabellenüberschrift steht auch in einer Tabellenzelle. Er wird so angezeigt, wie er extrahiert wurde, weil das Layout nicht zuverlässig getrennt werden kann."
+    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "Der Text der Tabellenüberschrift steht auch in einer Tabellenzelle. Er wird so angezeigt, wie er extrahiert wurde, weil das Layout nicht zuverlässig getrennt werden kann.",
+    "Previous run": "Vorheriger Lauf",
+    "This is the output saved by the last run on this device, not a new execution. Run again to update it.": "Diese Ausgabe wurde beim letzten Lauf auf diesem Gerät gespeichert, nicht bei einer neuen Ausführung. Führen Sie den Code erneut aus, um sie zu aktualisieren.",
+    "The code in the editor has changed since that run, so this result belongs to the earlier code.": "Der Code im Editor hat sich seit diesem Lauf geändert; dieses Ergebnis gehört zum früheren Code.",
+    "Error output": "Fehlerausgabe",
+    "This run did not finish successfully (exit code {{code}}).": "Dieser Lauf wurde nicht erfolgreich beendet (Exit-Code {{code}})."
   }
 }

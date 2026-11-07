@@ -7749,6 +7749,11 @@
     "Checking whether this feature can run…": "正在檢查此功能是否可以執行…",
     "PDF translation needs a model.": "PDF 翻譯需要模型。",
     "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "尚未設定可用於翻譯的模型。請在「設定 > 模型」中新增 API 或訂閱模型，然後回到此 PDF。",
-    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "表格標題的文字也出現在儲存格中。由於無法可靠拆分版面，仍依抽取結果顯示。"
+    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "表格標題的文字也出現在儲存格中。由於無法可靠拆分版面，仍依抽取結果顯示。",
+    "Previous run": "上次執行",
+    "This is the output saved by the last run on this device, not a new execution. Run again to update it.": "此輸出是上次在這台裝置上執行時儲存的，不是本次執行的結果。如需更新，請再次執行。",
+    "The code in the editor has changed since that run, so this result belongs to the earlier code.": "編輯區中的程式碼在該次執行後已變更，因此此結果屬於先前的程式碼。",
+    "Error output": "錯誤輸出",
+    "This run did not finish successfully (exit code {{code}}).": "該次執行未能成功結束（結束代碼 {{code}}）。"
   }
 }

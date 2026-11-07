@@ -7749,6 +7749,11 @@
     "Checking whether this feature can run…": "この機能を実行できるか確認しています…",
     "PDF translation needs a model.": "PDF 翻訳にはモデルが必要です。",
     "No model is configured for translation. Add an API or subscription model in Settings > Models, then come back to this PDF.": "翻訳に使えるモデルが設定されていません。設定 > モデルで API またはサブスクリプションのモデルを追加してから、この PDF に戻ってください。",
-    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "表の見出し（キャプション）の文字が、表のセルにも入っています。レイアウトを安全に分割できないため、抽出されたまま表示しています。"
+    "The caption text also appears inside a table cell. It is shown as extracted because the layout cannot be split reliably.": "表の見出し（キャプション）の文字が、表のセルにも入っています。レイアウトを安全に分割できないため、抽出されたまま表示しています。",
+    "Previous run": "前回の実行",
+    "This is the output saved by the last run on this device, not a new execution. Run again to update it.": "この出力は、この端末で前回実行したときの保存内容です。今回の実行結果ではありません。更新するには、もう一度実行してください。",
+    "The code in the editor has changed since that run, so this result belongs to the earlier code.": "あの実行からコードが変わっています。この結果は以前のコードのものです。",
+    "Error output": "エラー出力",
+    "This run did not finish successfully (exit code {{code}}).": "この実行は正常に終了しませんでした（終了コード {{code}}）。"
   }
 }
