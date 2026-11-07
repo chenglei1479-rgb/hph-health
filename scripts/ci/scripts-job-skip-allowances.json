@@ -1,0 +1,128 @@
+{
+  "allowed": [
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication does not bootstrap when another channel pointer is missing",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication does not downgrade a newer ARM64 feed before the version manifest catches up",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication does not interpret head:An error occurred (403): Forbidden as permission to bootstrap",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication does not interpret head:Connection timed out as permission to bootstrap",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication does not let a delayed older promotion overwrite a newer completed promotion",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication explicitly bootstraps an absent ARM64 feed and can retry the same promotion",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication fails closed when current metadata is malformed",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication fails closed when current metadata is missing",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication ignores runner shell wrappers and uses only the fixture AWS executable",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication keeps bootstrap behind explicit promotion intent",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication keeps publication isolated from shell startup files that replace PATH",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication only promotes on explicit intent and makes same-version retries idempotent",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication preserves newer channel entry bytes when mirroring an older release",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects a promotion missing arm64-mac.yml before channel writes",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects a promotion missing latest-linux-arm64.yml before channel writes",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects a promotion missing latest-linux.yml before channel writes",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects a promotion missing latest-mac.yml before channel writes",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects a promotion missing latest.yml before channel writes",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects a promotion missing x64-mac.yml before channel writes",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects changed bytes before overwriting a published version",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects malformed existing ARM64 metadata even with bootstrap enabled",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication rejects successful uploads whose channel readback differs",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication repairs an interrupted first ARM64 promotion without allowing a downgrade",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication repairs an interrupted latest-linux-arm64.yml upload and prevents an intervening downgrade",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication repairs an interrupted latest-linux.yml upload and prevents an intervening downgrade",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/mirror-channel-publication.test.ts > website channel publication requires the new ARM64 channel to be initialized before first promotion",
+      "reason": "the publication harness runs a POSIX shell script through /bin/sh and manipulates PATH to prove isolation; windows-latest has no /bin/sh, so this file needs a Linux host"
+    },
+    {
+      "pattern": "scripts/ci/run-macos-packaged-e2e.test.ts > packaged macOS test Keychain restores the search list and deletes only its own Keychain after missing-helper",
+      "reason": "runs a packaged macOS app through Playwright and the macOS Keychain; needs a macOS runner and a signed app bundle, neither of which exists on windows-latest"
+    },
+    {
+      "pattern": "scripts/ci/run-macos-packaged-e2e.test.ts > packaged macOS test Keychain restores the search list and deletes only its own Keychain after restore-failure",
+      "reason": "runs a packaged macOS app through Playwright and the macOS Keychain; needs a macOS runner and a signed app bundle, neither of which exists on windows-latest"
+    },
+    {
+      "pattern": "scripts/ci/run-macos-packaged-e2e.test.ts > packaged macOS test Keychain restores the search list and deletes only its own Keychain after setup-failure",
+      "reason": "runs a packaged macOS app through Playwright and the macOS Keychain; needs a macOS runner and a signed app bundle, neither of which exists on windows-latest"
+    },
+    {
+      "pattern": "scripts/ci/run-macos-packaged-e2e.test.ts > packaged macOS test Keychain restores the search list and deletes only its own Keychain after success",
+      "reason": "runs a packaged macOS app through Playwright and the macOS Keychain; needs a macOS runner and a signed app bundle, neither of which exists on windows-latest"
+    },
+    {
+      "pattern": "scripts/ci/run-macos-packaged-e2e.test.ts > packaged macOS test Keychain restores the search list and deletes only its own Keychain after test-failure",
+      "reason": "runs a packaged macOS app through Playwright and the macOS Keychain; needs a macOS runner and a signed app bundle, neither of which exists on windows-latest"
+    }
+  ]
+}
