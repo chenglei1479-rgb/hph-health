@@ -24,6 +24,13 @@ name: PR unit tests
 # are excluded by name in `vitest.config.ts` (NOTEBOOK_PR_EXCLUDE_PATTERNS), each with its reason.
 on:
   pull_request:
+  # #208: a plain merge into main ran nothing, which is how #150's 27/27 red composition suite and
+  # #207's packaging blocker survived in main while every pull request was green. These jobs carry the
+  # incident suites; the commit main receives must be checked too, not only the commit that proposed
+  # it. The concurrency group below falls back to `github.ref` off a pull request, so a main push never
+  # cancels a pull-request run or the other way round.
+  push:
+    branches: [main]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -63,6 +70,7 @@ jobs:
           src/renderer/src/i18n
           packages/diagnostics
           scripts/ci/require-unit-test-results.test.ts
+          scripts/ci/main-push-guards.test.ts
           --reporter=json
           --outputFile="$env:RUNNER_TEMP/unit-results-commands.json"
           --reporter=default
@@ -77,6 +85,7 @@ jobs:
           "$env:RUNNER_TEMP/unit-results-commands.json"
           --require src/main/application-command-composition.test.ts
           --require scripts/ci/require-unit-test-results.test.ts
+          --require scripts/ci/main-push-guards.test.ts
           --require src/main/variable-definition/service.test.ts
           --require src/shared/acp.test.ts
           --require src/renderer/src/i18n/resources.test.ts

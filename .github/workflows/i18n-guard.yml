@@ -6,6 +6,11 @@ name: i18n guard
 # The suite is 786 catalog assertions in pure JS and finishes in seconds.
 on:
   pull_request:
+  # #208: a plain merge into main ran no check at all, so a red main only surfaced at the next beta
+  # tag. This guard is 786 catalog assertions in pure JS and finishes in seconds; it is worth running
+  # on the commit main actually receives, not only on the pull request that proposed it.
+  push:
+    branches: [main]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
