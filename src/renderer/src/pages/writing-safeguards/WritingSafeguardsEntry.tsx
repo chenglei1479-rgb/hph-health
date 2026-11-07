@@ -237,7 +237,10 @@ export const WritingSafeguardsEntry = (): React.JSX.Element => {
   }
 
   return (
-    <div className="pointer-events-none fixed bottom-3 right-3 z-40">
+    // Stacks above the variable-definition entry, which owns the bottom-left corner. Both live on
+    // the left so the right side of the composer stays free for the model picker, send, and the
+    // workflow controls.
+    <div className="pointer-events-none fixed bottom-14 left-3 z-40">
       <button
         type="button"
         className="pointer-events-auto rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground shadow-sm"
