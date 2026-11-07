@@ -935,7 +935,7 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
     try {
       await mkdir(resources)
       await expect(packagedMcpRuntime(root, env)).resolves.toEqual({
-        executable: join(root, 'open-science.exe'),
+        executable: join(root, 'medresearch-agent.exe'),
         entryPath: join(resources, 'app.asar', 'out', 'main', 'index.js'),
         env
       })
@@ -988,7 +988,7 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
   })
 
   it('removes only stale registrations owned by the exact failed smoke root', async () => {
-    const root = 'C:\\Temp\\open-science-installer-smoke-owned'
+    const root = 'C:\\Temp\\medresearch-agent-installer-smoke-owned'
     const uninstall = join(root, 'installed app 程序', 'Uninstall MedResearch Agent.exe')
     const install = join(root, 'installed app 程序')
     const run = vi.fn(async (_executable: string, args: string[]) => {
@@ -1020,7 +1020,7 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
   })
 
   it('tolerates a key removed between the ownership check and the delete', async () => {
-    const root = 'C:\\Temp\\open-science-installer-smoke-owned'
+    const root = 'C:\\Temp\\medresearch-agent-installer-smoke-owned'
     const uninstall = join(root, 'installed app', 'Uninstall MedResearch Agent.exe')
     const install = join(root, 'installed app')
     const run = vi.fn(async (_executable: string, args: string[]) => {
@@ -1040,7 +1040,7 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
   })
 
   it('still reports unexpected delete failures from registration cleanup', async () => {
-    const root = 'C:\\Temp\\open-science-installer-smoke-owned'
+    const root = 'C:\\Temp\\medresearch-agent-installer-smoke-owned'
     const uninstall = join(root, 'installed app', 'Uninstall MedResearch Agent.exe')
     const install = join(root, 'installed app')
     const run = vi.fn(async (_executable: string, args: string[]) => {
@@ -1058,7 +1058,7 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
   })
 
   it('preserves unrelated installer registrations', async () => {
-    const root = 'C:\\Temp\\open-science-installer-smoke-owned'
+    const root = 'C:\\Temp\\medresearch-agent-installer-smoke-owned'
     const unrelated = 'C:\\Program Files\\MedResearch Agent\\Uninstall MedResearch Agent.exe'
     const run = vi.fn(async (_executable: string, args: string[]) => {
       if (args[0] === 'delete') throw new Error('unrelated registration was deleted')
@@ -1074,7 +1074,7 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
   })
 
   it('removes the observed owned uninstall registration with an empty install location', async () => {
-    const root = 'C:\\Temp\\open-science-installer-smoke-owned'
+    const root = 'C:\\Temp\\medresearch-agent-installer-smoke-owned'
     const uninstall = join(root, 'installed app 程序', 'Uninstall MedResearch Agent.exe')
     const run = vi.fn(async (_executable: string, args: string[]) => {
       if (args[0] === 'delete') return { code: 0, stdout: '', stderr: '' }
@@ -1102,7 +1102,7 @@ MedResearch Agent Web: http://127.0.0.1:52378/?token=iUFHGSACwBz2k1kSJfPixHbclDy
   })
 
   it('preserves an incomplete registration even when one path is under the smoke root', async () => {
-    const root = 'C:\\Temp\\open-science-installer-smoke-owned'
+    const root = 'C:\\Temp\\medresearch-agent-installer-smoke-owned'
     const uninstall = join(root, 'installed app 程序', 'Uninstall MedResearch Agent.exe')
     const run = vi.fn(async (_executable: string, args: string[]) => {
       if (args[0] === 'delete') throw new Error('incomplete registration was deleted')

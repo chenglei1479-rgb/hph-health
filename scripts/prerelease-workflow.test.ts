@@ -136,7 +136,7 @@ it('launches the packaged app on Windows, Apple silicon, and Intel macOS before 
   expect(smoke?.needs).toBe('build')
   expect(smoke?.strategy?.matrix?.include).toEqual([
     { os: 'windows-latest', label: 'Windows x64', artifact: 'dra-x64-win' },
-    { os: 'macos-14', label: 'macOS arm64', artifact: 'dra-arm64-mac' },
+    { os: 'macos-15', label: 'macOS arm64', artifact: 'dra-arm64-mac' },
     { os: 'macos-15-intel', label: 'macOS x64', artifact: 'dra-x64-mac' }
   ])
   const launch = smoke?.steps?.find(
