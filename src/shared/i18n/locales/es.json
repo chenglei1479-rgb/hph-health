@@ -2152,6 +2152,7 @@
     "Loading recorded evidence…": "Cargando las evidencias registradas…",
     "Invalid text geometry": "Geometría del texto no válida",
     "This workbook has no worksheets.": "Este libro no contiene hojas de cálculo.",
+    "This workbook is missing {{part}}.": "Este libro no contiene {{part}}.",
     "R access verified": "Acceso a R verificado",
     "Skill installation blocked": "Instalación de la habilidad bloqueada",
     "Marketplace snapshot is no longer available": "La instantánea del mercado ya no está disponible",

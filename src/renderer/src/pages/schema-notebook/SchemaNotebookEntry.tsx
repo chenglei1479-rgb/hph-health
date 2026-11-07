@@ -15,17 +15,12 @@ import type {
   SchemaModelContext,
   SchemaNotebookRunOutput
 } from '../../../../shared/schema-notebook'
+import { failureText, importFailureCopy } from './schema-notebook-error-copy'
 import { deliverableCardCopy } from '../home/deliverable-packages'
 import { loadSchemaNotebookDraft, saveSchemaNotebookDraft } from './schema-notebook-draft'
 
-// A direct IPC rejection arrives as "Error invoking remote method '<channel>': Error: <text>".
-// The main process already renders the operable sentence with its stable code; show just that text so
-// the panel never repeats internal transport chrome.
-const failureText = (error: unknown): string =>
-  (error instanceof Error ? error.message : String(error)).replace(
-    /^Error invoking remote method '[^']*':\s*(?:[A-Za-z]*Error:\s*)?/u,
-    ''
-  )
+// The transport chrome and the two actionable sentences live in schema-notebook-error-copy, so each
+// branch has a direct test; this module only decides where the failure is shown.
 
 type SchemaNotebookApi = {
   importTable: (request: {
@@ -106,6 +101,12 @@ export const PatientDataBadge = (): React.JSX.Element => {
 
 export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React.JSX.Element => {
   const { t } = useTranslation()
+  // #167: two import sentences are actionable and get a catalogue entry; an unknown failure is shown
+  // verbatim, because translating a diagnostic would hide the text people search for in a report.
+  const localizeImportFailure = (text: string): string => {
+    const copy = importFailureCopy(text)
+    return copy ? t(copy.key, copy.params) : text
+  }
   const agentContext = useProjectStore(
     (state) => state.projects.find((project) => project.id === projectId)?.agentContext
   )
@@ -325,7 +326,7 @@ export const SchemaNotebookEntry = ({ projectId }: { projectId: string }): React
     } catch (error) {
       // Strip the IPC transport chrome so the panel shows the main process sentence, not
       // "Error invoking remote method 'schema-notebook:import-table': ...".
-      showImportFailure(failureText(error))
+      showImportFailure(localizeImportFailure(failureText(error)))
     } finally {
       setBusy(false)
     }

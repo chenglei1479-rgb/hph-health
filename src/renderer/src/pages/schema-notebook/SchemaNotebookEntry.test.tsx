@@ -594,7 +594,10 @@ describe('SchemaNotebookEntry', () => {
     // The failed file must not leave the previous row count and columns looking current.
     expect(container.textContent).not.toContain(`${copy.rows}: 40`)
     expect(container.textContent).not.toContain('合成サンプル1')
-    expect(container.textContent).toContain('Workbook has no worksheets.')
+    // #167: the reader's language, not the main process sentence verbatim. Before this change a
+    // Japanese interface showed the English sentence at the moment the doctor needed to act.
+    expect(container.textContent).toContain('このブックにはワークシートがありません。')
+    expect(container.textContent).not.toContain('Workbook has no worksheets.')
     // The panel shows the main process sentence, not the IPC transport chrome.
     expect(container.textContent).not.toContain('Error invoking remote method')
     // The draft survives the failure, and Run stays unavailable without a table.
@@ -695,7 +698,7 @@ describe('SchemaNotebookEntry', () => {
       await Promise.resolve(importTable.mock.results.at(-1)?.value).catch(() => undefined)
     })
 
-    expect(container.textContent).toContain('Workbook has no worksheets.')
+    expect(container.textContent).toContain('このブックにはワークシートがありません。')
     // The old "cannot be restored" notice is gone: the two failures are different.
     expect(container.textContent).not.toContain(copy.restoreNotice)
   })
