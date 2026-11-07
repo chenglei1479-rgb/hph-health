@@ -146,11 +146,20 @@ export type SaveSchemaNotebookOutputResponse = {
   saved: boolean
 }
 
-// One run, as written to `<runs>/<runId>/run.json` at run end. This is the single storage the run
-// history and the "computed" counters build on (#121 stores it, #123 reads it). It deliberately keeps
-// no stdout, stderr, or head text: those can quote patient rows, and the run record outlives the panel.
+// One run, as written to `<runs>/<runId>/.run/record.json` at run end. This is the single storage the
+// run history and the "computed" counters build on (#121 stores it, #123 reads it).
+//
+// schemaVersion 2 (#162) adds what a restart used to lose: the code that ran, the hash of the exact
+// table copy it read, and the local stdout/stderr. Records written before that change have
+// schemaVersion 1 and none of those fields, and `lastRun` returns both shapes.
+//
+// PHI boundary: the text in here is local output and stays on this device, exactly like the output
+// files next to it. It is returned only by `schema-notebook:last-run`, which refuses every non-local
+// caller, and it never joins `forModel`; a later reader (run history) must not forward it either.
+// Long output is capped by the runner with an explicit `[truncated]` marker, never silently.
 export type SchemaNotebookRunRecord = {
-  schemaVersion: 1
+  /** 2 adds `code`, `inputSha256`, `stdout`, `stderr`; 1 is a record from an earlier install. */
+  schemaVersion: 1 | 2
   runId: string
   projectId: string
   tableId: string
@@ -158,6 +167,13 @@ export type SchemaNotebookRunRecord = {
   startedAt: string
   endedAt: string
   exitCode: number | null
+  /** The exact code that ran, so a restored result is attributable to code, not to the current editor. */
+  code?: string
+  /** sha256 (hex) of the `table.csv` copy the script read, so a result can be tied to its input bytes. */
+  inputSha256?: string
+  /** Complete local standard output / error, as shown right after the run. Local only, never sent. */
+  stdout?: string
+  stderr?: string
   outputs: SchemaNotebookRunOutput[]
   interpreter?: SchemaNotebookPythonInterpreter
 }
