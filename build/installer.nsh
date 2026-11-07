@@ -1,4 +1,4 @@
-# The preflight include pulls in the generated path budget, whose defines the installer strings below
+﻿# The preflight include pulls in the generated path budget, whose defines the installer strings below
 # interpolate (BASELIO_PATH_LIMIT, BASELIO_MAX_INSTALL_DIR_LENGTH), so it has to come first.
 !include "${BUILD_RESOURCES_DIR}\installer-preflight.nsh"
 !include "${BUILD_RESOURCES_DIR}\installer-strings.nsh"

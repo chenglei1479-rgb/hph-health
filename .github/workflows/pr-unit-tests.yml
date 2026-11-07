@@ -185,3 +185,66 @@ jobs:
           "$env:RUNNER_TEMP/unit-results-phi.json"
           --require src/main/phi/detect.test.ts
           --require src/main/phi/gate.test.ts
+
+  # #192: `build/` holds the installer and packaging guards - the placeholder-brackets release check, the
+  # NSIS path budget, the three-language installer strings and `packaging.test.ts`, whose `-WX`
+  # preflight-order case is the one written for #205. No pull request ran any of it, which is why #206
+  # could sit in main for two days: the probes were green locally and the packaging job was not part of
+  # the merge decision. A separate job keeps a red result attributable to the packaging input instead of
+  # hiding it among 3000 other assertions.
+  #
+  # Two targets, both deliberate:
+  #   - `build/` WITH the trailing slash. The positional arguments are substring filters, not paths:
+  #     `build` alone also matches `scripts/electron-builder-config.test.ts` (the word "builder"),
+  #     `scripts/build-backend.integration.test.ts` and `scripts/dev-build-watch.integration.test.ts`,
+  #     which need a full build pipeline and a watcher. The slash is load-bearing.
+  #   - `scripts/electron-builder-config.test.ts` as a file, because the electron-builder config guard
+  #     lives outside `build/`. Leaving it out would leave every change to `electron-builder.yml`
+  #     unguarded - the same gap this ticket is about. It is named, not globbed, and the guard below
+  #     fails if it stops running.
+  #
+  # A fresh runner has no electron-builder NSIS cache, and the NSIS cases skip themselves without one.
+  # `scripts/ci/prepare-nsis-toolchain.mjs` downloads the exact toolchain electron-builder compiles with
+  # and fails the job when it cannot, so this job compiles instead of reporting skips. Measured on this
+  # developer machine from an empty cache: download 28.7 s, suite 11.3 s, 6 files / 109 tests / 0 skipped.
+  unit-tests-build:
+    name: Unit tests (build)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: node scripts/ci/npm-ci.mjs --install-links
+      - name: Build workspace packages
+        run: node scripts/build-dev-packages.mjs
+      # Fail closed: without the toolchain the NSIS cases skip, and a skipped release-blocker guard is
+      # how #205 shipped. This step is the reason the suite has no skips here.
+      - name: Prepare the NSIS toolchain the packaging tests compile with
+        run: node scripts/ci/prepare-nsis-toolchain.mjs
+      - name: Run the packaging unit-test set
+        run: >-
+          node node_modules/vitest/vitest.mjs run
+          build/
+          scripts/electron-builder-config.test.ts
+          --reporter=json
+          --outputFile="$env:RUNNER_TEMP/unit-results-build.json"
+          --reporter=default
+          --maxWorkers=2
+      # Sentinels for the two inputs this job exists to protect: the installer script itself and the
+      # electron-builder configuration that decides what gets packaged.
+      - name: Require real test execution
+        run: >-
+          node scripts/ci/require-unit-test-results.mjs
+          "$env:RUNNER_TEMP/unit-results-build.json"
+          --require build/packaging.test.ts
+          --require build/installer-localization.test.ts
+          --require build/assert-placeholder-brackets.test.ts
+          --require scripts/electron-builder-config.test.ts
