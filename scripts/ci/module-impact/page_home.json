@@ -1,5 +1,6 @@
 {
   "ownerPaths": [
+    "src/renderer/src/lib/report-statistician-export-failure.ts",
     "src/renderer/src/pages/home/DeleteDevicePatientData.test.tsx",
     "src/renderer/src/pages/home/DeleteDevicePatientData.tsx",
     "src/renderer/src/pages/home/DeleteProjectDialog.tsx",
@@ -40,7 +41,15 @@
     "src/renderer/src/pages/home/pack-delivery-ledger.ts",
     "src/renderer/src/pages/home/research-follow-up.ts",
     "src/renderer/src/pages/home/research-plan-checklist-draft.ts",
-    "src/renderer/src/pages/home/use-recent-sessions.ts"
+    "src/renderer/src/pages/home/use-recent-sessions.ts",
+    "src/shared/deliverable-next-step.test.ts",
+    "src/shared/deliverable-next-step.ts",
+    "src/shared/s34-disclaimers.test.ts",
+    "src/shared/s34-disclaimers.ts",
+    "src/shared/s34-research-plan-checklist.test.ts",
+    "src/shared/s34-research-plan-checklist.ts",
+    "src/shared/statistician-export-diagnostics.test.ts",
+    "src/shared/statistician-export-diagnostics.ts"
   ],
   "interfacePaths": [
     "src/renderer/src/pages/home/DeleteProjectDialog.tsx",
@@ -68,11 +77,27 @@
       "src/renderer/src/pages/home/home-dialogs.render.test.tsx",
       "src/renderer/src/pages/home/home-primary-entries.test.ts",
       "src/renderer/src/pages/home/home-shell-locale.test.tsx",
-      "src/renderer/src/pages/home/pack-delivery-ledger.test.ts"
+      "src/renderer/src/pages/home/pack-delivery-ledger.test.ts",
+      "src/shared/deliverable-next-step.test.ts",
+      "src/shared/s34-disclaimers.test.ts",
+      "src/shared/s34-research-plan-checklist.test.ts",
+      "src/shared/statistician-export-diagnostics.test.ts"
     ],
     "contract": [],
     "consumer": [
       "scripts/ci/external-destinations.test.ts",
+      "src/main/application-command-client.test.ts",
+      "src/main/application-command-composition.test.ts",
+      "src/main/application-command-electron-adapter.test.ts",
+      "src/main/application-command-wiring.test.ts",
+      "src/main/node-entry.test.ts",
+      "src/main/runtime-electron-wiring.test.ts",
+      "src/main/settings/bootstrap.integration.test.ts",
+      "src/main/statistician-review/confirm-window.export.test.ts",
+      "src/main/statistician-review/export.test.ts",
+      "src/main/web-service/controller.test.ts",
+      "src/main/web-service/http-server.test.ts",
+      "src/main/web-service/task-api.test.ts",
       "src/renderer/src/App.test.tsx",
       "src/renderer/src/components/global-search/GlobalSearchDialog.i18n.render.test.tsx",
       "src/renderer/src/components/global-search/GlobalSearchDialog.test.tsx",
