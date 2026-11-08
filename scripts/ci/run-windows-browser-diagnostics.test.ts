@@ -6,6 +6,12 @@ import { join } from 'node:path'
 import { load } from 'js-yaml'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { runWindowsBrowserDiagnostics } from './run-windows-browser-diagnostics.mjs'
+import {
+  PWSH_EXPECT_ENV,
+  assertPwshExpectation,
+  expectsPwsh,
+  resolvePwshPolicy
+} from './pwsh-policy.mjs'
 
 vi.mock('node:child_process', async (original) => {
   const actual = await original<typeof import('node:child_process')>()
@@ -286,12 +292,23 @@ it('does not restart for stale NetLog evidence', async () => {
 
 // The two real-shell cases below need PowerShell 7 (`pwsh`) on PATH. Both call sites use `-Command`,
 // so the execution policy is not the constraint - Windows PowerShell 5.1 alone cannot run them.
-// A red job nobody can explain gets ignored, so a missing `pwsh` is a named skip instead:
-// scripts/ci/scripts-job-skip-allowances.json carries the reason, and #221 decides whether a 5.1
-// fallback is worth the syntax differences.
+// A red job nobody can explain gets ignored, so a missing `pwsh` is a named skip when it is not
+// declared: scripts/ci/scripts-job-skip-allowances.json carries the reason. When the job declares
+// `${PWSH_EXPECT_ENV}=1` (see scripts/ci/pwsh-expectation.test.ts) the same absence must be red.
 const pwshAvailable =
   process.platform === 'win32' &&
   spawnSync('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', 'exit 0']).status === 0
+const pwshPolicy = resolvePwshPolicy({ pwshAvailable, expectPwsh: expectsPwsh(process.env) })
+
+// Runs unconditionally: when the policy is `fail` this throws instead of skipping, which is the whole
+// point - the number of executed assertions must not silently shrink on a runner that promised pwsh.
+it('has PowerShell 7 whenever the job declares it', () => {
+  assertPwshExpectation(pwshPolicy)
+})
+
+it('reports the policy it resolved', () => {
+  expect(['run', 'skip', 'fail']).toContain(pwshPolicy)
+})
 
 it('names a missing pwsh instead of reporting a bare exit 1', async () => {
   vi.mocked(spawn).mockImplementation(() => {
@@ -310,7 +327,7 @@ it('names a missing pwsh instead of reporting a bare exit 1', async () => {
   )
 })
 
-it.skipIf(!pwshAvailable).each([0, 7])(
+it.skipIf(pwshPolicy !== 'run').each([0, 7])(
   'preserves native exit %i through the real PowerShell shell',
   async (code) => {
     vi.mocked(spawn).mockImplementation(actual.spawn)
