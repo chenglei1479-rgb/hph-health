@@ -1,5 +1,6 @@
 {
   "ownerPaths": [
+    "src/main/pdf-annotations/fixtures/permission-encrypted.pdf",
     "src/renderer/src/pages/workspace/pdf-annotations/PdfAnnotationMarker.tsx",
     "src/renderer/src/pages/workspace/pdf-annotations/PdfAnnotationsProvider.test.tsx",
     "src/renderer/src/pages/workspace/pdf-annotations/PdfAnnotationsProvider.tsx",

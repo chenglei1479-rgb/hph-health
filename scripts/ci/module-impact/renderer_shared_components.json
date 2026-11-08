@@ -3,6 +3,8 @@
     "src/renderer/src/components/ActionToast.test.tsx",
     "src/renderer/src/components/ActionToast.tsx",
     "src/renderer/src/components/AppLogo.tsx",
+    "src/renderer/src/components/baselio-logo-motion.css",
+    "src/renderer/src/components/baselio-splash.css",
     "src/renderer/src/components/CloseConfirmModal.render.test.tsx",
     "src/renderer/src/components/CloseConfirmModal.tsx",
     "src/renderer/src/components/CompletedJobCard.tsx",

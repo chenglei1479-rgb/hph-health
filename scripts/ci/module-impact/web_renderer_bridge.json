@@ -6,6 +6,10 @@
     "src/renderer/web/bootstrap.test.ts",
     "src/renderer/web/bootstrap.ts",
     "src/renderer/web/index.html",
+    "src/renderer/web/public/dra-icon-180-v0.1.12.png",
+    "src/renderer/web/public/dra-icon-192-v0.1.12.png",
+    "src/renderer/web/public/dra-icon-512-v0.1.12.png",
+    "src/renderer/web/public/manifest.webmanifest",
     "src/renderer/web/raw-imports.d.ts",
     "src/renderer/web/renderer-argument-shape-characterization.test.ts"
   ],

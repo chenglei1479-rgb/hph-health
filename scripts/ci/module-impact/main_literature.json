@@ -17,6 +17,7 @@
     "src/main/literature/document-reader.test.ts",
     "src/main/literature/document-reader.ts",
     "src/main/literature/export-roundtrip.test.ts",
+    "src/main/literature/fixtures/conference-paper.ris",
     "src/main/literature/full-text-finder.test.ts",
     "src/main/literature/full-text-index.test.ts",
     "src/main/literature/full-text-index.ts",
