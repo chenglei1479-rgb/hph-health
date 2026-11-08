@@ -2,6 +2,8 @@
   "ownerPaths": [
     "src/main/update/create-strategy.test.ts",
     "src/main/update/create-strategy.ts",
+    "src/main/update/deployment-config.ts",
+    "src/main/update/disabled-strategy.ts",
     "src/main/update/downloader.test.ts",
     "src/main/update/downloader.ts",
     "src/main/update/electron-updater-provider-regressions.test.ts",
@@ -41,6 +43,7 @@
     "src/main/update/installation-protection.ts",
     "src/main/update/installation-reboot-recovery.test.ts",
     "src/main/update/installation-reboot-recovery.ts",
+    "src/main/update/upstream-test-build.test.ts",
     "src/main/update/verification-process.test.ts",
     "src/main/update/verification-process.ts",
     "src/main/update/installation-occupancy.test.ts",
@@ -88,6 +91,7 @@
       "src/main/update/installation-formats.test.ts",
       "src/main/update/installation-protection.test.ts",
       "src/main/update/installation-reboot-recovery.test.ts",
+      "src/main/update/upstream-test-build.test.ts",
       "src/main/update/verification-process.test.ts",
       "src/main/update/installation-occupancy.test.ts",
       "src/main/update/installation-preparation.test.ts"

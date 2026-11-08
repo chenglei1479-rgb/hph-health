@@ -9,6 +9,7 @@
     "src/renderer/src/assets/fonts/quicksand-latin-600.woff2",
     "src/renderer/src/assets/diff-colors.test.ts",
     "src/renderer/src/assets/electron.svg",
+    "src/renderer/src/assets/home-theme.test.ts",
     "src/renderer/src/assets/installation-assistant.css",
     "src/renderer/src/assets/logo-dark.png",
     "src/renderer/src/assets/logo.png",
@@ -42,6 +43,7 @@
   "testFiles": {
     "owner": [
       "src/renderer/src/assets/diff-colors.test.ts",
+      "src/renderer/src/assets/home-theme.test.ts",
       "src/renderer/src/assets/pdf-text-layer.test.ts",
       "src/renderer/src/assets/provider-icons.packaging.test.ts"
     ],

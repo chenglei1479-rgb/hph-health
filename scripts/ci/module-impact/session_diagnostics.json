@@ -1,6 +1,8 @@
 {
   "ownerPaths": [
     "src/main/session-diagnostics/export-evidence.integration.test.ts",
+    "src/main/session-diagnostics/patient-row-gate-redaction.test.ts",
+    "src/main/session-diagnostics/patient-row-gate-redaction.ts",
     "src/main/session-diagnostics/schema-compatibility.integration.test.ts",
     "src/main/session-diagnostics/collector.test.ts",
     "src/main/session-diagnostics/collector.ts",
@@ -38,6 +40,7 @@
   "testFiles": {
     "owner": [
       "src/main/session-diagnostics/export-evidence.integration.test.ts",
+      "src/main/session-diagnostics/patient-row-gate-redaction.test.ts",
       "src/renderer/src/pages/workspace/SessionDiagnosticsDialog.interaction.test.tsx",
       "src/main/session-diagnostics/schema-compatibility.integration.test.ts",
       "src/shared/session-diagnostics-contracts.test.ts",

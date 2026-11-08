@@ -1,10 +1,17 @@
 {
   "ownerPaths": [
+    "src/renderer/src/pages/onboarding/AgentBootstrapStep.render.test.tsx",
+    "src/renderer/src/pages/onboarding/AgentBootstrapStep.tsx",
     "src/renderer/src/pages/onboarding/AgentStep.render.test.tsx",
     "src/renderer/src/pages/onboarding/AgentStep.tsx",
+    "src/renderer/src/pages/onboarding/BetaTerms.render.test.tsx",
+    "src/renderer/src/pages/onboarding/BetaTerms.tsx",
+    "src/renderer/src/pages/onboarding/BetaTermsGate.tsx",
     "src/renderer/src/pages/onboarding/EnvironmentSetupCard.tsx",
     "src/renderer/src/pages/onboarding/EnvironmentStep.render.test.tsx",
     "src/renderer/src/pages/onboarding/EnvironmentStep.tsx",
+    "src/renderer/src/pages/onboarding/JapanResearchGuide.tsx",
+    "src/renderer/src/pages/onboarding/LocationStep.location-risk.render.test.tsx",
     "src/renderer/src/pages/onboarding/LocationStep.render.test.tsx",
     "src/renderer/src/pages/onboarding/LocationStep.tsx",
     "src/renderer/src/pages/onboarding/NotebookStep.render.test.tsx",
@@ -28,8 +35,11 @@
   "consumerModules": [],
   "testFiles": {
     "owner": [
+      "src/renderer/src/pages/onboarding/AgentBootstrapStep.render.test.tsx",
       "src/renderer/src/pages/onboarding/AgentStep.render.test.tsx",
+      "src/renderer/src/pages/onboarding/BetaTerms.render.test.tsx",
       "src/renderer/src/pages/onboarding/EnvironmentStep.render.test.tsx",
+      "src/renderer/src/pages/onboarding/LocationStep.location-risk.render.test.tsx",
       "src/renderer/src/pages/onboarding/LocationStep.render.test.tsx",
       "src/renderer/src/pages/onboarding/NotebookStep.render.test.tsx",
       "src/renderer/src/pages/onboarding/OnboardingWizard.regressions.test.tsx",
