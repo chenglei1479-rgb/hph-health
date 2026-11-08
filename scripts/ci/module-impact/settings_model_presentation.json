@@ -1,5 +1,6 @@
 {
   "ownerPaths": [
+    "src/renderer/src/components/PrereleaseDataDestinationNotice.tsx",
     "src/renderer/src/pages/settings/ActiveModelSelect.render.test.tsx",
     "src/renderer/src/pages/settings/ActiveModelSelect.tsx",
     "src/renderer/src/pages/settings/AgentFrameworkCard.preview.tsx",
