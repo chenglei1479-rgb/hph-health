@@ -46,6 +46,7 @@
     "src/renderer/src/pages/workspace/WorkspaceMessageScroller.tsx",
     "src/renderer/src/pages/workspace/WorkspaceSubagentMessageRow.test.tsx",
     "src/renderer/src/pages/workspace/WorkspaceSubagentMessageRow.tsx",
+    "src/renderer/src/pages/workspace/artifact-download-name.ts",
     "src/renderer/src/pages/workspace/message-draft-keyboard.test.ts",
     "src/renderer/src/pages/workspace/message-draft-keyboard.ts",
     "src/renderer/src/pages/workspace/session-message-artifact-reference.test.ts",
