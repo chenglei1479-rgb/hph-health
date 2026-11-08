@@ -1,5 +1,8 @@
 {
   "ownerPaths": [
+    "src/renderer/src/components/NoProviderNotice.tsx",
+    "src/renderer/src/lib/protected-execution-error.test.ts",
+    "src/renderer/src/lib/protected-execution-error.ts",
     "src/shared/scientific-status.ts",
     "src/shared/scientific-status.test.ts",
     "src/renderer/src/pages/workspace/ScientificStatusPanel.tsx",
@@ -57,6 +60,7 @@
   "consumerModules": [],
   "testFiles": {
     "owner": [
+      "src/renderer/src/lib/protected-execution-error.test.ts",
       "src/shared/scientific-status.test.ts",
       "src/renderer/src/pages/workspace/ScientificStatusPanel.test.tsx",
       "src/renderer/src/pages/workspace/WorkspacePage.draft-preservation.test.tsx",
@@ -93,6 +97,8 @@
     "consumer": [
       "src/renderer/src/App.test.tsx",
       "src/renderer/src/components/LifecycleToast.test.tsx",
+      "src/renderer/src/components/NoProviderNotice.render.test.tsx",
+      "src/renderer/src/components/PrereleaseDataDestinationNotice.test.tsx",
       "src/renderer/src/components/WebEventRecoveryDialog.test.tsx",
       "src/renderer/src/components/components-i18n.render.test.tsx",
       "src/renderer/src/components/global-search/GlobalSearchDialog.i18n.render.test.tsx",

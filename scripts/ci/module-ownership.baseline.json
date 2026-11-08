@@ -1,6 +1,6 @@
 {
   "$comment": "Acknowledged ownership debt: the invariant is \"every tracked file is owned by some module\", pinned at\n363 files. #218 O1 paid down 12 of them, assigned to the module that reads or publishes each file;\n#218 O2 paid down 59 more, assigned to the module that owns the surface each file sits in.\n292 remain.\n\n69 of the original set stay here on purpose. They sit in a directory where the only module holding a\nfile is a composition root whose single file is an application-commands.ts registration\n(notebook/schema-only, variable-definition, statistician-review, writing-safeguards), or they are a\ncross-cutting guard test (shared/i18n/no-visible-dev-code.test.ts). Naming them after that root would\nclaim ownership without owning the surface, so they wait for the feature-surface ownership ticket.\n\naudit-module-ownership requires every tracked file to be named by a module as owner, interface or\nevidence. These have never been named. Assigning them is a design question, not a cleanup, so the\ncurrent set is pinned here and the audit fails only on files that are NOT in it.\n\nDistribution of the original 363: 183 src/main, 103 src/renderer, 71 src/shared, 5 packages/connector-builtins, 1 packages/pdf-structure.\nsrc/shared and src/renderer are half of it, which is not someone forgetting an entry: those two\nsurfaces never had an ownership rule. #218 should define that rule before assigning files one by one.\n\nOne-time snapshot. Entries may only be DELETED by hand as the debt is paid; the audit prints how many\nwere paid. Do not regenerate this file - a regenerated baseline silently accepts new debt, which is\nexactly what the audit exists to prevent.",
-  "count": 289,
+  "count": 286,
   "missing": [
     "src/main/account/config.ts",
     "src/main/account/deployment-config.test.ts",
@@ -174,7 +174,6 @@
     "src/renderer/src/components/MembershipPanel.test.tsx",
     "src/renderer/src/components/MembershipPanel.tsx",
     "src/renderer/src/components/NoProviderNotice.render.test.tsx",
-    "src/renderer/src/components/NoProviderNotice.tsx",
     "src/renderer/src/components/PackageFileSelection.test.tsx",
     "src/renderer/src/components/PrereleaseDataDestinationNotice.test.tsx",
     "src/renderer/src/components/PrereleaseDataDestinationNotice.tsx",
@@ -183,8 +182,6 @@
     "src/renderer/src/i18n/schema-notebook-strong-copy.test.ts",
     "src/renderer/src/lib/prerelease-lockdown.ts",
     "src/renderer/src/lib/prerelease-model-call-notice.ts",
-    "src/renderer/src/lib/protected-execution-error.test.ts",
-    "src/renderer/src/lib/protected-execution-error.ts",
     "src/renderer/src/lib/report-statistician-export-failure.ts",
     "src/renderer/src/lib/research-package-inclusion.test.ts",
     "src/renderer/src/lib/research-package-inclusion.ts",
