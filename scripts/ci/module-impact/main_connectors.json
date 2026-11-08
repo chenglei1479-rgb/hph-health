@@ -33,7 +33,9 @@
     "src/main/composition/connector-application.test.ts",
     "src/main/connectors/catalog.ts",
     "src/main/connector-reload.test.ts",
-    "src/main/connector-reload.ts"
+    "src/main/connector-reload.ts",
+    "src/shared/outbound-endpoints.test.ts",
+    "src/shared/outbound-endpoints.ts"
   ],
   "interfacePaths": [
     "src/main/composition/connector-application.ts",
@@ -124,7 +126,8 @@
       "src/main/connectors/mcp-host-dependencies.test.ts",
       "src/main/connectors/molecule-artifact-adapter.test.ts",
       "src/main/composition/connector-application.test.ts",
-      "src/main/connector-reload.test.ts"
+      "src/main/connector-reload.test.ts",
+      "src/shared/outbound-endpoints.test.ts"
     ],
     "contract": [
       "src/preload/index.test.ts",
