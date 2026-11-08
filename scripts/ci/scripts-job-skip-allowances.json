@@ -128,11 +128,11 @@
     },
     {
       "pattern": "scripts/ci/run-windows-browser-diagnostics.test.ts > preserves native exit 0 through the real PowerShell shell",
-      "reason": "requires PowerShell 7 (pwsh) on PATH; both call sites use -Command so execution policy is not the constraint - see #221"
+      "reason": "requires PowerShell 7 (pwsh) on PATH; both call sites use -Command so execution policy is not the constraint - see #221 Intentionally unused on CI because the job declares pwsh; needed for local runs without PowerShell 7 - do not delete."
     },
     {
       "pattern": "scripts/ci/run-windows-browser-diagnostics.test.ts > preserves native exit 7 through the real PowerShell shell",
-      "reason": "requires PowerShell 7 (pwsh) on PATH; both call sites use -Command so execution policy is not the constraint - see #221"
+      "reason": "requires PowerShell 7 (pwsh) on PATH; both call sites use -Command so execution policy is not the constraint - see #221 Intentionally unused on CI because the job declares pwsh; needed for local runs without PowerShell 7 - do not delete."
     }
   ]
 }

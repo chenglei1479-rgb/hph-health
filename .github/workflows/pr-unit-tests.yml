@@ -301,6 +301,10 @@ jobs:
     name: Unit tests (scripts)
     runs-on: windows-latest
     timeout-minutes: 20
+    # #221: this job's contract includes PowerShell 7. Without the declaration a missing pwsh would be
+    # a named skip and the two real-shell cases would silently stop running; with it, that is red.
+    env:
+      OPEN_SCIENCE_EXPECT_PWSH: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
