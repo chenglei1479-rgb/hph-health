@@ -72,4 +72,12 @@ describe('the scripts job declares PowerShell 7 and the suite reads it', () => {
     expect(diagnostics).toContain('expectsPwsh(process.env)')
     expect(diagnostics).not.toContain("process.env.OPEN_SCIENCE_EXPECT_PWSH")
   })
+
+  it('keeps the unconditional assertion that turns a declared-but-missing pwsh red', () => {
+    // Deleting this case or conditioning it restores exactly the failure mode #221 removes: the two
+    // real-shell cases skip on a pwsh-less runner, nothing throws, and the job reports green.
+    expect(diagnostics).toMatch(
+      /it\('has PowerShell 7 whenever the job declares it',\s*\(\)\s*=>\s*\{\s*assertPwshExpectation\(pwshPolicy\)/
+    )
+  })
 })

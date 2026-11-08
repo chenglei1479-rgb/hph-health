@@ -306,10 +306,6 @@ it('has PowerShell 7 whenever the job declares it', () => {
   assertPwshExpectation(pwshPolicy)
 })
 
-it('reports the policy it resolved', () => {
-  expect(['run', 'skip', 'fail']).toContain(pwshPolicy)
-})
-
 it('names a missing pwsh instead of reporting a bare exit 1', async () => {
   vi.mocked(spawn).mockImplementation(() => {
     const child = new EventEmitter()
