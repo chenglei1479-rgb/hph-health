@@ -1,6 +1,9 @@
 {
   "ownerPaths": [
     "src/renderer/src/assets/agent-markdown.css",
+    "src/renderer/src/assets/baselio-horizontal-black.svg",
+    "src/renderer/src/assets/baselio-horizontal-white.svg",
+    "src/renderer/src/assets/baselio-horizontal.svg",
     "src/renderer/src/assets/baselio-mark.svg",
     "src/renderer/src/assets/fonts/Quicksand-OFL.txt",
     "src/renderer/src/assets/fonts/quicksand-latin-600.woff2",
@@ -10,6 +13,7 @@
     "src/renderer/src/assets/logo-dark.png",
     "src/renderer/src/assets/logo.png",
     "src/renderer/src/assets/main.css",
+    "src/renderer/src/assets/medical-research-mark.svg",
     "src/renderer/src/assets/pdf-text-layer.test.ts",
     "src/renderer/src/assets/provider-icons/anthropic.svg",
     "src/renderer/src/assets/provider-icons/apodex.svg",
