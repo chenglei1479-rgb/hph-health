@@ -129,6 +129,8 @@ export const PHI_REVIEW_INVALIDATED_MESSAGE =
 export const PHI_TURN_REPLACED_MESSAGE = 'This turn was replaced by a newer turn. Nothing was sent.'
 export const PHI_INTERNAL_MESSAGE =
   'The request could not be prepared for sending. Nothing was sent.'
+export const PHI_REVIEW_UNAVAILABLE_MESSAGE =
+  'The privacy review is unavailable in this installation. Nothing was sent.'
 export const UNSCANNABLE_MODEL_CONTENT_MESSAGE =
   'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
 export const UNGUARDED_AGENT_MESSAGE =
@@ -175,12 +177,12 @@ export function phiTurnReplacedError(): PhiGateError {
   return new PhiGateError(blockTranslator(PHI_TURN_REPLACED_MESSAGE), [], PHI_TURN_REPLACED_CODE)
 }
 
-// The bridge exists but cannot ask a human. Classified as C1 on purpose: retrying is harmless and a
-// later install of the review surface fixes it. The wiring gap is made audible in the log instead of
-// being encoded as a permanent failure at the client.
+// The bridge exists but cannot ask a human. Classified as E (409), not C1: installPhiConfirmer only
+// runs during composition, so this process cannot recover - 503 would claim "later will be better" and
+// be lying. The wiring gap is still made audible in the log (`reason=bridge-has-no-review-surface`).
 export function phiReviewUnavailableError(): PhiGateError {
   return new PhiGateError(
-    blockTranslator(MODEL_RELEASE_RETRY_MESSAGE),
+    blockTranslator(PHI_REVIEW_UNAVAILABLE_MESSAGE),
     [],
     PHI_REVIEW_UNAVAILABLE_CODE
   )
@@ -200,7 +202,7 @@ function escalateReleaseFailure(error: unknown): never {
   if (error instanceof PhiPolicyError) {
     // A typed error from the store keeps its class: an unavailable engine stays retryable, and only
     // an invariant failure becomes E. Nothing but the stable code is logged.
-    if (error.code === PHI_UNAVAILABLE_CODE || error.code === PHI_REVIEW_UNAVAILABLE_CODE) {
+    if (error.code === PHI_UNAVAILABLE_CODE) {
       phiBlockLog.warn('phi release unavailable', { code: error.code, reason: 'gate-unavailable' })
       throw modelReleaseError()
     }

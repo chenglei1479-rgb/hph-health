@@ -10,16 +10,13 @@ import {
 import { createLogger, errorLogFields, type Logger } from '@aipoch/diagnostics/node'
 
 import {
-  PHI_BLOCK_CODE,
-  PHI_CONSENT_CODE,
+  PHI_CLIENT_REFUSAL_CODES,
   PHI_INTERNAL_CODE,
-  PHI_REVIEW_UNAVAILABLE_CODE,
-  PHI_TURN_REPLACED_CODE,
   PHI_UNAVAILABLE_CODE,
-  PHI_UNSCANNABLE_CODE,
-  PhiPolicyError
+  PHI_UNRETRYABLE_INTERNAL_CODES,
+  PhiPolicyError,
+  type PhiFailureCode
 } from '../../shared/phi-block'
-import { PhiGateError } from '../phi/gate'
 
 // A turn may contain up to 24 MiB of base64 image data before frameworks add text, replayed history,
 // and tool declarations. Keep every authenticated Provider bridge on one memory-bounded envelope.
@@ -70,35 +67,32 @@ class ProviderLoopbackRequestError extends Error {
 //   PHI-CONSENT-01              D      400     no      a human review step ended or was refused
 //   PHI-TURN-REPLACED-01        D      400     no      the turn this request belonged to is stale
 //   PHI-UNAVAILABLE-01          C1     503     yes     the policy engine could not finish
-//   PHI-REVIEW-UNAVAILABLE-01   C1     503     yes     no review surface is wired up in this runtime
-//   PHI-INTERNAL-01             E      500     no      an invariant inside the gate broke
+//   PHI-INTERNAL-01             E      409     no      an invariant inside the gate broke
+//   PHI-REVIEW-UNAVAILABLE-01   E      409     no      no review surface is wired up in this runtime
 //   (anything else)             ?      500     no      unmapped: reported with its own code, never 400
 //
 // Why not 4xx for everything: a 4xx tells the client "never retry", and an unclassified failure may be
-// temporary - that would make a recoverable failure permanent. Why not 503 for everything unknown: 503
-// asserts "later will be better", which is a judgement we do not have for an unknown error. 5xx retries
-// cost time and log lines, never confidentiality: fail-closed already guarantees the request is not sent.
+// temporary - that would make a recoverable failure permanent. Why 503 only for C1 and never for an
+// unknown or internal failure: 503 asserts "later will be better", a judgement we do not have there (and
+// for E it would be false - a broken invariant or an unwired review surface cannot fix itself mid-process,
+// while retrying after a review can reopen the consent window). Unknown codes stay 500 and name
+// themselves. Retries cost time and log lines, never confidentiality: fail-closed already guarantees the
+// request is not sent.
 export type PhiErrorStatus = { status: number; code?: string }
 
 const classify = (code: string): PhiErrorStatus => {
-  switch (code) {
-    case PHI_BLOCK_CODE:
-    case PHI_UNSCANNABLE_CODE:
-    case PHI_CONSENT_CODE:
-    case PHI_TURN_REPLACED_CODE:
-      return { status: 400, code }
-    case PHI_UNAVAILABLE_CODE:
-    case PHI_REVIEW_UNAVAILABLE_CODE:
-      return { status: 503, code }
-    default:
-      // An unmapped code must name itself, otherwise the table can never learn what it is missing.
-      defaultDiagnostics.warn('unmapped phi failure code', { code })
-      return { status: 500, code }
-  }
+  // The lists live next to the codes, so this function cannot drift into a second statement of which
+  // refusals are client errors. An unmapped code must name itself: that string is the only signal that
+  // can grow the table.
+  if (PHI_CLIENT_REFUSAL_CODES.includes(code as PhiFailureCode)) return { status: 400, code }
+  if (PHI_UNRETRYABLE_INTERNAL_CODES.includes(code as PhiFailureCode)) return { status: 409, code }
+  if (code === PHI_UNAVAILABLE_CODE) return { status: 503, code }
+  defaultDiagnostics.warn('unmapped phi failure code', { code })
+  return { status: 500, code }
 }
 
 export function statusForPhiError(error: unknown): PhiErrorStatus {
-  if (error instanceof PhiGateError) return classify(error.code)
+  // PhiGateError extends PhiPolicyError and carries the same code, so one branch covers both.
   if (error instanceof PhiPolicyError) return classify(error.code ?? PHI_INTERNAL_CODE)
   if (error instanceof ProviderLoopbackRequestError) return { status: 400 }
   return { status: 502 }

@@ -473,6 +473,8 @@
       "src/main/notebook-payload.integration.test.ts",
       "src/main/web-service/session-payload.integration.test.ts",
       "src/main/desktop-update-integration.test.ts"
+    ,
+      "src/main/settings/phi-failure-classes.test.ts"
     ]
   },
   "capabilityOverlays": ["i18n_catalog"],

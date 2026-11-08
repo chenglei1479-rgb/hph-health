@@ -195,7 +195,7 @@ describe('refusal classes reach the transport as the retry advice they mean', ()
     }
   })
 
-  it('E: a broken gate contract is 500 with a stable id, and never claims the content was checked', async () => {
+  it('E: a broken gate contract is 409, once, and never claims the content was checked', async () => {
     installPhiGate({
       release: () => ({ text: 42 as unknown as string, replacements: [], warnings: [] }),
       restore: (value: string) => value
@@ -208,7 +208,10 @@ describe('refusal classes reach the transport as the retry advice they mean', ()
         model: 'gpt-5',
         input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'hello' }] }]
       })
-      expect(result.status).toBe(500)
+      expect(result.status).toBe(409)
+      // 409 is outside the client's retry set: retrying would replay the gate, and after a review that
+      // can reopen the window the user already left.
+      expect(result.attempts).toBe(1)
       expect(result.body.error?.code).toBe(PHI_INTERNAL_CODE)
       expect(result.body.error?.message).not.toMatch(/vault|\\|[A-Z]:\\/i)
       expect(upstream).not.toHaveBeenCalled()
@@ -236,13 +239,37 @@ describe('refusal classes reach the transport as the retry advice they mean', ()
 // #159 behaviour for its wire.
 describe('every bridge reads the one mapping', () => {
   const directory = join(process.cwd(), 'src/main/settings')
-  const bridges = readdirSync(directory).filter(
-    (name) => /provider-bridge\.ts$|compatibility\.ts$/.test(name) && !name.includes('.test.')
+  const sources = readdirSync(directory).filter(
+    (name) => name.endsWith('.ts') && !name.includes('.test.')
   )
+  // Behaviour, not filenames (#212): a bridge is anything that imports or constructs the loopback host.
+  // The filename pattern this guard started with would have missed responses-bridge.ts, which had its
+  // own mapping; a future `foo-gateway.ts` is exactly the same shape of miss.
+  const bridges = sources.filter((name) => {
+    if (name === 'provider-loopback-http-host.ts') return false
+    const text = readFileSync(join(directory, name), 'utf8')
+    return (
+      text.includes("from './provider-loopback-http-host'") ||
+      text.includes('ProviderLoopbackHttpHost')
+    )
+  })
+
+  it('finds the bridges by behaviour, including the one the filename pattern missed', () => {
+    expect(bridges).toContain('responses-bridge.ts')
+    for (const name of [
+      'anthropic-provider-bridge.ts',
+      'chat-provider-compatibility.ts',
+      'native-responses-compatibility.ts',
+      'openai-provider-bridge.ts',
+      'xai-oauth-provider-bridge.ts'
+    ])
+      expect(bridges, name).toContain(name)
+  })
 
   it('has no bridge left with its own status ternary', () => {
+    // Normalise whitespace so a ternary split across lines is found too.
     const leftovers = bridges.filter((name) =>
-      readFileSync(join(directory, name), 'utf8').includes('? 400 : 502')
+      readFileSync(join(directory, name), 'utf8').replace(/\s+/g, '').includes('?400:502')
     )
     expect(leftovers).toEqual([])
   })
@@ -254,18 +281,6 @@ describe('every bridge reads the one mapping', () => {
     })
     expect(missing).toEqual([])
   })
-
-  it('knows the five call sites this ticket migrated', () => {
-    expect(bridges.sort()).toEqual(
-      [
-        'anthropic-provider-bridge.ts',
-        'chat-provider-compatibility.ts',
-        'native-responses-compatibility.ts',
-        'openai-provider-bridge.ts',
-        'xai-oauth-provider-bridge.ts'
-      ].sort()
-    )
-  })
 })
 
 // The codes themselves are part of the contract: the transport table must not silently drop one.
@@ -276,8 +291,8 @@ describe('refusal codes keep their retry semantics', () => {
     [PHI_CONSENT_CODE, 400],
     [PHI_TURN_REPLACED_CODE, 400],
     [PHI_UNAVAILABLE_CODE, 503],
-    [PHI_REVIEW_UNAVAILABLE_CODE, 503],
-    [PHI_INTERNAL_CODE, 500]
+    [PHI_REVIEW_UNAVAILABLE_CODE, 409],
+    [PHI_INTERNAL_CODE, 409]
   ])('%s maps to %i', (code, status) => {
     expect(statusForPhiError(new PhiGateError('refused', [], code))).toEqual({ status, code })
   })

@@ -16,13 +16,20 @@ export const PHI_REVIEW_EXCLUDED_CODE = 'PHI-REVIEW-SKIP-01'
 //   B  this request can never be checked as text          -> 400, never retried
 //   C1 the policy engine is temporarily unavailable       -> 503, retry may succeed
 //   D  a human consent step is missing, stale or refused  -> 400, the machine must not decide it
-//   E  an internal invariant of the gate broke            -> 500, retrying proves nothing
+//   E  an internal invariant of the gate broke            -> 409, retrying cannot change it
+//
+// E is 409, not 500, for a concrete reason: the client retries 5xx, and an E raised after a review (the
+// date-shift collision in store.ts) would replay the whole gate and can reopen the consent window that
+// D exists to stop reopening. 409 says "this request conflicts with the state we are in", sits outside
+// the client's retry set, and makes no claim that the content was patient information.
 export const PHI_UNSCANNABLE_CODE = 'PHI-UNSCANNABLE-01'
 export const PHI_UNAVAILABLE_CODE = 'PHI-UNAVAILABLE-01'
 export const PHI_CONSENT_CODE = 'PHI-CONSENT-01'
-// C1 with its own id: the privacy check needs a human review surface that this build/runtime has not
-// wired up. Retrying is harmless and may recover once the bridge is installed, but the wiring gap must
-// be countable in the log (`reason=bridge-has-no-review-surface`), not only felt as retries.
+// E with its own id: the privacy check needs a human review surface that this build/runtime has not
+// wired up. `installPhiConfirmer` only runs during composition, so the same process cannot recover from
+// this - 503 would claim "later will be better" and be lying, the same judgement we refuse for an
+// unmapped code. The wiring gap is made countable in the log instead
+// (`reason=bridge-has-no-review-surface`).
 export const PHI_REVIEW_UNAVAILABLE_CODE = 'PHI-REVIEW-UNAVAILABLE-01'
 // A superseded turn is consent-shaped (a human decision already moved on) but must not reuse the
 // privacy-review wording: nothing was wrong with the content, the turn itself is stale.
@@ -56,10 +63,15 @@ export class PhiPolicyError extends Error {
   }
 }
 
-// The subset the client must not retry. Kept here so the transport and the gate agree on one list.
+// The transport derives its statuses from these two lists, so it cannot restate them. Both are outside
+// the client's retry set; they differ in what they say about the request.
 export const PHI_CLIENT_REFUSAL_CODES: readonly PhiFailureCode[] = [
   PHI_BLOCK_CODE,
   PHI_UNSCANNABLE_CODE,
   PHI_CONSENT_CODE,
   PHI_TURN_REPLACED_CODE
+]
+export const PHI_UNRETRYABLE_INTERNAL_CODES: readonly PhiFailureCode[] = [
+  PHI_INTERNAL_CODE,
+  PHI_REVIEW_UNAVAILABLE_CODE
 ]
