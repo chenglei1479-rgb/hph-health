@@ -1,6 +1,6 @@
 {
   "$comment": "Acknowledged ownership debt: the invariant is \"every tracked file is owned by some module\", pinned at\n363 files. #218 O1 paid down 12 of them, each assigned to the module that reads or publishes it;\nthe remaining 351 are still unassigned, and #218 owns them.\n\naudit-module-ownership requires every tracked file to be named by a module as owner, interface or\nevidence. These have never been named. Assigning them is a design question, not a cleanup, so the\ncurrent set is pinned here and the audit fails only on files that are NOT in it.\n\nDistribution: 183 src/main, 103 src/renderer, 71 src/shared, 5 packages/connector-builtins, 1 packages/pdf-structure.\nsrc/shared and src/renderer are half of it, which is not someone forgetting an entry: those two\nsurfaces never had an ownership rule. #218 should define that rule before assigning files one by one.\n\nOne-time snapshot. Entries may only be DELETED by hand as the debt is paid; the audit prints how many\nwere paid. Do not regenerate this file - a regenerated baseline silently accepts new debt, which is\nexactly what the audit exists to prevent.",
-  "count": 298,
+  "count": 295,
   "missing": [
     "packages/pdf-structure/test/engine-startup.test.ts",
     "src/main/account/config.ts",
@@ -42,9 +42,6 @@
     "src/main/ethics-protocol/export-phi-gate.test.ts",
     "src/main/ethics-protocol/export-phi-gate.ts",
     "src/main/host-location-risk-command.test.ts",
-    "src/main/literature/pdf-structure/engine-native-startup.test.ts",
-    "src/main/literature/pdf-structure/engine-startup.test.ts",
-    "src/main/literature/ris-roundtrip.test.ts",
     "src/main/marketplace/official-sources.ts",
     "src/main/notebook/membership-admission.test.ts",
     "src/main/notebook/python-command.test.ts",
