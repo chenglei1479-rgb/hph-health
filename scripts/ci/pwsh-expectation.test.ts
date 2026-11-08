@@ -13,8 +13,9 @@ import {
 } from './pwsh-policy.mjs'
 
 // #221: "pwsh is missing" may be a skip on a developer machine, but a job that declares PowerShell 7
-// must not tolerate it. The decision is a pure function, so the branch that matters can be asserted
-// here even though this machine does have pwsh - no PATH surgery, no second machine.
+// must not tolerate it. This machine has no `pwsh`, so `run` and `skip` can only be asserted through
+// the pure function; `fail` is not hypothetical here - with OPEN_SCIENCE_EXPECT_PWSH=1 the
+// unconditional assertion in the diagnostics suite goes red with CI-PWSH-MISSING-01.
 describe('resolvePwshPolicy', () => {
   it.each([
     [{ pwshAvailable: true, expectPwsh: true }, 'run'],
