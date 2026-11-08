@@ -228,7 +228,9 @@
     "src/main/notebook/trust-bundle.ts",
     "src/main/notebook/working-file-observer.ts"
   ],
-  "consumerModules": [],
+  "consumerModules": [
+    "workspace_page"
+  ],
   "testFiles": {
     "owner": [
       "src/main/notebook/windows-runtime-components.test.ts",

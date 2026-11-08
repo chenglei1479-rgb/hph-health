@@ -56,7 +56,9 @@
     "src/renderer/src/pages/home/HomePage.tsx",
     "src/renderer/src/pages/home/ProjectFormDialog.tsx"
   ],
-  "consumerModules": [],
+  "consumerModules": [
+    "settings_application_presentation"
+  ],
   "testFiles": {
     "owner": [
       "src/renderer/src/pages/home/DeleteDevicePatientData.test.tsx",
