@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 
@@ -45,14 +46,42 @@ const ALLOWED_UPSTREAM_FILES = {
 const ALLOWED = new Set(Object.keys(ALLOWED_UPSTREAM_FILES))
 const EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs', '.json', '.yml', '.yaml'])
 
-const productionFiles = (directory = root): string[] => {
+// Paths git ignores cannot reach a release, so scanning them only manufactures false positives: a
+// local `.worktree/` copy (180 MB) made this guard fail on a developer machine while CI - which has no
+// such directory - stayed green. Skipping exactly what git ignores keeps the two runs equivalent
+// without an ignore list of our own that would rot.
+const gitIgnoredPaths = (): Set<string> => {
+  try {
+    return new Set(
+      execFileSync(
+        'git',
+        ['ls-files', '--others', '--ignored', '--exclude-standard', '--directory', '-z'],
+        { encoding: 'utf8', cwd: root }
+      )
+        .split('\0')
+        .filter(Boolean)
+        .map((path) => path.replace(/\/$/u, ''))
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+const IGNORED_PATHS = gitIgnoredPaths()
+
+const productionFiles = (directory = root, skipIgnored = directory === root): string[] => {
   const found: string[] = []
   for (const entry of readdirSync(directory)) {
     if (['.git', 'node_modules', 'out', 'dist'].includes(entry)) continue
     const absolute = join(directory, entry)
+    if (
+      skipIgnored &&
+      IGNORED_PATHS.has(relative(root, absolute).replaceAll('\\', '/'))
+    )
+      continue
     const info = statSync(absolute)
     if (info.isDirectory()) {
-      found.push(...productionFiles(absolute))
+      found.push(...productionFiles(absolute, skipIgnored))
       continue
     }
     if (!EXTENSIONS.has(entry.slice(entry.lastIndexOf('.')))) {

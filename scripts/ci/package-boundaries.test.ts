@@ -500,7 +500,9 @@ it('selects durable file consumers downstream without testing unchanged prerequi
   // The executor forwards the exact filters to Vitest; upstream builds are a separate step.
   const invocations: string[][] = []
   executeModuleTestPlan(durable, {
-    environment: {},
+    // The executor refuses to run on win32 without npm_execpath; the spawn is stubbed, so the value
+    // only has to exist. Production gets it from `npm run test:module` / `npm run test:affected`.
+    environment: { npm_execpath: 'npm-cli.js' },
     spawn: (_command: string, args: string[]) => {
       invocations.push(args)
       return { status: 0 }
@@ -567,7 +569,8 @@ it('routes download package changes downstream and host adapters without unchang
       ).toBe(false)
     const invocations: string[][] = []
     executeModuleTestPlan(plan, {
-      environment: {},
+      // Same win32 requirement as above; the spawn is a stub.
+      environment: { npm_execpath: 'npm-cli.js' },
       spawn: (_command: string, args: string[]) => {
         invocations.push(args)
         return { status: 0 }

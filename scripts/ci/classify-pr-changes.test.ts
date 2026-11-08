@@ -384,7 +384,7 @@ describe('pull request change classification', () => {
     '.github/ISSUE_TEMPLATE/helper.js',
     '.github/ISSUE_TEMPLATE/nested/form.yml',
     '.github/unknown.yml',
-    '.github/workflows/pr-gate.yml'
+    '.github/workflows/pr-unit-tests.yml'
   ])('does not exempt unknown or executable inputs: %s', (path) => {
     expect(classifyChanges([{ path, status: 'added' }]).mode).toBe('full')
   })
@@ -764,7 +764,7 @@ describe('pull request change classification', () => {
   )
 
   it.each([
-    '.github/workflows/pr-gate.yml',
+    '.github/workflows/pr-unit-tests.yml',
     'scripts/ci/classify-pr-changes.mjs',
     'scripts/ci/module-impact.json',
     'scripts/ci/module-impact/sample.json',
@@ -796,7 +796,7 @@ describe('pull request change classification', () => {
     'scripts/publish-linux-cli-packages.mjs',
     'scripts/publish-linux-cli-packages.test.ts',
     'scripts/test-linux-cli-package.mjs',
-    '.github/workflows/pr-gate.yml'
+    '.github/workflows/pr-unit-tests.yml'
   ])('selects the declared full plan for global gate input %s', (path) => {
     const plan = classifyChanges([{ path, status: 'modified' }])
 

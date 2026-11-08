@@ -104,14 +104,38 @@ const gitMatches = (tree) => {
   return matches
 }
 
-const diskFiles = (root, directory = root) => {
+// What git ignores cannot reach a release, so scanning it only manufactures false positives: a local
+// `.worktree/` copy made the host guard fail on a developer machine while CI - which has no such
+// directory - stayed green. Skipping exactly what git ignores keeps the two runs equivalent without an
+// ignore list of our own that would rot.
+const ignoredDirectories = (root) => {
+  try {
+    const result = spawnSync(
+      'git',
+      ['ls-files', '--others', '--ignored', '--exclude-standard', '--directory', '-z'],
+      { encoding: 'utf8', cwd: root }
+    )
+    if (result.status !== 0 || !result.stdout) return new Set()
+    return new Set(
+      result.stdout
+        .split('\0')
+        .filter(Boolean)
+        .map((path) => path.replace(/\/$/u, ''))
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+const diskFiles = (root, directory = root, ignored = null) => {
   const found = []
   for (const entry of readdirSync(directory)) {
     if (entry === '.git' || entry === 'node_modules' || entry === 'out' || entry === 'dist') continue
     const absolute = join(directory, entry)
+    if (ignored?.has(relative(root, absolute).replaceAll('\\', '/'))) continue
     const info = statSync(absolute)
     if (info.isDirectory()) {
-      found.push(...diskFiles(root, absolute))
+      found.push(...diskFiles(root, absolute, ignored))
       continue
     }
     if (!EXTENSIONS.has(extname(entry))) continue
@@ -135,6 +159,7 @@ export const collectHosts = ({ root = process.cwd(), gitTree = '' } = {}) => {
     for (const match of gitMatches(gitTree)) addHosts(hosts, match.path, match.text)
     return hosts
   }
-  for (const path of diskFiles(root)) addHosts(hosts, path, readFileSync(join(root, path), 'utf8'))
+  for (const path of diskFiles(root, root, ignoredDirectories(root)))
+    addHosts(hosts, path, readFileSync(join(root, path), 'utf8'))
   return hosts
 }

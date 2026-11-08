@@ -295,7 +295,6 @@
       "src/renderer/src/components/notice.test.tsx",
       "src/renderer/src/components/notification-event-visual.test.ts",
       "src/renderer/src/components/notification-inbox-presentation.test.ts",
-      "src/renderer/src/components/open-science-logo-motion.test.ts",
       "src/renderer/src/components/session-package-import-menu-model.test.ts",
       "src/renderer/src/components/streamdown/AgentMarkdown.lazy-failure.test.tsx",
       "src/renderer/src/components/streamdown/AgentMarkdown.streaming.render.test.tsx",

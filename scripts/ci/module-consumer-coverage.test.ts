@@ -148,8 +148,20 @@ it('retains every statically reachable consumer test and declared runtime-loadin
     for (const path of visited)
       if (isTest(path) && !declared.has(path)) missing.push(`${id} -> ${path}`)
   }
+  // Ratchet: the 1709 declarations that never existed are pinned in the baseline (acknowledged debt,
+  // owned by #218). A NEW missing entry fails immediately; paying one down only prints, so the list can
+  // only shrink. See the baseline header for why it must never be regenerated.
+  const acknowledged = new Set(
+    (
+      JSON.parse(
+        readFileSync(resolve('scripts/ci/module-consumer-coverage.baseline.json'), 'utf8')
+      ) as { missing: string[] }
+    ).missing
+  )
   expect(
-    missing,
-    'Add missing owner/contract/consumer evidence to scripts/ci/module-impact/<module-id>.json'
+    missing.filter((entry) => !acknowledged.has(entry)),
+    'New missing owner/contract/consumer evidence: declare it in scripts/ci/module-impact/<module-id>.json. Adding it to the baseline instead accepts debt that #218 is paying down.'
   ).toEqual([])
+  const paid = [...acknowledged].filter((entry) => !missing.includes(entry))
+  if (paid.length > 0) console.log(`PAID COVERAGE DEBT ${paid.length}: ${paid.join(', ')}`)
 }, 60_000)

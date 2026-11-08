@@ -229,81 +229,21 @@ it('uses only trusted registry data, includes renames/deletions and preserves sy
   }
 })
 
-it('applies exclusions to real Vitest discovery across inherited projects while local discovery stays complete', () => {
-  const fixture = mkdtempSync(join(tmpdir(), 'package-vitest-discovery-'))
-  const cwd = process.cwd()
-  try {
-    for (const path of [
-      'src/host.test.ts',
-      'packages/core/src/core.test.ts',
-      'packages/core/src/core.architecture.test.ts',
-      'packages/core/src/core.integration.test.ts',
-      'packages/compute/src/compute.test.ts',
-      'packages/compute/src/compute.architecture.test.ts',
-      'packages/compute/src/compute.integration.test.ts',
-      'packages/durable-files/src/publication.test.ts',
-      'packages/durable-files/src/publication.architecture.test.ts',
-      'packages/durable-files/src/publication.integration.test.ts',
-      'packages/resilient-download/src/transport.test.ts'
-    ]) {
-      const file = join(fixture, path)
-      mkdirSync(join(file, '..'), { recursive: true })
-      writeFileSync(file, 'import { it } from "vitest"; it("fixture", () => {})\n')
-    }
-    writeFileSync(
-      join(fixture, 'packages/compute/vitest.config.ts'),
-      `export default {root: ${JSON.stringify(join(fixture, 'packages/compute'))}, test: {name:'compute',include:['src/**/*.test.ts']}}`
-    )
-    writeFileSync(
-      join(fixture, 'packages/durable-files/vitest.config.ts'),
-      `export default {root: ${JSON.stringify(join(fixture, 'packages/durable-files'))}, test: {name:'durable-files',include:['src/**/*.test.ts']}}`
-    )
-    writeFileSync(
-      join(fixture, 'packages/resilient-download/vitest.config.ts'),
-      `export default {root: ${JSON.stringify(join(fixture, 'packages/resilient-download'))}, test: {name:'resilient-download',include:['src/**/*.test.ts']}}`
-    )
-    const list = (portable: string, excluded = [core], scope = ''): Array<{ file: string }> =>
-      JSON.parse(
-        execFileSync(
-          process.execPath,
-          [
-            join(cwd, 'node_modules/vitest/vitest.mjs'),
-            'list',
-            '--config',
-            join(cwd, 'vitest.config.ts'),
-            '--root',
-            fixture,
-            '--filesOnly',
-            '--json'
-          ],
-          {
-            cwd,
-            encoding: 'utf8',
-            env: {
-              ...process.env,
-              VITEST_PORTABLE_CI: portable,
-              OPEN_SCIENCE_CI_PORTABLE_SCOPE: scope,
-              OPEN_SCIENCE_CI_EXCLUDED_PACKAGE_ROOTS: JSON.stringify(excluded)
-            }
-          }
-        )
-      )
-    expect(
-      list('1', [
-        core,
-        'packages/compute',
-        'packages/durable-files',
-        'packages/resilient-download'
-      ]).map(({ file }) => normalize(file))
-    ).toEqual([join(fixture, 'src/host.test.ts')])
-    // A trusted baseline predating these standalone packages must still discover the new package, exactly once.
-    expect(
-      list('1')
-        .map(({ file }) => normalize(file))
-        .sort()
-    ).toEqual(
-      [
+it(
+  'applies exclusions to real Vitest discovery across inherited projects while local discovery stays complete',
+  // Measured under contention: this case spawns three real `vitest list` runs and exceeded the 15 s
+  // default while `scripts/ci` ran two workers (audit-module-ownership holds one for ~48 s). The work
+  // is real and bounded, so the budget is raised instead of splitting or skipping it.
+  { timeout: 60_000 },
+  () => {
+    const fixture = mkdtempSync(join(tmpdir(), 'package-vitest-discovery-'))
+    const cwd = process.cwd()
+    try {
+      for (const path of [
         'src/host.test.ts',
+        'packages/core/src/core.test.ts',
+        'packages/core/src/core.architecture.test.ts',
+        'packages/core/src/core.integration.test.ts',
         'packages/compute/src/compute.test.ts',
         'packages/compute/src/compute.architecture.test.ts',
         'packages/compute/src/compute.integration.test.ts',
@@ -311,38 +251,107 @@ it('applies exclusions to real Vitest discovery across inherited projects while 
         'packages/durable-files/src/publication.architecture.test.ts',
         'packages/durable-files/src/publication.integration.test.ts',
         'packages/resilient-download/src/transport.test.ts'
-      ]
-        .map((file) => join(fixture, file))
-        .sort()
-    )
-    expect(list('0')).toHaveLength(11)
-    // Include roots beyond today's directory inventory: partitioning must not drop future host tests.
-    for (const path of ['root.test.ts', 'future-host/nested/new.test.ts']) {
-      const file = join(fixture, path)
-      mkdirSync(join(file, '..'), { recursive: true })
-      writeFileSync(file, 'import { it } from "vitest"; it("fixture", () => {})\n')
-    }
-    for (const excluded of [[], [core, 'packages/compute']]) {
-      const files = (scope: string): string[] =>
-        list('1', excluded, scope)
+      ]) {
+        const file = join(fixture, path)
+        mkdirSync(join(file, '..'), { recursive: true })
+        writeFileSync(file, 'import { it } from "vitest"; it("fixture", () => {})\n')
+      }
+      writeFileSync(
+        join(fixture, 'packages/compute/vitest.config.ts'),
+        `export default {root: ${JSON.stringify(join(fixture, 'packages/compute'))}, test: {name:'compute',include:['src/**/*.test.ts']}}`
+      )
+      writeFileSync(
+        join(fixture, 'packages/durable-files/vitest.config.ts'),
+        `export default {root: ${JSON.stringify(join(fixture, 'packages/durable-files'))}, test: {name:'durable-files',include:['src/**/*.test.ts']}}`
+      )
+      writeFileSync(
+        join(fixture, 'packages/resilient-download/vitest.config.ts'),
+        `export default {root: ${JSON.stringify(join(fixture, 'packages/resilient-download'))}, test: {name:'resilient-download',include:['src/**/*.test.ts']}}`
+      )
+      const list = (portable: string, excluded = [core], scope = ''): Array<{ file: string }> =>
+        JSON.parse(
+          execFileSync(
+            process.execPath,
+            [
+              join(cwd, 'node_modules/vitest/vitest.mjs'),
+              'list',
+              '--config',
+              join(cwd, 'vitest.config.ts'),
+              '--root',
+              fixture,
+              '--filesOnly',
+              '--json'
+            ],
+            {
+              cwd,
+              encoding: 'utf8',
+              env: {
+                ...process.env,
+                VITEST_PORTABLE_CI: portable,
+                OPEN_SCIENCE_CI_PORTABLE_SCOPE: scope,
+                OPEN_SCIENCE_CI_EXCLUDED_PACKAGE_ROOTS: JSON.stringify(excluded)
+              }
+            }
+          )
+        )
+      expect(
+        list('1', [
+          core,
+          'packages/compute',
+          'packages/durable-files',
+          'packages/resilient-download'
+        ]).map(({ file }) => normalize(file))
+      ).toEqual([join(fixture, 'src/host.test.ts')])
+      // A trusted baseline predating these standalone packages must still discover the new package, exactly once.
+      expect(
+        list('1')
           .map(({ file }) => normalize(file))
           .sort()
-      const baseline = files('')
-      const host = files('host')
-      const packages = files('packages')
-      expect(host).toHaveLength(3)
-      expect(packages.length).toBeGreaterThan(0)
-      expect(host.every((file) => !file.startsWith(join(fixture, 'packages') + sep))).toBe(true)
-      expect(packages.every((file) => file.startsWith(join(fixture, 'packages') + sep))).toBe(true)
-      expect(new Set([...host, ...packages]).size).toBe(host.length + packages.length)
-      expect([...host, ...packages].sort()).toEqual(baseline)
+      ).toEqual(
+        [
+          'src/host.test.ts',
+          'packages/compute/src/compute.test.ts',
+          'packages/compute/src/compute.architecture.test.ts',
+          'packages/compute/src/compute.integration.test.ts',
+          'packages/durable-files/src/publication.test.ts',
+          'packages/durable-files/src/publication.architecture.test.ts',
+          'packages/durable-files/src/publication.integration.test.ts',
+          'packages/resilient-download/src/transport.test.ts'
+        ]
+          .map((file) => join(fixture, file))
+          .sort()
+      )
+      expect(list('0')).toHaveLength(11)
+      // Include roots beyond today's directory inventory: partitioning must not drop future host tests.
+      for (const path of ['root.test.ts', 'future-host/nested/new.test.ts']) {
+        const file = join(fixture, path)
+        mkdirSync(join(file, '..'), { recursive: true })
+        writeFileSync(file, 'import { it } from "vitest"; it("fixture", () => {})\n')
+      }
+      for (const excluded of [[], [core, 'packages/compute']]) {
+        const files = (scope: string): string[] =>
+          list('1', excluded, scope)
+            .map(({ file }) => normalize(file))
+            .sort()
+        const baseline = files('')
+        const host = files('host')
+        const packages = files('packages')
+        expect(host).toHaveLength(3)
+        expect(packages.length).toBeGreaterThan(0)
+        expect(host.every((file) => !file.startsWith(join(fixture, 'packages') + sep))).toBe(true)
+        expect(packages.every((file) => file.startsWith(join(fixture, 'packages') + sep))).toBe(
+          true
+        )
+        expect(new Set([...host, ...packages]).size).toBe(host.length + packages.length)
+        expect([...host, ...packages].sort()).toEqual(baseline)
+      }
+      expect(list('0', [], 'host')).toHaveLength(13)
+      expect(list('0', [], 'packages')).toHaveLength(13)
+    } finally {
+      rmSync(fixture, { recursive: true, force: true })
     }
-    expect(list('0', [], 'host')).toHaveLength(13)
-    expect(list('0', [], 'packages')).toHaveLength(13)
-  } finally {
-    rmSync(fixture, { recursive: true, force: true })
   }
-})
+)
 
 it.each(['dependencies', 'unavailable', 'pr'] as const)(
   'executes all required package tests in a real selective shard: %s',

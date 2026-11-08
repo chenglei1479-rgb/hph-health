@@ -86,7 +86,7 @@ async function fixture(): Promise<{
 }
 it('stages exactly pinned bytes at existing package paths and reuses the verified cache', async () => {
   const options = await fixture()
-  await stageNativeComponents({ ...options, target: 'linux-x64' })
+  await stageNativeComponents({ ...options, target: 'linux-x64', refreshVendor: true })
   expect(options.fetchImpl).toHaveBeenCalledTimes(5)
   for (const file of nativeFiles('linux-x64')) {
     const path = join(options.directory, 'packages', file.package, 'build/Release', file.name)
@@ -94,7 +94,7 @@ it('stages exactly pinned bytes at existing package paths and reuses the verifie
     if (process.platform !== 'win32') expect((await stat(path)).mode & 0o777).toBe(0o755)
   }
   options.fetchImpl.mockClear()
-  await stageNativeComponents({ ...options, target: 'linux-x64' })
+  await stageNativeComponents({ ...options, target: 'linux-x64', refreshVendor: true })
   expect(options.fetchImpl).not.toHaveBeenCalled()
   for (const file of nativeFiles('linux-x64')) {
     expect(
@@ -107,10 +107,10 @@ it('stages exactly pinned bytes at existing package paths and reuses the verifie
 })
 it('rejects stale sources before any download or output mutation', async () => {
   const options = await fixture()
-  await stageNativeComponents({ ...options, target: 'linux-x64' })
+  await stageNativeComponents({ ...options, target: 'linux-x64', refreshVendor: true })
   options.fetchImpl.mockClear()
   await writeFile(join(options.directory, 'packages/process-tree-native/src/main.cc'), 'changed')
-  await expect(stageNativeComponents({ ...options, target: 'linux-x64' })).rejects.toThrow('stale')
+  await expect(stageNativeComponents({ ...options, target: 'linux-x64', refreshVendor: true })).rejects.toThrow('stale')
   expect(options.fetchImpl).not.toHaveBeenCalled()
   for (const file of nativeFiles('linux-x64')) {
     expect(
@@ -152,7 +152,13 @@ it.each(['corrupted', 'truncated', 'oversized', 'unavailable'])(
           status: kind === 'unavailable' ? 404 : 200
         })
     )
-    await expect(stageNativeComponents({ ...options, target: 'linux-x64' })).rejects.toThrow()
+    // The fixture ships no vendored bytes, and only the refresh branch downloads, so without this
+    // flag the call rejects because the vendor file is missing - before any download happens - and
+    // the case would assert nothing about a bad response. See the same reason on the staging cases.
+    await expect(
+      stageNativeComponents({ ...options, target: 'linux-x64', refreshVendor: true })
+    ).rejects.toThrow()
+    expect(options.fetchImpl).toHaveBeenCalled()
     await expect(
       stat(join(options.directory, 'packages/credential-identity-probe-native/build'))
     ).rejects.toMatchObject({ code: 'ENOENT' })
@@ -160,7 +166,7 @@ it.each(['corrupted', 'truncated', 'oversized', 'unavailable'])(
 )
 it('fails closed on corrupted cached bytes rather than downloading a replacement', async () => {
   const options = await fixture()
-  await stageNativeComponents({ ...options, target: 'linux-x64' })
+  await stageNativeComponents({ ...options, target: 'linux-x64', refreshVendor: true })
   await writeFile(
     join(
       options.directory,
@@ -170,7 +176,7 @@ it('fails closed on corrupted cached bytes rather than downloading a replacement
     'tampered'
   )
   options.fetchImpl.mockClear()
-  await expect(stageNativeComponents({ ...options, target: 'linux-x64' })).rejects.toThrow()
+  await expect(stageNativeComponents({ ...options, target: 'linux-x64', refreshVendor: true })).rejects.toThrow()
   expect(options.fetchImpl).not.toHaveBeenCalled()
 })
 it.skipIf(process.platform === 'win32')('rejects cached symlinks', async () => {

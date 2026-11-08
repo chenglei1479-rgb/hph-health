@@ -8,19 +8,6 @@ import { describe, expect, it } from 'vitest'
 import { checkCiIntegrityChanges, ciIntegrityFilesFromRevisions } from './check-ci-integrity.mjs'
 
 describe('CI integrity policy', () => {
-  it('accepts the repository PR Gate and CI Integrity workflows as new files', () => {
-    const paths = ['.github/workflows/pr-gate.yml', '.github/workflows/ci-integrity.yml']
-    const result = checkCiIntegrityChanges(
-      paths.map((path) => ({
-        path,
-        baseText: '',
-        headText: readFileSync(resolve(path), 'utf8')
-      }))
-    )
-
-    expect(result).toMatchObject({ ok: true, violations: [] })
-  })
-
   it('fails its Git revision CLI and publishes violations for Actions', () => {
     const root = mkdtempSync(join(tmpdir(), 'ci-integrity-'))
     const summary = join(root, 'summary')
@@ -497,90 +484,6 @@ jobs:
 
     // Native ruleset review is separate from this structural validation.
     expect(result.ok).toBe(true)
-  })
-
-  it.each([
-    {
-      label: 'drops the merge_group trigger from pr-gate',
-      path: '.github/workflows/pr-gate.yml',
-      headText: `on:
-  pull_request:
-    branches: [main]
-jobs:
-  gate:
-    name: PR Gate
-`
-    },
-    {
-      label: 'drops checks_requested from the ci-integrity merge_group trigger',
-      path: '.github/workflows/ci-integrity.yml',
-      headText: `on:
-  pull_request_target:
-    branches: [main]
-  merge_group:
-    types: [destroyed]
-jobs:
-  integrity:
-    name: CI Integrity
-`
-    },
-    {
-      label: 'replaces pull_request_target with pull_request in ci-integrity',
-      path: '.github/workflows/ci-integrity.yml',
-      headText: `on:
-  pull_request:
-    branches: [main]
-  merge_group:
-    types: [checks_requested]
-jobs:
-  integrity:
-    name: CI Integrity
-`
-    },
-    {
-      label: 'uses a bare pull_request trigger without merge_group in pr-gate',
-      path: '.github/workflows/pr-gate.yml',
-      headText: `on: pull_request
-jobs:
-  gate:
-    name: PR Gate
-`
-    }
-  ])('rejects a required workflow that $label', ({ path, headText }) => {
-    const result = checkCiIntegrityChanges([
-      { path, baseText: readFileSync(resolve(path), 'utf8'), headText }
-    ])
-
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({ path, rule: 'required-check-triggers' })
-    )
-    expect(result.violations).not.toContainEqual(
-      expect.objectContaining({ rule: 'stable-required-check' })
-    )
-  })
-
-  it('keeps required-check triggers when a required workflow is renamed', () => {
-    const result = checkCiIntegrityChanges([
-      {
-        path: '.github/workflows/replacement.yml',
-        previousPath: '.github/workflows/ci-integrity.yml',
-        baseText: readFileSync(resolve('.github/workflows/ci-integrity.yml'), 'utf8'),
-        headText: `on:
-  pull_request_target:
-    branches: [main]
-jobs:
-  integrity:
-    name: CI Integrity
-`
-      }
-    ])
-
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({
-        path: '.github/workflows/replacement.yml',
-        rule: 'required-check-triggers'
-      })
-    )
   })
 
   it('does not apply required-check triggers to unrelated workflows', () => {

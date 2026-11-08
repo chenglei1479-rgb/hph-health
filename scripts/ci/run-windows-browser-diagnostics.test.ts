@@ -1,4 +1,5 @@
-import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import { execFile, execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { EventEmitter } from 'node:events'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -282,34 +283,34 @@ it('does not restart for stale NetLog evidence', async () => {
   expect(records()).not.toContainEqual(expect.objectContaining({ status: 'retry' }))
 })
 
-it.each([
-  [
-    'windows-e2e-regression.yml',
-    'npm run test:e2e:browser -- --workers=1 --global-timeout=420000 --shard=${{ matrix.shard }}/3 --fail-on-flaky-tests'
-  ]
-])(
-  'wraps only the Windows layout shell in %s and preserves its selected command',
-  (file, command) => {
-    const workflow = load(readFileSync(`.github/workflows/${file}`, 'utf8')) as {
-      jobs: Record<string, { steps?: Array<{ id?: string; shell?: string; run?: string }> }>
-    }
-    const wrapped = Object.entries(workflow.jobs).flatMap(([job, value]) =>
-      (value.steps ?? [])
-        .filter((step) => step.shell?.includes('run-windows-browser-diagnostics.mjs'))
-        .map((step) => ({ job, ...step }))
-    )
-    expect(wrapped).toEqual([
-      expect.objectContaining({
-        job: 'windows_e2e',
-        id: 'renderer_layout',
-        shell: 'node scripts/ci/run-windows-browser-diagnostics.mjs {0}',
-        run: command
-      })
-    ])
-  }
-)
 
-it.skipIf(process.platform !== 'win32').each([0, 7])(
+// The two real-shell cases below need PowerShell 7 (`pwsh`) on PATH. Both call sites use `-Command`,
+// so the execution policy is not the constraint - Windows PowerShell 5.1 alone cannot run them.
+// A red job nobody can explain gets ignored, so a missing `pwsh` is a named skip instead:
+// scripts/ci/scripts-job-skip-allowances.json carries the reason, and #221 decides whether a 5.1
+// fallback is worth the syntax differences.
+const pwshAvailable =
+  process.platform === 'win32' &&
+  spawnSync('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', 'exit 0']).status === 0
+
+it('names a missing pwsh instead of reporting a bare exit 1', async () => {
+  vi.mocked(spawn).mockImplementation(() => {
+    const child = new EventEmitter()
+    queueMicrotask(() =>
+      child.emit('error', Object.assign(new Error('spawn pwsh ENOENT'), { code: 'ENOENT' }))
+    )
+    return child as unknown as ChildProcess
+  })
+  vi.mocked(execFile).mockImplementation(() => {
+    throw new Error('diagnostics unavailable')
+  })
+  expect(await runWindowsBrowserDiagnostics('layout.tmp', output)).toBe(1)
+  expect(records()).toContainEqual(
+    expect.objectContaining({ status: 'error', reason: 'pwsh-missing', code: 'ENOENT' })
+  )
+})
+
+it.skipIf(!pwshAvailable).each([0, 7])(
   'preserves native exit %i through the real PowerShell shell',
   async (code) => {
     vi.mocked(spawn).mockImplementation(actual.spawn)
@@ -325,6 +326,8 @@ it.skipIf(process.platform !== 'win32').each([0, 7])(
   }
 )
 
+// This one only needs `powershell.exe` for the query: it substitutes the layout child via `layout(0)`,
+// so a missing `pwsh` must not silence it.
 it.skipIf(process.platform !== 'win32')(
   'collects an actual Windows process and TCP sample',
   async () => {

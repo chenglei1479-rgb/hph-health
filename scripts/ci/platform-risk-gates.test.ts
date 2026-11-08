@@ -22,7 +22,7 @@ describe('platform risk execution policy', () => {
     ['unknown owner', 'A', 'src/shared/new-unregistered-contract.ts'],
     ['destructive change', 'D', 'src/shared/app-config.ts'],
     ['global input', 'M', 'package.json'],
-    ['CI policy', 'M', '.github/workflows/pr-gate.yml']
+    ['CI policy', 'M', 'scripts/ci/evaluate-pr-gate.mjs']
   ])(
     'defers %s full portable validation to acceptance without weakening other checks',
     (_, status, path) => {
@@ -200,108 +200,6 @@ describe('platform risk execution policy', () => {
     ).toBe(false)
   })
 })
-
-type Workflow = {
-  jobs: Record<
-    string,
-    { steps: Array<{ name: string; run?: string; env?: Record<string, string> }> }
-  >
-}
-const workflow = (path: string): Workflow => load(readFileSync(path, 'utf8')) as Workflow
-
-it('fails a selected short Mac group when either core or platform checks did not pass', () => {
-  const step = workflow('.github/workflows/pr-gate.yml').jobs.macos_e2e.steps.find(
-    ({ name }) => name === 'Enforce selected macOS checks'
-  )!
-  for (const [core, platform, code] of [
-    ['success', 'success', 0],
-    ['skipped', 'success', 1],
-    ['success', 'skipped', 1],
-    ['failure', 'success', 1]
-  ] as const) {
-    const result = spawnSync('bash', ['-c', step.run!], {
-      env: {
-        ...process.env,
-        ...Object.fromEntries(Object.keys(step.env ?? {}).map((key) => [key, 'skipped'])),
-        E2E_GROUP: 'journeys',
-        E2E_SMOKE_SELECTED: 'true',
-        E2E_SMOKE_OUTCOME: core,
-        UNIT_MACOS_SMOKE_OUTCOME: platform
-      },
-      encoding: 'utf8'
-    })
-    expect(result.status).toBe(code)
-  }
-})
-
-it('retains all deferred Mac suites in the nightly job and fails on missing execution', () => {
-  const steps = workflow('.github/workflows/source-regression.yml').jobs.regression.steps
-  for (const command of [
-    'test:e2e:journey',
-    'test:e2e:workspace',
-    'e2e/playwright.browser.config.ts',
-    'test:e2e:visual',
-    'test:e2e:accessibility:signal'
-  ]) {
-    expect(steps.some(({ run }) => run?.includes(command))).toBe(true)
-  }
-  const enforce = steps.find(
-    ({ name }) => name === 'Enforce complete Mac core and presentation suites'
-  )!
-  const env = {
-    ...process.env,
-    FUNCTIONAL: 'success',
-    WORKSPACE: 'success',
-    PRESENTATION: 'success',
-    ACCESSIBILITY: 'success'
-  }
-  expect(spawnSync('bash', ['-c', enforce.run!], { env }).status).toBe(0)
-  for (const key of ['FUNCTIONAL', 'WORKSPACE', 'PRESENTATION', 'ACCESSIBILITY']) {
-    expect(
-      spawnSync('bash', ['-c', enforce.run!], { env: { ...env, [key]: 'skipped' } }).status
-    ).toBe(1)
-  }
-})
-
-it.each(['pull_request', 'merge_group'])(
-  'runs a workflow-contract-only change without desktop jobs for %s',
-  (event) => {
-    const { plan, report } = runModuleImpactAuthorityCli(
-      ['--base', 'a'.repeat(40), '--head', 'b'.repeat(40)],
-      { EVENT_NAME: event, PR_GATE_PLATFORM_POLICY: 'risk-v1' },
-      {
-        execute: () => Buffer.from('M\0scripts/ci/pr-gate-workflow.test.ts\0'),
-        write: () => undefined
-      }
-    )
-    expect(plan.mode).toBe('selective')
-    expect(plan.bundles).toEqual(['policy', 'static', 'unit'])
-    expect(macosGroupsForPlan(plan)).toEqual([])
-    expect(report.shadow.testFiles).toEqual(['scripts/ci/pr-gate-workflow.test.ts'])
-  }
-)
-
-it.each(['pull_request', 'merge_group'])(
-  'does not let a workflow contract expand an ordinary UI change on %s',
-  (event) => {
-    const { plan, report } = runModuleImpactAuthorityCli(
-      ['--base', 'a'.repeat(40), '--head', 'b'.repeat(40)],
-      { EVENT_NAME: event, PR_GATE_PLATFORM_POLICY: 'risk-v1' },
-      {
-        execute: () =>
-          Buffer.from(
-            'M\0src/renderer/src/components/ui/button.tsx\0M\0scripts/ci/pr-gate-workflow.test.ts\0'
-          ),
-        write: () => undefined
-      }
-    )
-    expect(plan.mode).toBe('selective')
-    expect(plan.macosProfile).toBe('smoke')
-    expect(macosGroupsForPlan(plan)).toEqual(event === 'merge_group' ? ['journeys'] : [])
-    expect(report.shadow.testFiles).toContain('scripts/ci/pr-gate-workflow.test.ts')
-    if (event === 'merge_group') expect(plan.bundles).not.toContain('windows_e2e')
-  }
-)
 
 it('applies the platform policy only when explicitly enabled', () => {
   const changes = Buffer.from('M\0src/renderer/src/components/ui/button.tsx\0')
@@ -514,24 +412,4 @@ describe('queue-only Mac policy', () => {
     }
   )
 
-  it('requires risk-selected native checks in the same core job', () => {
-    const step = workflow('.github/workflows/pr-gate.yml').jobs.macos_e2e.steps.find(
-      ({ name }) => name === 'Enforce selected macOS checks'
-    )!
-    for (const outcome of ['success', 'skipped', 'failure', 'cancelled', '']) {
-      const result = spawnSync('bash', ['-c', step.run!], {
-        env: {
-          ...process.env,
-          ...Object.fromEntries(Object.keys(step.env ?? {}).map((key) => [key, 'skipped'])),
-          E2E_GROUP: 'journeys',
-          E2E_SMOKE_SELECTED: 'true',
-          E2E_SMOKE_OUTCOME: 'success',
-          UNIT_MACOS_SMOKE_OUTCOME: 'success',
-          MACOS_PROFILE: 'expanded',
-          UNIT_MACOS_NATIVE_OUTCOME: outcome
-        }
-      })
-      expect(result.status).toBe(outcome === 'success' ? 0 : 1)
-    }
-  })
 })

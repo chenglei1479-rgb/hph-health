@@ -278,3 +278,51 @@ jobs:
           --require scripts/credential-helper-signing.test.ts
           --require scripts/deb-cli-launcher.test.ts
           --no-skips
+
+  # #213: the `scripts/ci` guards assert on real repository state - the workflow files, the module-impact
+  # manifests, the change-impact selectors - and none of them ran in any job, so 111 assertions across
+  # 20 files rotted unnoticed. This runs the directory, never a file list: a new guard is included by
+  # default and a renamed one has to be dealt with here (#179).
+  #
+  # `npm run test:scripts`, not `node node_modules/vitest/...`: on Windows the module-impact executor
+  # refuses to run without `npm_execpath` (`module-test-impact.mjs:385`), and npm sets it for us. Running
+  # vitest directly is exactly the "green locally, red on CI" shape this ticket exists to remove.
+  #
+  # `--allow-skip` instead of `--no-skips`: this directory has legitimate platform skips (the POSIX
+  # publication harness, the packaged macOS app). Every skip is printed, a skip that no allowance names
+  # fails, and an allowance that stops matching is printed as `UNUSED SKIP ALLOWANCE` without failing.
+  # Measured on this developer machine: 53 files, 1774 tests, 189 s with two workers.
+  unit-tests-scripts:
+    name: Unit tests (scripts)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: node scripts/ci/npm-ci.mjs --install-links
+      - name: Build workspace packages
+        run: node scripts/build-dev-packages.mjs
+      - name: Run the script guard set
+        run: >-
+          npm run test:scripts --
+          --reporter=json
+          --outputFile="$env:RUNNER_TEMP/unit-results-scripts.json"
+          --reporter=default
+          --maxWorkers=2
+      - name: Require real test execution
+        run: >-
+          node scripts/ci/require-unit-test-results.mjs
+          "$env:RUNNER_TEMP/unit-results-scripts.json"
+          --require scripts/ci/audit-module-ownership.test.ts
+          --require scripts/ci/validate-module-impact.test.ts
+          --require scripts/ci/module-consumer-coverage.test.ts
+          --require scripts/ci/package-boundaries.test.ts
+          --allow-skip scripts/ci/scripts-job-skip-allowances.json

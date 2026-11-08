@@ -14,7 +14,6 @@
     "src/main/remote-access/repository.ts",
     "src/main/remote-access/service.test.ts",
     "src/main/remote-access/service.ts",
-    "src/main/remote-access/open-science-logo.svg",
     "src/main/remote-access/command-port.ts"
   ],
   "interfacePaths": [

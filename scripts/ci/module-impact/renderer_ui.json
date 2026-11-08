@@ -500,7 +500,6 @@
       "src/renderer/src/components/job-observation-ui.test.tsx",
       "src/renderer/src/components/notification-event-visual.test.ts",
       "src/renderer/src/components/notification-inbox-presentation.test.ts",
-      "src/renderer/src/components/open-science-logo-motion.test.ts",
       "src/renderer/src/components/use-settings-undo-portal.test.tsx",
       "src/renderer/src/hooks/useWindowFindAppearanceSync.overlay.test.tsx",
       "src/renderer/src/lib/acp/workspace-runtime-interrupted-recovery.test.ts",
