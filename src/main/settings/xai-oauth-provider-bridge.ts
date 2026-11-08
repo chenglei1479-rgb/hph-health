@@ -5,7 +5,7 @@ import { netFetchStandard } from '../network-fetch'
 import { DEFAULT_MAX_PROVIDER_RESPONSE_BYTES, readBoundedResponseText } from './bounded-response'
 import {
   ProviderLoopbackHttpHost,
-  providerLoopbackClientError,
+  phiErrorResponse,
   writeProviderLoopbackJson as json,
   type ProviderLoopbackHttpRequest
 } from './provider-loopback-http-host'
@@ -91,10 +91,10 @@ export class XaiOAuthProviderBridge {
       credentialMode: 'bearer-or-api-key',
       createConnection: (origin, token) => ({ baseUrl: origin, token }),
       onUnauthorized: (response) => json(response, 401, { error: { message: 'Unauthorized' } }),
-      onError: (error, response) =>
-        json(response, providerLoopbackClientError(error) ? 400 : 502, {
-          error: { message: error instanceof Error ? error.message : 'xAI request failed.' }
-        }),
+      onError: (error, response) => {
+        const { status, body } = phiErrorResponse(error, 'xAI request failed.')
+        json(response, status, body)
+      },
       handle: (request, response) => this.handle(request, response)
     })
   }

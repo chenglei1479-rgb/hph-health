@@ -10,7 +10,7 @@ import { createLogger, errorLogFields, type Logger } from '@aipoch/diagnostics/n
 import { normalizeAnthropicBaseUrl } from './base-url'
 import {
   ProviderLoopbackHttpHost,
-  providerLoopbackClientError,
+  phiErrorResponse,
   writeProviderLoopbackJson as json,
   type ProviderLoopbackHttpRequest
 } from './provider-loopback-http-host'
@@ -144,13 +144,8 @@ export class AnthropicProviderBridge {
           response.destroy(error instanceof Error ? error : undefined)
           return
         }
-        const requestError = providerLoopbackClientError(error)
-        json(response, requestError ? 400 : 502, {
-          error: {
-            type: requestError ? 'invalid_request_error' : 'api_error',
-            message: error instanceof Error ? error.message : 'Anthropic provider request failed.'
-          }
-        })
+        const { status, body } = phiErrorResponse(error, 'Anthropic provider request failed.')
+        json(response, status, body)
       },
       handle: (request, response) => this.handle(request, response)
     })
