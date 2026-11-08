@@ -1,5 +1,8 @@
 {
   "ownerPaths": [
+    "src/main/backend-fatal-diagnostics.integration.test.ts",
+    "src/main/backend-fatal-diagnostics.test.ts",
+    "src/main/backend-fatal-diagnostics.ts",
     "src/main/composition/agent-activation.ts",
     "src/main/composition/agent-completion.ts",
     "src/main/composition/agent-controls.ts",
@@ -46,7 +49,11 @@
     "src/main/app-startup.ts",
     "src/main/application-command-composition.test.ts",
     "src/main/application-command-composition.ts",
+    "src/main/desktop-startup-continuation.test.ts",
+    "src/main/desktop-startup-continuation.ts",
     "src/main/notebook/schema-only/application-commands.ts",
+    "src/main/runtime-process-diagnostics.test.ts",
+    "src/main/runtime-process-diagnostics.ts",
     "src/main/statistician-review/application-commands.ts",
     "src/main/variable-definition/application-commands.ts",
     "src/main/writing-safeguards/application-commands.ts",
@@ -273,6 +280,8 @@
   "consumerModules": ["main_web_service"],
   "testFiles": {
     "owner": [
+      "src/main/backend-fatal-diagnostics.integration.test.ts",
+      "src/main/backend-fatal-diagnostics.test.ts",
       "src/main/composition/project-lifecycle.test.ts",
       "src/main/composition/notebook-environment.test.ts",
       "src/main/composition/reviewer.test.ts",
@@ -288,6 +297,7 @@
       "src/main/connector-reload.test.ts",
       "src/main/crash-diagnostics.test.ts",
       "src/main/data-content-application-commands.test.ts",
+      "src/main/desktop-startup-continuation.test.ts",
       "src/main/error-message.test.ts",
       "src/main/file-save.test.ts",
       "src/main/find-overlay.test.ts",
@@ -314,6 +324,7 @@
       "src/main/renderer-diagnostics.test.ts",
       "src/main/runtime-electron-wiring.test.ts",
       "src/main/runtime-import-cycle.architecture.test.ts",
+      "src/main/runtime-process-diagnostics.test.ts",
       "src/main/runtime-state-ownership.architecture.test.ts",
       "src/main/second-instance-router.test.ts",
       "src/main/source-preview-webview.test.ts",
