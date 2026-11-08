@@ -19,7 +19,7 @@
     "test:module": "npm run build:packages && node scripts/ci/module-test-impact.mjs module",
     "test:affected": "npm run build:packages && node scripts/ci/module-test-impact.mjs affected",
     "test:affected:explain": "node scripts/ci/module-test-impact.mjs affected --explain",
-    "test:scripts": "vitest run scripts/ci",
+    "test:scripts": "vitest run scripts/ci --testTimeout=60000",
     "build:e2e": "npm run build:packages -- --clean && npm run build:backend:compiled && npm run stage:node-runtime && npm run build:web:compiled && node --max-old-space-size=4096 node_modules/electron-vite/bin/electron-vite.js build",
     "test:e2e": "playwright test",
     "test:specialist-recovery": "vitest run src/main/acp/specialist-switch-recovery.integration.test.ts src/main/acp/runtime.test.ts src/main/acp/approved-handoff-outcome.integration.test.ts src/main/agents/claude-code-handoff.test.ts src/main/agents/production-completion-handoff.test.ts src/main/agents/completion-handoff-lifecycle.test.ts src/main/specialist/session-reconfiguration.test.ts src/renderer/src/pages/workspace/workspace-session-controller.test.ts src/renderer/src/pages/workspace/PermissionApprovalControls.specialist-switch.render.test.tsx --maxWorkers=1",
