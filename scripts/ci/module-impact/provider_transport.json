@@ -20,7 +20,9 @@
     "src/main/settings/skill-selector-routing.ts",
     "src/main/settings/xai-protocol.test.ts",
     "src/main/settings/xai-protocol.ts"
-  ],
+  ,
+    "src/main/settings/phi-failure-classes.test.ts"
+    ],
   "interfacePaths": [
     "src/main/settings/base-url.ts",
     "src/main/settings/chat-provider-compatibility.ts",
@@ -820,6 +822,8 @@
       "src/main/update/installation-artifact.test.ts",
       "src/main/update/installation-occupancy.test.ts",
       "src/main/update/installation-preparation.test.ts"
+    ,
+      "src/main/settings/phi-failure-classes.test.ts"
     ]
   },
   "consumerModules": ["artifact_provenance", "reviewer_orchestrator", "settings_service_facade"],

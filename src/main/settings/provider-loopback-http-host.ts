@@ -9,7 +9,14 @@ import {
 
 import { createLogger, errorLogFields, type Logger } from '@aipoch/diagnostics/node'
 
-import { PhiPolicyError } from '../../shared/phi-block'
+import {
+  PHI_CLIENT_REFUSAL_CODES,
+  PHI_INTERNAL_CODE,
+  PHI_UNAVAILABLE_CODE,
+  PHI_UNRETRYABLE_INTERNAL_CODES,
+  PhiPolicyError,
+  type PhiFailureCode
+} from '../../shared/phi-block'
 
 // A turn may contain up to 24 MiB of base64 image data before frameworks add text, replayed history,
 // and tool declarations. Keep every authenticated Provider bridge on one memory-bounded envelope.
@@ -50,11 +57,69 @@ class ProviderLoopbackRequestError extends Error {
   }
 }
 
-// A request the gate refused locally is the client's error, not a gateway failure. Answering 502 made the
-// agent CLI treat a decision that can never change as a transient upstream fault and retry it 30 times in
-// 25.5 s (#159), so every bridge maps a policy refusal to 400 alongside its own malformed-request errors.
+// #195: one place decides what a refusal means for the transport, and every bridge reads that answer.
+// The question is "would resending the same request produce a different answer?", never "what should the
+// doctor read".
+//
+//   code                        class  status  retry?  why
+//   PHI-BLOCK-01                A      400     no      patient information was found
+//   PHI-UNSCANNABLE-01          B      400     no      this request can never be checked as text
+//   PHI-CONSENT-01              D      400     no      a human review step ended or was refused
+//   PHI-TURN-REPLACED-01        D      400     no      the turn this request belonged to is stale
+//   PHI-UNAVAILABLE-01          C1     503     yes     the policy engine could not finish
+//   PHI-INTERNAL-01             E      409     no      an invariant inside the gate broke
+//   PHI-REVIEW-UNAVAILABLE-01   E      409     no      no review surface is wired up in this runtime
+//   (anything else)             ?      500     no      unmapped: reported with its own code, never 400
+//
+// Why not 4xx for everything: a 4xx tells the client "never retry", and an unclassified failure may be
+// temporary - that would make a recoverable failure permanent. Why 503 only for C1 and never for an
+// unknown or internal failure: 503 asserts "later will be better", a judgement we do not have there (and
+// for E it would be false - a broken invariant or an unwired review surface cannot fix itself mid-process,
+// while retrying after a review can reopen the consent window). Unknown codes stay 500 and name
+// themselves. Retries cost time and log lines, never confidentiality: fail-closed already guarantees the
+// request is not sent.
+export type PhiErrorStatus = { status: number; code?: string }
+
+const classify = (code: string): PhiErrorStatus => {
+  // The lists live next to the codes, so this function cannot drift into a second statement of which
+  // refusals are client errors. An unmapped code must name itself: that string is the only signal that
+  // can grow the table.
+  if (PHI_CLIENT_REFUSAL_CODES.includes(code as PhiFailureCode)) return { status: 400, code }
+  if (PHI_UNRETRYABLE_INTERNAL_CODES.includes(code as PhiFailureCode)) return { status: 409, code }
+  if (code === PHI_UNAVAILABLE_CODE) return { status: 503, code }
+  defaultDiagnostics.warn('unmapped phi failure code', { code })
+  return { status: 500, code }
+}
+
+export function statusForPhiError(error: unknown): PhiErrorStatus {
+  // PhiGateError extends PhiPolicyError and carries the same code, so one branch covers both.
+  if (error instanceof PhiPolicyError) return classify(error.code ?? PHI_INTERNAL_CODE)
+  if (error instanceof ProviderLoopbackRequestError) return { status: 400 }
+  return { status: 502 }
+}
+
+// The body every bridge sends. `code` is carried for unknown classes too (500 included): it is a stable
+// id, never patient text or a local path, and it is the only signal that can grow the mapping table.
+export const phiErrorResponse = (
+  error: unknown,
+  fallbackMessage: string
+): { status: number; body: { error: { type: string; message: string; code?: string } } } => {
+  const { status, code } = statusForPhiError(error)
+  return {
+    status,
+    body: {
+      error: {
+        type: status === 400 ? 'invalid_request_error' : 'api_error',
+        message: error instanceof Error ? error.message : fallbackMessage,
+        ...(code ? { code } : {})
+      }
+    }
+  }
+}
+
+// Kept for callers that only ask the boolean question; the answer now comes from the same classifier.
 const providerLoopbackClientError = (error: unknown): boolean =>
-  error instanceof ProviderLoopbackRequestError || error instanceof PhiPolicyError
+  statusForPhiError(error).status === 400
 
 const writeProviderLoopbackJson = (
   response: ServerResponse,

@@ -26,6 +26,8 @@ import {
   readBoundedResponseText,
   ResponseBodyLimitError
 } from './bounded-response'
+import { PhiPolicyError } from '../../shared/phi-block'
+import { phiErrorResponse } from './provider-loopback-http-host'
 import { selectChatSkills } from './chat-skill-selector'
 import {
   DeterministicProviderErrorReplay,
@@ -128,6 +130,14 @@ export class ResponsesBridge {
       onError: (error, response) => {
         if (response.headersSent) {
           response.destroy()
+          return
+        }
+        // A gate refusal is a property of the request, not of this wire - one mapping decides its
+        // status. This bridge used to fall through to 400 for every unknown error, so a "check could
+        // not finish" would have been reported as a permanent refusal here.
+        if (error instanceof PhiPolicyError) {
+          const { status, body } = phiErrorResponse(error, 'Responses bridge request failed.')
+          json(response, status, body)
           return
         }
         const bridgeError = error instanceof ResponsesProtocolError ? error : undefined

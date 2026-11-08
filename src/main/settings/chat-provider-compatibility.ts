@@ -7,7 +7,7 @@ import type { ServerResponse } from 'node:http'
 import { DEFAULT_MAX_PROVIDER_RESPONSE_BYTES, readBoundedResponseText } from './bounded-response'
 import {
   ProviderLoopbackHttpHost,
-  providerLoopbackClientError,
+  phiErrorResponse,
   writeProviderLoopbackJson as json,
   type ProviderLoopbackHttpRequest
 } from './provider-loopback-http-host'
@@ -263,15 +263,10 @@ export class ChatProviderCompatibilityBridge {
       createConnection: (origin, token) => ({ baseUrl: origin, token }),
       onUnauthorized: (response) =>
         json(response, 401, { error: { type: 'authentication_error', message: 'Unauthorized' } }),
-      onError: (error, response) =>
-        json(response, providerLoopbackClientError(error) ? 400 : 502, {
-          error: {
-            type:
-              providerLoopbackClientError(error) ? 'invalid_request_error' : 'api_error',
-            message:
-              error instanceof Error ? error.message : 'Provider compatibility request failed.'
-          }
-        }),
+      onError: (error, response) => {
+        const { status, body } = phiErrorResponse(error, 'Provider compatibility request failed.')
+        json(response, status, body)
+      },
       handle: (request, response) => this.handle(request, response)
     })
   }

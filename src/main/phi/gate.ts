@@ -2,7 +2,18 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash } from 'node:crypto'
 import { createLogger } from '@aipoch/diagnostics/node'
 import { englishNativeTranslator, type NativeTranslator } from '../locale/main-process-messages'
-import { PHI_BLOCK_CODE, PHI_REVIEW_EXCLUDED_CODE, PhiPolicyError } from '../../shared/phi-block'
+import {
+  PHI_BLOCK_CODE,
+  PHI_CONSENT_CODE,
+  PHI_INTERNAL_CODE,
+  PHI_REVIEW_EXCLUDED_CODE,
+  PHI_REVIEW_UNAVAILABLE_CODE,
+  PHI_TURN_REPLACED_CODE,
+  PHI_UNAVAILABLE_CODE,
+  PHI_UNSCANNABLE_CODE,
+  PhiPolicyError,
+  type PhiFailureCode
+} from '../../shared/phi-block'
 import { formatUnapprovedBlock } from './approval'
 import {
   applyManualSpans,
@@ -27,11 +38,18 @@ export interface PhiBlockedSpan {
   rule?: string
 }
 
+// The class a human may see. `code` is the refusal class from ../../shared/phi-block; it decides the
+// transport status and the retry advice, never the copy. A subclass of PhiPolicyError so the two
+// layers above (assertModelBoundRelease, failClosed) preserve it instead of re-minting a generic one.
 export class PhiGateError extends PhiPolicyError {
   readonly spans: readonly PhiBlockedSpan[]
 
-  constructor(message: string, spans: readonly PhiBlockedSpan[] = []) {
-    super(message)
+  constructor(
+    message: string,
+    spans: readonly PhiBlockedSpan[] = [],
+    code: PhiFailureCode = PHI_INTERNAL_CODE
+  ) {
+    super(message, code)
     this.name = 'PhiGateError'
     this.spans = spans
   }
@@ -102,26 +120,97 @@ export const MODEL_RELEASE_TIMEOUT_MS = 60_000
 export const PHI_SEND_CANCELLED_MESSAGE = 'Sending cancelled. Nothing was sent.'
 export const MODEL_RELEASE_RETRY_MESSAGE =
   'The privacy check could not finish. Nothing was sent. Please try again.'
+// A consent-shaped stop keeps its own wording: the content was checked, and the review itself is what
+// ended. Reusing the "could not finish" sentence here would invite a retry that only reopens the window.
+export const PHI_REVIEW_EXPIRED_MESSAGE =
+  'The privacy review was not confirmed in time. Nothing was sent.'
+export const PHI_REVIEW_INVALIDATED_MESSAGE =
+  'The privacy review is no longer valid. Nothing was sent.'
+export const PHI_TURN_REPLACED_MESSAGE = 'This turn was replaced by a newer turn. Nothing was sent.'
+export const PHI_INTERNAL_MESSAGE =
+  'The request could not be prepared for sending. Nothing was sent.'
+export const PHI_REVIEW_UNAVAILABLE_MESSAGE =
+  'The privacy review is unavailable in this installation. Nothing was sent.'
 export const UNSCANNABLE_MODEL_CONTENT_MESSAGE =
   'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
 export const UNGUARDED_AGENT_MESSAGE =
   'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.'
 
+// Each key is also a refusal class: cancelled is consent-shaped, "cannot be checked" can never succeed,
+// and everything else means the engine could not finish (retryable). Callers that only need a message
+// keep using this entry point, so classification does not depend on them remembering a code.
 export function modelReleaseError(key = MODEL_RELEASE_RETRY_MESSAGE): PhiGateError {
   const translate = blockTranslator
-  const message =
-    key === PHI_SEND_CANCELLED_MESSAGE
-      ? translate('Sending cancelled. Nothing was sent.')
-      : key === UNSCANNABLE_MODEL_CONTENT_MESSAGE
-        ? translate(
-            'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
-          )
-        : key === UNGUARDED_AGENT_MESSAGE
-          ? translate(
-              'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.'
-            )
-          : translate('The privacy check could not finish. Nothing was sent. Please try again.')
-  return new PhiGateError(message)
+  if (key === PHI_SEND_CANCELLED_MESSAGE)
+    return new PhiGateError(translate('Sending cancelled. Nothing was sent.'), [], PHI_CONSENT_CODE)
+  if (key === UNSCANNABLE_MODEL_CONTENT_MESSAGE)
+    return new PhiGateError(
+      translate(
+        'This attachment cannot be checked for patient information. Nothing was sent. Use checked text instead.'
+      ),
+      [],
+      PHI_UNSCANNABLE_CODE
+    )
+  if (key === UNGUARDED_AGENT_MESSAGE)
+    return new PhiGateError(
+      translate(
+        'This agent connection cannot check every model request for patient information and is unavailable in beta. Choose a provider with a checked connection.'
+      ),
+      [],
+      PHI_UNSCANNABLE_CODE
+    )
+  return new PhiGateError(
+    translate('The privacy check could not finish. Nothing was sent. Please try again.'),
+    [],
+    PHI_UNAVAILABLE_CODE
+  )
+}
+
+// A consent step ended: the review window timed out, its state was invalidated before the send, or the
+// bridge has no review surface at all. None of these is a content refusal, and none should be retried
+// automatically - a retry reopens the window the user already left.
+export function phiConsentError(message: string = PHI_REVIEW_EXPIRED_MESSAGE): PhiGateError {
+  return new PhiGateError(blockTranslator(message), [], PHI_CONSENT_CODE)
+}
+
+export function phiTurnReplacedError(): PhiGateError {
+  return new PhiGateError(blockTranslator(PHI_TURN_REPLACED_MESSAGE), [], PHI_TURN_REPLACED_CODE)
+}
+
+// The bridge exists but cannot ask a human. Classified as E (409), not C1: installPhiConfirmer only
+// runs during composition, so this process cannot recover - 503 would claim "later will be better" and
+// be lying. The wiring gap is still made audible in the log (`reason=bridge-has-no-review-surface`).
+export function phiReviewUnavailableError(): PhiGateError {
+  return new PhiGateError(
+    blockTranslator(PHI_REVIEW_UNAVAILABLE_MESSAGE),
+    [],
+    PHI_REVIEW_UNAVAILABLE_CODE
+  )
+}
+
+// An invariant inside the gate broke (a release whose shape we do not understand, a de-identification
+// collision). Retrying proves nothing, and the copy must not describe the internals to a person.
+export function phiInternalError(): PhiGateError {
+  return new PhiGateError(blockTranslator(PHI_INTERNAL_MESSAGE), [], PHI_INTERNAL_CODE)
+}
+
+// One place that decides what a caught release failure means. Typed gate errors keep their class; a
+// typed policy error from the store is an internal invariant, and an untyped error is the engine being
+// unavailable. The original message is never reused: it can carry a local vault path.
+function escalateReleaseFailure(error: unknown): never {
+  if (error instanceof PhiGateError) throw error
+  if (error instanceof PhiPolicyError) {
+    // A typed error from the store keeps its class: an unavailable engine stays retryable, and only
+    // an invariant failure becomes E. Nothing but the stable code is logged.
+    if (error.code === PHI_UNAVAILABLE_CODE) {
+      phiBlockLog.warn('phi release unavailable', { code: error.code, reason: 'gate-unavailable' })
+      throw modelReleaseError()
+    }
+    phiBlockLog.warn('phi release refused by an internal invariant', { code: error.code })
+    throw phiInternalError()
+  }
+  phiBlockLog.warn('phi release unavailable', { code: PHI_UNAVAILABLE_CODE, reason: 'gate-error' })
+  throw modelReleaseError()
 }
 
 function activeGate(): PhiGate {
@@ -138,12 +227,13 @@ async function releaseThroughInstalledGate(text: string, projectId: string): Pro
       !Array.isArray(result.replacements) ||
       !Array.isArray(result.warnings)
     ) {
-      throw modelReleaseError()
+      throw phiInternalError()
     }
     return result
-  } catch {
-    // Vault/scanner errors can contain local paths. Use one localized retry surface.
-    throw modelReleaseError()
+  } catch (error) {
+    // Vault/scanner errors can contain local paths, so the message is dropped here and only the class
+    // survives. This runs once per released string, so it stays allocation-free apart from the log.
+    escalateReleaseFailure(error)
   }
 }
 
@@ -162,8 +252,7 @@ async function assertModelBoundRelease<T>(operation: () => Promise<T>): Promise<
     if (Date.now() - started >= MODEL_RELEASE_TIMEOUT_MS) throw modelReleaseError()
     return released
   } catch (error) {
-    if (error instanceof PhiGateError) throw error
-    throw modelReleaseError()
+    escalateReleaseFailure(error)
   } finally {
     if (timer) clearTimeout(timer)
   }
@@ -224,21 +313,23 @@ export function createVaultBackedGate(vault: { store(projectId: string): PhiStor
 
 export function createClosedGate(message: string): PhiGate {
   return {
+    // Diagnostic text, not user copy: the caller passes an internal reason (a vault that cannot be
+    // decrypted), so it must not be shown verbatim. escalateReleaseFailure turns it into the standard
+    // retry sentence and logs only the stable code.
     release() {
-      throw new PhiGateError(message)
+      throw new PhiPolicyError(message, PHI_UNAVAILABLE_CODE)
     },
     restore() {
-      throw new PhiGateError(message)
+      throw new PhiPolicyError(message, PHI_UNAVAILABLE_CODE)
     },
     manual() {
-      throw new PhiGateError(message)
+      throw new PhiPolicyError(message, PHI_UNAVAILABLE_CODE)
     }
   }
 }
 
 function failClosed(error: unknown): never {
-  if (error instanceof PhiGateError) throw error
-  throw modelReleaseError()
+  escalateReleaseFailure(error)
 }
 
 function contained(inner: PhiSpan, outer: PhiSpan): boolean {
@@ -376,7 +467,7 @@ function assertMachineMaySend(
     hits: spans.length,
     spans: diagnostics
   })
-  throw new PhiGateError(formatUnapprovedBlock(translate), spans)
+  throw new PhiGateError(formatUnapprovedBlock(translate), spans, PHI_BLOCK_CODE)
 }
 
 // Provider bodies carry both content and application-generated scaffolding. Two different projections
@@ -500,7 +591,9 @@ export function restoreModelText(text: string, projectId = currentPhiProject()):
     throw new PhiGateError(
       error instanceof Error
         ? error.message
-        : 'PHI restore failed closed. The output was not shown.'
+        : 'PHI restore failed closed. The output was not shown.',
+      [],
+      PHI_INTERNAL_CODE
     )
   }
 }
@@ -541,7 +634,7 @@ export function releasePromptContent<T>(content: T, projectId: string): Promise<
   return assertModelBoundRelease(async () => {
     notePhiProject(projectId)
     if (typeof content === 'string') return (await releaseModelText(content, projectId)) as T
-    if (!Array.isArray(content)) throw modelReleaseError()
+    if (!Array.isArray(content)) throw phiInternalError()
     assertMachineMaySend(
       content.flatMap((block, index) => {
         const text = blockText(block)
@@ -575,13 +668,13 @@ async function decisionFor(preview: PhiPreview): Promise<PhiConfirmDecision> {
 
 async function confirmWithDeadline(preview: PhiPreview): Promise<PhiConfirmDecision> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(modelReleaseError()), PHI_CONSENT_EXPIRY_MS)
+  const timer = setTimeout(() => controller.abort(phiConsentError()), PHI_CONSENT_EXPIRY_MS)
   try {
-    if (!confirmer) throw modelReleaseError()
+    if (!confirmer) throw phiConsentError()
     const decision = await Promise.race([
       confirmer(preview, controller.signal),
       new Promise<never>((_, reject) => {
-        controller.signal.addEventListener('abort', () => reject(modelReleaseError()), {
+        controller.signal.addEventListener('abort', () => reject(phiConsentError()), {
           once: true
         })
       })
@@ -627,7 +720,11 @@ async function guardProviderBodyImpl(
     return body
   }
   if (typeof body !== 'string') {
-    throw new PhiGateError('PHI gate cannot scan this request body. The request was not sent.')
+    throw new PhiGateError(
+      'PHI gate cannot scan this request body. The request was not sent.',
+      [],
+      PHI_UNSCANNABLE_CODE
+    )
   }
   notePhiProject(projectId)
   let parsed: unknown
@@ -661,11 +758,11 @@ export function sendPhiChecked<T>(
 ): Promise<T> {
   projectId = turns.getStore()?.projectId ?? projectId
   return assertModelBoundRelease(async () => {
-    if (!destination) throw modelReleaseError()
+    if (!destination) throw phiInternalError()
     const turn = turns.getStore()
     const assertCurrentTurn = (): void => {
       if (turn && (!turn.active || !turn.isCurrent() || turns.getStore() !== turn))
-        throw modelReleaseError()
+        throw phiTurnReplacedError()
     }
     assertCurrentTurn()
     const revision = policyRevision
@@ -769,7 +866,7 @@ export function sendPhiChecked<T>(
         machineApproved !== approvalReader ||
         stillApproved !== approved
       )
-        throw modelReleaseError()
+        throw phiConsentError(PHI_REVIEW_INVALIDATED_MESSAGE)
       const result = await send(typeof released === 'string' ? reviewed : released)
       if (turn && reviewer) {
         // Rejected sends must not grant consent to a later retry in this turn.
@@ -784,9 +881,9 @@ export function sendPhiChecked<T>(
 /** Structured context/tool results are scanned including keys; the original is never returned. */
 export async function releaseModelBoundValue<T>(value: T, projectId: string): Promise<T> {
   const serialized = JSON.stringify(value)
-  if (serialized === undefined) throw modelReleaseError()
+  if (serialized === undefined) throw phiInternalError()
   const released = await guardProviderBody(serialized, projectId)
-  if (typeof released !== 'string') throw modelReleaseError()
+  if (typeof released !== 'string') throw phiInternalError()
   return JSON.parse(released) as T
 }
 
@@ -809,7 +906,9 @@ export async function checkConnectorQueryArgs(args: Record<string, unknown>): Pr
         throw new PhiGateError(
           translate(
             'The search terms changed during the privacy check. The search was not sent. Remove patient information and try again.'
-          )
+          ),
+          [],
+          PHI_BLOCK_CODE
         )
       }
     }
@@ -858,7 +957,8 @@ export function refuseMentorPackIndividualPatientData(texts: readonly string[]):
     translate(
       'This mentor discussion pack does not send individual patient data. The message was not sent.'
     ),
-    spans
+    spans,
+    PHI_BLOCK_CODE
   )
 }
 
@@ -867,7 +967,7 @@ export function refusePatientQuery(text: string): void {
   if (isOrdinaryLabel(text) && hasOnlyOrdinaryLabelPhi(text, detected)) return
   const spans = detected.filter((span) => !isWholeQueryNameGuess(text, span))
   if (spans.length === 0) return
-  throw new PhiGateError(CONNECTOR_PATIENT_QUERY_MESSAGE, spans)
+  throw new PhiGateError(CONNECTOR_PATIENT_QUERY_MESSAGE, spans, PHI_BLOCK_CODE)
 }
 
 // detectPhi treats an entire short Japanese string as a personal name. Disease and literature
@@ -941,7 +1041,9 @@ export function assertScannableModelValue(value: unknown): void {
 // anyway would silently drop one of them, so the gate refuses instead: releasing must never change the
 // shape of what it sends. Defining the property keeps a released `__proto__` key a plain key.
 function defineReleasedKey(next: Record<string, unknown>, key: string, value: unknown): void {
-  if (Object.hasOwn(next, key)) throw modelReleaseError()
+  // Two distinct keys de-identified to the same replacement. This is a collision inside our own
+  // pseudonymization, not patient information the doctor sent, so it must never be classified as A.
+  if (Object.hasOwn(next, key)) throw phiInternalError()
   Object.defineProperty(next, key, { value, enumerable: true, configurable: true, writable: true })
 }
 

@@ -178,10 +178,14 @@ jobs:
       # has to be dealt with here rather than silently leaving the set (#179 rule). No
       # `--passWithNoTests`: a filter that matches nothing must fail, and the sentinels below make a
       # silently shrinking set red too.
+      # #195: the failure-class suite lives under src/main/settings, which no PR job runs. It is named
+      # explicitly instead of adding the whole directory: the rest of that directory has four
+      # environment-dependent failures that pre-date this branch and would bury the result here.
       - name: Run the phi unit-test set
         run: >-
           node node_modules/vitest/vitest.mjs run
           src/main/phi
+          src/main/settings/phi-failure-classes.test.ts
           --reporter=json
           --outputFile="$env:RUNNER_TEMP/unit-results-phi.json"
           --reporter=default
@@ -194,6 +198,7 @@ jobs:
           "$env:RUNNER_TEMP/unit-results-phi.json"
           --require src/main/phi/detect.test.ts
           --require src/main/phi/gate.test.ts
+          --require src/main/settings/phi-failure-classes.test.ts
 
   # #192: `build/` holds the installer and packaging guards - the placeholder-brackets release check, the
   # NSIS path budget, the three-language installer strings and `packaging.test.ts`, whose `-WX`

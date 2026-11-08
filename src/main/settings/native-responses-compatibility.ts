@@ -26,11 +26,12 @@ import {
   readBoundedProviderErrorBody
 } from './provider-error-replay'
 import { fetchProviderRequest } from './provider-fetch'
+import { PhiGateError } from '../phi/gate'
 import {
   writeProviderLoopbackJson as json,
   ProviderLoopbackHttpHost,
   ProviderLoopbackRequestError,
-  providerLoopbackClientError,
+  statusForPhiError,
   type ProviderLoopbackHttpRequest
 } from './provider-loopback-http-host'
 import type { ResponsesBridgeNamespacedTool } from './responses-bridge'
@@ -813,11 +814,17 @@ export class NativeResponsesCompatibilityProxy {
           response.destroy()
           return
         }
-        const requestError = providerLoopbackClientError(error)
-        json(response, requestError ? 400 : 502, {
+        const { status, code } = statusForPhiError(error)
+        json(response, status, {
           error: {
-            type: requestError ? 'invalid_request_error' : 'api_error',
-            message: 'Native Responses compatibility request failed'
+            type: status === 400 ? 'invalid_request_error' : 'api_error',
+            // This wire keeps its own fallback copy for transport failures; a gate refusal still
+            // carries the gate message so the client can see the stable refusal id.
+            message:
+              error instanceof PhiGateError
+                ? error.message
+                : 'Native Responses compatibility request failed',
+            ...(code ? { code } : {})
           }
         })
       },

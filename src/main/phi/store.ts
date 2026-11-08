@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import type { PhiCategory } from './detect'
+import { PHI_INTERNAL_CODE, PHI_UNAVAILABLE_CODE, PhiPolicyError } from '../../shared/phi-block'
 import { patientDateOffset } from './dates'
 
 // One vocabulary for vault assignment and recognition of opaque substitutions.
@@ -132,7 +133,12 @@ class ProjectStore implements PhiStore {
     if (shifted === original) return
     const existing = this.record.shifts.find((item) => item.shifted === shifted)
     if (existing && existing.original !== original) {
-      throw new Error('PHI date shift collided. The request was not sent.')
+      // Internal invariant, not patient information: two dates mapped to the same shifted value.
+      // Typed so the gate can keep the class; the message here is a diagnostic, never user copy.
+      throw new PhiPolicyError(
+        'PHI date shift collided. The request was not sent.',
+        PHI_INTERNAL_CODE
+      )
     }
     if (!existing) this.record.shifts.push({ shifted, original })
     this.persist('shift', {})
@@ -227,7 +233,10 @@ export function createEncryptedPhiVault(
       return parsed as VaultDocument
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return emptyDocument()
-      throw new Error('PHI vault cannot be decrypted. Model requests are blocked.')
+      throw new PhiPolicyError(
+        'PHI vault cannot be decrypted. Model requests are blocked.',
+        PHI_UNAVAILABLE_CODE
+      )
     }
   }
   const save = (document: VaultDocument): void => {

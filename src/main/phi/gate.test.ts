@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { PHI_BLOCK_CODE } from '../../shared/phi-block'
+import { PHI_BLOCK_CODE, PHI_INTERNAL_CODE } from '../../shared/phi-block'
 import { AcpProviderPromptExecutor } from '../acp/provider-prompt-executor'
 import type { ProviderPromptExecutionInput } from '../acp/provider-prompt-executor'
 import { fetchProviderRequest } from '../settings/provider-fetch'
@@ -12,6 +12,7 @@ import {
   installPhiConfirmer,
   installPhiGate,
   MODEL_RELEASE_RETRY_MESSAGE,
+  PHI_INTERNAL_MESSAGE,
   releaseModelText,
   restoredBlockedSpanDiagnostics
 } from './gate'
@@ -445,12 +446,16 @@ describe('PHI gate scan scope', () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
     const body = JSON.stringify({ '患者A 山田 太郎': 1, '患者B 山田 太郎': 2 })
     try {
+      // #195: a pseudonymization collision is our own invariant breaking (E), not patient
+      // information the doctor sent (A) and not a temporary engine failure (C1). The old expectation
+      // here was the C1 retry sentence, which invited a retry that could never help.
       await expect(
         fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
           method: 'POST',
           body
         })
-      ).rejects.toThrow(MODEL_RELEASE_RETRY_MESSAGE)
+      ).rejects.toMatchObject({ message: PHI_INTERNAL_MESSAGE, code: PHI_INTERNAL_CODE })
+      expect(PHI_INTERNAL_MESSAGE).not.toBe(MODEL_RELEASE_RETRY_MESSAGE)
       expect(fetchImpl).not.toHaveBeenCalled()
     } finally {
       installMachineApproval(null)
