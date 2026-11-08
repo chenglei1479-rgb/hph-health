@@ -560,7 +560,7 @@ describe('pull request change classification', () => {
     ['delegated process ownership', 'src/main/delegation/process-ownership.ts'],
     ['notebook shell process', 'src/main/notebook/shell-process.ts'],
     ['file save', 'src/main/file-save.ts'],
-    ['specialist repository', 'src/main/specialist/repository.ts'],
+    ['specialist repository', 'packages/specialists/src/repository.ts'],
     ['notebook runtime settings', 'src/main/settings/notebook-runtime-settings.ts'],
     ['preferences', 'src/main/settings/preferences.ts'],
     ['restricted runtime profile', 'src/main/acp/restricted-runtime-profile.ts'],
@@ -684,7 +684,10 @@ describe('pull request change classification', () => {
     ])
 
     expect(plan.mode).toBe('selective')
-    expect(plan.roots).toEqual(['preload_contract'])
+    // #216: `src/preload/**` is registered as Windows-sensitive as a directory. The four filename
+    // globs it replaced matched none of the nine files there, so the contract plan now also carries
+    // the Windows lanes; it still does not escalate to a full plan.
+    expect(plan.roots).toEqual(['preload_contract', 'windows_sensitive'])
     expect(plan.lanes).toEqual([
       'policy',
       'format',
@@ -693,11 +696,22 @@ describe('pull request change classification', () => {
       'typecheck_web',
       'interface_contracts',
       'unit_macos',
+      'windows_runtime',
+      'windows_path',
       'build',
+      'e2e_functional_windows',
+      'e2e_workspace_windows',
       'e2e_regressions_macos',
       'e2e_delegation_macos'
     ])
-    expect(plan.bundles).toEqual(['policy', 'static', 'unit', 'macos_e2e'])
+    expect(plan.bundles).toEqual([
+      'policy',
+      'static',
+      'unit',
+      'windows_core',
+      'macos_e2e',
+      'windows_e2e'
+    ])
   })
 
   it('adds Windows core back when a Preload platform-risk overlay matches', () => {
