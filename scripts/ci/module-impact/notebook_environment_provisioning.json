@@ -13,7 +13,8 @@
     "src/main/notebook/environment-runner.ts",
     "src/main/notebook/environment-lifecycle-diagnostics.ts",
     "src/main/notebook/environment-lifecycle-diagnostics.test.ts",
-    "src/main/notebook/environment-download.contract.test.ts"
+    "src/main/notebook/environment-download.contract.test.ts",
+    "src/shared/runtime-cdn.ts"
   ],
   "interfacePaths": [
     "src/main/notebook/package-process-sandbox.ts",
