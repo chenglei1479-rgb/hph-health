@@ -47,7 +47,9 @@
     "src/main/update/verification-process.test.ts",
     "src/main/update/verification-process.ts",
     "src/main/update/installation-occupancy.test.ts",
-    "src/main/update/installation-preparation.test.ts"
+    "src/main/update/installation-preparation.test.ts",
+    "src/shared/dra-update-deployment.test.ts",
+    "src/shared/dra-update-deployment.ts"
   ],
   "interfacePaths": [
     "src/main/update/create-strategy.ts",
@@ -94,7 +96,8 @@
       "src/main/update/upstream-test-build.test.ts",
       "src/main/update/verification-process.test.ts",
       "src/main/update/installation-occupancy.test.ts",
-      "src/main/update/installation-preparation.test.ts"
+      "src/main/update/installation-preparation.test.ts",
+      "src/shared/dra-update-deployment.test.ts"
     ],
     "contract": [
       "src/preload/index.test.ts",
