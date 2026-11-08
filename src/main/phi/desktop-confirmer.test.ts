@@ -4,6 +4,7 @@ import { parseDesktopNativeResult, type DesktopNativeOperation } from '../deskto
 import { fetchProviderRequest } from '../settings/provider-fetch'
 import { englishNativeTranslator } from '../locale/main-process-messages'
 import { createDesktopPhiConfirmer } from './desktop-confirmer'
+import { PHI_REVIEW_UNAVAILABLE_CODE } from '../../shared/phi-block'
 import {
   createVaultBackedGate,
   installMachineApproval,
@@ -14,6 +15,20 @@ import {
 import { createMemoryPhiVault } from './store'
 
 const state = vi.hoisted(() => ({ available: true, review: vi.fn() }))
+// `desktop-confirmer.ts` builds its logger at import time, so the factory has to be mocked before the
+// module loads. The mock is shared by every logger in this graph; assertions therefore match the exact
+// call, not "warn was called".
+const logs = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn()
+}))
+vi.mock('@aipoch/diagnostics/node', async (original) => ({
+  ...(await original<typeof import('@aipoch/diagnostics/node')>()),
+  createLogger: () => logs
+}))
 vi.mock('../desktop-interaction', async (original) => ({
   ...(await original<typeof import('../desktop-interaction')>()),
   desktopFileInteraction: () => ({ reviewPhi: state.available ? state.review : undefined })
@@ -22,6 +37,7 @@ vi.mock('../desktop-interaction', async (original) => ({
 beforeEach(() => {
   state.available = true
   state.review.mockReset()
+  logs.warn.mockReset()
   installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
   installMachineApproval(() => true)
   installPhiConfirmer(createDesktopPhiConfirmer(englishNativeTranslator))
@@ -101,6 +117,22 @@ describe('Node model requests require the authenticated desktop review', () => {
     expect(send).not.toHaveBeenCalled()
     if (fault === 'unavailable') expect(request).not.toHaveBeenCalled()
   })
+  it('names the missing review surface in both the code and the log', async () => {
+    // #195 demoted "no review surface" from its own 503 to E(409), so this log line is the only signal
+    // left that says why. Assert the object, not just "warn was called": changing the reason string
+    // must red this test, otherwise the case proves nothing.
+    state.available = false
+    const send = vi.fn<typeof fetch>()
+    await expect(sendRequest(send)).rejects.toMatchObject({
+      code: PHI_REVIEW_UNAVAILABLE_CODE
+    })
+    expect(send).not.toHaveBeenCalled()
+    expect(logs.warn).toHaveBeenCalledWith('phi review surface unavailable', {
+      code: PHI_REVIEW_UNAVAILABLE_CODE,
+      reason: 'bridge-has-no-review-surface'
+    })
+  })
+
   it('cancels the native review on timeout and never sends a late confirmation', async () => {
     vi.useFakeTimers()
     let signal: AbortSignal | undefined

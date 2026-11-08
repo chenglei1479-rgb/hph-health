@@ -69,7 +69,14 @@ class ProviderLoopbackRequestError extends Error {
 //   PHI-UNAVAILABLE-01          C1     503     yes     the policy engine could not finish
 //   PHI-INTERNAL-01             E      409     no      an invariant inside the gate broke
 //   PHI-REVIEW-UNAVAILABLE-01   E      409     no      no review surface is wired up in this runtime
-//   (anything else)             ?      500     no      unmapped: reported with its own code, never 400
+//   (anything else)             ?      409     no      unmapped: reported with its own code, never 400
+//
+// An unmapped code is not a stranger: it is a code we minted and did not add to either list, which is an
+// internal inconsistency like E. Retrying proves nothing there, and 500 would be retried (the client
+// retries 5xx), so a failure that happens after a review could replay the gate and reopen the confirm
+// window. 409 is outside the retry set and makes no claim about the content. This supersedes the earlier
+// "unknown code = 500" decision: that default was chosen for genuinely foreign errors, and none reach
+// this function - everything here is one of ours.
 //
 // Why not 4xx for everything: a 4xx tells the client "never retry", and an unclassified failure may be
 // temporary - that would make a recoverable failure permanent. Why 503 only for C1 and never for an
@@ -88,7 +95,7 @@ const classify = (code: string): PhiErrorStatus => {
   if (PHI_UNRETRYABLE_INTERNAL_CODES.includes(code as PhiFailureCode)) return { status: 409, code }
   if (code === PHI_UNAVAILABLE_CODE) return { status: 503, code }
   defaultDiagnostics.warn('unmapped phi failure code', { code })
-  return { status: 500, code }
+  return { status: 409, code }
 }
 
 export function statusForPhiError(error: unknown): PhiErrorStatus {
@@ -109,7 +116,7 @@ export const phiErrorResponse = (
     status,
     body: {
       error: {
-        type: status === 400 ? 'invalid_request_error' : 'api_error',
+        type: status < 500 ? 'invalid_request_error' : 'api_error',
         message: error instanceof Error ? error.message : fallbackMessage,
         ...(code ? { code } : {})
       }

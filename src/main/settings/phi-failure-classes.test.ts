@@ -12,6 +12,7 @@ import {
 } from '../phi/gate'
 import { createMemoryPhiVault } from '../phi/store'
 import { OpenAiProviderBridge } from './openai-provider-bridge'
+import { ResponsesBridge } from './responses-bridge'
 import {
   PHI_BLOCK_CODE,
   PHI_CONSENT_CODE,
@@ -220,12 +221,125 @@ describe('refusal classes reach the transport as the retry advice they mean', ()
     }
   })
 
-  it('names an unmapped code instead of collapsing it to a bare 500', () => {
-    // The only source that can grow the table is the string itself: 500 alone would tell the next
-    // reader nothing about which code is missing.
+  it('names an unmapped code and keeps it out of the retry set', () => {
+    // A code we minted but never classified is an internal inconsistency, not a foreign error: 409,
+    // never 500 (retried) and never a bare status. The code string is the only signal that can grow
+    // the table.
     const error = new PhiGateError('x', [], 'PHI-FUTURE-01' as never)
-    expect(statusForPhiError(error)).toEqual({ status: 500, code: 'PHI-FUTURE-01' })
+    expect(statusForPhiError(error)).toEqual({ status: 409, code: 'PHI-FUTURE-01' })
     expect(phiErrorResponse(error, 'fallback').body.error.code).toBe('PHI-FUTURE-01')
+  })
+
+  // The Responses wire had its own mapping until #195 and is now covered by the shared one. Drive it
+  // through the real host: a structural guard ("the file mentions phiErrorResponse") does not prove the
+  // branch behaves.
+  const responsesWire = async () => {
+    const upstream = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const bridge = new ResponsesBridge({ baseUrl: 'https://opencode.ai/zen/go/v1', vendorId: 'opencode-go' }, upstream)
+    const connection = await bridge.start()
+    const send = (body: unknown) =>
+      fetch(`${connection.baseUrl}/responses`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${connection.token}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      })
+    return { bridge, upstream, send }
+  }
+
+  it('C1 through the Responses wire is 503, not 400', async () => {
+    installPhiGate(null)
+    const { bridge, upstream, send } = await responsesWire()
+    try {
+      const response = await send({ input: 'hello', stream: false, prompt_cache_key: 'session-1' })
+      expect(response.status).toBe(503)
+      expect(await response.json()).toMatchObject({
+        error: { code: PHI_UNAVAILABLE_CODE }
+      })
+      expect(upstream).not.toHaveBeenCalled()
+    } finally {
+      await bridge.close()
+    }
+  })
+
+  it('a block through the Responses wire is 400 with PHI-BLOCK-01', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const { bridge, upstream, send } = await responsesWire()
+    try {
+      const response = await send({
+        input: '患者：山田 太郎、保険者番号 02123456',
+        stream: false,
+        prompt_cache_key: 'session-2'
+      })
+      expect(response.status).toBe(400)
+      expect(await response.json()).toMatchObject({ error: { code: PHI_BLOCK_CODE } })
+      expect(upstream).not.toHaveBeenCalled()
+    } finally {
+      await bridge.close()
+    }
+  })
+
+  // E's body: a 409 is still a client error, while 503 stays in the "transient upstream" class the
+  // client reads as api_error. Without this table the next person can flip one ternary and stay green.
+  it.each([
+    [PHI_BLOCK_CODE, 400, 'invalid_request_error'],
+    [PHI_INTERNAL_CODE, 409, 'invalid_request_error'],
+    ['PHI-FUTURE-01', 409, 'invalid_request_error'],
+    [PHI_REVIEW_UNAVAILABLE_CODE, 409, 'invalid_request_error'],
+    [PHI_UNAVAILABLE_CODE, 503, 'api_error']
+  ])('%s travels as %i with type %s', (code, status, type) => {
+    const error = new PhiGateError('refused', [], code as never)
+    const response = phiErrorResponse(error, 'fallback')
+    expect(response.status).toBe(status)
+    expect(response.body.error.type).toBe(type)
+    expect(response.body.error.code).toBe(code)
+  })
+
+  it('never maps a phi failure to 500, because the client retries 5xx', () => {
+    for (const code of [
+      PHI_BLOCK_CODE,
+      PHI_UNSCANNABLE_CODE,
+      PHI_CONSENT_CODE,
+      PHI_TURN_REPLACED_CODE,
+      PHI_INTERNAL_CODE,
+      PHI_REVIEW_UNAVAILABLE_CODE,
+      PHI_UNAVAILABLE_CODE,
+      'PHI-FUTURE-01'
+    ]) {
+      expect(statusForPhiError(new PhiGateError('x', [], code as never)).status, code).not.toBe(500)
+    }
+    // A non-PHI error is a different question: it is not a refusal, so it keeps the transport's 502.
+    expect(statusForPhiError(new Error('upstream timed out'))).toEqual({ status: 502 })
+  })
+
+  it('an unmapped code reaches the wire as 409 and is not resent', async () => {
+    // No production path mints this code, so the function table alone would leave it on paper. The wire
+    // proves the whole chain: a gate error escapes escalateReleaseFailure unchanged, the transport maps
+    // it, and 409 keeps the client from replaying the gate.
+    installPhiGate({
+      release: () => {
+        throw new PhiGateError('x', [], 'PHI-FUTURE-01' as never)
+      },
+      restore: (value: string) => value
+    })
+    const upstream = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const bridge = new OpenAiProviderBridge(providerTarget, 'phi', upstream)
+    const connection = await bridge.start()
+    try {
+      const result = await attempt(connection, {
+        model: 'gpt-5',
+        input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'hello' }] }]
+      })
+      expect(result.status).toBe(409)
+      expect(result.attempts).toBe(1)
+      expect(result.body.error?.code).toBe('PHI-FUTURE-01')
+      expect(upstream).not.toHaveBeenCalled()
+    } finally {
+      await bridge.close()
+    }
   })
 
   it('does not treat an unclassified error as a refusal', () => {
