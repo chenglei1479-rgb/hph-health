@@ -21,6 +21,13 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve, win32 } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import {
+  DownloadFailure,
+  fetchBytesWithRetry,
+  reportDownloadFailure,
+  withDownloadStage
+} from './ci/download-retry.mjs'
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 export const PYTHON_STANDALONE_RELEASE = '20261013'
@@ -146,21 +153,21 @@ export async function stageSchemaNotebookPython({
 
   const url = standaloneArchiveUrl(target)
   console.error(`[schema-notebook-python] downloading ${url}`)
-  const response = await fetchImpl(url)
-  if (!response.ok) {
-    throw new Error(`Download failed (${response.status}) for ${url}`)
-  }
-  const bytes = Buffer.from(await response.arrayBuffer())
+  // Transport failures retry with a stable id; the digest comparison below is deliberately outside
+  // the retry, because a second archive with a different digest means the pin is wrong.
+  const bytes = await fetchBytesWithRetry({ url, id: 'SCHEMA-PY', fetchImpl })
   const digest = createHash('sha256').update(bytes).digest('hex')
   if (digest !== target.sha256) {
-    throw new Error(
-      `SHA256 mismatch for ${standaloneArchiveName(target)}: expected ${target.sha256}, got ${digest}`
+    throw new DownloadFailure(
+      'digest',
+      `SHA256 mismatch for ${standaloneArchiveName(target)}: expected ${target.sha256}, got ${digest}`,
+      { url }
     )
   }
   const archive = join(tmpdir(), standaloneArchiveName(target))
   writeFileSync(archive, bytes)
   const extract = tarExtractCommand(archive, dest)
-  run(spawn, extract.command, extract.args)
+  await withDownloadStage('extract', async () => run(spawn, extract.command, extract.args))
   rmSync(archive, { force: true })
   materializePythonBinary(dest, target.executable)
 
@@ -218,6 +225,7 @@ export async function stageSchemaNotebookPython({
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   stageSchemaNotebookPython().catch((error) => {
     console.error(error instanceof Error ? error.message : error)
+    reportDownloadFailure(error, { title: 'schema-notebook python staging failed' })
     process.exit(1)
   })
 }
