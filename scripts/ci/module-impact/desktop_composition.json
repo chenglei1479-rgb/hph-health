@@ -55,6 +55,7 @@
     "src/main/runtime-process-diagnostics.test.ts",
     "src/main/runtime-process-diagnostics.ts",
     "src/main/statistician-review/application-commands.ts",
+    "src/main/user-data-path.ts",
     "src/main/variable-definition/application-commands.ts",
     "src/main/writing-safeguards/application-commands.ts",
     "src/main/application-command-electron-adapter.test.ts",
@@ -277,7 +278,7 @@
     "src/main/desktop-startup-recovery.ts",
     "src/main/desktop-update-integration.ts"
   ],
-  "consumerModules": ["main_web_service"],
+  "consumerModules": ["main_web_service", "phi"],
   "testFiles": {
     "owner": [
       "src/main/backend-fatal-diagnostics.integration.test.ts",
@@ -398,6 +399,7 @@
     ],
     "consumer": [
       "src/main/compute/compute-job-operation-repository.test.ts",
+      "src/main/phi/approval-ipc.test.ts",
       "test/config/electron.vite.config.test.ts",
       "scripts/electron-vite-config.test.ts",
       "src/main/notebook/windows-runtime-manager.test.ts",
