@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  DOWNLOAD_ATTEMPT_TIMEOUT_MS,
   DOWNLOAD_BASE_DELAY_MS,
   DOWNLOAD_MAX_DELAY_MS,
   DOWNLOAD_MAX_ATTEMPTS,
@@ -229,6 +230,78 @@ describe('the staging script uses the shared policy', () => {
   })
 })
 
+describe('per-attempt ceiling', () => {
+  it('gives every attempt a timeout signal', async () => {
+    const calls: Array<{ signal?: unknown }> = []
+    const fetchImpl = vi.fn(async (_url, options) => {
+      calls.push(options ?? {})
+      return okResponse('bytes')
+    })
+
+    await fetchBytesWithRetry({
+      url: 'https://example.test/a.tgz',
+      id: 'SCHEMA-PY',
+      fetchImpl,
+      log: () => {}
+    })
+
+    expect(calls).toHaveLength(1)
+    // An AbortSignal is what bounds one stalled connection; without it undici's own 300s
+    // headers/body timeout is the only ceiling.
+    expect(calls[0].signal).toBeInstanceOf(AbortSignal)
+    expect(DOWNLOAD_ATTEMPT_TIMEOUT_MS).toBe(120_000)
+  })
+
+  it('retries an aborted attempt and reports download attempts=3', async () => {
+    const abort = () =>
+      Object.assign(new Error('This operation was aborted'), { name: 'AbortError' })
+    const fetchImpl = vi.fn(async () => {
+      throw abort()
+    })
+    const log = vi.fn()
+
+    await expect(
+      fetchBytesWithRetry({
+        url: 'https://example.test/a.tgz',
+        id: 'SCHEMA-PY',
+        fetchImpl,
+        log,
+        sleep: async () => {}
+      })
+    ).rejects.toMatchObject({ kind: 'download', attempts: 3, url: 'https://example.test/a.tgz' })
+
+    expect(fetchImpl).toHaveBeenCalledTimes(3)
+    expect(log).toHaveBeenCalledTimes(2)
+  })
+
+  it('abandons a connection that never settles, so one attempt cannot stall the step', async () => {
+    // The stub only settles when the signal aborts: nothing else rejects it. If the timeout were
+    // dropped this promise would never settle and the test would time out.
+    const fetchImpl = vi.fn(
+      (_url: string, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () => reject(options.signal?.reason))
+        })
+    )
+    const started = Date.now()
+
+    await expect(
+      fetchBytesWithRetry({
+        url: 'https://example.test/a.tgz',
+        id: 'SCHEMA-PY',
+        fetchImpl,
+        log: () => {},
+        sleep: async () => {},
+        attemptTimeoutMs: 10
+      })
+    ).rejects.toMatchObject({ kind: 'download', attempts: 3 })
+
+    expect(fetchImpl).toHaveBeenCalledTimes(3)
+    // Three 10ms attempts, not three undici timeouts of 300s each.
+    expect(Date.now() - started).toBeLessThan(5_000)
+  }, 10_000)
+})
+
 describe('failure classification', () => {
   it('keeps a digest failure final and carries the expected and actual digest', () => {
     const failure = new DownloadFailure('digest', 'digest mismatch: expected aa, got bb', {
@@ -243,14 +316,45 @@ describe('failure classification', () => {
 
   it('classifies a post-download stage failure as extract without retrying', async () => {
     await expect(
-      withDownloadStage('extract', async () => {
-        throw new Error('tar exited with 2')
-      })
-    ).rejects.toMatchObject({ kind: 'extract', attempts: 1 })
+      withDownloadStage(
+        'extract',
+        async () => {
+          throw new Error('tar exited with 2')
+        },
+        { url: 'https://example.test/a.tgz' }
+      )
+    ).rejects.toMatchObject({
+      kind: 'extract',
+      attempts: 1,
+      url: 'https://example.test/a.tgz'
+    })
 
     expect(retryDecision({ kind: 'extract', attempt: 1, maxAttempts: 3 })).toMatchObject({
       retry: false
     })
+  })
+
+  it('keeps the url on an extract failure so its annotation names the download', async () => {
+    const url = 'https://example.test/a.tgz'
+    let thrown
+    try {
+      await withDownloadStage(
+        'extract',
+        async () => {
+          throw new Error('tar exited with 2')
+        },
+        { url }
+      )
+    } catch (error) {
+      thrown = error
+    }
+    const annotation = reportDownloadFailure(thrown, {
+      title: 'micromamba download failed',
+      log: () => {}
+    })
+    expect(annotation).toBe(
+      `::error title=micromamba download failed::extract attempts=1 url=${url}`
+    )
   })
 
   it('passes an already classified failure through unchanged', async () => {

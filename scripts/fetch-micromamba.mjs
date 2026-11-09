@@ -166,9 +166,13 @@ const main = async () => {
   // reads a drive-letter path like `C:\Users\...` as a remote `host:path` spec and fails with
   // "Cannot connect to C: resolve failed"; keeping every path relative avoids the colon entirely and
   // still works with bsdtar on macOS (which lacks GNU's --force-local).
-  await withDownloadStage('extract', async () => {
-    execFileSync('tar', ['-xjf', archiveName], { cwd: staging, stdio: 'ignore' })
-  })
+  await withDownloadStage(
+    'extract',
+    async () => {
+      execFileSync('tar', ['-xjf', archiveName], { cwd: staging, stdio: 'ignore' })
+    },
+    { url }
+  )
 
   const found = findBinary(staging, binName)
   if (!found) {

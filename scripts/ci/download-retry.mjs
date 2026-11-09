@@ -15,6 +15,9 @@
 export const DOWNLOAD_MAX_ATTEMPTS = 3
 export const DOWNLOAD_BASE_DELAY_MS = 2_000
 export const DOWNLOAD_MAX_DELAY_MS = 15_000
+// Per-attempt ceiling. Without it the only bound is undici's own headers/body timeout (300s each),
+// so one stalled connection costs minutes and three attempts cost roughly the opposite of "bounded".
+export const DOWNLOAD_ATTEMPT_TIMEOUT_MS = 120_000
 
 /** The three ways a download step can fail, in the order the step reaches them. */
 export const DOWNLOAD_FAILURE_KINDS = ['download', 'digest', 'extract']
@@ -99,15 +102,23 @@ export async function fetchBytesWithRetry({
   maxAttempts = DOWNLOAD_MAX_ATTEMPTS,
   baseDelayMs = DOWNLOAD_BASE_DELAY_MS,
   maxDelayMs = DOWNLOAD_MAX_DELAY_MS,
+  attemptTimeoutMs = DOWNLOAD_ATTEMPT_TIMEOUT_MS,
   fetchImpl = globalThis.fetch,
   sleep = defaultSleep,
   log = (line) => console.error(line)
 } = {}) {
   if (!url) throw new Error('url is required')
   if (!id) throw new Error('id is required')
+  if (!Number.isFinite(attemptTimeoutMs) || attemptTimeoutMs <= 0) {
+    throw new Error(`attemptTimeoutMs must be a positive number, got ${attemptTimeoutMs}`)
+  }
   for (let attempt = 1; ; attempt += 1) {
     try {
-      const response = await fetchImpl(url)
+      // Bounded per attempt, not merely per step: undici's own headers/body timeouts are 300s each,
+      // so without this a stalled connection costs minutes per attempt and the whole step has no
+      // useful ceiling. The abort lands in the generic catch below and classifies as `download`,
+      // which is retryable.
+      const response = await fetchImpl(url, { signal: AbortSignal.timeout(attemptTimeoutMs) })
       if (!response?.ok) {
         throw new DownloadFailure('download', `HTTP ${response?.status ?? 'unknown'} for ${url}`, {
           attempts: attempt,
@@ -148,12 +159,12 @@ export async function fetchBytesWithRetry({
 }
 
 /** Runs a post-download stage (extract, copy) and classifies any failure that escapes it. */
-export async function withDownloadStage(kind, run) {
+export async function withDownloadStage(kind, run, { url } = {}) {
   try {
     return await run()
   } catch (error) {
     if (error instanceof DownloadFailure) throw error
-    throw new DownloadFailure(kind, error instanceof Error ? error.message : String(error))
+    throw new DownloadFailure(kind, error instanceof Error ? error.message : String(error), { url })
   }
 }
 

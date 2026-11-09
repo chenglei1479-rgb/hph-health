@@ -167,7 +167,7 @@ export async function stageSchemaNotebookPython({
   const archive = join(tmpdir(), standaloneArchiveName(target))
   writeFileSync(archive, bytes)
   const extract = tarExtractCommand(archive, dest)
-  await withDownloadStage('extract', async () => run(spawn, extract.command, extract.args))
+  await withDownloadStage('extract', async () => run(spawn, extract.command, extract.args), { url })
   rmSync(archive, { force: true })
   materializePythonBinary(dest, target.executable)
 
