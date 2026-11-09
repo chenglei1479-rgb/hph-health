@@ -4,9 +4,11 @@ import { join, relative } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  CI_ATTEMPTS,
   DEFAULT_NPM_CI_ARGS,
   GITHUB_ELECTRON_BUILDER_BINARIES_MIRROR,
   GITHUB_ELECTRON_MIRROR,
+  npmCiAttemptCount,
   npmCiCommand,
   npmCiEnv,
   runNpmCi,
@@ -63,7 +65,7 @@ describe('npm ci Electron mirror policy', () => {
     expect(DEFAULT_NPM_CI_ARGS).toEqual(['--no-audit'])
   })
 
-  it('retries a failed Windows GitHub Actions install once after a short delay', () => {
+  it('retries a failed GitHub Actions install once after a short delay on every runner', () => {
     const spawn = vi.fn().mockReturnValueOnce({ status: 1 }).mockReturnValueOnce({ status: 0 })
     const sleep = vi.fn()
 
@@ -78,15 +80,25 @@ describe('npm ci Electron mirror policy', () => {
     expect(spawn).toHaveBeenCalledTimes(2)
     expect(sleep).toHaveBeenCalledTimes(1)
     expect(sleep).toHaveBeenCalledWith(5_000)
+
+    // The retry used to be Windows-only, so the Linux and macOS jobs got one attempt against the
+    // same downloads. Both runners retry now.
+    expect(npmCiAttemptCount({ env: { GITHUB_ACTIONS: 'true' } })).toBe(CI_ATTEMPTS)
+    expect(npmCiAttemptCount({ env: {} })).toBe(1)
+    const linuxSpawn = vi.fn().mockReturnValueOnce({ status: 1 }).mockReturnValueOnce({ status: 0 })
+    expect(
+      runNpmCi({ env: { GITHUB_ACTIONS: 'true' }, platform: 'linux', sleep, spawn: linuxSpawn })
+    ).toBe(0)
+    expect(linuxSpawn).toHaveBeenCalledTimes(2)
   })
 
-  it('does not retry a failed install outside Windows GitHub Actions', () => {
+  it('does not retry a failed install outside GitHub Actions', () => {
     const spawn = vi.fn(() => ({ status: 1 }))
     const sleep = vi.fn()
 
     expect(
       runNpmCi({
-        env: { GITHUB_ACTIONS: 'true' },
+        env: {},
         platform: 'linux',
         sleep,
         spawn

@@ -34,6 +34,13 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import {
+  DownloadFailure,
+  fetchBytesWithRetry,
+  reportDownloadFailure,
+  withDownloadStage
+} from './ci/download-retry.mjs'
+
 const SUBDIRS = new Set(['osx-arm64', 'osx-64', 'linux-64', 'linux-aarch64', 'win-64'])
 
 // Pinned version + digests, loaded from the sibling JSON (kept out of code so repinning is a data edit).
@@ -139,12 +146,18 @@ const main = async () => {
   const url = resolveDownloadUrl(subdir, variant)
 
   console.log(`[fetch-micromamba] ${subdir} ${version} -> ${destPath}`)
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`download failed ${res.status}: ${url}`)
-  const archive = Buffer.from(await res.arrayBuffer())
+  // Transport failures retry with a stable id; the digest checks below stay outside the retry,
+  // because a second archive with a different digest means the pinned digest is wrong.
+  const archive = await fetchBytesWithRetry({ url, id: 'MICROMAMBA' })
 
   // Verify the downloaded archive against the pinned digest BEFORE extracting or copying anything.
-  verifyArchiveDigest(archive, subdir, variant)
+  try {
+    verifyArchiveDigest(archive, subdir, variant)
+  } catch (error) {
+    throw new DownloadFailure('digest', error instanceof Error ? error.message : String(error), {
+      url
+    })
+  }
 
   const staging = mkdtempSync(join(tmpdir(), 'mm-'))
   const archiveName = 'micromamba.tar.bz2'
@@ -153,12 +166,26 @@ const main = async () => {
   // reads a drive-letter path like `C:\Users\...` as a remote `host:path` spec and fails with
   // "Cannot connect to C: resolve failed"; keeping every path relative avoids the colon entirely and
   // still works with bsdtar on macOS (which lacks GNU's --force-local).
-  execFileSync('tar', ['-xjf', archiveName], { cwd: staging, stdio: 'ignore' })
+  await withDownloadStage('extract', async () => {
+    execFileSync('tar', ['-xjf', archiveName], { cwd: staging, stdio: 'ignore' })
+  })
 
   const found = findBinary(staging, binName)
-  if (!found) throw new Error(`micromamba binary (${binName}) not found in the downloaded archive`)
+  if (!found) {
+    throw new DownloadFailure(
+      'extract',
+      `micromamba binary (${binName}) not found in the downloaded archive`,
+      { url }
+    )
+  }
   if (pin.binarySha256?.[subdir]) {
-    verifyBinaryDigest(readFileSync(found), subdir, variant)
+    try {
+      verifyBinaryDigest(readFileSync(found), subdir, variant)
+    } catch (error) {
+      throw new DownloadFailure('digest', error instanceof Error ? error.message : String(error), {
+        url
+      })
+    }
   }
 
   mkdirSync(dirname(destPath), { recursive: true })
@@ -181,6 +208,7 @@ export {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main().catch((err) => {
     console.error('[fetch-micromamba] failed:', err)
+    reportDownloadFailure(err, { title: 'micromamba download failed' })
     process.exit(1)
   })
 }

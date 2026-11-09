@@ -9,15 +9,21 @@ export const GITHUB_ELECTRON_MIRROR = 'https://github.com/electron/electron/rele
 export const GITHUB_ELECTRON_BUILDER_BINARIES_MIRROR =
   'https://github.com/electron-userland/electron-builder-binaries/releases/download/'
 export const DEFAULT_NPM_CI_ARGS = ['--no-audit']
-export const WINDOWS_CI_RETRY_DELAY_MS = 5_000
-export const WINDOWS_CI_ATTEMPTS = 2
+// One retry on every GitHub Actions runner, not only Windows. The retry used to be Windows-only,
+// so the Linux and macOS unit-test jobs got exactly one attempt against the same downloads; when a
+// download step fails twice on any runner the install is the thing to fix, not the loop to grow.
+export const CI_ATTEMPTS = 2
+export const CI_RETRY_DELAY_MS = 5_000
+// Historical names, kept because they describe the delay rather than a platform.
+export const WINDOWS_CI_ATTEMPTS = CI_ATTEMPTS
+export const WINDOWS_CI_RETRY_DELAY_MS = CI_RETRY_DELAY_MS
 
 export function shouldForceGitHubElectronMirrors(env = process.env) {
   return env.GITHUB_ACTIONS === 'true'
 }
 
-export function npmCiAttemptCount({ platform = process.platform, env = process.env } = {}) {
-  return platform === 'win32' && env.GITHUB_ACTIONS === 'true' ? WINDOWS_CI_ATTEMPTS : 1
+export function npmCiAttemptCount({ env = process.env } = {}) {
+  return env.GITHUB_ACTIONS === 'true' ? CI_ATTEMPTS : 1
 }
 
 const defaultSleep = (ms) => {
@@ -58,15 +64,24 @@ export function runNpmCi({
 
   let status = 1
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    // stdio stays 'inherit': the install's output belongs in the job log, and capturing it here
+    // would mean forwarding two streams by hand. The cost is that this helper cannot answer "was the
+    // second attempt's error the same as the first's" - it only keeps the final exit status. Making
+    // that answerable needs a tee of each attempt's tail, which is its own change.
     status = spawn(command, spawnArgs, options).status ?? 1
     if (status === 0) return 0
     if (attempt < attempts) {
+      // Stable id so a recovered install is still visible on the run page, and so a search for
+      // NPM-CI-RETRY-01 finds every retry this helper has ever made.
       console.error(
-        `npm-ci: Windows GitHub Actions install failed (attempt ${attempt}/${attempts}); retrying after ${WINDOWS_CI_RETRY_DELAY_MS}ms`
+        `NPM-CI-RETRY-01 attempt=${attempt + 1}/${attempts} previous-exit=${status} retry-after-ms=${CI_RETRY_DELAY_MS}`
       )
-      sleep(WINDOWS_CI_RETRY_DELAY_MS)
+      sleep(CI_RETRY_DELAY_MS)
     }
   }
+  console.error(`npm ci failed: process attempts=${attempts} exit=${status}`)
+  // Run-page annotation: workflow commands are read from stdout.
+  console.log(`::error title=npm ci failed::process attempts=${attempts} exit=${status}`)
   return status
 }
 
