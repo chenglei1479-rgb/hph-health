@@ -13,6 +13,7 @@ import {
   installPhiGate,
   restoreModelText
 } from './gate'
+import { phiErrorResponse } from '../settings/provider-loopback-http-host'
 
 // Shaped like a real filesystem error: the first use of a project writes <userData>/phi/vault.bin, and
 // a writeFileSync EACCES or ENOSPC message carries that absolute path.
@@ -112,6 +113,21 @@ describe('restoreModelText failure surface', () => {
   it('does not swallow the failure: the restored text is still refused', () => {
     installThrowingGate(pathError)
     expect(() => restoreModelText('released text', 'project-1')).toThrow()
+  })
+
+  // The review's point: the leaked thing is the outbound body, so assert the body itself rather than
+  // only the thrown message. This goes through the transport mapping the client actually receives.
+  it.each([
+    [PHI_INTERNAL_CODE, 409],
+    [PHI_UNAVAILABLE_CODE, 503]
+  ])('%s reaches the wire as %i with a body that carries no vault path', (code, status) => {
+    installThrowingGate(() => new PhiPolicyError(`vault at ${MARKER} is locked`, code))
+    const response = phiErrorResponse(captureFailure(), 'fallback')
+    expect(response.status).toBe(status)
+    const body = JSON.stringify(response.body)
+    expect(body).not.toContain('vault.bin')
+    expect(body).not.toContain('C:\\Users')
+    expect(body).not.toContain('someone')
   })
 
   it('still restores normally when the gate succeeds', async () => {
