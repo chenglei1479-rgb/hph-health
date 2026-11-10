@@ -107,3 +107,34 @@ describe('unlabeled names in a short record', () => {
     expect(namesOf('山田太郎\n65歳')).toEqual(['山田太郎'])
   })
 })
+
+// #244: a 66-character CJK field of ordinary prose was cut into three consecutive "person names" by
+// `guess-segment`, and the screenshot sentence was held as one name by `guess-whole`. A name part is
+// short; a clause is not. The bound is far above every reviewed name (the longest kanji-only part in
+// the fixtures is five characters: 椎名凛太郎) and far below the prose that fired (9/12/15).
+describe('CJK prose is not a name (#244)', () => {
+  it.each([
+    ['暂时不需要任何信息 仅仅需要看下这个课题的创新性', 'one clause pair with a space'],
+    ['暂时不需要任何信息，仅仅需要看下这个课题的创新性', 'two clauses split by a comma'],
+    ['暂时不需要任何信息', 'one nine-character clause'],
+    ['我想研究一下支气管扩张症患者出院后使用LABA的成本效果分析', 'a research topic']
+  ])('releases %s (%s)', (text) => {
+    expect(namesOf(text)).toEqual([])
+  })
+
+  // Recall floor: the bound must not touch a single reviewed name, including the script mixes that
+  // are the reason the shape is not kanji-only. These are the fixture names that sit at the edge.
+  it.each([
+    '山田 太郎',
+    '山田太郎',
+    '椎名凛太郎',
+    '小鳥遊 ゆかり',
+    '宮ノ崎ハル',
+    'ブリュンヒルデ',
+    'タカサゴヤ・タクミ',
+    'John Smith',
+    'Smith, John'
+  ])('still masks the reviewed name %s', (text) => {
+    expect(namesOf(text)).toContain(text)
+  })
+})

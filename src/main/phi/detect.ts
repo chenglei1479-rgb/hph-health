@@ -207,18 +207,24 @@ export function detectPhi(original: string): PhiSpan[] {
   take('(?<!\\d)(\\d{8}\\n\\d{4})(?!\\d)', 'MY_NUMBER', 1, { rule: 'my-number-bare-8-4' })
   take('(?<!\\d)(\\d{12})(?!\\d)', 'MY_NUMBER', 1, { rule: 'my-number-bare-12' })
 
-  // Insured identifiers. Labels 被保険者番号 / 受給者番号 stay outside.
-  take('被保険者証記号\\s*\\S+\\s*番号\\s*\\S+(?:\\s*枝番\\s*\\S+)?', 'INSURED_ID')
+  // Insured identifiers. Labels 被保険者番号 / 受給者番号 stay outside. A rule that requires a label
+  // records `labeled: true`: the machine-metadata exemption (#244) only releases *unlabeled* shapes,
+  // because a labelled number in a workspace path is still a real identifier (#159).
+  take('被保険者証記号\\s*\\S+\\s*番号\\s*\\S+(?:\\s*枝番\\s*\\S+)?', 'INSURED_ID', 0, {
+    labeled: true
+  })
   take(
     '記号\\s*[:：]?\\s*[^\\s（(]+(?:\\s|\\u3000)*番号\\s*[:：]?\\s*[^\\s（(]+(?:\\s*[（(]\\s*枝番\\s*\\d+\\s*[）)]|\\s*枝番\\s*\\d+)?',
-    'INSURED_ID'
+    'INSURED_ID',
+    0,
+    { labeled: true }
   )
-  take('記号\\s*[・/]\\s*番号\\s*\\S+', 'INSURED_ID')
+  take('記号\\s*[・/]\\s*番号\\s*\\S+', 'INSURED_ID', 0, { labeled: true })
   take('(?<![\\d])(\\d{2,8}・\\d{2,8}(?:[（(]\\d{2}[）)])?)', 'INSURED_ID', 1)
-  take('Insured ID:\\s*\\S+', 'INSURED_ID')
-  take('被保険者番号\\s*(\\d{8})', 'INSURED_ID', 1)
-  take('受給者番号\\s*(\\d{7,8})', 'INSURED_ID', 1)
-  take('番号\\s*\\d+[（(]\\s*枝番\\s*\\d+\\s*[）)]', 'INSURED_ID')
+  take('Insured ID:\\s*\\S+', 'INSURED_ID', 0, { labeled: true })
+  take('被保険者番号\\s*(\\d{8})', 'INSURED_ID', 1, { labeled: true })
+  take('受給者番号\\s*(\\d{7,8})', 'INSURED_ID', 1, { labeled: true })
+  take('番号\\s*\\d+[（(]\\s*枝番\\s*\\d+\\s*[）)]', 'INSURED_ID', 0, { labeled: true })
   take(
     '[\\u4e00-\\u9fff\\u30a1-\\u30ffa-zA-Z0-9]{1,8}・[\\u4e00-\\u9fff\\u30a1-\\u30ffa-zA-Z0-9]{2,8}[（(]\\d{2}[）)]',
     'INSURED_ID'
@@ -866,6 +872,15 @@ const HONORIFIC_TAIL = /(?:様|さん|先生|氏|ちゃん)$/u
 // 々 (U+3005) and 〆 (U+3006) occur inside surnames, and so does a hyphen (山田-太郎), so all three
 // count as part of a name here. A hyphen is never a segment separator for the same reason.
 const KANJI_KATAKANA_PART = /^[\u4e00-\u9fff\u3005\u3006\u30a0-\u30ffー\u2010-]{1,16}$/u
+// #244: a name part is short. The reviewed names top out at five kanji (椎名凛太郎); ordinary CJK
+// prose is not one word, and a 66-character field used to be held as three consecutive names. A part
+// that carries katakana keeps the old bound (アレクサンダー, タカサゴヤ・タクミ), because length is
+// what tells a foreign name apart from a clause.
+const KATAKANA_IN_PART = /[\u30a0-\u30ffー]/u
+const KANJI_PART_MAX_LENGTH = 6
+const isKanjiNamePart = (part: string): boolean =>
+  KANJI_KATAKANA_PART.test(part) &&
+  (KATAKANA_IN_PART.test(part) || part.length <= KANJI_PART_MAX_LENGTH)
 const HIRAGANA_PART = /^[\u3040-\u309f]{1,8}$/u
 const LATIN_PART = /^[A-Z][A-Za-z'.-]*$/u
 const LATIN_COMMA_PAIR =
@@ -886,10 +901,10 @@ function isNameShaped(text: string): boolean {
   // A Japanese name may mix scripts across its parts: 小鳥遊 ゆかり, 柊 ハルル, やまだ たろう.
   // A single part must carry kanji or katakana: one hiragana word is prose ("こんにちは").
   if (
-    parts.every((part) => KANJI_KATAKANA_PART.test(part) || HIRAGANA_PART.test(part)) &&
+    parts.every((part) => isKanjiNamePart(part) || HIRAGANA_PART.test(part)) &&
     parts.join('').length >= 2
   )
-    return parts.length >= 2 || KANJI_KATAKANA_PART.test(parts[0])
+    return parts.length >= 2 || isKanjiNamePart(parts[0])
   if (parts.length >= 2 && parts.every((part) => LATIN_PART.test(part))) return true
   return false
 }
