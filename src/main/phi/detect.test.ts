@@ -110,8 +110,9 @@ describe('unlabeled names in a short record', () => {
 
 // #244: a 66-character CJK field of ordinary prose was cut into three consecutive "person names" by
 // `guess-segment`, and the screenshot sentence was held as one name by `guess-whole`. A name part is
-// short; a clause is not. The bound is far above every reviewed name (the longest kanji-only part in
-// the fixtures is five characters: 椎名凛太郎) and far below the prose that fired (9/12/15).
+// short; a clause is not. Reviewed names run from five to eight kanji without a space (西園寺公望,
+// 武者小路実篤, 勅使河原剛太朗, 長谷川太郎左衛門), so the bound is eight; the shortest false shape in
+// the incident was nine characters (暂时不需要任何信息).
 describe('CJK prose is not a name (#244)', () => {
   it.each([
     ['暂时不需要任何信息 仅仅需要看下这个课题的创新性', 'one clause pair with a space'],
@@ -128,6 +129,10 @@ describe('CJK prose is not a name (#244)', () => {
     '山田 太郎',
     '山田太郎',
     '椎名凛太郎',
+    '西園寺公望',
+    '武者小路実篤',
+    '勅使河原剛太朗',
+    '長谷川太郎左衛門',
     '小鳥遊 ゆかり',
     '宮ノ崎ハル',
     'ブリュンヒルデ',

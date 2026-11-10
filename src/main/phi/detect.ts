@@ -872,12 +872,14 @@ const HONORIFIC_TAIL = /(?:様|さん|先生|氏|ちゃん)$/u
 // 々 (U+3005) and 〆 (U+3006) occur inside surnames, and so does a hyphen (山田-太郎), so all three
 // count as part of a name here. A hyphen is never a segment separator for the same reason.
 const KANJI_KATAKANA_PART = /^[\u4e00-\u9fff\u3005\u3006\u30a0-\u30ffー\u2010-]{1,16}$/u
-// #244: a name part is short. The reviewed names top out at five kanji (椎名凛太郎); ordinary CJK
-// prose is not one word, and a 66-character field used to be held as three consecutive names. A part
-// that carries katakana keeps the old bound (アレクサンダー, タカサゴヤ・タクミ), because length is
-// what tells a foreign name apart from a clause.
+// #244: a name part is short, but the bound has to sit between the longest reviewed name and the
+// shortest clause the incident showed. The reviewed names top out at five kanji (椎名凛太郎); the
+// incident's first false name was nine characters (暂时不需要任何信息), so eight keeps 7-8 character
+// names (勅使河原剛太朗) and still rejects every false shape (9/12/14/15/24). A part that carries
+// katakana keeps the old bound (アレクサンダー, タカサゴヤ・タクミ), because length is what tells a
+// foreign name apart from a clause.
 const KATAKANA_IN_PART = /[\u30a0-\u30ffー]/u
-const KANJI_PART_MAX_LENGTH = 6
+const KANJI_PART_MAX_LENGTH = 8
 const isKanjiNamePart = (part: string): boolean =>
   KANJI_KATAKANA_PART.test(part) &&
   (KATAKANA_IN_PART.test(part) || part.length <= KANJI_PART_MAX_LENGTH)
