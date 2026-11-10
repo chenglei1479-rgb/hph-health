@@ -605,8 +605,11 @@ describe('a refusal is recognised by its stable code, not by its class', () => {
         body: JSON.stringify({ input: 'hello' })
       })
       expect(response.status).toBe(400)
-      const body = (await response.json()) as { error?: { type?: string; code?: string } }
+      const body = (await response.json()) as {
+        error?: { type?: string; code?: string; message?: string }
+      }
       expect(body.error?.code).toBe(PHI_BLOCK_CODE)
+      expect(body.error?.message).toBe('refused at the gate')
       expect(body.error?.type).toBe('invalid_request_error')
       expect(upstream).not.toHaveBeenCalled()
     } finally {
