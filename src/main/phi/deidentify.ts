@@ -20,6 +20,12 @@ export interface PhiResult {
 
 export interface DeidentifyOptions {
   allowOriginal?: readonly string[]
+  /**
+   * Agent bookkeeping fields (`x-codex-*`, #244): an *unlabeled* insured-id shape there is a machine
+   * id (a session or turn id), not an insurance card, so it is left alone. A labelled form still
+   * masks: #159 keeps a patient number in a workspace path out of the envelope.
+   */
+  keepUnlabeledInsuredIds?: boolean
 }
 
 const HIGH_RISK = new Set<PhiCategory>(['MY_NUMBER', 'INSURER_NO', 'INSURED_ID', 'KARTE_NO'])
@@ -73,6 +79,7 @@ export function deidentify(
   }
 
   for (const span of spans) {
+    if (options.keepUnlabeledInsuredIds && span.category === 'INSURED_ID' && !span.labeled) continue
     counts[span.category] = (counts[span.category] ?? 0) + 1
     if (!isHighRisk(span) && allow.has(span.text)) {
       store.log('allow', { [span.category]: 1 })

@@ -26,7 +26,12 @@ import {
   type PhiPreview,
   type PhiSpanMark
 } from './confirm'
-import { deidentify, type PhiReplacement, type PhiResult } from './deidentify'
+import {
+  deidentify,
+  type DeidentifyOptions,
+  type PhiReplacement,
+  type PhiResult
+} from './deidentify'
 import { detectPhi, isAggregateAgeRule, type PhiCategory, type PhiSpan } from './detect'
 import type { PhiStore } from './store'
 import { hasOnlyOrdinaryLabelPhi, isOrdinaryLabel } from './ordinary-label'
@@ -73,7 +78,11 @@ const PATIENT_PHI = new Set<PhiCategory>([
 ])
 
 interface PhiGate {
-  release(text: string, projectId: string): PhiResult | Promise<PhiResult>
+  release(
+    text: string,
+    projectId: string,
+    options?: DeidentifyOptions
+  ): PhiResult | Promise<PhiResult>
   highlights?(text: string, projectId: string): PhiHighlight[]
   restore(text: string, projectId: string): string
   manual?(original: string, projectId: string): string
@@ -231,9 +240,17 @@ function activeGate(): PhiGate {
   return gate
 }
 
-async function releaseThroughInstalledGate(text: string, projectId: string): Promise<PhiResult> {
+async function releaseThroughInstalledGate(
+  text: string,
+  projectId: string,
+  options?: DeidentifyOptions
+): Promise<PhiResult> {
   try {
-    const result = await activeGate().release(text, projectId)
+    // Keep the two-argument call shape for every caller that has no options: gate implementations and
+    // their test doubles are compared by call arguments, and an explicit third `undefined` changes it.
+    const result = options
+      ? await activeGate().release(text, projectId, options)
+      : await activeGate().release(text, projectId)
     if (
       !result ||
       typeof result.text !== 'string' ||
@@ -317,7 +334,7 @@ export function createVaultBackedGate(vault: { store(projectId: string): PhiStor
     return store
   }
   return {
-    release: (text, projectId) => deidentify(text, open(projectId)),
+    release: (text, projectId, options) => deidentify(text, open(projectId), options),
     restore: (text, projectId) => open(projectId).restore(text),
     highlights: (text, projectId) => open(projectId).highlights(text),
     manual: (original, projectId) => open(projectId).manual(original)
@@ -408,6 +425,14 @@ const SAFE_FIELD_KEY = /^[A-Za-z_][A-Za-z0-9_-]{0,40}$/u
 const normalizeScanned = (values: readonly (string | ScannedModelText)[]): ScannedModelText[] =>
   values.map((value) => (typeof value === 'string' ? { text: value, field: 'body' } : value))
 
+// #244: tool call arguments and tool outputs are machine-generated fields. A bare ISO date there is
+// the agent's own bookkeeping — a filename, a query window — not a patient date, and one hit refused
+// the whole turn (session #28; the same family as #131). Only that one rule is exempt, and only in
+// those fields: the same shape in text the researcher typed still blocks, so the DATE category
+// itself is not weakened.
+const MACHINE_TOOL_FIELD = /^input\[\d+\]\.(?:arguments|output)(?:\.|\[|$)/u
+const MACHINE_TOOL_EXEMPT_RULES = new Set(['date-bare-iso'])
+
 const diagnosticFor = (
   values: readonly ScannedModelText[],
   pass: 'blocked' | 'restored'
@@ -415,7 +440,9 @@ const diagnosticFor = (
   const diagnostics: BlockedSpanDiagnostic[] = []
   const spans: PhiBlockedSpan[] = []
   for (const { text, field } of values) {
-    const found = patientSpans(text)
+    const found = patientSpans(text).filter(
+      (span) => !(MACHINE_TOOL_FIELD.test(field) && MACHINE_TOOL_EXEMPT_RULES.has(span.rule ?? ''))
+    )
     // Hash only when something was blocked: the gate runs on every outbound request, and a digest per
     // scanned string would be paid by every send that never blocks.
     const digest = found.length === 0 ? '' : textDigest8(text)
@@ -523,6 +550,12 @@ const BLOCKING_SKIP_FIELDS = new Set([
   'client_metadata'
 ])
 const RELEASE_SKIP_FIELDS = new Set(['tools', 'tool_choice', 'metadata'])
+// #244: fields the agent runtime writes for its own bookkeeping (`x-codex-turn-metadata` and its
+// siblings - the `x-codex-` prefix, not the whole `client_metadata` object). Blocking already skips
+// them (#194); rewriting them replaced the CLI's own ids with insurance-number placeholders, so an
+// unlabeled insured-id shape inside such a field is released unchanged. Names, dates and a labelled
+// insurance number in a workspace path still go through the detector (#159).
+const AGENT_RESERVED_KEY = /^x-codex-/u
 const NON_CONTENT_KEYS = new Set([
   'id',
   'ids',
@@ -1098,6 +1131,7 @@ async function walkReleaseContent(
   if (!body || typeof body !== 'object') return body
   const next: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(body)) {
+    const agentReserved = AGENT_RESERVED_KEY.test(key)
     if (!isReleaseKey(key)) {
       next[key] = value
       continue
@@ -1105,11 +1139,11 @@ async function walkReleaseContent(
     const scope = APPLICATION_TEXT_KEYS.has(key)
       ? { ...collectors, review: { tokens: [], texts: [] } }
       : collectors
-    const releasedKey = await releaseContentValue(key, projectId, collectors)
+    const releasedKey = await releaseContentValue(key, projectId, collectors, agentReserved)
     defineReleasedKey(
       next,
       typeof releasedKey === 'string' ? releasedKey : key,
-      await releaseContentValue(value, projectId, scope)
+      await releaseContentValue(value, projectId, scope, agentReserved)
     )
   }
   return next
@@ -1118,10 +1152,15 @@ async function walkReleaseContent(
 async function releaseContentValue(
   value: unknown,
   projectId: string,
-  collectors: ReviewCollectors
+  collectors: ReviewCollectors,
+  agentReserved = false
 ): Promise<unknown> {
   if (typeof value === 'string') {
-    const result = await releaseThroughInstalledGate(value, projectId)
+    const result = await releaseThroughInstalledGate(
+      value,
+      projectId,
+      agentReserved ? { keepUnlabeledInsuredIds: true } : undefined
+    )
     if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
     // One pass over the replacements: callers instrument them with an iterator, and the two collectors
     // must observe the same list rather than a second traversal.
@@ -1133,7 +1172,8 @@ async function releaseContentValue(
   }
   if (Array.isArray(value)) {
     const released: unknown[] = []
-    for (const item of value) released.push(await releaseContentValue(item, projectId, collectors))
+    for (const item of value)
+      released.push(await releaseContentValue(item, projectId, collectors, agentReserved))
     return released
   }
   if (value && typeof value === 'object') {
@@ -1143,11 +1183,12 @@ async function releaseContentValue(
         next[key] = child
         continue
       }
-      const releasedKey = await releaseContentValue(key, projectId, collectors)
+      const childReserved = agentReserved || AGENT_RESERVED_KEY.test(key)
+      const releasedKey = await releaseContentValue(key, projectId, collectors, childReserved)
       defineReleasedKey(
         next,
         typeof releasedKey === 'string' ? releasedKey : key,
-        await releaseContentValue(child, projectId, collectors)
+        await releaseContentValue(child, projectId, collectors, childReserved)
       )
     }
     return next

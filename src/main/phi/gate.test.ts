@@ -516,9 +516,7 @@ describe('third-party transport envelope (#159)', () => {
     JSON.stringify({
       model: 'gpt-5',
       instructions: 'Follow the hospital style guide.',
-      input: [
-        { type: 'message', role: 'user', content: [{ type: 'input_text', text }] }
-      ],
+      input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text }] }],
       tools: [],
       tool_choice: 'auto',
       parallel_tool_calls: true,
@@ -594,6 +592,176 @@ describe('third-party transport envelope (#159)', () => {
       expect(workspace).toContain('番号')
     } finally {
       installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+})
+
+// #244: the gate was firing on machine-generated tool traffic — a bare ISO date in a function call's
+// arguments refused the whole turn (session #28), and an agent bookkeeping id inside
+// `x-codex-turn-metadata` was rewritten into an insurance-number placeholder. Both are the same
+// asymmetry #194 fixed for blocking: the field decides, and only the machine-generated field is
+// exempt. The DATE rule itself is untouched, so the same date in text the researcher typed still
+// blocks (#131).
+describe('machine-generated tool traffic (#244)', () => {
+  const isoDate = '2026-10-13'
+
+  const installIdentityGate = (): void => {
+    installMachineApproval(null)
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+  }
+
+  const machineBody = (text = 'Summarise the notes in this folder.'): string =>
+    JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text }] },
+        {
+          type: 'function_call',
+          name: 'list_files',
+          arguments: JSON.stringify({ path: 'notes', since: isoDate })
+        },
+        {
+          type: 'function_call_output',
+          call_id: 'call_1',
+          output: JSON.stringify({ checked_at: isoDate })
+        }
+      ]
+    })
+
+  it('does not block a bare ISO date inside a tool call argument or a tool output', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = machineBody()
+    try {
+      const diagnostics = blockedSpanDiagnostics(JSON.parse(body))
+      expect(diagnostics.filter((item) => item.category === 'DATE')).toEqual([])
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('still blocks a bare ISO date in the text the researcher typed', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = machineBody(`退院日は ${isoDate} です。`)
+    try {
+      expect(blockedSpanDiagnostics(JSON.parse(body)).map((item) => item.rule)).toEqual([
+        'date-bare-iso'
+      ])
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body
+        })
+      ).rejects.toMatchObject({ code: PHI_BLOCK_CODE })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('keeps an agent metadata id and still masks a body insurance number', async () => {
+    installMachineApproval(() => true)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const metadata = JSON.stringify({
+      session_id: '01a1c45b-d421-7cc3-bf94-6dd4329ebd67',
+      agent_name: '02852897-1234-56',
+      // A labelled identifier inside the same reserved field is still a patient identifier (#159).
+      workspaces: { 'C:\\clinic\\被保険者番号 12345678': { has_changes: false } }
+    })
+    const body = JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [
+        {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text: '保険者番号 02123456 の患者の再入院' }]
+        }
+      ],
+      client_metadata: { 'x-codex-turn-metadata': metadata }
+    })
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      const sentText = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+      const sent = JSON.parse(sentText)
+      expect(JSON.parse(sent.client_metadata['x-codex-turn-metadata']).agent_name).toBe(
+        '02852897-1234-56'
+      )
+      expect(sentText).not.toContain('02123456')
+      expect(sentText).not.toContain('12345678')
+      // The body number is still replaced; only the agent bookkeeping field is exempt.
+      expect(sent.input[0].content[0].text).not.toContain('02123456')
+      expect(sent.input[0].content[0].text).toContain('の患者の再入院')
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  // The regression the notebook job caught: adding an optional third argument to release must not
+  // change the call shape for the ordinary path. A gate double is compared by call arguments, so an
+  // explicit third `undefined` turns an unrelated notebook test red.
+  it('keeps the two-argument release call when there are no options', async () => {
+    const release = vi.fn((text: string) => ({ text, replacements: [], warnings: [] }))
+    installMachineApproval(() => true)
+    installPhiGate({ release, restore: (text) => text })
+    try {
+      await releaseModelText('hello', 'fiction')
+      expect(release.mock.calls[0]).toHaveLength(2)
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  // #244 acceptance: the packaged boundary itself must not change the answer. The same body is
+  // released through a gate object created by a second module copy (what a separate bundle is:
+  // another copy of the classes), and the bytes must be identical.
+  it('releases identical bytes through a gate from another module copy', async () => {
+    installMachineApproval(() => true)
+    const vault = createMemoryPhiVault()
+    const body = JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [
+        {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text: `退院日は ${isoDate} です。` }]
+        }
+      ],
+      client_metadata: {
+        'x-codex-turn-metadata': JSON.stringify({ agent_name: '02852897-1234-56' })
+      }
+    })
+    const run = async (gate: Parameters<typeof installPhiGate>[0]): Promise<string> => {
+      installPhiGate(gate)
+      const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      return (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+    }
+    try {
+      const local = await run(createVaultBackedGate(vault))
+      vi.resetModules()
+      const foreign = (await import('./gate')) as typeof import('./gate')
+      const bundled = await run(foreign.createVaultBackedGate(vault))
+      expect(bundled).toBe(local)
+    } finally {
       installIdentityGate()
     }
   })
