@@ -27,6 +27,7 @@
     "src/main/phi/ordinary-label.test.ts",
     "src/main/phi/ordinary-label.ts",
     "src/main/phi/production-gate.ts",
+    "src/main/phi/restore-failure.test.ts",
     "src/main/phi/review-scope.test.ts",
     "src/main/phi/score.ts",
     "src/main/phi/store.ts",
@@ -62,6 +63,7 @@
       "src/main/phi/model-bound-paths.test.ts",
       "src/main/phi/name-boundary.test.ts",
       "src/main/phi/ordinary-label.test.ts",
+      "src/main/phi/restore-failure.test.ts",
       "src/main/phi/review-scope.test.ts",
       "src/main/phi/turn-review-count.test.ts"
     ],

@@ -467,6 +467,7 @@
       "src/main/permission-grants/ipc.test.ts",
       "src/main/permission-grants/projection-controller.test.ts",
       "src/main/permission-grants/registry.test.ts",
+      "src/main/phi/restore-failure.test.ts",
       "src/main/process-tree.windows.integration.test.ts",
       "src/main/project-files/content-search.test.ts",
       "src/main/project-files/host-artifact-catalog.test.ts",
