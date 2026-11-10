@@ -14,6 +14,7 @@ import {
   PHI_INTERNAL_CODE,
   PHI_UNAVAILABLE_CODE,
   PHI_UNRETRYABLE_INTERNAL_CODES,
+  phiFailureCodeOf,
   PhiPolicyError,
   type PhiFailureCode
 } from '../../shared/phi-block'
@@ -98,11 +99,42 @@ const classify = (code: string): PhiErrorStatus => {
   return { status: 409, code }
 }
 
+// #243: the identity rule lives next to the codes (shared/phi-block.ts) so the gate and every bridge
+// agree on it; this module re-exports it for the bridges that already import from here.
+export { phiFailureCodeOf }
+
 export function statusForPhiError(error: unknown): PhiErrorStatus {
-  // PhiGateError extends PhiPolicyError and carries the same code, so one branch covers both.
-  if (error instanceof PhiPolicyError) return classify(error.code ?? PHI_INTERNAL_CODE)
+  // PhiGateError extends PhiPolicyError and carries the same code, so one branch covers both - and the
+  // code branch covers the copy that arrived across a bundle boundary without its prototype.
+  const code = phiFailureCodeOf(error)
+  if (code) return classify(code)
   if (error instanceof ProviderLoopbackRequestError) return { status: 400 }
   return { status: 502 }
+}
+
+// #243: the failure log must name a failure without printing it. A refusal's message can carry the
+// blocked text and a transport error's can carry a local path, so only the presence of a message is
+// recorded; `name` and `code` are stable identifiers, which is what made that incident un-diagnosable.
+const safeString = (value: unknown, key: 'name' | 'message', max: number): string | undefined => {
+  if (!value || typeof value !== 'object') return undefined
+  try {
+    const read = (value as Record<string, unknown>)[key]
+    return typeof read === 'string' && read.length > 0 && read.length <= max ? read : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export const failureDiagnosticFields = (
+  error: unknown
+): { errorName?: string; errorCode?: string; hasErrorMessage: boolean } => {
+  const name = safeString(error, 'name', 64)
+  const code = phiFailureCodeOf(error) ?? safeString(error, 'code', 64)
+  return {
+    ...(name ? { errorName: name } : {}),
+    ...(code && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(code) ? { errorCode: code } : {}),
+    hasErrorMessage: safeString(error, 'message', Number.MAX_SAFE_INTEGER) !== undefined
+  }
 }
 
 // One rule for the wire's `type`, shared by every bridge that derives it from the status it sends:

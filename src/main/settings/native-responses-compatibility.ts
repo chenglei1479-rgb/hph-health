@@ -31,6 +31,7 @@ import {
   writeProviderLoopbackJson as json,
   ProviderLoopbackHttpHost,
   ProviderLoopbackRequestError,
+  failureDiagnosticFields,
   phiErrorType,
   statusForPhiError,
   type ProviderLoopbackHttpRequest
@@ -1313,13 +1314,20 @@ export class NativeResponsesCompatibilityProxy {
     } catch (error) {
       const failure = timeoutError ?? error
       const errorCode = safeNetworkErrorCode(failure)
+      // #243: `errorCategory: "object"` alone sent two reproductions after this. A refusal crossing a
+      // bundle boundary logs as `object` because its PHI code matches no system-code pattern, so the
+      // record names the failure instead of hiding it: `errorName`/`errorCode` are identifiers, the
+      // message is recorded only as a presence flag, and `requestAborted` separates "the client went
+      // away" from "we refused". Nothing here can carry the blocked text or a local path.
       log.warn('native Responses compatibility request failed', {
         requestId,
         phase,
         outcome: request.signal.aborted ? 'aborted' : 'error',
         durationMs: Math.max(0, Date.now() - startedAt),
         ...diagnosticErrorFields(failure),
-        ...(errorCode ? { errorCode } : {})
+        ...failureDiagnosticFields(failure),
+        ...(errorCode ? { errorCode } : {}),
+        requestAborted: request.signal.aborted
       })
       throw failure
     } finally {

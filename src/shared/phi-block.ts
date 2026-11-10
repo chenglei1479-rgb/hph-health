@@ -75,3 +75,24 @@ export const PHI_UNRETRYABLE_INTERNAL_CODES: readonly PhiFailureCode[] = [
   PHI_INTERNAL_CODE,
   PHI_REVIEW_UNAVAILABLE_CODE
 ]
+
+// #243: a refusal must be identifiable without `instanceof`. In the packaged app the gate is produced in
+// the backend bundle and consumed in the bridge bundle, so a real refusal can arrive as a different copy
+// of the class: same name, same `PHI-*` code, same message, failed class check. The stable code is the
+// identity - it is minted here, never derived from patient text - and the class stays a fallback for an
+// error that carries no code at all.
+const PHI_FAILURE_CODE_PATTERN = /^PHI-[A-Z0-9]+(?:-[A-Z0-9]+)*$/
+
+export const isPhiFailureCode = (value: unknown): value is PhiFailureCode =>
+  typeof value === 'string' && PHI_FAILURE_CODE_PATTERN.test(value)
+
+export const phiFailureCodeOf = (error: unknown): PhiFailureCode | undefined => {
+  if (error instanceof PhiPolicyError) return error.code ?? PHI_INTERNAL_CODE
+  if (!error || typeof error !== 'object') return undefined
+  try {
+    const code = (error as { code?: unknown }).code
+    return isPhiFailureCode(code) ? code : undefined
+  } catch {
+    return undefined
+  }
+}

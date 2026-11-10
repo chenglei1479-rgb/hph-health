@@ -538,3 +538,165 @@ describe('phi error type is one rule', () => {
     expect(body).toEqual({ error: { type: 'server_error', message: 'upstream exploded' } })
   })
 })
+
+// #243: the packaged app holds two copies of the gate class (the backend bundle produces the refusal,
+// the bridge checks its own copy), so `instanceof` is false for a real refusal. These tests build the
+// refusal the way that boundary actually delivers it - same name, same `PHI-*` code, same message, a
+// different class - and assert the outbound answer, not that some function was called.
+class ForeignGateError extends Error {
+  readonly code: string
+
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'PhiGateError'
+    this.code = code
+  }
+}
+
+const foreignRefusal = (code: string, message = 'refused at the gate') =>
+  new ForeignGateError(code, message)
+
+describe('a refusal is recognised by its stable code, not by its class', () => {
+  it('serves a foreign refusal exactly like our own class does', () => {
+    for (const code of [
+      PHI_BLOCK_CODE,
+      PHI_UNSCANNABLE_CODE,
+      PHI_CONSENT_CODE,
+      PHI_TURN_REPLACED_CODE,
+      PHI_INTERNAL_CODE,
+      PHI_REVIEW_UNAVAILABLE_CODE,
+      PHI_UNAVAILABLE_CODE
+    ]) {
+      const own = statusForPhiError(new PhiGateError('refused', [], code as never))
+      const foreign = statusForPhiError(foreignRefusal(code))
+      expect(foreign, code).toEqual(own)
+      expect(foreign.status, code).not.toBe(502)
+    }
+  })
+
+  it('does not read a non-PHI error as a refusal', () => {
+    expect(statusForPhiError(new Error('upstream timed out'))).toEqual({ status: 502 })
+    expect(statusForPhiError({ code: 'ECONNRESET' })).toEqual({ status: 502 })
+    expect(statusForPhiError({ code: 'PHI-NOT-A-REAL-CODE' }).status).toBe(409)
+  })
+
+  it('the native Responses wire answers a foreign PHI-BLOCK-01 with 400 and its code', async () => {
+    // This is the #243 incident: a refusal crossed the bundle boundary, `instanceof` failed, and the
+    // client was told 502 Bad Gateway with no code.
+    installPhiGate({
+      release: () => {
+        throw foreignRefusal(PHI_BLOCK_CODE)
+      },
+      restore: (value: string) => value
+    })
+    const upstream = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const proxy = new NativeResponsesCompatibilityProxy(
+      { baseUrl: 'https://provider.example.test/v1', key: 'key-a', model: 'model-a' },
+      upstream
+    )
+    const connection = await proxy.start()
+    try {
+      const response = await fetch(`${connection.baseUrl}/responses`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${connection.token}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ input: 'hello' })
+      })
+      expect(response.status).toBe(400)
+      const body = (await response.json()) as {
+        error?: { type?: string; code?: string; message?: string }
+      }
+      expect(body.error?.code).toBe(PHI_BLOCK_CODE)
+      expect(body.error?.message).toBe('refused at the gate')
+      expect(body.error?.type).toBe('invalid_request_error')
+      expect(upstream).not.toHaveBeenCalled()
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('the Responses bridge keeps the code for a foreign refusal too', async () => {
+    installPhiGate({
+      release: () => {
+        throw foreignRefusal(PHI_BLOCK_CODE)
+      },
+      restore: (value: string) => value
+    })
+    const upstream = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const bridge = new ResponsesBridge(
+      { baseUrl: 'https://opencode.ai/zen/go/v1', vendorId: 'opencode-go' },
+      upstream
+    )
+    const connection = await bridge.start()
+    try {
+      const response = await fetch(`${connection.baseUrl}/responses`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${connection.token}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ input: 'hello', stream: false, prompt_cache_key: 'session-1' })
+      })
+      expect(response.status).toBe(400)
+      const body = (await response.json()) as { error?: { code?: string } }
+      expect(body.error?.code).toBe(PHI_BLOCK_CODE)
+      expect(upstream).not.toHaveBeenCalled()
+    } finally {
+      await bridge.close()
+    }
+  })
+
+  // Acceptance #1: the log must name the failure without printing it. A refusal's message can carry
+  // the blocked text, so only its presence is recorded - and name/code are the two identifiers that
+  // would have ended the #243 investigation in one line.
+  it('the failure log names a foreign refusal without printing its text', async () => {
+    const { mkdtemp, readFile, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const { flushLogs, initLogger } = await import('@aipoch/diagnostics/node')
+    const logDir = await mkdtemp(join(tmpdir(), 'phi-243-log-'))
+    initLogger({ logDir, mirrorToConsole: false })
+    try {
+      installPhiGate({
+        release: () => {
+          throw foreignRefusal(PHI_BLOCK_CODE, 'BLOCKED-TEXT-MARKER 山田 太郎')
+        },
+        restore: (value: string) => value
+      })
+      const upstream = vi.fn<typeof fetch>(async () => new Response('{}'))
+      const proxy = new NativeResponsesCompatibilityProxy(
+        { baseUrl: 'https://provider.example.test/v1', key: 'key-a', model: 'model-a' },
+        upstream
+      )
+      const connection = await proxy.start()
+      try {
+        const response = await fetch(`${connection.baseUrl}/responses`, {
+          method: 'POST',
+          headers: {
+            authorization: `Bearer ${connection.token}`,
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({ input: 'hello' })
+        })
+        expect(response.status).toBe(400)
+      } finally {
+        await proxy.close()
+      }
+
+      await flushLogs()
+      const log = await readFile(join(logDir, 'main.log'), 'utf8')
+      expect(log).toContain('native Responses compatibility request failed')
+      expect(log).toContain('PhiGateError')
+      expect(log).toContain(PHI_BLOCK_CODE)
+      expect(log).toContain('"hasErrorMessage":true')
+      expect(log).toContain('"requestAborted":false')
+      // The refusal text is served to the client (acceptance #3), never written to the log.
+      expect(log).not.toContain('BLOCKED-TEXT-MARKER')
+    } finally {
+      await flushLogs()
+      await rm(logDir, { recursive: true, force: true })
+    }
+  })
+})
