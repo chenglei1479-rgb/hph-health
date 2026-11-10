@@ -246,7 +246,11 @@ async function releaseThroughInstalledGate(
   options?: DeidentifyOptions
 ): Promise<PhiResult> {
   try {
-    const result = await activeGate().release(text, projectId, options)
+    // Keep the two-argument call shape for every caller that has no options: gate implementations and
+    // their test doubles are compared by call arguments, and an explicit third `undefined` changes it.
+    const result = options
+      ? await activeGate().release(text, projectId, options)
+      : await activeGate().release(text, projectId)
     if (
       !result ||
       typeof result.text !== 'string' ||

@@ -712,6 +712,21 @@ describe('machine-generated tool traffic (#244)', () => {
     }
   })
 
+  // The regression the notebook job caught: adding an optional third argument to release must not
+  // change the call shape for the ordinary path. A gate double is compared by call arguments, so an
+  // explicit third `undefined` turns an unrelated notebook test red.
+  it('keeps the two-argument release call when there are no options', async () => {
+    const release = vi.fn((text: string) => ({ text, replacements: [], warnings: [] }))
+    installMachineApproval(() => true)
+    installPhiGate({ release, restore: (text) => text })
+    try {
+      await releaseModelText('hello', 'fiction')
+      expect(release.mock.calls[0]).toHaveLength(2)
+    } finally {
+      installIdentityGate()
+    }
+  })
+
   // #244 acceptance: the packaged boundary itself must not change the answer. The same body is
   // released through a gate object created by a second module copy (what a separate bundle is:
   // another copy of the classes), and the bytes must be identical.
