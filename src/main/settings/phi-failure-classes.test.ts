@@ -11,6 +11,7 @@ import {
   PhiGateError
 } from '../phi/gate'
 import { createMemoryPhiVault } from '../phi/store'
+import { NativeResponsesCompatibilityProxy } from './native-responses-compatibility'
 import { OpenAiProviderBridge } from './openai-provider-bridge'
 import { ResponsesBridge } from './responses-bridge'
 import {
@@ -22,7 +23,7 @@ import {
   PHI_UNAVAILABLE_CODE,
   PHI_UNSCANNABLE_CODE
 } from '../../shared/phi-block'
-import { phiErrorResponse, statusForPhiError } from './provider-loopback-http-host'
+import { phiErrorResponse, phiErrorType, statusForPhiError } from './provider-loopback-http-host'
 
 // #195: the transport answer is decided by the refusal class, and the client's retry loop is the thing
 // under test - not a mocked status. Each case drives the real bridge and the real retry set the agent
@@ -235,7 +236,10 @@ describe('refusal classes reach the transport as the retry advice they mean', ()
   // branch behaves.
   const responsesWire = async () => {
     const upstream = vi.fn<typeof fetch>(async () => new Response('{}'))
-    const bridge = new ResponsesBridge({ baseUrl: 'https://opencode.ai/zen/go/v1', vendorId: 'opencode-go' }, upstream)
+    const bridge = new ResponsesBridge(
+      { baseUrl: 'https://opencode.ai/zen/go/v1', vendorId: 'opencode-go' },
+      upstream
+    )
     const connection = await bridge.start()
     const send = (body: unknown) =>
       fetch(`${connection.baseUrl}/responses`, {
@@ -409,5 +413,128 @@ describe('refusal codes keep their retry semantics', () => {
     [PHI_INTERNAL_CODE, 409]
   ])('%s maps to %i', (code, status) => {
     expect(statusForPhiError(new PhiGateError('refused', [], code))).toEqual({ status, code })
+  })
+})
+
+// #227: the status -> `type` rule lived as the same ternary in two bridges, so one could be edited
+// without the other. It is one function now, and the table below is what pins both ends of the split.
+describe('phi error type is one rule', () => {
+  it.each([
+    [400, 'invalid_request_error'],
+    [409, 'invalid_request_error'],
+    [503, 'api_error'],
+    [502, 'api_error']
+  ])('%i travels as %s', (status, type) => {
+    expect(phiErrorType(status)).toBe(type)
+  })
+
+  it('leaves no bridge with its own status -> type ternary', () => {
+    const directory = join(process.cwd(), 'src/main/settings')
+    const normalised = (name: string) =>
+      readFileSync(join(directory, name), 'utf8').replace(/\s+/g, '')
+    const leftovers = readdirSync(directory)
+      .filter((name) => name.endsWith('.ts') && !name.includes('.test.'))
+      // The one home of the rule is allowed to hold the ternary; every other file must call it.
+      .filter((name) => name !== 'provider-loopback-http-host.ts')
+      .filter((name) => {
+        const text = normalised(name)
+        return (
+          text.includes("status<500?'invalid_request_error':'api_error'") ||
+          text.includes('status<500?"invalid_request_error":"api_error"')
+        )
+      })
+    expect(leftovers).toEqual([])
+  })
+
+  // The wire proof matters here for the same reason as the unmapped-code case: a function table alone
+  // would leave "this bridge actually uses it" on paper. This drives the native Responses proxy, which
+  // is the second call site and the one no PR job covers by its own directory.
+  it('the native Responses wire answers a phi refusal with 409 and a client type', async () => {
+    installPhiGate({
+      release: () => {
+        throw new PhiGateError('x', [], PHI_INTERNAL_CODE)
+      },
+      restore: (value: string) => value
+    })
+    const upstream = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const proxy = new NativeResponsesCompatibilityProxy(
+      { baseUrl: 'https://provider.example.test/v1', key: 'key-a', model: 'model-a' },
+      upstream
+    )
+    const connection = await proxy.start()
+    try {
+      const response = await fetch(`${connection.baseUrl}/responses`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${connection.token}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ input: 'hello' })
+      })
+      expect(response.status).toBe(409)
+      await expect(response.json()).resolves.toMatchObject({
+        error: { type: 'invalid_request_error', code: PHI_INTERNAL_CODE }
+      })
+      expect(upstream).not.toHaveBeenCalled()
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  // #227 second half: the synthesised provider-error body. The ticket expected an upstream 5xx to be
+  // reported as a 5xx with a client-error type. It cannot: that branch is gated on the deterministic
+  // 4xx set, and providerErrorClientStatus maps every one of those to 400. Two cases pin both sides of
+  // that fact, so a future widening of the gate cannot silently produce a 5xx + client-error pair.
+  const acceptingGate = () =>
+    installPhiGate({
+      release: (value: string) => ({ text: value, replacements: [], warnings: [] }),
+      restore: (value: string) => value
+    })
+
+  const askProxy = async (upstreamResponse: Response) => {
+    acceptingGate()
+    const upstream = vi.fn<typeof fetch>(async () => upstreamResponse)
+    const proxy = new NativeResponsesCompatibilityProxy(
+      { baseUrl: 'https://provider.example.test/v1', key: 'key-a', model: 'model-a' },
+      upstream
+    )
+    const connection = await proxy.start()
+    try {
+      const response = await fetch(`${connection.baseUrl}/responses`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${connection.token}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ input: 'hello' })
+      })
+      return { status: response.status, body: await response.json() }
+    } finally {
+      await proxy.close()
+    }
+  }
+
+  it('synthesises a client error whose type matches the 400 it sends', async () => {
+    const { status, body } = await askProxy(
+      // 404 is deterministic, but the body is not JSON, so it cannot be replayed and we synthesise one.
+      new Response('not json at all', {
+        status: 404,
+        headers: { 'content-type': 'application/json' }
+      })
+    )
+    expect(status).toBe(400)
+    expect(body).toMatchObject({ error: { type: 'invalid_request_error', status: 404 } })
+  })
+
+  it('never synthesises that body for an upstream 5xx', async () => {
+    const { status, body } = await askProxy(
+      Response.json(
+        { error: { type: 'server_error', message: 'upstream exploded' } },
+        { status: 503 }
+      )
+    )
+    // A 5xx is replayed verbatim: our client-error shape (with its `status` field) must not appear.
+    expect(status).toBe(503)
+    expect(body).toEqual({ error: { type: 'server_error', message: 'upstream exploded' } })
   })
 })

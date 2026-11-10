@@ -105,6 +105,12 @@ export function statusForPhiError(error: unknown): PhiErrorStatus {
   return { status: 502 }
 }
 
+// One rule for the wire's `type`, shared by every bridge that derives it from the status it sends:
+// 4xx is a client error, 5xx is an API error. #227: the same ternary existed in two bridges, so a
+// careless edit could flip one of them and stay green.
+export const phiErrorType = (status: number): 'invalid_request_error' | 'api_error' =>
+  status < 500 ? 'invalid_request_error' : 'api_error'
+
 // The body every bridge sends. `code` is carried for unknown classes too (500 included): it is a stable
 // id, never patient text or a local path, and it is the only signal that can grow the mapping table.
 export const phiErrorResponse = (
@@ -116,7 +122,7 @@ export const phiErrorResponse = (
     status,
     body: {
       error: {
-        type: status < 500 ? 'invalid_request_error' : 'api_error',
+        type: phiErrorType(status),
         message: error instanceof Error ? error.message : fallbackMessage,
         ...(code ? { code } : {})
       }
