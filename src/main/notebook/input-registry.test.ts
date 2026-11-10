@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto'
 import {
   chmod,
+  copyFile,
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   realpath,
   rm,
   stat,
@@ -14,7 +16,7 @@ import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join } from 'node:path'
 
 import type { PrismaClient } from '@prisma/client'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, describe, expect, it } from 'vitest'
 
 import { createProjectDbClient, migrateApplicationDatabase } from '../projects/prisma-client'
 import { ImmutableInputAuthority } from '../immutable-input-authority'
@@ -153,10 +155,38 @@ const createArtifact = async (input: {
   })
 }
 
+// Every case in this file used to migrate a fresh database in `setup()`. On the hosted Windows
+// runner that per-case SQLite migration is what pushed the last case past the 60 s job timeout
+// (measured locally: 18 cases / 70 s of test time). Build the migrated schema once per worker and
+// copy the files per case: the work a case depends on is its data, not the schema.
+let templateRoot: string | undefined
+const ensureTemplateDatabase = async (): Promise<string> => {
+  if (templateRoot) return templateRoot
+  const root = await mkdtemp(join(tmpdir(), 'open-science-input-registry-template-'))
+  const seed = createProjectDbClient(root)
+  try {
+    await migrateApplicationDatabase(seed)
+  } finally {
+    await seed.$disconnect()
+  }
+  templateRoot = root
+  return root
+}
+
+afterAll(async () => {
+  if (templateRoot) await rm(templateRoot, { recursive: true, force: true })
+  templateRoot = undefined
+})
+
 const setup = async (): Promise<NotebookInputRegistry> => {
+  const template = await ensureTemplateDatabase()
   storageRoot = await realpath(await mkdtemp(join(tmpdir(), 'open-science-input-registry-')))
+  // Copy every file the migration left behind: when SQLite is in WAL mode the `-wal`/`-shm` files
+  // are part of the same consistent snapshot as `open-science.db`.
+  for (const name of await readdir(template)) {
+    await copyFile(join(template, name), join(storageRoot, name))
+  }
   client = createProjectDbClient(storageRoot)
-  await migrateApplicationDatabase(client)
   await client.project.createMany({
     data: [
       { id: 'project-1', name: 'Project one' },
