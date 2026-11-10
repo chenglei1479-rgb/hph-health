@@ -480,4 +480,61 @@ describe('phi error type is one rule', () => {
       await proxy.close()
     }
   })
+
+  // #227 second half: the synthesised provider-error body. The ticket expected an upstream 5xx to be
+  // reported as a 5xx with a client-error type. It cannot: that branch is gated on the deterministic
+  // 4xx set, and providerErrorClientStatus maps every one of those to 400. Two cases pin both sides of
+  // that fact, so a future widening of the gate cannot silently produce a 5xx + client-error pair.
+  const acceptingGate = () =>
+    installPhiGate({
+      release: (value: string) => ({ text: value, replacements: [], warnings: [] }),
+      restore: (value: string) => value
+    })
+
+  const askProxy = async (upstreamResponse: Response) => {
+    acceptingGate()
+    const upstream = vi.fn<typeof fetch>(async () => upstreamResponse)
+    const proxy = new NativeResponsesCompatibilityProxy(
+      { baseUrl: 'https://provider.example.test/v1', key: 'key-a', model: 'model-a' },
+      upstream
+    )
+    const connection = await proxy.start()
+    try {
+      const response = await fetch(`${connection.baseUrl}/responses`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${connection.token}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ input: 'hello' })
+      })
+      return { status: response.status, body: await response.json() }
+    } finally {
+      await proxy.close()
+    }
+  }
+
+  it('synthesises a client error whose type matches the 400 it sends', async () => {
+    const { status, body } = await askProxy(
+      // 404 is deterministic, but the body is not JSON, so it cannot be replayed and we synthesise one.
+      new Response('not json at all', {
+        status: 404,
+        headers: { 'content-type': 'application/json' }
+      })
+    )
+    expect(status).toBe(400)
+    expect(body).toMatchObject({ error: { type: 'invalid_request_error', status: 404 } })
+  })
+
+  it('never synthesises that body for an upstream 5xx', async () => {
+    const { status, body } = await askProxy(
+      Response.json(
+        { error: { type: 'server_error', message: 'upstream exploded' } },
+        { status: 503 }
+      )
+    )
+    // A 5xx is replayed verbatim: our client-error shape (with its `status` field) must not appear.
+    expect(status).toBe(503)
+    expect(body).toEqual({ error: { type: 'server_error', message: 'upstream exploded' } })
+  })
 })

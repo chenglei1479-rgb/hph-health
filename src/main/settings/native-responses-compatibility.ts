@@ -1229,12 +1229,18 @@ export class NativeResponsesCompatibilityProxy {
           }
         }
         bodyIsReplayable &&= rawBody.byteLength <= MAX_REPLAY_ERROR_BODY_BYTES
+        // Derived, not hardcoded: this branch only runs for deterministic 4xx statuses
+        // (isDeterministicProviderErrorStatus), and providerErrorClientStatus maps every one of those to
+        // 400, so the type here is always invalid_request_error - and a 5xx can never reach this body
+        // because it takes the replay path below. Taking the value from the same clientStatus that is
+        // sent keeps the status and its type from drifting if that gate ever widens.
+        const clientStatus = providerErrorClientStatus(upstream.status)
         const bodyToReplay = bodyIsReplayable
           ? rawBody
           : Buffer.from(
               JSON.stringify({
                 error: {
-                  type: 'invalid_request_error',
+                  type: phiErrorType(clientStatus),
                   message: `Provider request failed with status ${upstream.status}`,
                   status: upstream.status
                 }
@@ -1249,7 +1255,7 @@ export class NativeResponsesCompatibilityProxy {
         const snapshot = {
           body: bodyToReplay,
           headers,
-          status: providerErrorClientStatus(upstream.status),
+          status: clientStatus,
           upstreamStatus: upstream.status
         }
         this.deterministicErrors.remember(replayKey, upstream.status, snapshot)
