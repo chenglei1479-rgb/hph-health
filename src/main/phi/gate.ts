@@ -588,14 +588,24 @@ export function restoreModelText(text: string, projectId = currentPhiProject()):
   try {
     return activeGate().restore(text, projectId)
   } catch (error) {
-    throw new PhiGateError(
-      error instanceof Error
-        ? error.message
-        : 'PHI restore failed closed. The output was not shown.',
-      [],
-      PHI_INTERNAL_CODE
-    )
+    throw restoreFailure(error)
   }
+}
+
+// Restore failures never reach the client verbatim. The underlying message can name the local vault
+// path - the first use of a project writes <userData>/phi/vault.bin, and a writeFileSync EACCES or
+// ENOSPC message is `<code>: ..., open 'C:\Users\<name>\...\vault.bin'` - and this text is returned
+// from a model-output path whose body is rendered as-is, so the message must not travel. The class is
+// preserved (an unavailable vault stays a retryable 503, an internal invariant stays a 409), the body
+// gets the stable sentence, and only the log sees the original message. Never swallowed: the caller
+// still gets a typed failure and the output is still not shown.
+function restoreFailure(error: unknown): PhiGateError {
+  const code = error instanceof PhiPolicyError ? error.code : PHI_INTERNAL_CODE
+  phiBlockLog.warn('phi restore failed', {
+    code,
+    message: error instanceof Error ? error.message : String(error)
+  })
+  return new PhiGateError(PHI_INTERNAL_MESSAGE, [], code)
 }
 
 export function restoreModelValue<T>(value: T, projectId = currentPhiProject()): T {
