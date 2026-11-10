@@ -26,8 +26,7 @@ import {
   readBoundedResponseText,
   ResponseBodyLimitError
 } from './bounded-response'
-import { PhiPolicyError } from '../../shared/phi-block'
-import { phiErrorResponse } from './provider-loopback-http-host'
+import { phiErrorResponse, phiFailureCodeOf } from './provider-loopback-http-host'
 import { selectChatSkills } from './chat-skill-selector'
 import {
   DeterministicProviderErrorReplay,
@@ -135,7 +134,10 @@ export class ResponsesBridge {
         // A gate refusal is a property of the request, not of this wire - one mapping decides its
         // status. This bridge used to fall through to 400 for every unknown error, so a "check could
         // not finish" would have been reported as a permanent refusal here.
-        if (error instanceof PhiPolicyError) {
+        // #243: identity by the stable PHI code, not by class. The gate lives in another bundle in the
+        // packaged app, so `instanceof` can be false for a real refusal and this branch would then
+        // answer a generic 400 with no code - the same defect that served the native wire a 502.
+        if (phiFailureCodeOf(error)) {
           const { status, body } = phiErrorResponse(error, 'Responses bridge request failed.')
           json(response, status, body)
           return

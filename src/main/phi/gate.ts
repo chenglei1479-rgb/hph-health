@@ -11,6 +11,8 @@ import {
   PHI_TURN_REPLACED_CODE,
   PHI_UNAVAILABLE_CODE,
   PHI_UNSCANNABLE_CODE,
+  PHI_CLIENT_REFUSAL_CODES,
+  phiFailureCodeOf,
   PhiPolicyError,
   type PhiFailureCode
 } from '../../shared/phi-block'
@@ -208,6 +210,17 @@ function escalateReleaseFailure(error: unknown): never {
     }
     phiBlockLog.warn('phi release refused by an internal invariant', { code: error.code })
     throw phiInternalError()
+  }
+  // #243: a refusal that lost its prototype crossing a bundle boundary. In the packaged app the gate
+  // is produced in the backend bundle and consumed elsewhere, so `instanceof` can be false for a real
+  // refusal; without this branch it became the generic retryable sentence (and a 502 at the bridge)
+  // instead of the 400 + stable code the client must see. The code is the identity.
+  const foreignCode = phiFailureCodeOf(error)
+  if (foreignCode && PHI_CLIENT_REFUSAL_CODES.includes(foreignCode)) {
+    phiBlockLog.warn('phi release refused by a foreign copy of the gate class', {
+      code: foreignCode
+    })
+    throw new PhiGateError(error instanceof Error ? error.message : '', [], foreignCode)
   }
   phiBlockLog.warn('phi release unavailable', { code: PHI_UNAVAILABLE_CODE, reason: 'gate-error' })
   throw modelReleaseError()
