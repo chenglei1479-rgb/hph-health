@@ -31,6 +31,7 @@ import {
   writeProviderLoopbackJson as json,
   ProviderLoopbackHttpHost,
   ProviderLoopbackRequestError,
+  phiErrorType,
   statusForPhiError,
   type ProviderLoopbackHttpRequest
 } from './provider-loopback-http-host'
@@ -817,7 +818,7 @@ export class NativeResponsesCompatibilityProxy {
         const { status, code } = statusForPhiError(error)
         json(response, status, {
           error: {
-            type: status < 500 ? 'invalid_request_error' : 'api_error',
+            type: phiErrorType(status),
             // This wire keeps its own fallback copy for transport failures; a gate refusal still
             // carries the gate message so the client can see the stable refusal id.
             message:

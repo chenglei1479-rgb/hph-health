@@ -742,6 +742,7 @@
       "src/main/settings/notebook-network-settings.test.ts",
       "src/main/settings/notebook-runtime-settings.test.ts",
       "src/main/settings/opencode-go-validation.integration.test.ts",
+      "src/main/settings/phi-failure-classes.test.ts",
       "src/main/settings/preferences.test.ts",
       "src/main/settings/preflight.test.ts",
       "src/main/settings/provider-accounts.test.ts",
