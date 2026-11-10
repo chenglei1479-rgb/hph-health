@@ -5134,6 +5134,11 @@ describe('notebook local RPC server', () => {
 
 configureTestRuntimeMetadata()
 describe('real ACP / RPC / Runtime approval wiring', () => {
+  // The Ask card is emitted after a real local-HTTP RPC round trip. Measured on a developer machine:
+  // P50 0.50 s, P95 0.56 s, max 0.58 s over 20 runs. The default `vi.waitFor` bound (1 s) left less
+  // than a 2x margin, and the shared two-worker Windows runner crossed it once. 5 s keeps a real hang
+  // failing in 5 s instead of the 60 s test timeout.
+  const ASK_CARD_WAIT_MS = 5_000
   type WiringRpcResponse = {
     status: number
     body: {
@@ -5419,7 +5424,7 @@ describe('real ACP / RPC / Runtime approval wiring', () => {
       await expect(h.outer()).resolves.toMatchObject({ outcome: { outcome: 'selected' } })
       expect(h.emitted).toHaveLength(0)
       const pending = h.rpc()
-      await vi.waitFor(() => expect(h.emitted).toHaveLength(1))
+      await vi.waitFor(() => expect(h.emitted).toHaveLength(1), { timeout: ASK_CARD_WAIT_MS })
       expect(
         (
           await h.service.listRuntimes({
@@ -5513,7 +5518,7 @@ describe('real ACP / RPC / Runtime approval wiring', () => {
     await h.outer()
     h.state.profile = 'ask'
     const pending = h.rpc()
-    await vi.waitFor(() => expect(h.emitted).toHaveLength(1))
+    await vi.waitFor(() => expect(h.emitted).toHaveLength(1), { timeout: ASK_CARD_WAIT_MS })
     h.state.profile = 'auto'
     expect(h.context.getPendingRequests()).toHaveLength(1)
     await h.respond(false)
@@ -5575,7 +5580,7 @@ describe('real ACP / RPC / Runtime approval wiring', () => {
       language: 'python',
       code: 'import os\nos.unlink("target.txt")'
     })
-    await vi.waitFor(() => expect(h.emitted).toHaveLength(1))
+    await vi.waitFor(() => expect(h.emitted).toHaveLength(1), { timeout: ASK_CARD_WAIT_MS })
     expect(h.emitted[0].rawInput).toHaveProperty('notebookCodeRisk')
     await h.respond(false)
     await pending
