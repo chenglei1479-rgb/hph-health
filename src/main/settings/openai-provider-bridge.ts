@@ -1,12 +1,16 @@
-import {
-  observeProviderFailure,
-  type ProviderFailureObserver
-} from './provider-failure-observation'
+import { randomUUID } from 'node:crypto'
 import type { ServerResponse } from 'node:http'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
+import { createLogger } from '@aipoch/diagnostics/node'
+
 import {
+  observeProviderFailure,
+  type ProviderFailureObserver
+} from './provider-failure-observation'
+import {
+  failureDiagnosticFields,
   ProviderLoopbackHttpHost,
   phiErrorResponse,
   writeProviderLoopbackJson as json,
@@ -44,6 +48,65 @@ type ProviderErrorSnapshot = Readonly<{
   headers: Record<string, string>
   status: number
 }>
+
+const providerLog = createLogger('openai-provider')
+
+// #251: an upstream fetch failure used to reach the agent as undici's bare "fetch failed", and the
+// cause — the only thing that says whether this was a headers/body timeout, a reset or a DNS failure —
+// was dropped. Keep the cause as bounded ASCII identifiers: never the error message, never a request
+// or response body, never a URL (a custom endpoint can carry a credential in its query).
+const STABLE_DIAGNOSTIC_FIELD = 64
+const stableDiagnosticField = (value: unknown): string | undefined => {
+  if (typeof value === 'number' && Number.isInteger(value) && Math.abs(value) <= 2_147_483_647)
+    return String(value)
+  if (typeof value !== 'string' || value.length === 0 || value.length > STABLE_DIAGNOSTIC_FIELD)
+    return undefined
+  return /^[A-Za-z][A-Za-z0-9_.-]*$/u.test(value) ? value : undefined
+}
+
+const causeDiagnosticFields = (error: unknown): Record<string, string> => {
+  let cause: unknown
+  try {
+    cause = (error as { cause?: unknown } | null)?.cause
+  } catch {
+    return {}
+  }
+  if (!cause || typeof cause !== 'object') return {}
+  const record = cause as { code?: unknown; name?: unknown; errno?: unknown; errors?: unknown }
+  // A dual-stack connection refusal arrives as an AggregateError; its first child carries the code.
+  const nested = Array.isArray(record.errors) ? record.errors : []
+  const nestedCode = nested
+    .map((child) => stableDiagnosticField((child as { code?: unknown } | null)?.code))
+    .find((value) => value !== undefined)
+  const fields: Record<string, string> = {}
+  const code = stableDiagnosticField(record.code) ?? nestedCode
+  if (code) fields.causeCode = code
+  const name = stableDiagnosticField(record.name)
+  if (name) fields.causeName = name
+  const errno = stableDiagnosticField(record.errno)
+  if (errno) fields.causeErrno = errno
+  return fields
+}
+
+// #251: the only three transport failures this bridge can explain. The status and the code stay what
+// `phiErrorResponse` already chose; only the sentence changes, so a caller can act on it.
+const PROVIDER_BODY_TIMEOUT_MESSAGE =
+  'The model service stopped sending data before the reply finished. Retry the request.'
+const PROVIDER_HEADERS_TIMEOUT_MESSAGE =
+  'The model service did not respond in time. Retry the request.'
+const PROVIDER_UNREACHABLE_MESSAGE =
+  'Could not reach the model service. Check your network, proxy or VPN, then retry.'
+
+const providerFailureMessage = (
+  error: unknown,
+  cause: Record<string, string>
+): string | undefined => {
+  if (cause.causeCode === 'UND_ERR_BODY_TIMEOUT') return PROVIDER_BODY_TIMEOUT_MESSAGE
+  if (cause.causeCode === 'UND_ERR_HEADERS_TIMEOUT') return PROVIDER_HEADERS_TIMEOUT_MESSAGE
+  if (error instanceof Error && error.name === 'TypeError' && error.message === 'fetch failed')
+    return PROVIDER_UNREACHABLE_MESSAGE
+  return undefined
+}
 
 export type OpenAiProviderBridgeTarget = Readonly<{
   id: string
@@ -200,61 +263,101 @@ export class OpenAiProviderBridge {
       return
     }
 
+    const requestId = randomUUID()
     const startedAt = Date.now()
-    const upstream = await fetchProviderRequest(this.fetchImpl, endpoint, {
-      method: 'POST',
-      headers: headersToForward,
-      body,
-      signal: request.signal
-    })
-    const headers = responseHeaders(upstream.headers)
-    if (isDeterministicProviderErrorStatus(upstream.status)) {
-      const upstreamBody = await readBoundedProviderErrorBody(upstream, {
+    let firstByteAt: number | undefined
+    try {
+      const upstream = await fetchProviderRequest(this.fetchImpl, endpoint, {
+        method: 'POST',
+        headers: headersToForward,
+        body,
         signal: request.signal
       })
-      await observeProviderFailure(
-        target.onProviderFailure,
-        {
-          model: target.model,
-          endpoint: target.wire === 'responses' ? 'responses' : 'openai',
-          startedAt
-        },
-        upstream.status,
-        upstreamBody.complete ? upstreamBody.body.toString('utf8') : undefined
-      )
-      delete headers['content-encoding']
-      if (!upstreamBody.complete) headers['content-type'] = 'application/json'
-      const bodyToReplay = upstreamBody.complete
-        ? upstreamBody.body
-        : Buffer.from(
-            JSON.stringify({
-              error: {
-                type: 'invalid_request_error',
-                message: `Provider request failed with status ${upstream.status}`
-              }
-            })
-          )
-      const snapshot = {
-        body: bodyToReplay,
-        headers: {
-          ...headers,
-          'content-length': String(bodyToReplay.byteLength),
-          'x-open-science-upstream-status': String(upstream.status)
-        },
-        status: providerErrorClientStatus(upstream.status)
+      const headers = responseHeaders(upstream.headers)
+      if (isDeterministicProviderErrorStatus(upstream.status)) {
+        const upstreamBody = await readBoundedProviderErrorBody(upstream, {
+          signal: request.signal
+        })
+        await observeProviderFailure(
+          target.onProviderFailure,
+          {
+            model: target.model,
+            endpoint: target.wire === 'responses' ? 'responses' : 'openai',
+            startedAt
+          },
+          upstream.status,
+          upstreamBody.complete ? upstreamBody.body.toString('utf8') : undefined
+        )
+        delete headers['content-encoding']
+        if (!upstreamBody.complete) headers['content-type'] = 'application/json'
+        const bodyToReplay = upstreamBody.complete
+          ? upstreamBody.body
+          : Buffer.from(
+              JSON.stringify({
+                error: {
+                  type: 'invalid_request_error',
+                  message: `Provider request failed with status ${upstream.status}`
+                }
+              })
+            )
+        const snapshot = {
+          body: bodyToReplay,
+          headers: {
+            ...headers,
+            'content-length': String(bodyToReplay.byteLength),
+            'x-open-science-upstream-status': String(upstream.status)
+          },
+          status: providerErrorClientStatus(upstream.status)
+        }
+        this.deterministicErrors.remember(replayKey, upstream.status, snapshot)
+        response.writeHead(snapshot.status, snapshot.headers)
+        response.end(snapshot.body)
+        return
       }
-      this.deterministicErrors.remember(replayKey, upstream.status, snapshot)
-      response.writeHead(snapshot.status, snapshot.headers)
-      response.end(snapshot.body)
-      return
+      response.statusCode = upstream.status
+      response.statusMessage = upstream.statusText
+      for (const [name, value] of Object.entries(headers)) response.setHeader(name, value)
+      if (!upstream.body) {
+        response.end()
+        return
+      }
+      await pipeline(
+        Readable.from(
+          (async function* (): AsyncGenerator<Uint8Array> {
+            for await (const chunk of upstream.body as AsyncIterable<Uint8Array>) {
+              if (firstByteAt === undefined) firstByteAt = Date.now()
+              yield chunk
+            }
+          })()
+        ),
+        response
+      )
+    } catch (error) {
+      // The client already has the upstream status line, so the only honest signal left is a reset.
+      // Before that point the bridge can still answer with a status the agent will carry to the user.
+      const responseStarted = response.headersSent
+      const cause = causeDiagnosticFields(error)
+      providerLog.warn('provider request failed', {
+        bridge: 'openai',
+        target: target.id,
+        wire: this.wire,
+        path: requestUrl.pathname,
+        requestId,
+        durationMs: Date.now() - startedAt,
+        phase: responseStarted ? 'stream' : 'before-response',
+        responseStarted,
+        ...(firstByteAt === undefined ? {} : { firstByteMs: firstByteAt - startedAt }),
+        ...failureDiagnosticFields(error),
+        ...cause
+      })
+      if (responseStarted) {
+        response.destroy(error instanceof Error ? error : undefined)
+        return
+      }
+      const { status, body: errorBody } = phiErrorResponse(error, 'OpenAI provider request failed.')
+      const message = providerFailureMessage(error, cause)
+      if (message) errorBody.error.message = message
+      json(response, status, errorBody)
     }
-    response.statusCode = upstream.status
-    response.statusMessage = upstream.statusText
-    for (const [name, value] of Object.entries(headers)) response.setHeader(name, value)
-    if (!upstream.body) {
-      response.end()
-      return
-    }
-    await pipeline(Readable.from(upstream.body as AsyncIterable<Uint8Array>), response)
   }
 }
