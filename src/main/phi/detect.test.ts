@@ -143,3 +143,33 @@ describe('CJK prose is not a name (#244)', () => {
     expect(namesOf(text)).toContain(text)
   })
 })
+
+// beta.23: beta.23 blocked the agent's own plan line as a person name. The field was 78 characters and
+// the span was offset 41 / length 6: 明确研究问题. It is a verb-object clause, not a name, and it
+// carries no particle — so a particle veto alone cannot reject it. What it does carry is a research
+// noun at its end; a personal name does not end in 问题/数据/计划/流程.
+describe('a verb-object clause is not a name (beta.23)', () => {
+  const plan =
+    '我将使用 biomedical-discovery 技能整理第一阶段研究计划草稿，明确研究问题、所需证据与数据及待确认事项；本阶段不开展外部检索或数据分析。'
+
+  it('releases the agent plan line that beta.23 blocked', () => {
+    expect(plan).toHaveLength(78)
+    const names = detectPhi(plan).filter((span) => span.category === 'PERSON_NAME')
+    expect(names.map((span) => [span.start, span.end, span.text])).toEqual([])
+  })
+
+  it.each(['明确研究问题', '所需证据', '研究计划草稿', '这个课题的创新性', '继续', '挨拶'])(
+    'releases the clause %s',
+    (text) => {
+      expect(namesOf(text)).toEqual([])
+    }
+  )
+
+  // The veto must not cost a reviewed name, including one that contains 和 (a name character).
+  it.each(['山田 太郎', '椎名凛太郎', '勅使河原剛太朗', '長谷川太郎左衛門', '鈴森 和子'])(
+    'still masks the reviewed name %s',
+    (text) => {
+      expect(namesOf(text)).toContain(text)
+    }
+  )
+})
