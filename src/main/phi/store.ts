@@ -1,6 +1,6 @@
 import { highlightTokens, type PhiHighlight } from './confirm'
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import type { PhiCategory } from './detect'
@@ -82,6 +82,30 @@ export function normalizeIdentifier(value: string): string {
 
 function emptyDocument(): VaultDocument {
   return { version: 1, projects: {}, log: [] }
+}
+
+// #252: the access log is a diagnostic trail, not an unbounded record. In beta.23 it grew without a
+// bound — every released string appended an event, and every append rewrote and re-encrypted the whole
+// document, so the file reached 2.37 MB and a failure inside save() closed the gate for every turn.
+// Two thousand events of roughly sixty bytes each keep the file near 120 KB while retaining the tail
+// of a session, which is what the incident reports need.
+export const PHI_LOG_MAX_EVENTS = 2_000
+const LOG_TRIMMED_ACTION = 'log-trimmed'
+// No project owns a log trim; the marker is about the vault itself.
+const LOG_TRIMMED_PROJECT = '-'
+
+// Dropping old events must not be silent: the marker says how many went, and stays until it is itself
+// the oldest entry, so a reader can always tell that the log is a tail rather than the whole history.
+function trimLog(document: VaultDocument): void {
+  const overflow = document.log.length - PHI_LOG_MAX_EVENTS
+  if (overflow <= 0) return
+  document.log.splice(0, overflow)
+  document.log.push({
+    at: new Date().toISOString(),
+    projectId: LOG_TRIMMED_PROJECT,
+    action: LOG_TRIMMED_ACTION,
+    counts: { dropped: overflow }
+  })
 }
 
 function placeholderFor(label: string, n: number): string {
@@ -207,10 +231,12 @@ function openProject(
       action: 'create-key',
       counts: {}
     })
+    trimLog(document)
     persist()
   }
   return new ProjectStore(record, (action, counts) => {
     document.log.push({ at: new Date().toISOString(), projectId, action, counts: { ...counts } })
+    trimLog(document)
     persist()
   })
 }
@@ -225,6 +251,12 @@ export function createEncryptedPhiVault(
 } {
   mkdirSync(directory, { recursive: true })
   const filePath = join(directory, 'vault.bin')
+  // #252: one document per vault, shared by every store(). Before this, each store() call decrypted the
+  // file again and kept its own snapshot, so two projects (or two gates) could each write back a copy
+  // that did not contain the other's entries — a lost update, and the reason concurrent releases all
+  // rewrote the whole file. Loading once also means a store cannot be built from a stale snapshot.
+  let document: VaultDocument | null = null
+  let writes = 0
   const load = (): VaultDocument => {
     try {
       const blob = readFileSync(filePath)
@@ -239,18 +271,49 @@ export function createEncryptedPhiVault(
       )
     }
   }
-  const save = (document: VaultDocument): void => {
-    const blob = cipher.encryptString(JSON.stringify(document))
-    writeFileSync(filePath, blob, { mode: 0o600 })
+  const current = (): VaultDocument => (document ??= load())
+  // One write at a time, per vault. The write is synchronous on purpose: a failed write must fail the
+  // release (fail-closed), so it cannot be deferred to a queue that swallows the error. This flag turns
+  // a re-entrant call into a typed PHI error instead of two writers on the same temp file; it is a
+  // property of the vault, not something a caller has to arrange.
+  let writing = false
+  const save = (): void => {
+    if (writing) {
+      throw new PhiPolicyError(
+        'PHI vault write is already in progress. The request was not sent.',
+        PHI_INTERNAL_CODE
+      )
+    }
+    writing = true
+    try {
+      const blob = cipher.encryptString(JSON.stringify(current()))
+      // Temp file + rename: at every moment the disk holds either the previous complete vault or the
+      // new one. A crash, ENOSPC or EBUSY in the middle leaves the previous vault readable rather than
+      // a half-written file that cannot be decrypted (which is what closes the gate for every turn).
+      const tempPath = `${filePath}.${process.pid}.${++writes}.tmp`
+      try {
+        writeFileSync(tempPath, blob, { mode: 0o600 })
+        renameSync(tempPath, filePath)
+      } catch (error) {
+        // The original vault is untouched; remove the partial temp file so a retry starts clean.
+        try {
+          rmSync(tempPath, { force: true })
+        } catch {
+          // Leaving a temp file behind is better than masking the write error.
+        }
+        throw error
+      }
+    } finally {
+      writing = false
+    }
   }
   return {
     filePath,
     store(projectId) {
-      const document = load()
-      return openProject(document, projectId, () => save(document))
+      return openProject(current(), projectId, save)
     },
     readLog() {
-      return load().log
+      return current().log
     }
   }
 }
