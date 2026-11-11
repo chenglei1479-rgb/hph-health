@@ -1,6 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-import { PHI_BLOCK_CODE, PHI_INTERNAL_CODE } from '../../shared/phi-block'
+import { flushLogs, initLogger } from '@aipoch/diagnostics/node'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import {
+  PHI_BLOCK_CODE,
+  PHI_INTERNAL_CODE,
+  PHI_UNAVAILABLE_CODE,
+  PhiPolicyError
+} from '../../shared/phi-block'
 import { AcpProviderPromptExecutor } from '../acp/provider-prompt-executor'
 import type { ProviderPromptExecutionInput } from '../acp/provider-prompt-executor'
 import { fetchProviderRequest } from '../settings/provider-fetch'
@@ -764,5 +774,80 @@ describe('machine-generated tool traffic (#244)', () => {
     } finally {
       installIdentityGate()
     }
+  })
+})
+
+// beta.23: beta.23 refused every turn with PHI-UNAVAILABLE-01 / reason "gate-error" and only the class
+// was recorded, so the incident could not be attributed (the same defect as the 502 that dropped
+// error.cause). The message can carry a vault path, so the log records stable identifiers only.
+describe('release failure diagnostics (beta.23)', () => {
+  let logDir: string
+
+  const installIdentity = (): void => {
+    installMachineApproval(null)
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+  }
+
+  beforeEach(async () => {
+    logDir = await mkdtemp(join(tmpdir(), 'phi-release-log-'))
+    initLogger({ logDir, mirrorToConsole: false })
+  })
+
+  afterEach(async () => {
+    await flushLogs()
+    await rm(logDir, { recursive: true, force: true })
+    installIdentity()
+  })
+
+  const readLog = async (): Promise<string> => {
+    await flushLogs()
+    return readFile(join(logDir, 'main.log'), 'utf8')
+  }
+
+  it('names a filesystem cause without logging the vault path', async () => {
+    installMachineApproval(null)
+    installPhiGate({
+      release: () => {
+        throw Object.assign(new Error('EACCES: private vault path C:\\Users\\someone\\vault.bin'), {
+          code: 'EACCES'
+        })
+      },
+      restore: (text) => text
+    })
+    await expect(releaseModelText('hello', 'fiction')).rejects.toMatchObject({
+      code: PHI_UNAVAILABLE_CODE
+    })
+    const log = await readLog()
+    expect(log).toContain('phi release unavailable')
+    expect(log).toContain('"reason":"gate-error"')
+    expect(log).toContain('"errorName":"Error"')
+    expect(log).toContain('"errorCode":"EACCES"')
+    expect(log).toContain('"isPhiError":false')
+    expect(log).toContain('"isVaultPathError":true')
+    expect(log).toContain('"hasErrorMessage":true')
+    expect(log).not.toContain('private vault path')
+    expect(log).not.toContain('someone')
+  })
+
+  it('identifies a typed invariant failure by its stable code', async () => {
+    installMachineApproval(null)
+    installPhiGate({
+      release: () => {
+        throw new PhiPolicyError('private invariant detail', PHI_INTERNAL_CODE)
+      },
+      restore: (text) => text
+    })
+    await expect(releaseModelText('hello', 'fiction')).rejects.toMatchObject({
+      code: PHI_INTERNAL_CODE
+    })
+    const log = await readLog()
+    expect(log).toContain('phi release refused by an internal invariant')
+    expect(log).toContain('"errorCode":"PHI-INTERNAL-01"')
+    expect(log).toContain('"isPhiError":true')
+    expect(log).toContain('"isVaultPathError":false')
+    expect(log).not.toContain('private invariant detail')
   })
 })
