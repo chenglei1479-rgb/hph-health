@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
+import { PHI_INTERNAL_CODE } from '../../shared/phi-block'
 import { deidentify } from './deidentify'
 import {
   PHI_LOG_MAX_EVENTS,
@@ -99,6 +100,44 @@ describe('encrypted PHI vault durability (#252)', () => {
     const next = deidentify('カルテ番号：0099900', store)
     expect(next.text).not.toContain('0099900')
     expect(base.decryptString(readFileSync(vault.filePath))).toContain('0099900')
+  })
+
+  it('rejects a re-entrant write without touching the vault or leaving a temp file', () => {
+    const directory = tempDirectory()
+    const base = createTestPhiCipher()
+    let reenter: (() => void) | null = null
+    const cipher: PhiCipher = {
+      encryptString(value) {
+        // The cipher is the one place a second save can start while the first is still open: it runs
+        // inside save(), after the lock is taken and before the temp file exists.
+        if (reenter) {
+          const run = reenter
+          reenter = null
+          run()
+        }
+        return base.encryptString(value)
+      },
+      decryptString: (blob) => base.decryptString(blob)
+    }
+    const vault = createEncryptedPhiVault(directory, cipher)
+    const store = vault.store('project-a')
+    store.placeholder('PERSON_NAME', '山田 太郎', '患者')
+    const before = readFileSync(vault.filePath)
+
+    reenter = () => store.placeholder('PERSON_NAME', '鈴木 花子', '患者')
+    let error: unknown
+    try {
+      store.placeholder('PERSON_NAME', '佐藤 次郎', '患者')
+    } catch (caught) {
+      error = caught
+    }
+
+    // Two writers on one vault is a programming error, not a retryable condition: it must be typed and
+    // fail closed, and it must not have written anything on the way to the error.
+    expect((error as { code?: string }).code).toBe(PHI_INTERNAL_CODE)
+    expect(String((error as Error).message)).toContain('already in progress')
+    expect(readFileSync(vault.filePath).equals(before)).toBe(true)
+    expect(tempFilesIn(directory)).toEqual([])
   })
 
   it('bounds the access log and records how many events it dropped', () => {
