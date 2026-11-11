@@ -143,3 +143,62 @@ describe('CJK prose is not a name (#244)', () => {
     expect(namesOf(text)).toContain(text)
   })
 })
+
+// #244: the beta.23 build blocked the agent's own plan line as a person name. The field was 78 characters and
+// the span was offset 41 / length 6: 明确研究问题. It is a verb-object clause, not a name, and it
+// carries no particle — so a particle veto alone cannot reject it. What it does carry is a research
+// noun at its end; a personal name does not end in 问题/数据/计划/流程.
+describe('a verb-object clause is not a name (#244)', () => {
+  const plan =
+    '我将使用 biomedical-discovery 技能整理第一阶段研究计划草稿，明确研究问题、所需证据与数据及待确认事项；本阶段不开展外部检索或数据分析。'
+
+  it('releases the agent plan line #244 reported', () => {
+    expect(plan).toHaveLength(78)
+    const names = detectPhi(plan).filter((span) => span.category === 'PERSON_NAME')
+    expect(names.map((span) => [span.start, span.end, span.text])).toEqual([])
+  })
+
+  it.each(['明确研究问题', '所需证据', '研究计划草稿', '这个课题的创新性', '继续', '挨拶'])(
+    'releases the clause %s',
+    (text) => {
+      expect(namesOf(text)).toEqual([])
+    }
+  )
+
+  // The veto must not cost a reviewed name, including one that contains 和 (a name character).
+  it.each(['山田 太郎', '椎名凛太郎', '勅使河原剛太朗', '長谷川太郎左衛門', '鈴森 和子'])(
+    'still masks the reviewed name %s',
+    (text) => {
+      expect(namesOf(text)).toContain(text)
+    }
+  )
+})
+
+// #244: the two plan lines from the 2026-11-11 05:45 and 05:48 blocks, recovered from the stored
+// sessions by the digest the block log recorded (c3717de5 for 66 characters, bc3a12f1 for 72). Both
+// are assistant messages — the agent wrote them — and both were cut into "person names" on the way
+// back out. The 66-character line is the field this ticket had been missing since beta.23.
+describe('assistant plan lines recovered from the block digests (#244)', () => {
+  it('releases the 66-character literature-review plan', () => {
+    const plan =
+      '我会使用“文献综述”技能，先整理第一阶段的可编辑草稿，列出研究问题、拟议检索策略及所需证据与数据；待您确认或修改后，再执行外部检索。'
+    expect(plan).toHaveLength(66)
+    expect(detectPhi(plan).filter((span) => span.category === 'PERSON_NAME')).toEqual([])
+  })
+
+  it('releases the 72-character paper-writing plan', () => {
+    const plan =
+      '我会先使用研究交付与论文叙事相关 Skill，整理“论文写作”第一阶段的可编辑草稿；暂不开展检索、数据分析或后续阶段，待您确认研究范围后再继续。'
+    expect(plan).toHaveLength(72)
+    expect(detectPhi(plan).filter((span) => span.category === 'PERSON_NAME')).toEqual([])
+  })
+
+  // The four segments the previous build reported on their own (offset 27/49/58 and 42 of the two
+  // fields). Pinning the segments keeps a future rule change from reading one of them as a name again.
+  it.each(['列出研究问题', '待您确认或修改后', '再执行外部检索', '暂不开展检索'])(
+    'releases the segment %s',
+    (text) => {
+      expect(namesOf(text)).toEqual([])
+    }
+  )
+})

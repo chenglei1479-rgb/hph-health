@@ -889,10 +889,89 @@ const LATIN_COMMA_PAIR =
   /(?<![A-Za-z])([A-Z][A-Za-z'.-]{1,15}\s*,\s*[A-Z][A-Za-z'.-]{1,15})(?![A-Za-z])/u
 const SEGMENT_EDGE = /^[\s"'`{}[\]]+|[\s"'`{}[\]]+$/gu
 
+// #244: an unlabeled segment is masked only when it can be a personal name. A Chinese function
+// character never occurs in a Japanese name, and the Japanese particles are kana (the hiragana path
+// handles those). 和, 与, 将, 及, 满, 后 and 之 are deliberately absent — do not add them back as an
+// "obvious" extension of this set: 和 appears in the reviewed 鈴森 和子, 及川 / 将太 / 与一 are real
+// names, 满 / 后 are Chinese surnames and 之 is a common given-name character. Vetoing any of them
+// would leave a real name unmasked, and an unmasked name is the unsafe side of this trade.
+const CJK_FUNCTION_CHARACTER = /[的了着是把被并或不需另]/u
+// #244: the beta.23 build blocked an agent plan line at 明确研究问题 (offset 41, length 6 of a
+// 78-character field). It is a verb-object clause with no particle, so the length bound alone cannot reject it
+// without losing the seven/eight-character names #244 kept. A personal name does not end in a
+// research/document noun; these are the domain words an agent's own plan uses. Each is checked against
+// all 85 reviewed PERSON_NAME texts (105 main gold + 15 short-record gold + 70 entities): none ends
+// with one of them.
+const CJK_PROSE_SUFFIXES = [
+  '问题',
+  '数据',
+  '证据',
+  '事项',
+  '流程',
+  '阶段',
+  '结果',
+  '信息',
+  '内容',
+  '方法',
+  '计划',
+  '风险',
+  '因素',
+  '标准',
+  '目标',
+  '方案',
+  '步骤',
+  '范围',
+  '来源',
+  '需求',
+  '要求',
+  '建议',
+  '意见',
+  '结论',
+  '摘要',
+  '背景',
+  '目的',
+  '情况',
+  '状态',
+  '记录',
+  '报告',
+  '草稿',
+  '文档',
+  '文件',
+  '列表',
+  '清单',
+  '表格',
+  '图表',
+  '思路',
+  '可行性',
+  '科研',
+  '研究',
+  '分析',
+  '检索',
+  '确认',
+  '修改',
+  '测试',
+  '工具',
+  '时间窗',
+  '终点',
+  '之后'
+] as const
+
+// Short whole messages a user sends by themselves, captured from the stored sessions where the guess
+// masked them. They are not suffix patterns (a name could not end with one) and not particles.
+const CJK_COMMON_NON_NAME = new Set(['继续', '挨拶'])
+
+const isProseClause = (value: string): boolean =>
+  CJK_FUNCTION_CHARACTER.test(value) ||
+  CJK_PROSE_SUFFIXES.some((suffix) => value.endsWith(suffix)) ||
+  // Whole-message imperatives/greetings observed in real sessions (继续, 挨拶). A personal name never
+  // equals one of these; this is the reviewed-vocabulary path, not a length rule.
+  CJK_COMMON_NON_NAME.has(value)
+
 function isNameShaped(text: string): boolean {
   const value = text.trim()
   if (!value || value.startsWith('/') || /[0-9]{3,}|保険|番号|カルテ|@|県|市/u.test(value))
     return false
+  if (isProseClause(value)) return false
   // A trailing honorific belongs to the span but not to the shape.
   const parts = value
     .replace(HONORIFIC_TAIL, '')

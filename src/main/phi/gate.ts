@@ -205,6 +205,45 @@ export function phiInternalError(): PhiGateError {
   return new PhiGateError(blockTranslator(PHI_INTERNAL_MESSAGE), [], PHI_INTERNAL_CODE)
 }
 
+// #252: a release failure must name its own cause. The message can carry a vault path or a provider
+// sentence, so only stable identifiers are logged: the error class, its code, whether the identity is
+// a PHI error (by code — the rule #243 settled), a filesystem path error, and whether a message
+// exists. The message text itself never reaches the log. #251 is the same defect on the provider
+// side (a 502 that dropped error.cause); the two are diagnosed separately.
+const VAULT_PATH_ERROR_CODES = new Set([
+  'ENOENT',
+  'EACCES',
+  'EPERM',
+  'EBUSY',
+  'ENOTDIR',
+  'EISDIR',
+  'EROFS'
+])
+
+export const releaseFailureDiagnosticFields = (error: unknown): Record<string, unknown> => {
+  let name: unknown
+  let code: unknown
+  let hasMessage = false
+  try {
+    name = (error as { name?: unknown } | null)?.name
+    code = (error as { code?: unknown } | null)?.code
+    hasMessage = error instanceof Error && error.message.length > 0
+  } catch {
+    return { hasErrorMessage: false }
+  }
+  const stable = (value: unknown): string | undefined =>
+    typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u.test(value) ? value : undefined
+  const errorName = stable(name)
+  const errorCode = stable(code)
+  return {
+    ...(errorName ? { errorName } : {}),
+    ...(errorCode ? { errorCode } : {}),
+    isPhiError: phiFailureCodeOf(error) !== undefined,
+    isVaultPathError: typeof code === 'string' && VAULT_PATH_ERROR_CODES.has(code),
+    hasErrorMessage: hasMessage
+  }
+}
+
 // One place that decides what a caught release failure means. Typed gate errors keep their class; a
 // typed policy error from the store is an internal invariant, and an untyped error is the engine being
 // unavailable. The original message is never reused: it can carry a local vault path.
@@ -214,10 +253,17 @@ function escalateReleaseFailure(error: unknown): never {
     // A typed error from the store keeps its class: an unavailable engine stays retryable, and only
     // an invariant failure becomes E. Nothing but the stable code is logged.
     if (error.code === PHI_UNAVAILABLE_CODE) {
-      phiBlockLog.warn('phi release unavailable', { code: error.code, reason: 'gate-unavailable' })
+      phiBlockLog.warn('phi release unavailable', {
+        code: error.code,
+        reason: 'gate-unavailable',
+        ...releaseFailureDiagnosticFields(error)
+      })
       throw modelReleaseError()
     }
-    phiBlockLog.warn('phi release refused by an internal invariant', { code: error.code })
+    phiBlockLog.warn('phi release refused by an internal invariant', {
+      code: error.code,
+      ...releaseFailureDiagnosticFields(error)
+    })
     throw phiInternalError()
   }
   // #243: a refusal that lost its prototype crossing a bundle boundary. In the packaged app the gate
@@ -231,7 +277,11 @@ function escalateReleaseFailure(error: unknown): never {
     })
     throw new PhiGateError(error instanceof Error ? error.message : '', [], foreignCode)
   }
-  phiBlockLog.warn('phi release unavailable', { code: PHI_UNAVAILABLE_CODE, reason: 'gate-error' })
+  phiBlockLog.warn('phi release unavailable', {
+    code: PHI_UNAVAILABLE_CODE,
+    reason: 'gate-error',
+    ...releaseFailureDiagnosticFields(error)
+  })
   throw modelReleaseError()
 }
 
