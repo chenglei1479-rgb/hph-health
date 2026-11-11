@@ -31,7 +31,8 @@
     "src/main/phi/review-scope.test.ts",
     "src/main/phi/score.ts",
     "src/main/phi/store.ts",
-    "src/main/phi/turn-review-count.test.ts"
+    "src/main/phi/turn-review-count.test.ts",
+    "src/main/phi/vault-durability.test.ts"
   ],
   "interfacePaths": ["src/main/phi/gate.ts", "src/shared/phi-block.ts"],
   "consumerModules": [
