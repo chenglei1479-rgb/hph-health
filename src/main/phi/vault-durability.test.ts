@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -9,8 +9,10 @@ import { deidentify } from './deidentify'
 import {
   PHI_LOG_MAX_EVENTS,
   createEncryptedPhiVault,
+  createMemoryPhiVault,
   createTestPhiCipher,
-  type PhiCipher
+  type PhiCipher,
+  type PhiVaultFileSystem
 } from './store'
 
 // #252: beta.23 rewrote the whole encrypted document on every release, from a snapshot each store()
@@ -140,23 +142,107 @@ describe('encrypted PHI vault durability (#252)', () => {
     expect(tempFilesIn(directory)).toEqual([])
   })
 
-  it('bounds the access log and records how many events it dropped', () => {
+  it('bounds the access log with exactly one marker that counts every dropped event', () => {
+    // The roll runs on the same trimLog for the in-memory vault, without paying a file rewrite per
+    // event: twice the cap is what exposes a marker that is appended on every trim and never removed.
+    const vault = createMemoryPhiVault()
+    const store = vault.store('project-a')
+    const appends = PHI_LOG_MAX_EVENTS * 2
+    for (let index = 0; index < appends; index += 1) store.log('deidentify', {})
+
+    const log = vault.readLog()
+    const markers = log.filter((event) => event.action === 'log-trimmed')
+    const events = log.filter((event) => event.action !== 'log-trimmed')
+    // One marker, not one per trim, and the retained events still fill the budget beside it. With a
+    // marker appended on every trim the log ends up as markers only, which is the bug this pins.
+    expect(markers).toHaveLength(1)
+    expect(events.length).toBe(PHI_LOG_MAX_EVENTS - 1)
+    expect(log.length).toBeLessThanOrEqual(PHI_LOG_MAX_EVENTS)
+    // The create-key event plus every append, minus what is still retained.
+    expect(markers[0]?.counts.dropped).toBe(appends + 1 - events.length)
+  })
+
+  it('keeps the encrypted file bounded as the log rolls', () => {
     const directory = tempDirectory()
-    const cipher = createTestPhiCipher()
-    const vault = createEncryptedPhiVault(directory, cipher)
+    const vault = createEncryptedPhiVault(directory, createTestPhiCipher())
     const store = vault.store('project-a')
 
     for (let index = 0; index < PHI_LOG_MAX_EVENTS + 50; index += 1) store.log('deidentify', {})
 
     const log = vault.readLog()
-    expect(log.length).toBeLessThanOrEqual(PHI_LOG_MAX_EVENTS + 1)
-    const trimmed = log.filter((event) => event.action === 'log-trimmed')
-    expect(trimmed.length).toBeGreaterThan(0)
-    const dropped = trimmed.reduce((total, event) => total + (event.counts.dropped ?? 0), 0)
-    expect(dropped).toBeGreaterThan(0)
-    // Trimming must be recorded, not silent: the marker is what a reader sees instead of the tail.
-    expect(log.some((event) => event.action === 'deidentify')).toBe(true)
+    expect(log.length).toBeLessThanOrEqual(PHI_LOG_MAX_EVENTS)
+    expect(log.filter((event) => event.action === 'log-trimmed')).toHaveLength(1)
     // The whole point of the bound: the file stays small enough to rewrite on every release.
     expect(readFileSync(vault.filePath).length).toBeLessThan(400_000)
+  })
+
+  it('removes the temp file and keeps the vault when the rename fails', () => {
+    const directory = tempDirectory()
+    const base = createTestPhiCipher()
+    const written: string[] = []
+    let failing = false
+    const fileSystem: PhiVaultFileSystem = {
+      mkdirSync,
+      readFileSync,
+      rmSync,
+      writeFileSync: (path, data, options) => {
+        written.push(String(path))
+        writeFileSync(path, data, options)
+      },
+      renameSync: (from, to) => {
+        if (failing) throw Object.assign(new Error('EACCES: rename denied'), { code: 'EACCES' })
+        renameSync(from, to)
+      }
+    }
+    const vault = createEncryptedPhiVault(directory, base, fileSystem)
+    const store = vault.store('project-a')
+    store.placeholder('PERSON_NAME', '山田 太郎', '患者')
+    const before = readFileSync(vault.filePath)
+    written.length = 0
+
+    failing = true
+    expect(() => store.placeholder('PERSON_NAME', '鈴木 花子', '患者')).toThrow('EACCES')
+    failing = false
+
+    // The temp file was really written before the failure, and the cleanup branch removed it.
+    expect(written.length).toBe(1)
+    expect(written.every((path) => !existsSync(path))).toBe(true)
+    expect(tempFilesIn(directory)).toEqual([])
+    expect(readFileSync(vault.filePath).equals(before)).toBe(true)
+    expect(base.decryptString(readFileSync(vault.filePath))).toContain('山田 太郎')
+  })
+
+  it('removes the temp file and keeps the vault when the write itself fails', () => {
+    const directory = tempDirectory()
+    const base = createTestPhiCipher()
+    const written: string[] = []
+    let failing = false
+    const fileSystem: PhiVaultFileSystem = {
+      mkdirSync,
+      readFileSync,
+      renameSync,
+      rmSync,
+      writeFileSync: (path, data, options) => {
+        written.push(String(path))
+        writeFileSync(path, data, options)
+        // ENOSPC after the bytes landed is the shape a full disk produces: the temp file exists and
+        // the destination is still the previous vault.
+        if (failing) throw Object.assign(new Error('ENOSPC: no space left'), { code: 'ENOSPC' })
+      }
+    }
+    const vault = createEncryptedPhiVault(directory, base, fileSystem)
+    const store = vault.store('project-a')
+    store.placeholder('PERSON_NAME', '山田 太郎', '患者')
+    const before = readFileSync(vault.filePath)
+    written.length = 0
+
+    failing = true
+    expect(() => store.placeholder('PERSON_NAME', '鈴木 花子', '患者')).toThrow('ENOSPC')
+    failing = false
+
+    expect(written.length).toBe(1)
+    expect(written.every((path) => !existsSync(path))).toBe(true)
+    expect(tempFilesIn(directory)).toEqual([])
+    expect(readFileSync(vault.filePath).equals(before)).toBe(true)
   })
 })
