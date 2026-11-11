@@ -173,3 +173,32 @@ describe('a verb-object clause is not a name (#244)', () => {
     }
   )
 })
+
+// #244: the two plan lines from the 2026-11-11 05:45 and 05:48 blocks, recovered from the stored
+// sessions by the digest the block log recorded (c3717de5 for 66 characters, bc3a12f1 for 72). Both
+// are assistant messages — the agent wrote them — and both were cut into "person names" on the way
+// back out. The 66-character line is the field this ticket had been missing since beta.23.
+describe('assistant plan lines recovered from the block digests (#244)', () => {
+  it('releases the 66-character literature-review plan', () => {
+    const plan =
+      '我会使用“文献综述”技能，先整理第一阶段的可编辑草稿，列出研究问题、拟议检索策略及所需证据与数据；待您确认或修改后，再执行外部检索。'
+    expect(plan).toHaveLength(66)
+    expect(detectPhi(plan).filter((span) => span.category === 'PERSON_NAME')).toEqual([])
+  })
+
+  it('releases the 72-character paper-writing plan', () => {
+    const plan =
+      '我会先使用研究交付与论文叙事相关 Skill，整理“论文写作”第一阶段的可编辑草稿；暂不开展检索、数据分析或后续阶段，待您确认研究范围后再继续。'
+    expect(plan).toHaveLength(72)
+    expect(detectPhi(plan).filter((span) => span.category === 'PERSON_NAME')).toEqual([])
+  })
+
+  // The four segments the previous build reported on their own (offset 27/49/58 and 42 of the two
+  // fields). Pinning the segments keeps a future rule change from reading one of them as a name again.
+  it.each(['列出研究问题', '待您确认或修改后', '再执行外部检索', '暂不开展检索'])(
+    'releases the segment %s',
+    (text) => {
+      expect(namesOf(text)).toEqual([])
+    }
+  )
+})
