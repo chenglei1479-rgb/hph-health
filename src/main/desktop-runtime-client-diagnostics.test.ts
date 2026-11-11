@@ -3,6 +3,7 @@ import { WEB_EVENT_STREAM_PROTOCOL_VERSION } from '../shared/web-rpc-contract'
 import { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { beforeEach, expect, it, vi } from 'vitest'
+import type { DesktopNativeHandler } from './desktop-native-contract'
 import { connectDesktopRuntime } from './desktop-runtime-client'
 
 vi.mock('./runtime-stop-confirmation', () => ({
@@ -55,7 +56,8 @@ beforeEach(() => vi.clearAllMocks())
 
 async function setup(
   onEvent = vi.fn(),
-  startedProcess?: ChildProcess
+  startedProcess?: ChildProcess,
+  onNativeRequest?: DesktopNativeHandler
 ): Promise<{
   socket: Socket
   client: Awaited<ReturnType<typeof connectDesktopRuntime>>
@@ -68,6 +70,7 @@ async function setup(
     endpoint: { path: 'unused', secret: 'unused', generation: streamId, version: 'test' },
     onEvent,
     startedProcess,
+    ...(onNativeRequest ? { onNativeRequest } : {}),
     onDisconnect
   })
   return { socket, client, onDisconnect }
@@ -299,4 +302,56 @@ it('records the actual native exit after the WebSocket closes first', async () =
       startupPhase: 'database'
     })
   )
+})
+
+// #251: a rejected native request fails the whole desktop↔runtime channel. The disconnect line names
+// only "invalid-native-request"; these pin the extra line that says which request shape was rejected.
+// The payload (dialog options, a path, a PHI preview) must never reach the log.
+it('names a repeated native request id without logging the request payload', async () => {
+  const { socket } = await setup(vi.fn(), undefined, () => new Promise(() => undefined))
+  const request = { operation: 'notification-focus' as const }
+  socket.frame({ kind: 'native-request', id: 1, request })
+  socket.frame({ kind: 'native-request', id: 1, request })
+  expect(mocks.warn).toHaveBeenCalledWith('native desktop request rejected', {
+    phase: 'id-order',
+    operation: 'notification-focus',
+    id: 1,
+    highestNativeId: 1,
+    pending: 1
+  })
+  expect(mocks.warn).toHaveBeenCalledWith(
+    'desktop runtime disconnected',
+    expect.objectContaining({ reason: 'invalid-native-request' })
+  )
+})
+
+it('names a malformed native request without logging its payload', async () => {
+  const { socket } = await setup()
+  socket.frame({
+    kind: 'native-request',
+    id: 7,
+    request: { operation: 'notification-focus', private: 'sensitive value' }
+  })
+  expect(mocks.warn).toHaveBeenCalledWith('native desktop request rejected', {
+    phase: 'parse',
+    frameKind: 'native-request',
+    id: 7,
+    issues: expect.any(Number),
+    issueCodes: expect.arrayContaining(['unrecognized_keys'])
+  })
+  expect(JSON.stringify(mocks.warn.mock.calls)).not.toContain('sensitive value')
+})
+
+it('names the capacity bound when the pending native queue is full', async () => {
+  const { socket } = await setup(vi.fn(), undefined, () => new Promise(() => undefined))
+  for (let id = 1; id <= 32; id += 1)
+    socket.frame({ kind: 'native-request', id, request: { operation: 'notification-focus' } })
+  socket.frame({ kind: 'native-request', id: 33, request: { operation: 'notification-focus' } })
+  expect(mocks.warn).toHaveBeenCalledWith('native desktop request rejected', {
+    phase: 'capacity',
+    operation: 'notification-focus',
+    id: 33,
+    highestNativeId: 32,
+    pending: 32
+  })
 })
