@@ -205,10 +205,11 @@ export function phiInternalError(): PhiGateError {
   return new PhiGateError(blockTranslator(PHI_INTERNAL_MESSAGE), [], PHI_INTERNAL_CODE)
 }
 
-// beta.23: a release failure must name its own cause. The message can carry a vault path or a provider
+// #252: a release failure must name its own cause. The message can carry a vault path or a provider
 // sentence, so only stable identifiers are logged: the error class, its code, whether the identity is
 // a PHI error (by code — the rule #243 settled), a filesystem path error, and whether a message
-// exists. The message text itself never reaches the log.
+// exists. The message text itself never reaches the log. #251 is the same defect on the provider
+// side (a 502 that dropped error.cause); the two are diagnosed separately.
 const VAULT_PATH_ERROR_CODES = new Set([
   'ENOENT',
   'EACCES',

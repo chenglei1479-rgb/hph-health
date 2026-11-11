@@ -777,10 +777,10 @@ describe('machine-generated tool traffic (#244)', () => {
   })
 })
 
-// beta.23: beta.23 refused every turn with PHI-UNAVAILABLE-01 / reason "gate-error" and only the class
+// #252: the beta.23 build refused every turn with PHI-UNAVAILABLE-01 / reason "gate-error" and only the class
 // was recorded, so the incident could not be attributed (the same defect as the 502 that dropped
-// error.cause). The message can carry a vault path, so the log records stable identifiers only.
-describe('release failure diagnostics (beta.23)', () => {
+// error.cause, #251). The message can carry a vault path, so the log records stable identifiers only.
+describe('release failure diagnostics (#252)', () => {
   let logDir: string
 
   const installIdentity = (): void => {

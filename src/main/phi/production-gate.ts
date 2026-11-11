@@ -29,7 +29,7 @@ export function installProductionPhiGate(directory: string): void {
     const approval = createMachineApprovalLog(machineApprovalLogPath(directory))
     installMachineApproval(() => approval.isApproved())
     if (!isSecureStorageAvailable()) {
-      // beta.23: a closed gate turns every turn into 503; say why once at construction instead of only
+      // #252: a closed gate turns every turn into 503; say why once at construction instead of only
       // repeating "gate-error" at release time.
       gateLog.warn('phi gate closed', { reason: 'secure-storage-unavailable' })
       installPhiGate(createClosedGate(VAULT_UNAVAILABLE))
