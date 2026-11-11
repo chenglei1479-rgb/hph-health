@@ -202,3 +202,38 @@ describe('assistant plan lines recovered from the block digests (#244)', () => {
     }
   )
 })
+
+// The 2026-11-11 15:34 and 15:35 blocks, recovered by digest (64981faa / 5478675b): our own artifact
+// manifest, sent back as tool output. `insurer-no-grouped` matched the middle of the artifact uuid and
+// `my-number-bare-12` the tail of the version uuid, and masking them corrupts the id the agent needs.
+describe('a UUID is an identifier, not PHI', () => {
+  const manifest = `{
+  "artifact": {
+    "artifact_id": "a8191d31-3752-41d9-b1fe-a737e649318b",
+    "version_id": "18502a00-7c6b-4350-8b61-9a2c1127ff5e",
+    "version_number": 1,
+    "filename": "bronchiectasis_stage1_analysis_draft.md",
+    "size_bytes": 6629
+  }
+}`
+
+  it('does not read an artifact manifest as an insurer number or a My Number', () => {
+    expect(detectPhi(manifest)).toEqual([])
+  })
+
+  it('does not read the twelve-digit tail of a UUID as a My Number', () => {
+    expect(detectPhi('version_id: 2af61efc-fbe4-4dbb-96a1-406580686117')).toEqual([])
+  })
+
+  it('still masks the same twelve digits when they sit outside the UUID', () => {
+    const spans = detectPhi('406580686117 2af61efc-fbe4-4dbb-96a1-406580686117')
+    expect(spans.map((span) => [span.category, span.rule, span.start, span.end])).toEqual([
+      ['MY_NUMBER', 'my-number-bare-12', 0, 12]
+    ])
+  })
+
+  it('still masks a labelled insured number in the same request', () => {
+    const spans = detectPhi('被保険者番号 12345678 を a8191d31-3752-41d9-b1fe-a737e649318b に記録')
+    expect(spans.map((span) => span.category)).toEqual(['INSURED_ID'])
+  })
+})

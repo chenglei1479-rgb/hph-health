@@ -353,7 +353,34 @@ export function detectPhi(original: string): PhiSpan[] {
   detectFacilities(spans, map, norm)
   detectNames(spans, map, norm)
 
-  return resolve(spans)
+  return resolve(withoutUuidIdentifiers(original, spans))
+}
+
+// The 2026-11-11 15:34 and 15:35 blocks (digests 64981faa / 5478675b) were both artifact manifests in
+// tool output: `insurer-no-grouped` matched the middle of an `artifact_id` UUID and
+// `my-number-bare-12` matched the twelve-hex-digit tail of a `version_id`. Masking them corrupts the id
+// the agent needs in order to name the artifact it just wrote — the same defect as rewriting
+// `x-codex-*` ids (#244).
+//
+// A UUID is an identifier, not patient information. This is the judgement gate.ts already makes with
+// `NON_CONTENT_KEYS`: an identifier field is structure, not content. It is not a loosening of either
+// shape rule: a span must sit *entirely* inside a canonical UUID to be dropped, so the same twelve
+// digits next to a UUID still match, and a labelled number anywhere (被保険者番号 12345678) still
+// matches. A patient identifier that happened to be a UUID would no longer be masked; no PHI source in
+// this app produces UUIDs.
+const UUID_IDENTIFIER =
+  /(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])/giu
+
+function withoutUuidIdentifiers(original: string, spans: PhiSpan[]): PhiSpan[] {
+  const ranges: Array<{ start: number; end: number }> = []
+  for (const match of original.matchAll(UUID_IDENTIFIER)) {
+    if (match.index === undefined) continue
+    ranges.push({ start: match.index, end: match.index + match[0].length })
+  }
+  if (ranges.length === 0) return spans
+  return spans.filter(
+    (span) => !ranges.some((range) => span.start >= range.start && span.end <= range.end)
+  )
 }
 
 // #170: a mean age and a "per N years" ratio unit are statistics about a group, not a person's age.
