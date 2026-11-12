@@ -483,12 +483,36 @@ const normalizeScanned = (values: readonly (string | ScannedModelText)[]): Scann
 const MACHINE_TOOL_FIELD = /^input\[\d+\]\.(?:arguments|output)(?:\.|\[|$)/u
 const MACHINE_TOOL_EXEMPT_RULES = new Set(['date-bare-iso'])
 
+// #264: two shape-only rules no longer refuse a turn. `date-bare-slash` reads `3/4` and `guess-segment`
+// reads an unlabeled CJK segment as a name, so both fire on ordinary prose — in beta.23 a writing turn
+// was refused over exactly those two after de-identification had already masked them. Masking is a
+// separate projection: `deidentify` masks every detected span and reads none of this, so a downgraded
+// hit still leaves the machine as a placeholder. Only the *blocking* projection below downgrades it,
+// and that downgrade is logged with its rule id so a later reader can tell "the gate let this through
+// on purpose" apart from "the detector stopped seeing it". Every rule without an id and every labelled
+// rule keeps blocking; the connector hard-refuse paths (`refusePatientQuery`, mentor packs) never
+// consult this set and stay strict — they send nothing rather than masking.
+//
+// Intended consequence, not an oversight (COO, 2026-11-12): the blocking projection has never looked at
+// `kind`, while `deidentify` deliberately leaves a `kind: 'document'` DATE alone (記載日/作成日/承認日/
+// 研究期間 name the document, not the patient). `作成日：3/4` is therefore now neither masked nor
+// refused — the same judgement the release path already made. A test pins that state, so it cannot
+// drift silently in either direction.
+const RELEASE_ONLY_RULES = new Set(['date-bare-slash', 'guess-segment'])
+const isReleaseOnlyRule = (rule: string | undefined): boolean =>
+  rule !== undefined && RELEASE_ONLY_RULES.has(rule)
+
 const diagnosticFor = (
   values: readonly ScannedModelText[],
   pass: 'blocked' | 'restored'
-): { diagnostics: BlockedSpanDiagnostic[]; spans: PhiBlockedSpan[] } => {
+): {
+  diagnostics: BlockedSpanDiagnostic[]
+  spans: PhiBlockedSpan[]
+  downgraded: BlockedSpanDiagnostic[]
+} => {
   const diagnostics: BlockedSpanDiagnostic[] = []
   const spans: PhiBlockedSpan[] = []
+  const downgraded: BlockedSpanDiagnostic[] = []
   for (const { text, field } of values) {
     const found = patientSpans(text).filter(
       (span) => !(MACHINE_TOOL_FIELD.test(field) && MACHINE_TOOL_EXEMPT_RULES.has(span.rule ?? ''))
@@ -497,8 +521,7 @@ const diagnosticFor = (
     // scanned string would be paid by every send that never blocks.
     const digest = found.length === 0 ? '' : textDigest8(text)
     for (const span of found) {
-      spans.push(span)
-      diagnostics.push({
+      const diagnostic: BlockedSpanDiagnostic = {
         category: span.category,
         offset: span.start,
         length: span.end - span.start,
@@ -507,10 +530,16 @@ const diagnosticFor = (
         textLength: text.length,
         textDigest8: digest,
         rule: span.rule
-      })
+      }
+      if (isReleaseOnlyRule(span.rule)) {
+        downgraded.push(diagnostic)
+        continue
+      }
+      spans.push(span)
+      diagnostics.push(diagnostic)
     }
   }
-  return { diagnostics, spans }
+  return { diagnostics, spans, downgraded }
 }
 
 /**
@@ -547,7 +576,17 @@ function assertMachineMaySend(
     throw modelReleaseError()
   }
   if (approved) return
-  const { diagnostics, spans } = diagnosticFor(normalizeScanned(texts), pass)
+  const { diagnostics, spans, downgraded } = diagnosticFor(normalizeScanned(texts), pass)
+  // A downgraded hit leaves a trace, or nobody can later tell "released by policy" from "no longer
+  // detected": the same no-text payload the block log uses, plus the rule that was downgraded.
+  if (downgraded.length > 0) {
+    phiBlockLog.info('phi release-only hit passed without blocking', {
+      code: PHI_BLOCK_CODE,
+      hits: downgraded.length,
+      rules: [...new Set(downgraded.map((hit) => hit.rule))],
+      spans: downgraded
+    })
+  }
   if (spans.length === 0) return
   const translate = blockTranslator
   // The blocked span text is patient information. Keep it out of the log: the stable number plus where

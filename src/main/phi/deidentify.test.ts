@@ -171,3 +171,29 @@ it('does not classify shifted dates or unassigned strings as opaque vault placeh
   const store = createMemoryPhiVault().store('fiction')
   expect(deidentify('患者：[患者1]', store).replacements).not.toHaveLength(0)
 })
+
+// #264 / #260: a `release-only` rule stops a turn from being refused; it must not stop the value from
+// being masked. The two rules below are exactly the shape rules a release-only change would move, and
+// their release behaviour does not depend on the blocking projection at all: `deidentify` masks every
+// detected span, and the only rule-aware skips it owns are an aggregate age and an unlabeled insured id
+// in agent bookkeeping. Pin that here, so a later change cannot make the release path read the
+// blocking policy — that would turn a relaxed block into a silent leak.
+it('masks the shape rules a release-only policy would stop blocking on (#264)', () => {
+  const store = createMemoryPhiVault().store('release-only-shapes')
+
+  // The `3/4` the beta.23 turn was refused over: three characters, still a date shape to the detector.
+  expect(detectPhi('受診日は 3/4 です。')).toMatchObject([
+    { category: 'DATE', rule: 'date-bare-slash' }
+  ])
+  const date = deidentify('受診日は 3/4 です。', store)
+  expect(date.text).not.toContain('3/4')
+  expect(date.replacements.map((item) => item.original)).toEqual(['3/4'])
+
+  // The 7-character name read out of a segment: the same rule and shape as the third hit.
+  expect(detectPhi('研究の分担：佐藤 健')).toMatchObject([
+    { category: 'PERSON_NAME', rule: 'guess-segment' }
+  ])
+  const name = deidentify('研究の分担：佐藤 健', store)
+  expect(name.text).not.toContain('佐藤 健')
+  expect(name.text).toContain('研究の分担：')
+})
