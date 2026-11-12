@@ -1020,28 +1020,60 @@ describe('release-only shape rules (#264)', () => {
     ).toEqual(['PERSON_NAME'])
   })
 
-  it('leaves a document date neither masked nor refused, on purpose', async () => {
+  // `記載日/報告日/文書日付/作成日/研究期間/承認日/同意取得日` name the document, not the patient, so the masking
+  // path has always kept them (`deidentify`, `kind === 'document'`). The blocking projection never looked
+  // at `kind`, so on main every one of those labels was "not masked but refused" — the refusal was what
+  // kept the date out of the request. CTO (2026-11-12): release-only moves exactly one shape, `3/4`, to
+  // "sent and still not masked", so the whole label list is exercised here. A date shape that later joins
+  // the policy would otherwise widen that state silently, label by label.
+  const DOCUMENT_DATE_LABELS = [
+    '記載日',
+    '報告日',
+    '文書日付',
+    '作成日',
+    '研究期間',
+    '承認日',
+    '同意取得日'
+  ] as const
+
+  it.each(DOCUMENT_DATE_LABELS)(
+    'leaves the document date after %s unmasked, and no longer refuses the 3/4 shape',
+    async (label) => {
+      installMachineApproval(() => false)
+      const store = newStore()
+      installMaskingGate(store)
+      const text = `${label}：3/4`
+      expect(deidentify(text, store).text).toBe(text)
+      expect(
+        blockedSpanDiagnostics({
+          input: [{ type: 'message', content: [{ type: 'input_text', text }] }]
+        })
+      ).toEqual([])
+      const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: JSON.stringify({
+          input: [{ type: 'message', content: [{ type: 'input_text', text }] }]
+        })
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+    }
+  )
+
+  it('keeps the other date shapes under a document label refused', () => {
+    // The downgrade is one shape, not the DATE category: an era date after the same label is still
+    // refused (it always was) and still not masked. If this starts passing, release-only grew.
     installMachineApproval(() => false)
     const store = newStore()
     installMaskingGate(store)
-    // `記載日/作成日/承認日/研究期間` name the document, not the patient, so the masking path has always
-    // kept them (`deidentify`, `kind === 'document'`). The blocking projection never looked at `kind`;
-    // now that `date-bare-slash` is release-only the two agree. This is the state to keep — not a
-    // leftover of the rule change — so it is asserted in both directions.
-    expect(deidentify('作成日：3/4', store).text).toBe('作成日：3/4')
+    expect(deidentify('作成日：令和8年4月5日', store).text).toBe('作成日：令和8年4月5日')
     expect(
       blockedSpanDiagnostics({
-        input: [{ type: 'message', content: [{ type: 'input_text', text: '作成日：3/4' }] }]
-      })
-    ).toEqual([])
-    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
-    await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
-      method: 'POST',
-      body: JSON.stringify({
-        input: [{ type: 'message', content: [{ type: 'input_text', text: '作成日：3/4' }] }]
-      })
-    })
-    expect(fetchImpl).toHaveBeenCalledOnce()
+        input: [
+          { type: 'message', content: [{ type: 'input_text', text: '作成日：令和8年4月5日' }] }
+        ]
+      }).map((hit) => hit.rule)
+    ).toEqual(['date-bare-era'])
   })
 
   it('records a downgraded hit with its rule id and no text', async () => {
