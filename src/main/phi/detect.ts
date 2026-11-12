@@ -469,8 +469,12 @@ function detectAgesAndDates(spans: PhiSpan[], map: NormMap, norm: string): void 
       const parsed = parsePhiDate(chunk)
       if (!parsed) continue
       const before = norm.slice(Math.max(0, start - 16), start)
+      // Labels whose date belongs to the document, not the person: `deidentify` leaves those alone, and
+      // on main the blocking layer was what kept them off the wire. `同意取得日` is deliberately not in
+      // this list (#264): consent acquisition is the patient's timeline, so that date is shifted like any
+      // other calendar date. Nothing in the export relies on it staying readable.
       const document =
-        /(?:記載日|報告日|文書日付|作成日|研究期間|承認日|同意取得日)\s*[:：|]?\s*$/.test(before)
+        /(?:記載日|報告日|文書日付|作成日|研究期間|承認日)\s*[:：|]?\s*$/.test(before)
       const relative = /術後\s*$/.test(before)
       if (relative) continue
       const birth = /生$/.test(chunk) || /生年月日\s*[:：]\s*$/.test(before)

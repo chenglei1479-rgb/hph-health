@@ -331,6 +331,21 @@ describe('PHI gate scan scope', () => {
       field: 'input[0].content[0].text'
     })
     expect(hit?.rule).toBeUndefined()
+    // CTO (2026-11-12): the exemption is a protocol position, not a key name. A tool-argument object is
+    // model-generated and can carry a key literally called `signature`; that value is ordinary text, so
+    // it stays in both projections. A name-based skip would open an exit for content here.
+    const [toolHit] = blockedSpanDiagnostics({
+      messages: [
+        {
+          role: 'assistant',
+          content: [{ type: 'tool_use', name: 'lookup', input: { signature: 'aB3dEf9z-1234-56' } }]
+        }
+      ]
+    })
+    expect(toolHit).toMatchObject({
+      category: 'INSURED_ID',
+      field: 'messages[0].content[0].input.signature'
+    })
   })
 
   it('sends an opaque provider token back byte for byte (#264)', async () => {
@@ -362,6 +377,16 @@ describe('PHI gate scan scope', () => {
         messages: [
           { role: 'assistant', content: [{ type: 'thinking', thinking: '', signature: opaqueToken }] }
         ]
+      },
+      {
+        // Same key name, ordinary text position: the release projection must still mask it.
+        model: 'gpt-6.1-sol',
+        messages: [
+          {
+            role: 'assistant',
+            content: [{ type: 'tool_use', name: 'lookup', input: { signature: 'aB3dEf9z-1234-56' } }]
+          }
+        ]
       }
     ]
     try {
@@ -379,6 +404,8 @@ describe('PHI gate scan scope', () => {
       expect(sent[1]?.messages[0].content[0].signature).toBe(opaqueToken)
       // The text next to it was still released, so the skip did not disable the projection.
       expect(sent[0]?.input[1].content[0].text).toBe('[遮蔽]')
+      // A same-named key in a tool-argument object is text, and text gets masked.
+      expect(sent[2]?.messages[0].content[0].input.signature).toBe('[遮蔽]')
     } finally {
       installMachineApproval(null)
       installIdentityGate()
@@ -1014,28 +1041,38 @@ describe('release-only shape rules (#264)', () => {
     expect(JSON.stringify(sent)).not.toContain('佐藤')
     // Blocking count for the two rules: exactly zero.
     expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
-    // The downgrade is not a widened PERSON_NAME exemption: a labelled name still blocks.
-    expect(
-      blockedSpanDiagnostics({
-        input: [{ type: 'message', content: [{ type: 'input_text', text: '患者：山田 太郎' }] }]
-      }).map((hit) => hit.category)
-    ).toEqual(['PERSON_NAME'])
+    // The downgrade is not a widened PERSON_NAME exemption, and the evidence is egress, not a
+    // diagnostic: a labelled name still refuses the request and nothing is sent.
+    const blockedFetch = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await expect(
+      fetchProviderRequest(blockedFetch, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: JSON.stringify({
+          input: [{ type: 'message', content: [{ type: 'input_text', text: '患者：山田 太郎' }] }]
+        })
+      })
+    ).rejects.toThrow(PHI_BLOCK_CODE)
+    expect(blockedFetch).not.toHaveBeenCalled()
   })
 
-  // `記載日/報告日/文書日付/作成日/研究期間/承認日/同意取得日` name the document, not the patient, so the masking
-  // path has always kept them (`deidentify`, `kind === 'document'`). The blocking projection never looked
-  // at `kind`, so on main every one of those labels was "not masked but refused" — the refusal was what
+  // `記載日/報告日/文書日付/作成日/研究期間/承認日` name the document, not the patient, so the masking path
+  // has always kept them (`deidentify`, `kind === 'document'`). The blocking projection never looked at
+  // `kind`, so on main every one of those labels was "not masked but refused" — the refusal was what
   // kept the date out of the request. CTO (2026-11-12): release-only moves exactly one shape, `3/4`, to
   // "sent and still not masked", so the whole label list is exercised here. A date shape that later joins
   // the policy would otherwise widen that state silently, label by label.
+  //
+  // `同意取得日` is deliberately not in this list (#264): consent acquisition is the patient's timeline,
+  // so it lost the exemption instead of being accepted as a document date. It is the only label here that
+  // was patient-facing, and while release-only is in play a document date the masking path skips is a
+  // date that can leave unmasked.
   const DOCUMENT_DATE_LABELS = [
     '記載日',
     '報告日',
     '文書日付',
     '作成日',
     '研究期間',
-    '承認日',
-    '同意取得日'
+    '承認日'
   ] as const
 
   it.each(DOCUMENT_DATE_LABELS)(
@@ -1059,23 +1096,55 @@ describe('release-only shape rules (#264)', () => {
         })
       })
       expect(fetchImpl).toHaveBeenCalledOnce()
+      // Whatever leaves the machine, it is not the document date: this label list is only "unmasked"
+      // in the sense that the masking path chose to leave it alone — the 3/4 shape really is `3/4`.
+      expect(String((fetchImpl.mock.calls[0]?.[1] as RequestInit).body)).toContain(text)
     }
   )
 
-  it('keeps the other date shapes under a document label refused', () => {
+  it('shifts the consent-acquisition date instead of exempting it', async () => {
+    // The one label that is the patient's timeline, not the document's: it is masked like any other
+    // calendar date, so neither option of the policy question can send it in the clear.
+    installMachineApproval(() => false)
+    const store = newStore()
+    installMaskingGate(store)
+    const text = '同意取得日：3/4'
+    expect(deidentify(text, store).text).not.toBe(text)
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+      method: 'POST',
+      body: JSON.stringify({
+        input: [{ type: 'message', content: [{ type: 'input_text', text }] }]
+      })
+    })
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    const sent = String((fetchImpl.mock.calls[0]?.[1] as RequestInit).body)
+    expect(sent).not.toContain('3/4')
+    expect(sent).toContain('同意取得日：')
+  })
+
+  it('keeps the other date shapes under a document label refused', async () => {
     // The downgrade is one shape, not the DATE category: an era date after the same label is still
-    // refused (it always was) and still not masked. If this starts passing, release-only grew.
+    // refused (it always was) and still not masked. Egress is the assertion, not a diagnostic: if this
+    // request ever reaches the network, release-only grew.
     installMachineApproval(() => false)
     const store = newStore()
     installMaskingGate(store)
     expect(deidentify('作成日：令和8年4月5日', store).text).toBe('作成日：令和8年4月5日')
-    expect(
-      blockedSpanDiagnostics({
-        input: [
-          { type: 'message', content: [{ type: 'input_text', text: '作成日：令和8年4月5日' }] }
-        ]
-      }).map((hit) => hit.rule)
-    ).toEqual(['date-bare-era'])
+    const body = JSON.stringify({
+      input: [{ type: 'message', content: [{ type: 'input_text', text: '作成日：令和8年4月5日' }] }]
+    })
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await expect(
+      fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+    ).rejects.toThrow(PHI_BLOCK_CODE)
+    expect(fetchImpl).not.toHaveBeenCalled()
+    expect(blockedSpanDiagnostics(JSON.parse(body)).map((hit) => hit.rule)).toEqual([
+      'date-bare-era'
+    ])
   })
 
   it('records a downgraded hit with its rule id and no text', async () => {
@@ -1090,17 +1159,42 @@ describe('release-only shape rules (#264)', () => {
     })
     expect(fetchImpl).toHaveBeenCalledOnce()
     const log = await readLog()
-    expect(log).toContain('phi release-only hit passed without blocking')
+    expect(log).toContain('"msg":"phi release-only hit"')
     expect(log).toContain('"rule":"date-bare-slash"')
     // Same payload rule as the block log: where it was and how long, never what it said.
     expect(log).toContain('"field":"input[0].content[0].text"')
     expect(log).not.toContain('3/4')
+    // The request did go out, and the line says so instead of leaving it to be inferred.
+    expect(log).toContain('"blocked":false')
     // Its own id, never the block id (#266): support greps PHI-BLOCK-01 to answer "did the gate refuse
     // anything?", and a release that borrowed the id would make that count lie.
     expect(log).toContain(`"code":"PHI-RELEASE-ONLY-01"`)
-    const downgradeLine =
-      log.split('\n').find((line) => line.includes('phi release-only hit passed')) ?? ''
+    const downgradeLine = log.split('\n').find((line) => line.includes('phi release-only hit')) ?? ''
     expect(downgradeLine).not.toContain(PHI_BLOCK_CODE)
+  })
+
+  it('marks a downgraded hit as blocked when another rule still refuses the request', async () => {
+    // CTO (2026-11-12): the line used to be written before the block decision, so a triage reader could
+    // take it as "this turn was sent" when another rule had refused the same request.
+    installMachineApproval(() => false)
+    installMaskingGate()
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await expect(
+      fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: JSON.stringify({
+          input: [
+            { type: 'message', content: [{ type: 'input_text', text: '受診日は 3/4 です。' }] },
+            { type: 'message', content: [{ type: 'input_text', text: '患者：山田 太郎' }] }
+          ]
+        })
+      })
+    ).rejects.toThrow(PHI_BLOCK_CODE)
+    expect(fetchImpl).not.toHaveBeenCalled()
+    const log = await readLog()
+    expect(log).toContain('"blocked":true')
+    expect(log).toContain('"rule":"date-bare-slash"')
+    expect(log).toContain('"msg":"model content blocked"')
   })
 
   // COO (2026-11-12): release-only is the one new fail-open seam. The connector hard-refuse paths do not

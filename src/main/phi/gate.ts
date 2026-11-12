@@ -579,17 +579,25 @@ function assertMachineMaySend(
   if (approved) return
   const { diagnostics, spans, downgraded } = diagnosticFor(normalizeScanned(texts), pass)
   // A downgraded hit leaves a trace, or nobody can later tell "released by policy" from "no longer
-  // detected": the same no-text payload the block log uses, plus the rule that was downgraded. Its code
-  // is a release id, never PHI-BLOCK-01 — that id has to keep meaning "the gate refused" (#266).
-  if (downgraded.length > 0) {
-    phiBlockLog.info('phi release-only hit passed without blocking', {
+  // detected". The line has two possible readings — this request went out, or another rule still
+  // refused it — so the block decision is made first and the answer travels in `blocked`: triage must
+  // not read "the release-only hit passed" as "the turn was sent". Its code is a release id, never
+  // PHI-BLOCK-01, which has to keep meaning "the gate refused" (#266).
+  const logDowngraded = (blocked: boolean): void => {
+    if (downgraded.length === 0) return
+    phiBlockLog.info('phi release-only hit', {
       code: PHI_RELEASE_ONLY_CODE,
       hits: downgraded.length,
+      blocked,
       rules: [...new Set(downgraded.map((hit) => hit.rule))],
       spans: downgraded
     })
   }
-  if (spans.length === 0) return
+  if (spans.length === 0) {
+    logDowngraded(false)
+    return
+  }
+  logDowngraded(true)
   const translate = blockTranslator
   // The blocked span text is patient information. Keep it out of the log: the stable number plus where
   // and how long each hit was is enough to identify the false positive without persisting PHI to disk.
@@ -674,22 +682,29 @@ const isIdentifierKey = (key: string): boolean =>
 // random hits — in beta.23 a 38-character ciphertext "matched" an INSURED_ID at offset 0, and the
 // offset moved with every re-encryption of unchanged content. Rewriting one is worse than scanning it:
 // de-identifying the ciphertext would void the reasoning state the provider checks on the way back.
-// Both directions therefore skip them, the same trade `tools` already makes; unlike `tools` there is
-// no user or project text here to lose, because a caller cannot put text into a provider's own token.
+//
+// The exemption is a *protocol position*, not a key name. A tool-argument object is model-generated and
+// its keys can be copied from the conversation (`messages[i].content[j].input`), so a bare `signature`
+// key there is ordinary text and keeps both projections — skipping it by name would be a new exit for
+// content, unlike `tools`, which is scaffolding the caller writes. The two positions below are where the
+// provider puts its own tokens in the Responses and Anthropic shapes this app sends.
 const OPAQUE_PROVIDER_KEYS = new Set(['encrypted_content', 'signature'])
-const isOpaqueProviderKey = (key: string): boolean => OPAQUE_PROVIDER_KEYS.has(key)
+const OPAQUE_PROVIDER_TOKEN_FIELD =
+  /^(?:input\[\d+\]|messages\[\d+\]\.content\[\d+\])\.(?:encrypted_content|signature)$/u
+const isOpaqueProviderToken = (key: string, field: string): boolean =>
+  OPAQUE_PROVIDER_KEYS.has(key) && OPAQUE_PROVIDER_TOKEN_FIELD.test(`${field}.${key}`)
 
-const isBlockingKey = (key: string): boolean =>
-  !BLOCKING_SKIP_FIELDS.has(key) && !isIdentifierKey(key) && !isOpaqueProviderKey(key)
+const isBlockingKey = (key: string, field: string): boolean =>
+  !BLOCKING_SKIP_FIELDS.has(key) && !isIdentifierKey(key) && !isOpaqueProviderToken(key, field)
 
-const isReleaseKey = (key: string): boolean =>
-  !RELEASE_SKIP_FIELDS.has(key) && !isIdentifierKey(key) && !isOpaqueProviderKey(key)
+const isReleaseKey = (key: string, field: string): boolean =>
+  !RELEASE_SKIP_FIELDS.has(key) && !isIdentifierKey(key) && !isOpaqueProviderToken(key, field)
 
 function collectContentValue(
   value: unknown,
   field: string,
   out: ScannedModelText[],
-  include: (key: string) => boolean
+  include: (key: string, field: string) => boolean
 ): void {
   if (typeof value === 'string') {
     out.push({ text: value, field: field || 'body' })
@@ -701,7 +716,7 @@ function collectContentValue(
   }
   if (value && typeof value === 'object') {
     for (const [key, child] of Object.entries(value)) {
-      if (!include(key)) continue
+      if (!include(key, field)) continue
       // Provider keys are ASCII (`system`, `messages`, `content`, `text`, `input`, `arguments`,
       // `properties`), which keeps the path readable. Anything else may be data-derived and collapses
       // to `[key]`, because a key copied from model output must not be written to the log.
@@ -1238,7 +1253,7 @@ async function walkReleaseContent(
   const next: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(body)) {
     const agentReserved = AGENT_RESERVED_KEY.test(key)
-    if (!isReleaseKey(key)) {
+    if (!isReleaseKey(key, '')) {
       next[key] = value
       continue
     }
@@ -1249,17 +1264,25 @@ async function walkReleaseContent(
     defineReleasedKey(
       next,
       typeof releasedKey === 'string' ? releasedKey : key,
-      await releaseContentValue(value, projectId, scope, agentReserved)
+      await releaseContentValue(value, projectId, scope, agentReserved, childField('', key))
     )
   }
   return next
+}
+
+// The release walker needs the same structural path as the blocking one: an opaque provider token is
+// recognised by its position (`messages[i].content[j].signature`), never by a bare key name.
+const childField = (field: string, key: string): string => {
+  const label = SAFE_FIELD_KEY.test(key) ? key : '[key]'
+  return field ? `${field}.${label}` : label
 }
 
 async function releaseContentValue(
   value: unknown,
   projectId: string,
   collectors: ReviewCollectors,
-  agentReserved = false
+  agentReserved = false,
+  field = ''
 ): Promise<unknown> {
   if (typeof value === 'string') {
     const result = await releaseThroughInstalledGate(
@@ -1278,23 +1301,31 @@ async function releaseContentValue(
   }
   if (Array.isArray(value)) {
     const released: unknown[] = []
-    for (const item of value)
-      released.push(await releaseContentValue(item, projectId, collectors, agentReserved))
+    for (const [index, item] of value.entries())
+      released.push(
+        await releaseContentValue(item, projectId, collectors, agentReserved, `${field}[${index}]`)
+      )
     return released
   }
   if (value && typeof value === 'object') {
     const next: Record<string, unknown> = {}
     for (const [key, child] of Object.entries(value)) {
-      if (!isReleaseKey(key)) {
+      if (!isReleaseKey(key, field)) {
         next[key] = child
         continue
       }
       const childReserved = agentReserved || AGENT_RESERVED_KEY.test(key)
-      const releasedKey = await releaseContentValue(key, projectId, collectors, childReserved)
+      const releasedKey = await releaseContentValue(key, projectId, collectors, childReserved, field)
       defineReleasedKey(
         next,
         typeof releasedKey === 'string' ? releasedKey : key,
-        await releaseContentValue(child, projectId, collectors, childReserved)
+        await releaseContentValue(
+          child,
+          projectId,
+          collectors,
+          childReserved,
+          childField(field, key)
+        )
       )
     }
     return next
