@@ -784,6 +784,10 @@ describe('provider failure diagnostics (#251)', () => {
     expect(log).not.toContain('BODY-CANARY-DO-NOT-LOG')
     // The error message can carry a path or a provider sentence; only its presence is recorded.
     expect(log).not.toContain('private upstream detail')
+    // The target's endpoint is a private gateway URL (`https://gateway.invalid/...`). `path` in this
+    // line is the local wire path (`/v1/responses`), whose value domain is checked by `WIRE_PATH[wire]`
+    // — never the upstream URL — so a URL-shaped canary has to stay out of the log.
+    expect(log).not.toContain('gateway.invalid')
   })
 
   it('marks a failure after the first byte as a stream interruption', async () => {
