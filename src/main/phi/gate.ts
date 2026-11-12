@@ -6,6 +6,7 @@ import {
   PHI_BLOCK_CODE,
   PHI_CONSENT_CODE,
   PHI_INTERNAL_CODE,
+  PHI_RELEASE_ONLY_CODE,
   PHI_REVIEW_EXCLUDED_CODE,
   PHI_REVIEW_UNAVAILABLE_CODE,
   PHI_TURN_REPLACED_CODE,
@@ -483,12 +484,36 @@ const normalizeScanned = (values: readonly (string | ScannedModelText)[]): Scann
 const MACHINE_TOOL_FIELD = /^input\[\d+\]\.(?:arguments|output)(?:\.|\[|$)/u
 const MACHINE_TOOL_EXEMPT_RULES = new Set(['date-bare-iso'])
 
+// #264: two shape-only rules no longer refuse a turn. `date-bare-slash` reads `3/4` and `guess-segment`
+// reads an unlabeled CJK segment as a name, so both fire on ordinary prose — in beta.23 a writing turn
+// was refused over exactly those two after de-identification had already masked them. Masking is a
+// separate projection: `deidentify` masks every detected span and reads none of this, so a downgraded
+// hit still leaves the machine as a placeholder. Only the *blocking* projection below downgrades it,
+// and that downgrade is logged with its rule id so a later reader can tell "the gate let this through
+// on purpose" apart from "the detector stopped seeing it". Every rule without an id and every labelled
+// rule keeps blocking; the connector hard-refuse paths (`refusePatientQuery`, mentor packs) never
+// consult this set and stay strict — they send nothing rather than masking.
+//
+// Intended consequence, not an oversight (COO, 2026-11-12): the blocking projection has never looked at
+// `kind`, while `deidentify` deliberately leaves a `kind: 'document'` DATE alone (記載日/作成日/承認日/
+// 研究期間 name the document, not the patient). `作成日：3/4` is therefore now neither masked nor
+// refused — the same judgement the release path already made. A test pins that state, so it cannot
+// drift silently in either direction.
+const RELEASE_ONLY_RULES = new Set(['date-bare-slash', 'guess-segment'])
+const isReleaseOnlyRule = (rule: string | undefined): boolean =>
+  rule !== undefined && RELEASE_ONLY_RULES.has(rule)
+
 const diagnosticFor = (
   values: readonly ScannedModelText[],
   pass: 'blocked' | 'restored'
-): { diagnostics: BlockedSpanDiagnostic[]; spans: PhiBlockedSpan[] } => {
+): {
+  diagnostics: BlockedSpanDiagnostic[]
+  spans: PhiBlockedSpan[]
+  downgraded: BlockedSpanDiagnostic[]
+} => {
   const diagnostics: BlockedSpanDiagnostic[] = []
   const spans: PhiBlockedSpan[] = []
+  const downgraded: BlockedSpanDiagnostic[] = []
   for (const { text, field } of values) {
     const found = patientSpans(text).filter(
       (span) => !(MACHINE_TOOL_FIELD.test(field) && MACHINE_TOOL_EXEMPT_RULES.has(span.rule ?? ''))
@@ -497,8 +522,7 @@ const diagnosticFor = (
     // scanned string would be paid by every send that never blocks.
     const digest = found.length === 0 ? '' : textDigest8(text)
     for (const span of found) {
-      spans.push(span)
-      diagnostics.push({
+      const diagnostic: BlockedSpanDiagnostic = {
         category: span.category,
         offset: span.start,
         length: span.end - span.start,
@@ -507,10 +531,16 @@ const diagnosticFor = (
         textLength: text.length,
         textDigest8: digest,
         rule: span.rule
-      })
+      }
+      if (isReleaseOnlyRule(span.rule)) {
+        downgraded.push(diagnostic)
+        continue
+      }
+      spans.push(span)
+      diagnostics.push(diagnostic)
     }
   }
-  return { diagnostics, spans }
+  return { diagnostics, spans, downgraded }
 }
 
 /**
@@ -547,8 +577,27 @@ function assertMachineMaySend(
     throw modelReleaseError()
   }
   if (approved) return
-  const { diagnostics, spans } = diagnosticFor(normalizeScanned(texts), pass)
-  if (spans.length === 0) return
+  const { diagnostics, spans, downgraded } = diagnosticFor(normalizeScanned(texts), pass)
+  // A downgraded hit leaves a trace, or nobody can later tell "released by policy" from "no longer
+  // detected". The line has two possible readings — this request went out, or another rule still
+  // refused it — so the block decision is made first and the answer travels in `blocked`: triage must
+  // not read "the release-only hit passed" as "the turn was sent". Its code is a release id, never
+  // PHI-BLOCK-01, which has to keep meaning "the gate refused" (#266).
+  const logDowngraded = (blocked: boolean): void => {
+    if (downgraded.length === 0) return
+    phiBlockLog.info('phi release-only hit', {
+      code: PHI_RELEASE_ONLY_CODE,
+      hits: downgraded.length,
+      blocked,
+      rules: [...new Set(downgraded.map((hit) => hit.rule))],
+      spans: downgraded
+    })
+  }
+  if (spans.length === 0) {
+    logDowngraded(false)
+    return
+  }
+  logDowngraded(true)
   const translate = blockTranslator
   // The blocked span text is patient information. Keep it out of the log: the stable number plus where
   // and how long each hit was is enough to identify the false positive without persisting PHI to disk.
@@ -589,6 +638,10 @@ function assertMachineMaySend(
 // descriptions are ours — but new code must not put user or project text there, and JSON keys
 // elsewhere are still released.
 //
+// Opaque provider tokens (`encrypted_content`, a thinking block's `signature`) are skipped in both
+// directions for a different reason (#264): they are ciphertext, so there is nothing to read in them
+// and rewriting one breaks the provider's own replay.
+//
 // Everything else stays in scope, including `system`, `messages`, `input` and `prompt`: providers
 // disagree about which field carries the conversation, and whitelisting content fields leaked PHI
 // through Anthropic's `system`.
@@ -623,17 +676,35 @@ const NON_CONTENT_KEYS = new Set([
 const isIdentifierKey = (key: string): boolean =>
   NON_CONTENT_KEYS.has(key) || /(?:^|_)(?:id|ids)$/iu.test(key)
 
-const isBlockingKey = (key: string): boolean =>
-  !BLOCKING_SKIP_FIELDS.has(key) && !isIdentifierKey(key)
+// #264: an opaque provider token is bytes the provider produced and expects back verbatim, not text
+// anyone wrote: `encrypted_content` is a reasoning item's ciphertext, `signature` is the same idea for
+// a thinking block. Neither can carry readable patient information, so scanning one only produces
+// random hits — in beta.23 a 38-character ciphertext "matched" an INSURED_ID at offset 0, and the
+// offset moved with every re-encryption of unchanged content. Rewriting one is worse than scanning it:
+// de-identifying the ciphertext would void the reasoning state the provider checks on the way back.
+//
+// The exemption is a *protocol position*, not a key name. A tool-argument object is model-generated and
+// its keys can be copied from the conversation (`messages[i].content[j].input`), so a bare `signature`
+// key there is ordinary text and keeps both projections — skipping it by name would be a new exit for
+// content, unlike `tools`, which is scaffolding the caller writes. The two positions below are where the
+// provider puts its own tokens in the Responses and Anthropic shapes this app sends.
+const OPAQUE_PROVIDER_KEYS = new Set(['encrypted_content', 'signature'])
+const OPAQUE_PROVIDER_TOKEN_FIELD =
+  /^(?:input\[\d+\]|messages\[\d+\]\.content\[\d+\])\.(?:encrypted_content|signature)$/u
+const isOpaqueProviderToken = (key: string, field: string): boolean =>
+  OPAQUE_PROVIDER_KEYS.has(key) && OPAQUE_PROVIDER_TOKEN_FIELD.test(`${field}.${key}`)
 
-const isReleaseKey = (key: string): boolean =>
-  !RELEASE_SKIP_FIELDS.has(key) && !isIdentifierKey(key)
+const isBlockingKey = (key: string, field: string): boolean =>
+  !BLOCKING_SKIP_FIELDS.has(key) && !isIdentifierKey(key) && !isOpaqueProviderToken(key, field)
+
+const isReleaseKey = (key: string, field: string): boolean =>
+  !RELEASE_SKIP_FIELDS.has(key) && !isIdentifierKey(key) && !isOpaqueProviderToken(key, field)
 
 function collectContentValue(
   value: unknown,
   field: string,
   out: ScannedModelText[],
-  include: (key: string) => boolean
+  include: (key: string, field: string) => boolean
 ): void {
   if (typeof value === 'string') {
     out.push({ text: value, field: field || 'body' })
@@ -645,7 +716,7 @@ function collectContentValue(
   }
   if (value && typeof value === 'object') {
     for (const [key, child] of Object.entries(value)) {
-      if (!include(key)) continue
+      if (!include(key, field)) continue
       // Provider keys are ASCII (`system`, `messages`, `content`, `text`, `input`, `arguments`,
       // `properties`), which keeps the path readable. Anything else may be data-derived and collapses
       // to `[key]`, because a key copied from model output must not be written to the log.
@@ -1182,7 +1253,7 @@ async function walkReleaseContent(
   const next: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(body)) {
     const agentReserved = AGENT_RESERVED_KEY.test(key)
-    if (!isReleaseKey(key)) {
+    if (!isReleaseKey(key, '')) {
       next[key] = value
       continue
     }
@@ -1193,17 +1264,25 @@ async function walkReleaseContent(
     defineReleasedKey(
       next,
       typeof releasedKey === 'string' ? releasedKey : key,
-      await releaseContentValue(value, projectId, scope, agentReserved)
+      await releaseContentValue(value, projectId, scope, agentReserved, childField('', key))
     )
   }
   return next
+}
+
+// The release walker needs the same structural path as the blocking one: an opaque provider token is
+// recognised by its position (`messages[i].content[j].signature`), never by a bare key name.
+const childField = (field: string, key: string): string => {
+  const label = SAFE_FIELD_KEY.test(key) ? key : '[key]'
+  return field ? `${field}.${label}` : label
 }
 
 async function releaseContentValue(
   value: unknown,
   projectId: string,
   collectors: ReviewCollectors,
-  agentReserved = false
+  agentReserved = false,
+  field = ''
 ): Promise<unknown> {
   if (typeof value === 'string') {
     const result = await releaseThroughInstalledGate(
@@ -1222,23 +1301,31 @@ async function releaseContentValue(
   }
   if (Array.isArray(value)) {
     const released: unknown[] = []
-    for (const item of value)
-      released.push(await releaseContentValue(item, projectId, collectors, agentReserved))
+    for (const [index, item] of value.entries())
+      released.push(
+        await releaseContentValue(item, projectId, collectors, agentReserved, `${field}[${index}]`)
+      )
     return released
   }
   if (value && typeof value === 'object') {
     const next: Record<string, unknown> = {}
     for (const [key, child] of Object.entries(value)) {
-      if (!isReleaseKey(key)) {
+      if (!isReleaseKey(key, field)) {
         next[key] = child
         continue
       }
       const childReserved = agentReserved || AGENT_RESERVED_KEY.test(key)
-      const releasedKey = await releaseContentValue(key, projectId, collectors, childReserved)
+      const releasedKey = await releaseContentValue(key, projectId, collectors, childReserved, field)
       defineReleasedKey(
         next,
         typeof releasedKey === 'string' ? releasedKey : key,
-        await releaseContentValue(child, projectId, collectors, childReserved)
+        await releaseContentValue(
+          child,
+          projectId,
+          collectors,
+          childReserved,
+          childField(field, key)
+        )
       )
     }
     return next

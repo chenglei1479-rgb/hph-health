@@ -23,10 +23,13 @@ import {
   installPhiGate,
   MODEL_RELEASE_RETRY_MESSAGE,
   PHI_INTERNAL_MESSAGE,
+  refuseConnectorQueryArgs,
+  refusePatientQuery,
   releaseModelText,
   restoredBlockedSpanDiagnostics
 } from './gate'
 import { createMemoryPhiVault } from './store'
+import { deidentify } from './deidentify'
 
 describe('PHI hard gate', () => {
   it('fails closed before a provider session prompt', async () => {
@@ -295,6 +298,118 @@ describe('PHI gate scan scope', () => {
       diagnostics.some((hit) => hit.category === 'DATE' && hit.field === 'input[1].content[0].text')
     ).toBe(true)
     expect(JSON.stringify(diagnostics)).not.toContain('2026-10-26')
+  })
+
+  // #264: beta.23 blocked a writing turn with three hits, one of them an INSURED_ID read out of a
+  // reasoning item's `encrypted_content`. That value is ciphertext, not text: the same conversation
+  // re-encrypts to different bytes, so a hit inside it moves with every turn and no reader can see
+  // patient information in it. The fragment below is the production shape — a base64url token whose
+  // `xxx-1234-56` run is what the unlabeled insured-id pattern reads (that rule records no id).
+  const opaqueToken = `aB3dEf9z-1234-56${'kQ7'.repeat(7)}9A`
+
+  it('does not scan an opaque provider token, and still blocks the same shape in text (#264)', () => {
+    expect(
+      blockedSpanDiagnostics({ input: [{ type: 'reasoning', encrypted_content: opaqueToken }] })
+    ).toEqual([])
+    expect(
+      blockedSpanDiagnostics({
+        messages: [
+          { role: 'assistant', content: [{ type: 'thinking', thinking: '', signature: opaqueToken }] }
+        ]
+      })
+    ).toEqual([])
+    // The exemption is the field, not the pattern: the same bytes typed into content still block.
+    const [hit] = blockedSpanDiagnostics({
+      input: [
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'aB3dEf9z-1234-56' }] }
+      ]
+    })
+    expect(hit).toMatchObject({
+      category: 'INSURED_ID',
+      offset: 0,
+      length: 16,
+      field: 'input[0].content[0].text'
+    })
+    expect(hit?.rule).toBeUndefined()
+    // CTO (2026-11-12): the exemption is a protocol position, not a key name. A tool-argument object is
+    // model-generated and can carry a key literally called `signature`; that value is ordinary text, so
+    // it stays in both projections. A name-based skip would open an exit for content here.
+    const [toolHit] = blockedSpanDiagnostics({
+      messages: [
+        {
+          role: 'assistant',
+          content: [{ type: 'tool_use', name: 'lookup', input: { signature: 'aB3dEf9z-1234-56' } }]
+        }
+      ]
+    })
+    expect(toolHit).toMatchObject({
+      category: 'INSURED_ID',
+      field: 'messages[0].content[0].input.signature'
+    })
+  })
+
+  it('sends an opaque provider token back byte for byte (#264)', async () => {
+    installMachineApproval(() => true)
+    // Marks every released string that carries the token fragment, so a field the release projection
+    // visited at all would come back as the mark instead of the ciphertext.
+    installPhiGate({
+      release: (text) =>
+        text.includes('aB3dEf9z-1234-56')
+          ? { text: '[遮蔽]', replacements: [], warnings: [] }
+          : { text, replacements: [], warnings: [] },
+      restore: (text) => text
+    })
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const bodies = [
+      {
+        model: 'gpt-6.1-sol',
+        input: [
+          { type: 'reasoning', encrypted_content: opaqueToken },
+          {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'input_text', text: '元のメモ aB3dEf9z-1234-56' }]
+          }
+        ]
+      },
+      {
+        model: 'gpt-6.1-sol',
+        messages: [
+          { role: 'assistant', content: [{ type: 'thinking', thinking: '', signature: opaqueToken }] }
+        ]
+      },
+      {
+        // Same key name, ordinary text position: the release projection must still mask it.
+        model: 'gpt-6.1-sol',
+        messages: [
+          {
+            role: 'assistant',
+            content: [{ type: 'tool_use', name: 'lookup', input: { signature: 'aB3dEf9z-1234-56' } }]
+          }
+        ]
+      }
+    ]
+    try {
+      for (const body of bodies) {
+        await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body: JSON.stringify(body)
+        })
+      }
+      const sent = fetchImpl.mock.calls.map(
+        (call) => JSON.parse((call[1] as RequestInit).body as string) as Record<string, any>
+      )
+      // Rewriting a provider's own token voids the reasoning state it checks on the way back.
+      expect(sent[0]?.input[0].encrypted_content).toBe(opaqueToken)
+      expect(sent[1]?.messages[0].content[0].signature).toBe(opaqueToken)
+      // The text next to it was still released, so the skip did not disable the projection.
+      expect(sent[0]?.input[1].content[0].text).toBe('[遮蔽]')
+      // A same-named key in a tool-argument object is text, and text gets masked.
+      expect(sent[2]?.messages[0].content[0].input.signature).toBe('[遮蔽]')
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
   })
 
   it('never writes a data-derived key name into the diagnostic path', () => {
@@ -849,5 +964,298 @@ describe('release failure diagnostics (#252)', () => {
     expect(log).toContain('"isPhiError":true')
     expect(log).toContain('"isVaultPathError":false')
     expect(log).not.toContain('private invariant detail')
+  })
+})
+
+// #264: the two shape rules COO scoped to release-only on 2026-11-12 — `date-bare-slash` read `3/4`,
+// `guess-segment` read a 7-character segment. Reading "the turn is no longer refused" as "the value is
+// no longer masked" would turn a relaxed block into a silent leak, so all three sides are pinned
+// together: the released bytes, the blocking count, and the name recall the masking path must keep.
+describe('release-only shape rules (#264)', () => {
+  const FIXTURE = join(__dirname, '../../../test/fixtures/jp-phi-short-records')
+  let logDir: string
+
+  // The real masking path, not a stub: a release projection that returned its input unchanged would
+  // make the byte-identity assertions below hold for the wrong reason.
+  // A fixed vault key: the date shift is HMAC-derived from it, so the released bytes below can be
+  // pinned as literals instead of compared against a second run of the same function.
+  const newStore = () => createMemoryPhiVault({ key: Buffer.alloc(32, 7) }).store('release-only')
+  const installMaskingGate = (store = newStore()): void => {
+    installPhiGate({
+      release: (text) => deidentify(text, store),
+      restore: (text) => store.restore(text)
+    })
+  }
+
+  beforeEach(async () => {
+    logDir = await mkdtemp(join(tmpdir(), 'phi-release-only-'))
+    initLogger({ logDir, mirrorToConsole: false })
+  })
+
+  afterEach(async () => {
+    await flushLogs()
+    await rm(logDir, { recursive: true, force: true })
+    installMachineApproval(null)
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+  })
+
+  const readLog = async (): Promise<string> => {
+    await flushLogs()
+    return readFile(join(logDir, 'main.log'), 'utf8')
+  }
+
+  it('refuses nothing on the two shape rules and releases the same bytes as before', async () => {
+    installMachineApproval(() => false)
+    const store = newStore()
+    installMaskingGate(store)
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [
+        {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text: '受診日は 3/4 です。' }]
+        },
+        {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text: '研究の分担：佐藤 健' }]
+        }
+      ]
+    })
+    await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+      method: 'POST',
+      body
+    })
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    const sent = JSON.parse((fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string)
+    // Byte-identical to the release output before this change: the same shifted date, the same
+    // pseudonym. Only the refusal is gone.
+    expect(sent.input[0].content[0].text).toBe('受診日は 7/20 です。')
+    expect(sent.input[1].content[0].text).toBe('研究の分担：[患者1]')
+    expect(JSON.stringify(sent)).not.toContain('3/4')
+    expect(JSON.stringify(sent)).not.toContain('佐藤')
+    // Blocking count for the two rules: exactly zero.
+    expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
+    // The downgrade is not a widened PERSON_NAME exemption, and the evidence is egress, not a
+    // diagnostic: a labelled name still refuses the request and nothing is sent.
+    const blockedFetch = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await expect(
+      fetchProviderRequest(blockedFetch, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: JSON.stringify({
+          input: [{ type: 'message', content: [{ type: 'input_text', text: '患者：山田 太郎' }] }]
+        })
+      })
+    ).rejects.toThrow(PHI_BLOCK_CODE)
+    expect(blockedFetch).not.toHaveBeenCalled()
+  })
+
+  // `記載日/報告日/文書日付/作成日/研究期間/承認日` name the document, not the patient, so the masking path
+  // has always kept them (`deidentify`, `kind === 'document'`). The blocking projection never looked at
+  // `kind`, so on main every one of those labels was "not masked but refused" — the refusal was what
+  // kept the date out of the request. CTO (2026-11-12): release-only moves exactly one shape, `3/4`, to
+  // "sent and still not masked", so the whole label list is exercised here. A date shape that later joins
+  // the policy would otherwise widen that state silently, label by label.
+  //
+  // `同意取得日` is deliberately not in this list (#264): consent acquisition is the patient's timeline,
+  // so it lost the exemption instead of being accepted as a document date. It is the only label here that
+  // was patient-facing, and while release-only is in play a document date the masking path skips is a
+  // date that can leave unmasked.
+  const DOCUMENT_DATE_LABELS = [
+    '記載日',
+    '報告日',
+    '文書日付',
+    '作成日',
+    '研究期間',
+    '承認日'
+  ] as const
+
+  it.each(DOCUMENT_DATE_LABELS)(
+    'leaves the document date after %s unmasked, and no longer refuses the 3/4 shape',
+    async (label) => {
+      installMachineApproval(() => false)
+      const store = newStore()
+      installMaskingGate(store)
+      const text = `${label}：3/4`
+      expect(deidentify(text, store).text).toBe(text)
+      expect(
+        blockedSpanDiagnostics({
+          input: [{ type: 'message', content: [{ type: 'input_text', text }] }]
+        })
+      ).toEqual([])
+      const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: JSON.stringify({
+          input: [{ type: 'message', content: [{ type: 'input_text', text }] }]
+        })
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+      // Whatever leaves the machine, it is not the document date: this label list is only "unmasked"
+      // in the sense that the masking path chose to leave it alone — the 3/4 shape really is `3/4`.
+      expect(String((fetchImpl.mock.calls[0]?.[1] as RequestInit).body)).toContain(text)
+    }
+  )
+
+  it('shifts the consent-acquisition date instead of exempting it', async () => {
+    // The one label that is the patient's timeline, not the document's: it is masked like any other
+    // calendar date, so neither option of the policy question can send it in the clear.
+    installMachineApproval(() => false)
+    const store = newStore()
+    installMaskingGate(store)
+    const text = '同意取得日：3/4'
+    expect(deidentify(text, store).text).not.toBe(text)
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+      method: 'POST',
+      body: JSON.stringify({
+        input: [{ type: 'message', content: [{ type: 'input_text', text }] }]
+      })
+    })
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    const sent = String((fetchImpl.mock.calls[0]?.[1] as RequestInit).body)
+    expect(sent).not.toContain('3/4')
+    expect(sent).toContain('同意取得日：')
+  })
+
+  it('keeps the other date shapes under a document label refused', async () => {
+    // The downgrade is one shape, not the DATE category: an era date after the same label is still
+    // refused (it always was) and still not masked. Egress is the assertion, not a diagnostic: if this
+    // request ever reaches the network, release-only grew.
+    installMachineApproval(() => false)
+    const store = newStore()
+    installMaskingGate(store)
+    expect(deidentify('作成日：令和8年4月5日', store).text).toBe('作成日：令和8年4月5日')
+    const body = JSON.stringify({
+      input: [{ type: 'message', content: [{ type: 'input_text', text: '作成日：令和8年4月5日' }] }]
+    })
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await expect(
+      fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+    ).rejects.toThrow(PHI_BLOCK_CODE)
+    expect(fetchImpl).not.toHaveBeenCalled()
+    expect(blockedSpanDiagnostics(JSON.parse(body)).map((hit) => hit.rule)).toEqual([
+      'date-bare-era'
+    ])
+  })
+
+  it('records a downgraded hit with its rule id and no text', async () => {
+    installMachineApproval(() => false)
+    installMaskingGate()
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+      method: 'POST',
+      body: JSON.stringify({
+        input: [{ type: 'message', content: [{ type: 'input_text', text: '受診日は 3/4 です。' }] }]
+      })
+    })
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    const log = await readLog()
+    expect(log).toContain('"msg":"phi release-only hit"')
+    expect(log).toContain('"rule":"date-bare-slash"')
+    // Same payload rule as the block log: where it was and how long, never what it said.
+    expect(log).toContain('"field":"input[0].content[0].text"')
+    expect(log).not.toContain('3/4')
+    // The request did go out, and the line says so instead of leaving it to be inferred.
+    expect(log).toContain('"blocked":false')
+    // Its own id, never the block id (#266): support greps PHI-BLOCK-01 to answer "did the gate refuse
+    // anything?", and a release that borrowed the id would make that count lie.
+    expect(log).toContain(`"code":"PHI-RELEASE-ONLY-01"`)
+    const downgradeLine = log.split('\n').find((line) => line.includes('phi release-only hit')) ?? ''
+    expect(downgradeLine).not.toContain(PHI_BLOCK_CODE)
+  })
+
+  it('marks a downgraded hit as blocked when another rule still refuses the request', async () => {
+    // CTO (2026-11-12): the line used to be written before the block decision, so a triage reader could
+    // take it as "this turn was sent" when another rule had refused the same request.
+    installMachineApproval(() => false)
+    installMaskingGate()
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    await expect(
+      fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: JSON.stringify({
+          input: [
+            { type: 'message', content: [{ type: 'input_text', text: '受診日は 3/4 です。' }] },
+            { type: 'message', content: [{ type: 'input_text', text: '患者：山田 太郎' }] }
+          ]
+        })
+      })
+    ).rejects.toThrow(PHI_BLOCK_CODE)
+    expect(fetchImpl).not.toHaveBeenCalled()
+    const log = await readLog()
+    expect(log).toContain('"blocked":true')
+    expect(log).toContain('"rule":"date-bare-slash"')
+    expect(log).toContain('"msg":"model content blocked"')
+  })
+
+  // COO (2026-11-12): release-only is the one new fail-open seam. The connector hard-refuse paths do not
+  // mask — they send nothing — so they never consult RELEASE_ONLY_RULES and must keep refusing both
+  // shapes. Without these cases, wiring `diagnosticFor` into a connector path would look green.
+  it('keeps the connector hard-refuse path strict', () => {
+    const refusal = (run: () => void): unknown => {
+      try {
+        run()
+      } catch (error) {
+        return error
+      }
+      return null
+    }
+    // A bare-slash date is a released model field but still a refused search query.
+    expect(refusal(() => refusePatientQuery('3/4'))).toMatchObject({ code: PHI_BLOCK_CODE })
+    expect(refusal(() => refuseConnectorQueryArgs({ query: '3/4' }))).toMatchObject({
+      code: PHI_BLOCK_CODE
+    })
+    // A labelled name is not the whole-query guess, so the connector exemption does not cover it.
+    expect(refusal(() => refusePatientQuery('患者名: 佐藤'))).toMatchObject({ code: PHI_BLOCK_CODE })
+    expect(refusal(() => refuseConnectorQueryArgs({ query: '患者名: 佐藤' }))).toMatchObject({
+      code: PHI_BLOCK_CODE
+    })
+  })
+
+  it('still masks every reviewed short-record name', async () => {
+    // The red line is masking recall, not blocking: these are the reviewed names the short-record
+    // fixture pins at 1.0 (dev-eval asserts the recall; this asserts the release path directly, which
+    // is the side a release-only change could quietly move).
+    const gold = (await readFile(join(FIXTURE, 'records_gold.jsonl'), 'utf8'))
+      .trim()
+      .split('\n')
+      .map(
+        (line) =>
+          JSON.parse(line) as {
+            record: string
+            start: number
+            end: number
+            category: string
+            is_phi: boolean
+          }
+      )
+      .filter(
+        (span) =>
+          span.is_phi &&
+          span.category === 'PERSON_NAME' &&
+          // The one documented miss (#103): an 84-character note, outside the guess window. It is a
+          // pinned limitation, not a recall this change may or may not keep.
+          !span.record.startsWith('known-')
+      )
+    expect(gold).toHaveLength(14)
+    const missing: string[] = []
+    for (const span of gold) {
+      const text = await readFile(join(FIXTURE, 'records', span.record), 'utf8')
+      const result = deidentify(text, newStore())
+      const covered = result.replacements.some(
+        (item) => item.start <= span.start && item.end >= span.end
+      )
+      if (!covered) missing.push(span.record)
+    }
+    expect(missing).toEqual([])
   })
 })

@@ -8,6 +8,14 @@ export const PHI_BLOCK_CODE = 'PHI-BLOCK-01'
 // support engineer has: stable id plus counts and categories, never the replaced text.
 export const PHI_REVIEW_EXCLUDED_CODE = 'PHI-REVIEW-SKIP-01'
 
+// #264: a hit the gate let through instead of refusing, because the rule that produced it is shape-only
+// (see RELEASE_ONLY_RULES in src/main/phi/gate.ts). This is a log id and never an error code: nothing is
+// thrown, no HTTP status derives from it, and it stays out of `PhiFailureCode`. `PHI-BLOCK-01` keeps its
+// single meaning — "the gate refused this request" — because support counts that id to answer exactly
+// that question (the beta.23 triage); reusing it for a release would blur the one signal the incident
+// workflow relies on.
+export const PHI_RELEASE_ONLY_CODE = 'PHI-RELEASE-ONLY-01'
+
 // #195: refusal classes are decided where the error is minted, not in the HTTP layer. The question each
 // code answers is "would resending the same request produce a different answer?" - not "what should the
 // doctor read".
