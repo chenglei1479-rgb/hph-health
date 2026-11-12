@@ -589,6 +589,10 @@ function assertMachineMaySend(
 // descriptions are ours — but new code must not put user or project text there, and JSON keys
 // elsewhere are still released.
 //
+// Opaque provider tokens (`encrypted_content`, a thinking block's `signature`) are skipped in both
+// directions for a different reason (#264): they are ciphertext, so there is nothing to read in them
+// and rewriting one breaks the provider's own replay.
+//
 // Everything else stays in scope, including `system`, `messages`, `input` and `prompt`: providers
 // disagree about which field carries the conversation, and whitelisting content fields leaked PHI
 // through Anthropic's `system`.
@@ -623,11 +627,22 @@ const NON_CONTENT_KEYS = new Set([
 const isIdentifierKey = (key: string): boolean =>
   NON_CONTENT_KEYS.has(key) || /(?:^|_)(?:id|ids)$/iu.test(key)
 
+// #264: an opaque provider token is bytes the provider produced and expects back verbatim, not text
+// anyone wrote: `encrypted_content` is a reasoning item's ciphertext, `signature` is the same idea for
+// a thinking block. Neither can carry readable patient information, so scanning one only produces
+// random hits — in beta.23 a 38-character ciphertext "matched" an INSURED_ID at offset 0, and the
+// offset moved with every re-encryption of unchanged content. Rewriting one is worse than scanning it:
+// de-identifying the ciphertext would void the reasoning state the provider checks on the way back.
+// Both directions therefore skip them, the same trade `tools` already makes; unlike `tools` there is
+// no user or project text here to lose, because a caller cannot put text into a provider's own token.
+const OPAQUE_PROVIDER_KEYS = new Set(['encrypted_content', 'signature'])
+const isOpaqueProviderKey = (key: string): boolean => OPAQUE_PROVIDER_KEYS.has(key)
+
 const isBlockingKey = (key: string): boolean =>
-  !BLOCKING_SKIP_FIELDS.has(key) && !isIdentifierKey(key)
+  !BLOCKING_SKIP_FIELDS.has(key) && !isIdentifierKey(key) && !isOpaqueProviderKey(key)
 
 const isReleaseKey = (key: string): boolean =>
-  !RELEASE_SKIP_FIELDS.has(key) && !isIdentifierKey(key)
+  !RELEASE_SKIP_FIELDS.has(key) && !isIdentifierKey(key) && !isOpaqueProviderKey(key)
 
 function collectContentValue(
   value: unknown,

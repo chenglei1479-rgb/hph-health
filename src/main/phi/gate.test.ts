@@ -297,6 +297,91 @@ describe('PHI gate scan scope', () => {
     expect(JSON.stringify(diagnostics)).not.toContain('2026-10-26')
   })
 
+  // #264: beta.23 blocked a writing turn with three hits, one of them an INSURED_ID read out of a
+  // reasoning item's `encrypted_content`. That value is ciphertext, not text: the same conversation
+  // re-encrypts to different bytes, so a hit inside it moves with every turn and no reader can see
+  // patient information in it. The fragment below is the production shape — a base64url token whose
+  // `xxx-1234-56` run is what the unlabeled insured-id pattern reads (that rule records no id).
+  const opaqueToken = `aB3dEf9z-1234-56${'kQ7'.repeat(7)}9A`
+
+  it('does not scan an opaque provider token, and still blocks the same shape in text (#264)', () => {
+    expect(
+      blockedSpanDiagnostics({ input: [{ type: 'reasoning', encrypted_content: opaqueToken }] })
+    ).toEqual([])
+    expect(
+      blockedSpanDiagnostics({
+        messages: [
+          { role: 'assistant', content: [{ type: 'thinking', thinking: '', signature: opaqueToken }] }
+        ]
+      })
+    ).toEqual([])
+    // The exemption is the field, not the pattern: the same bytes typed into content still block.
+    const [hit] = blockedSpanDiagnostics({
+      input: [
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'aB3dEf9z-1234-56' }] }
+      ]
+    })
+    expect(hit).toMatchObject({
+      category: 'INSURED_ID',
+      offset: 0,
+      length: 16,
+      field: 'input[0].content[0].text'
+    })
+    expect(hit?.rule).toBeUndefined()
+  })
+
+  it('sends an opaque provider token back byte for byte (#264)', async () => {
+    installMachineApproval(() => true)
+    // Marks every released string that carries the token fragment, so a field the release projection
+    // visited at all would come back as the mark instead of the ciphertext.
+    installPhiGate({
+      release: (text) =>
+        text.includes('aB3dEf9z-1234-56')
+          ? { text: '[遮蔽]', replacements: [], warnings: [] }
+          : { text, replacements: [], warnings: [] },
+      restore: (text) => text
+    })
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const bodies = [
+      {
+        model: 'gpt-6.1-sol',
+        input: [
+          { type: 'reasoning', encrypted_content: opaqueToken },
+          {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'input_text', text: '元のメモ aB3dEf9z-1234-56' }]
+          }
+        ]
+      },
+      {
+        model: 'gpt-6.1-sol',
+        messages: [
+          { role: 'assistant', content: [{ type: 'thinking', thinking: '', signature: opaqueToken }] }
+        ]
+      }
+    ]
+    try {
+      for (const body of bodies) {
+        await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body: JSON.stringify(body)
+        })
+      }
+      const sent = fetchImpl.mock.calls.map(
+        (call) => JSON.parse((call[1] as RequestInit).body as string) as Record<string, any>
+      )
+      // Rewriting a provider's own token voids the reasoning state it checks on the way back.
+      expect(sent[0]?.input[0].encrypted_content).toBe(opaqueToken)
+      expect(sent[1]?.messages[0].content[0].signature).toBe(opaqueToken)
+      // The text next to it was still released, so the skip did not disable the projection.
+      expect(sent[0]?.input[1].content[0].text).toBe('[遮蔽]')
+    } finally {
+      installMachineApproval(null)
+      installIdentityGate()
+    }
+  })
+
   it('never writes a data-derived key name into the diagnostic path', () => {
     // `messages[i].content[j].input` is model-generated JSON: its keys can be copied from the
     // conversation, so a hit under one of them must not put that key into the log.
