@@ -6,6 +6,7 @@ import {
   PHI_BLOCK_CODE,
   PHI_CONSENT_CODE,
   PHI_INTERNAL_CODE,
+  PHI_RELEASE_ONLY_CODE,
   PHI_REVIEW_EXCLUDED_CODE,
   PHI_REVIEW_UNAVAILABLE_CODE,
   PHI_TURN_REPLACED_CODE,
@@ -578,10 +579,11 @@ function assertMachineMaySend(
   if (approved) return
   const { diagnostics, spans, downgraded } = diagnosticFor(normalizeScanned(texts), pass)
   // A downgraded hit leaves a trace, or nobody can later tell "released by policy" from "no longer
-  // detected": the same no-text payload the block log uses, plus the rule that was downgraded.
+  // detected": the same no-text payload the block log uses, plus the rule that was downgraded. Its code
+  // is a release id, never PHI-BLOCK-01 — that id has to keep meaning "the gate refused" (#266).
   if (downgraded.length > 0) {
     phiBlockLog.info('phi release-only hit passed without blocking', {
-      code: PHI_BLOCK_CODE,
+      code: PHI_RELEASE_ONLY_CODE,
       hits: downgraded.length,
       rules: [...new Set(downgraded.map((hit) => hit.rule))],
       spans: downgraded

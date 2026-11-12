@@ -23,6 +23,8 @@ import {
   installPhiGate,
   MODEL_RELEASE_RETRY_MESSAGE,
   PHI_INTERNAL_MESSAGE,
+  refuseConnectorQueryArgs,
+  refusePatientQuery,
   releaseModelText,
   restoredBlockedSpanDiagnostics
 } from './gate'
@@ -1093,6 +1095,36 @@ describe('release-only shape rules (#264)', () => {
     // Same payload rule as the block log: where it was and how long, never what it said.
     expect(log).toContain('"field":"input[0].content[0].text"')
     expect(log).not.toContain('3/4')
+    // Its own id, never the block id (#266): support greps PHI-BLOCK-01 to answer "did the gate refuse
+    // anything?", and a release that borrowed the id would make that count lie.
+    expect(log).toContain(`"code":"PHI-RELEASE-ONLY-01"`)
+    const downgradeLine =
+      log.split('\n').find((line) => line.includes('phi release-only hit passed')) ?? ''
+    expect(downgradeLine).not.toContain(PHI_BLOCK_CODE)
+  })
+
+  // COO (2026-11-12): release-only is the one new fail-open seam. The connector hard-refuse paths do not
+  // mask — they send nothing — so they never consult RELEASE_ONLY_RULES and must keep refusing both
+  // shapes. Without these cases, wiring `diagnosticFor` into a connector path would look green.
+  it('keeps the connector hard-refuse path strict', () => {
+    const refusal = (run: () => void): unknown => {
+      try {
+        run()
+      } catch (error) {
+        return error
+      }
+      return null
+    }
+    // A bare-slash date is a released model field but still a refused search query.
+    expect(refusal(() => refusePatientQuery('3/4'))).toMatchObject({ code: PHI_BLOCK_CODE })
+    expect(refusal(() => refuseConnectorQueryArgs({ query: '3/4' }))).toMatchObject({
+      code: PHI_BLOCK_CODE
+    })
+    // A labelled name is not the whole-query guess, so the connector exemption does not cover it.
+    expect(refusal(() => refusePatientQuery('患者名: 佐藤'))).toMatchObject({ code: PHI_BLOCK_CODE })
+    expect(refusal(() => refuseConnectorQueryArgs({ query: '患者名: 佐藤' }))).toMatchObject({
+      code: PHI_BLOCK_CODE
+    })
   })
 
   it('still masks every reviewed short-record name', async () => {
