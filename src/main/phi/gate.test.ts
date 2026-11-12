@@ -952,13 +952,17 @@ describe('assistant-authored history (#244)', () => {
     }
   })
 
-  it('still blocks the same prose clause when the researcher typed it', async () => {
+  // #264 made `guess-segment` release-only, so it can no longer carry the egress half of this scope
+  // check: typed prose with that shape now passes the block by policy, not because it was read as
+  // assistant text. `guess-whole` is the rule this exemption actually stops refusing, so the negative
+  // cases below use a bare name — the shape a researcher can type and the model can also emit.
+  it('still blocks a bare name typed by the researcher', async () => {
     installMachineApproval(null)
     installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
-    const body = responsesBody('user', proseClause)
+    const body = responsesBody('user', '山田 太郎')
     try {
-      expect(guessRules(body).length).toBeGreaterThan(0)
+      expect(guessRules(body)).toEqual(['guess-whole'])
       await expect(
         fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
           method: 'POST',
@@ -1017,9 +1021,9 @@ describe('assistant-authored history (#244)', () => {
     installMachineApproval(null)
     installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
-    const body = responsesBody(undefined, proseClause)
+    const body = responsesBody(undefined, '山田 太郎')
     try {
-      expect(guessRules(body).length).toBeGreaterThan(0)
+      expect(guessRules(body)).toEqual(['guess-whole'])
       await expect(
         fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
           method: 'POST',
