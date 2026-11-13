@@ -892,8 +892,197 @@ describe('machine-generated tool traffic (#244)', () => {
   })
 })
 
-// #252: the beta.23 build refused every turn with PHI-UNAVAILABLE-01 / reason "gate-error" and only the class
-// was recorded, so the incident could not be attributed (the same defect as the 502 that dropped
+// #244: the agent's own plan lines were refused as person names when they came back to it as history.
+// The shape guess protects text a person typed; assistant text is the model's own output and is already
+// on the wire, so a guess hit there can only refuse a turn. Only `guess-segment` / `guess-whole` stop
+// blocking: a labelled name still blocks, and release still de-identifies the text (last cases below).
+describe('assistant-authored history (#244)', () => {
+  // The 66-character field recovered from the 05:45 block (digest c3717de5).
+  const plan =
+    '我会使用“文献综述”技能，先整理第一阶段的可编辑草稿，列出研究问题、拟议检索策略及所需证据与数据；待您确认或修改后，再执行外部检索。'
+  // A plan-shaped clause the shape guess still reads as names today (both segments hit guess-segment).
+  // The incident line above is already released by the #244 rules, so this is the sample that shows the
+  // scope decision: same text, role decides.
+  const proseClause = '表格导出设置，后续分为三步。'
+
+  const installIdentityGate = (): void => {
+    installMachineApproval(null)
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+  }
+
+  const responsesBody = (role: 'user' | 'assistant' | undefined, text: string): string =>
+    JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [
+        role === undefined
+          ? { type: 'message', content: [{ type: 'input_text', text }] }
+          : {
+              type: 'message',
+              role,
+              content: [{ type: role === 'assistant' ? 'output_text' : 'input_text', text }]
+            }
+      ]
+    })
+
+  const guessRules = (body: string): Array<string | undefined> =>
+    blockedSpanDiagnostics(JSON.parse(body))
+      .filter((item) => item.rule === 'guess-segment' || item.rule === 'guess-whole')
+      .map((item) => item.rule)
+
+  it('does not block the assistant plan line the shape guess reads as three names', async () => {
+    installMachineApproval(() => true)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = responsesBody('assistant', plan)
+    try {
+      expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+      // #244 already releases this exact line, so release leaves it alone and nothing reaches the log.
+      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+      expect(sent).toContain(plan)
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  // #264 made `guess-segment` release-only, so it can no longer carry the egress half of this scope
+  // check: typed prose with that shape now passes the block by policy, not because it was read as
+  // assistant text. `guess-whole` is the rule this exemption actually stops refusing, so the negative
+  // cases below use a bare name — the shape a researcher can type and the model can also emit.
+  it('still blocks a bare name typed by the researcher', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = responsesBody('user', '山田 太郎')
+    try {
+      expect(guessRules(body)).toEqual(['guess-whole'])
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body
+        })
+      ).rejects.toMatchObject({ code: PHI_BLOCK_CODE })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('still blocks a labelled name in an assistant message', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = responsesBody('assistant', '患者：山田 太郎')
+    try {
+      const diagnostics = blockedSpanDiagnostics(JSON.parse(body))
+      expect(diagnostics.length).toBeGreaterThan(0)
+      // The exemption is about the shape guess, not about who wrote the text.
+      expect(diagnostics.every((item) => !item.rule?.startsWith('guess-'))).toBe(true)
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body
+        })
+      ).rejects.toMatchObject({ code: PHI_BLOCK_CODE })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('still masks a bare name in assistant text on release', async () => {
+    installMachineApproval(() => true)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = responsesBody('assistant', '山田 太郎')
+    try {
+      // The guess rule does not block it any more, but the name must not reach the provider as is.
+      expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+      expect(sent).not.toContain('山田 太郎')
+      expect(sent).toContain('[患者')
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('keeps the full scan when a message carries no role', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = responsesBody(undefined, '山田 太郎')
+    try {
+      expect(guessRules(body)).toEqual(['guess-whole'])
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body
+        })
+      ).rejects.toMatchObject({ code: PHI_BLOCK_CODE })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('accepts an Anthropic-style assistant message', async () => {
+    installMachineApproval(() => true)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = JSON.stringify({
+      model: 'claude-fixture',
+      messages: [{ role: 'assistant', content: [{ type: 'text', text: proseClause }] }]
+    })
+    try {
+      expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/messages', {
+        method: 'POST',
+        body
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+      // Release is unchanged: whatever the guess reads as a name is still masked on the way out.
+      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+      expect(sent).toContain('[患者')
+      expect(sent).not.toContain('表格导出设置')
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('accepts an output_text part that carries no role of its own', async () => {
+    installMachineApproval(() => true)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [{ type: 'message', content: [{ type: 'output_text', text: proseClause }] }]
+    })
+    try {
+      expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+    } finally {
+      installIdentityGate()
+    }
+  })
+})
+
+// #252: the beta.23 build refused every turn with PHI-UNAVAILABLE-01 / reason "gate-error" and only the
+// class was recorded, so the incident could not be attributed (the same defect as the 502 that dropped
 // error.cause, #251). The message can carry a vault path, so the log records stable identifiers only.
 describe('release failure diagnostics (#252)', () => {
   let logDir: string

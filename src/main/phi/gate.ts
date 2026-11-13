@@ -444,7 +444,9 @@ function patientSpans(text: string): PhiBlockedSpan[] {
 // A scanned string plus where it sits in the provider body (`input[2].content[0].text`, `system`).
 // The path describes structure only: object keys in a provider body come from provider schemas, and a
 // caller must never feed user-derived keys here (the blocking projection walks known content keys).
-type ScannedModelText = { text: string; field: string }
+// `machineAuthored` marks text the model itself produced and is now sending back as history; it is set
+// only from an explicit `role: "assistant"` item or an `output_text` part, never inferred from a path.
+type ScannedModelText = { text: string; field: string; machineAuthored?: boolean }
 
 /** One blocked hit, as written to the log: never the matched text. */
 export type BlockedSpanDiagnostic = {
@@ -503,6 +505,31 @@ const RELEASE_ONLY_RULES = new Set(['date-bare-slash', 'guess-segment'])
 const isReleaseOnlyRule = (rule: string | undefined): boolean =>
   rule !== undefined && RELEASE_ONLY_RULES.has(rule)
 
+// #244: the agent's own turns come back to it as history (`input[i]` with `role: "assistant"`, or an
+// `output_text` content part). The shape heuristics protect text a person typed: a bare name there
+// would leave the machine unread. Assistant text is the model's own output and is already on the wire,
+// so a guess hit on it can only refuse a turn — the 05:45 and 05:48 blocks were exactly that, two plan
+// lines ("列出研究问题", "暂不开展检索") read as person names.
+//
+// Only the *blocking* pass is relaxed, and only for these two rules. Release still de-identifies the
+// same text, and that is not optional: the stored sessions contain zero placeholders (28 session files
+// checked), so what is stored — and what is sent back as history — is the restored form. Skipping the
+// release for assistant text would send the original name out. A labelled name (`患者：…`) in an
+// assistant message still blocks for the same reason: the exemption is about the shape guess, not
+// about who wrote the text.
+//
+// An item without an explicit role keeps the full scan, so an unknown provider shape stays fail-closed.
+// The two sets overlap on `guess-segment`: #264 already releases that rule everywhere, so for it this
+// exemption only removes the downgrade log line. `guess-whole` is the rule this exemption actually
+// stops refusing, and only on assistant-authored text.
+const MACHINE_AUTHORED_EXEMPT_RULES = new Set(['guess-segment', 'guess-whole'])
+
+const isAssistantAuthoredMessage = (record: Record<string, unknown>): boolean => {
+  const content = record.content
+  const carriesContent = Array.isArray(content) || typeof content === 'string'
+  return (record.role === 'assistant' && carriesContent) || record.type === 'output_text'
+}
+
 const diagnosticFor = (
   values: readonly ScannedModelText[],
   pass: 'blocked' | 'restored'
@@ -514,9 +541,11 @@ const diagnosticFor = (
   const diagnostics: BlockedSpanDiagnostic[] = []
   const spans: PhiBlockedSpan[] = []
   const downgraded: BlockedSpanDiagnostic[] = []
-  for (const { text, field } of values) {
+  for (const { text, field, machineAuthored } of values) {
     const found = patientSpans(text).filter(
-      (span) => !(MACHINE_TOOL_FIELD.test(field) && MACHINE_TOOL_EXEMPT_RULES.has(span.rule ?? ''))
+      (span) =>
+        !(MACHINE_TOOL_FIELD.test(field) && MACHINE_TOOL_EXEMPT_RULES.has(span.rule ?? '')) &&
+        !(machineAuthored && MACHINE_AUTHORED_EXEMPT_RULES.has(span.rule ?? ''))
     )
     // Hash only when something was blocked: the gate runs on every outbound request, and a digest per
     // scanned string would be paid by every send that never blocks.
@@ -704,24 +733,31 @@ function collectContentValue(
   value: unknown,
   field: string,
   out: ScannedModelText[],
-  include: (key: string, field: string) => boolean
+  include: (key: string, field: string) => boolean,
+  machineAuthored = false
 ): void {
   if (typeof value === 'string') {
-    out.push({ text: value, field: field || 'body' })
+    out.push({ text: value, field: field || 'body', machineAuthored })
     return
   }
   if (Array.isArray(value)) {
-    value.forEach((item, index) => collectContentValue(item, `${field}[${index}]`, out, include))
+    value.forEach((item, index) =>
+      collectContentValue(item, `${field}[${index}]`, out, include, machineAuthored)
+    )
     return
   }
   if (value && typeof value === 'object') {
+    // The role lives on the message item that wraps the text, so it is decided once per object and
+    // inherited by everything under it; a nested part cannot upgrade itself to machine-authored.
+    const authored =
+      machineAuthored || isAssistantAuthoredMessage(value as Record<string, unknown>)
     for (const [key, child] of Object.entries(value)) {
       if (!include(key, field)) continue
       // Provider keys are ASCII (`system`, `messages`, `content`, `text`, `input`, `arguments`,
       // `properties`), which keeps the path readable. Anything else may be data-derived and collapses
       // to `[key]`, because a key copied from model output must not be written to the log.
       const label = SAFE_FIELD_KEY.test(key) ? key : '[key]'
-      collectContentValue(child, field ? `${field}.${label}` : label, out, include)
+      collectContentValue(child, field ? `${field}.${label}` : label, out, include, authored)
     }
   }
 }
