@@ -365,9 +365,15 @@ export function detectPhi(original: string): PhiSpan[] {
 // A UUID is an identifier, not patient information. This is the judgement gate.ts already makes with
 // `NON_CONTENT_KEYS`: an identifier field is structure, not content. It is not a loosening of either
 // shape rule: a span must sit *entirely* inside a canonical UUID to be dropped, so the same twelve
-// digits next to a UUID still match, and a labelled number anywhere (被保険者番号 12345678) still
-// matches. A patient identifier that happened to be a UUID would no longer be masked; no PHI source in
-// this app produces UUIDs.
+// digits next to a UUID still match, and a labelled number that is not inside a UUID still matches
+// (被保険者番号 12345678).
+//
+// The containment check deliberately does not look at `labeled`, so a label whose value happens to fall
+// inside a UUID is dropped with it (`被保険者番号: <uuid>`): the label names the field, and the UUID is
+// still an identifier. The consequence worth naming is concrete: a twelve-digit My Number is all
+// hexadecimal digits, so a My Number wrapped into a UUID shape is not masked either. No PHI source in
+// this app produces UUIDs, and the trade buys back the artifact ids the agent needs in order to name
+// what it just wrote. A test pins the labelled-inside case, so changing either side has to decide it.
 const UUID_IDENTIFIER =
   /(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])/giu
 

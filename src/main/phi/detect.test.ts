@@ -236,4 +236,12 @@ describe('a UUID is an identifier, not PHI', () => {
     const spans = detectPhi('被保険者番号 12345678 を a8191d31-3752-41d9-b1fe-a737e649318b に記録')
     expect(spans.map((span) => span.category)).toEqual(['INSURED_ID'])
   })
+
+  // CTO (2026-11-12): the containment check never looks at `labeled`. A label whose value is part of a
+  // UUID is dropped with it — the label names the field, and the UUID is still an identifier. Pinned as
+  // intentional, so a change to either the filter or the labelled rules has to decide this case instead
+  // of drifting silently.
+  it('drops a labelled number that sits entirely inside a UUID, on purpose', () => {
+    expect(detectPhi('被保険者番号 12345678-1234-41d9-b1fe-a737e649318b')).toEqual([])
+  })
 })
