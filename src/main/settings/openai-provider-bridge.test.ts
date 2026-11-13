@@ -1,10 +1,14 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
+import { tmpdir } from 'node:os'
 import type { AddressInfo } from 'node:net'
+import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
+import { flushLogs, initLogger } from '@aipoch/diagnostics/node'
 import { fetch as nodeFetch } from 'undici'
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { adaptCodeBuddyChatCompletionsRequest } from './codebuddy-chat-request-adapter'
 import { createVaultBackedGate, installMachineApproval, installPhiGate } from '../phi/gate'
@@ -645,7 +649,10 @@ it('answers a PHI refusal with 400 so the client stops after one attempt', async
       attempts += 1
       const response = await fetch(`${connection.baseUrl}/v1/responses`, {
         method: 'POST',
-        headers: { authorization: `Bearer ${connection.token}`, 'content-type': 'application/json' },
+        headers: {
+          authorization: `Bearer ${connection.token}`,
+          'content-type': 'application/json'
+        },
         body: JSON.stringify({
           model: 'gpt-5',
           input: [
@@ -680,4 +687,144 @@ it('answers a PHI refusal with 400 so the client stops after one attempt', async
     })
     await bridge.close()
   }
+})
+
+// #251: beta.23's failing turn reported
+//   `unexpected status 502 Bad Gateway: fetch failed, url: http://127.0.0.1:62627/v1/responses`
+// The 502 is this bridge wrapping its own upstream fetch failure, and undici's cause — the only signal
+// that separates a body timeout from a reset or a DNS failure — used to be dropped. These pin the log
+// fields and the human sentence; they deliberately do not pin a timeout value (that waits for the
+// cause evidence this change starts recording).
+describe('provider failure diagnostics (#251)', () => {
+  const servers: Server[] = []
+  const bridges: OpenAiProviderBridge[] = []
+  let logDir: string
+
+  beforeEach(async () => {
+    installMachineApproval(() => true)
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+    logDir = await mkdtemp(join(tmpdir(), 'openai-bridge-log-'))
+    initLogger({ logDir, mirrorToConsole: false })
+  })
+
+  afterEach(async () => {
+    await Promise.all(bridges.splice(0).map((bridge) => bridge.close()))
+    await Promise.all(servers.splice(0).map(close))
+    await flushLogs()
+    await rm(logDir, { recursive: true, force: true })
+    installMachineApproval(null)
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+  })
+
+  const logText = async (): Promise<string> => {
+    await flushLogs()
+    return readFile(join(logDir, 'main.log'), 'utf8')
+  }
+
+  const startBridge = async (
+    fetchImpl: typeof fetch
+  ): Promise<{ baseUrl: string; token: string }> => {
+    const target: OpenAiProviderBridgeTarget = {
+      id: 'diagnostics',
+      wire: 'responses',
+      endpoint: 'https://gateway.invalid/v1/responses',
+      model: 'gpt-5'
+    }
+    const bridge = new OpenAiProviderBridge([target], target.id, fetchImpl)
+    bridges.push(bridge)
+    const connection = await bridge.start()
+    return { baseUrl: connection.baseUrl, token: connection.token }
+  }
+
+  const post = (baseUrl: string, token: string, body: unknown): Promise<Response> =>
+    fetch(`${baseUrl}/v1/responses`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+
+  it.each([
+    [
+      'UND_ERR_BODY_TIMEOUT',
+      'The model service stopped sending data before the reply finished. Retry the request.'
+    ],
+    ['UND_ERR_HEADERS_TIMEOUT', 'The model service did not respond in time. Retry the request.'],
+    [
+      'ECONNRESET',
+      'Could not reach the model service. Check your network, proxy or VPN, then retry.'
+    ]
+  ])('logs %s and answers an actionable sentence', async (code, sentence) => {
+    const upstream = vi.fn<typeof fetch>(async () => {
+      throw new TypeError('fetch failed', {
+        cause: Object.assign(new Error('private upstream detail'), { code })
+      })
+    })
+    const { baseUrl, token } = await startBridge(upstream)
+    const response = await post(baseUrl, token, {
+      model: 'gpt-5',
+      input: 'BODY-CANARY-DO-NOT-LOG'
+    })
+    expect(response.status).toBe(502)
+    const body = (await response.json()) as { error?: { message?: string; code?: string } }
+    expect(body.error?.message).toBe(sentence)
+    // The response code is unchanged: this failure never carried one.
+    expect(body.error?.code).toBeUndefined()
+
+    const log = await logText()
+    expect(log).toContain('provider request failed')
+    expect(log).toContain(`"causeCode":"${code}"`)
+    expect(log).toContain('"responseStarted":false')
+    expect(log).toContain('"durationMs":')
+    expect(log).not.toContain('BODY-CANARY-DO-NOT-LOG')
+    // The error message can carry a path or a provider sentence; only its presence is recorded.
+    expect(log).not.toContain('private upstream detail')
+    // The target's endpoint is a private gateway URL (`https://gateway.invalid/...`). `path` in this
+    // line is the local wire path (`/v1/responses`), whose value domain is checked by `WIRE_PATH[wire]`
+    // — never the upstream URL — so a URL-shaped canary has to stay out of the log.
+    expect(log).not.toContain('gateway.invalid')
+  })
+
+  it('marks a failure after the first byte as a stream interruption', async () => {
+    const upstreamServer = createServer((request, response) => {
+      request.resume()
+      request.on('end', () => {
+        response.writeHead(200, { 'content-type': 'text/event-stream' })
+        response.write('data: first\n\n')
+        setImmediate(() => response.destroy())
+      })
+    })
+    servers.push(upstreamServer)
+    const target: OpenAiProviderBridgeTarget = {
+      id: 'stream-failure',
+      wire: 'responses',
+      endpoint: `${await listen(upstreamServer)}/v1/responses`,
+      model: 'gpt-5'
+    }
+    const bridge = new OpenAiProviderBridge(
+      [target],
+      target.id,
+      nodeFetch as unknown as typeof fetch
+    )
+    bridges.push(bridge)
+    const connection = await bridge.start()
+    await post(connection.baseUrl, connection.token, { model: 'gpt-5', input: 'hello' }).then(
+      async (response) => {
+        expect(response.status).toBe(200)
+        await response.text().catch(() => undefined)
+      },
+      () => undefined
+    )
+    await vi.waitFor(async () => {
+      expect(await logText()).toContain('provider request failed')
+    })
+    const log = await logText()
+    expect(log).toContain('"responseStarted":true')
+    expect(log).toContain('"phase":"stream"')
+  })
 })
