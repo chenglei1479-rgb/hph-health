@@ -41,6 +41,31 @@ const logger = createLogger('desktop-runtime-client')
 const unsettledNativeHandlers = new Set<AbortController>()
 const MAX_UNSETTLED_NATIVE_HANDLERS = 64
 
+// #251: identifiers only. The rejected native request may carry dialog options, a PDF path or a PHI
+// review preview, so the diagnostic names the shape (id, operation, bounds) and never its payload.
+const nativeRequestIdField = (frame: unknown): { id?: number } => {
+  const id = (frame as { id?: unknown } | null)?.id
+  return typeof id === 'number' && Number.isInteger(id) && id >= 0 && id <= Number.MAX_SAFE_INTEGER
+    ? { id }
+    : {}
+}
+
+const nativeRequestParseFields = (
+  error: unknown
+): { issues?: number; issueCodes?: readonly string[] } => {
+  let issues: unknown
+  try {
+    issues = (error as { issues?: unknown } | null)?.issues
+  } catch {
+    return {}
+  }
+  if (!Array.isArray(issues)) return {}
+  const issueCodes = [
+    ...new Set(issues.map((issue) => (issue as { code?: unknown } | null)?.code))
+  ].filter((code): code is string => typeof code === 'string' && /^[a-z_]{1,32}$/u.test(code))
+  return { issues: issues.length, ...(issueCodes.length > 0 ? { issueCodes } : {}) }
+}
+
 export type DesktopDeliveryFailure = {
   kind: 'event' | 'startup' | 'document' | 'upload'
   clientId?: string
@@ -437,10 +462,33 @@ export async function connectDesktopRuntime(options: {
         frame.kind === 'native-request'
       ) {
         failureReason = 'invalid-native-request'
-        const request = desktopNativeRequestSchema.parse(frame)
+        // #251: a rejected native request fails the whole desktop↔runtime channel, but the log named
+        // only "invalid-native-request". Record the shape that identifies the sender without ever
+        // printing the request payload: operation, id, how far the id sequence had advanced, pending
+        // count, and for a parse failure only the issue count and issue codes.
+        let request: ReturnType<typeof desktopNativeRequestSchema.parse>
+        try {
+          request = desktopNativeRequestSchema.parse(frame)
+        } catch (error) {
+          logger.warn('native desktop request rejected', {
+            phase: 'parse',
+            frameKind: 'native-request',
+            ...nativeRequestIdField(frame),
+            ...nativeRequestParseFields(error)
+          })
+          throw error
+        }
         failureReason = native.size >= 32 ? 'native-capacity' : 'invalid-native-request'
-        if (request.id <= highestNativeId || native.size >= 32)
+        if (request.id <= highestNativeId || native.size >= 32) {
+          logger.warn('native desktop request rejected', {
+            phase: request.id <= highestNativeId ? 'id-order' : 'capacity',
+            operation: request.request.operation,
+            id: request.id,
+            highestNativeId,
+            pending: native.size
+          })
           throw new Error('Invalid or excessive native desktop requests.')
+        }
         highestNativeId = request.id
         if (unsettledNativeHandlers.size >= MAX_UNSETTLED_NATIVE_HANDLERS) {
           send({
