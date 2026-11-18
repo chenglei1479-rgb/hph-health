@@ -356,6 +356,23 @@ export function detectPhi(original: string): PhiSpan[] {
   return resolve(spans)
 }
 
+// #266: a canonical UUID (8-4-4-4-12 hex, case-insensitive, not part of a longer hex run) is an
+// identifier, not content. `detectPhi` keeps reporting the shape — a span inside a UUID is still a hit
+// here — and the *field* decides whether that hit is patient text: gate.ts drops it only for machine
+// tool fields (`function_call_output` / `arguments`), where it is an artifact or version id. The same
+// digits in a researcher's message are still masked, so this is a scope rule, not a shape relaxation.
+const UUID_IDENTIFIER =
+  /(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])/giu
+
+/** True when [start, end) sits entirely inside a UUID in `text`. */
+export function insideUuidIdentifier(text: string, start: number, end: number): boolean {
+  for (const match of text.matchAll(UUID_IDENTIFIER)) {
+    if (match.index === undefined) continue
+    if (start >= match.index && end <= match.index + match[0].length) return true
+  }
+  return false
+}
+
 // #170: a mean age and a "per N years" ratio unit are statistics about a group, not a person's age.
 // Both used to reach the gate as `age-sai`, and the gate refused the whole summary (beta.21 E27/E28
 // reported an aggregate as a patient date). `kind` and `labeled` never survive to the gate, so the

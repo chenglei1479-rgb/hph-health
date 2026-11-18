@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { detectPhi } from './detect'
+import { detectPhi, insideUuidIdentifier } from './detect'
 
 // The whole-string name fallback previously treated any short Japanese string (and long capitalized
 // English prose without digits) as PERSON_NAME, which blocked greetings and tool descriptions.
@@ -201,4 +201,33 @@ describe('assistant plan lines recovered from the block digests (#244)', () => {
       expect(namesOf(text)).toEqual([])
     }
   )
+})
+
+// #266: the detector keeps its shape judgement — a span inside a UUID is still reported here — and the
+// field scope in gate.ts decides whether that span is patient text. These pin the helper the gate uses.
+describe('UUID containment is a field decision (#266)', () => {
+  const uuid = '2af61efc-fbe4-4dbb-96a1-406580686117'
+  const text = `version_id: ${uuid}`
+  const tailStart = text.indexOf('406580686117')
+
+  it('finds a span entirely inside the uuid', () => {
+    expect(insideUuidIdentifier(text, tailStart, tailStart + 12)).toBe(true)
+  })
+
+  it('does not treat a span that reaches outside the uuid as inside', () => {
+    const uuidStart = text.indexOf(uuid)
+    expect(insideUuidIdentifier(text, uuidStart - 2, uuidStart + 6)).toBe(false)
+    expect(insideUuidIdentifier(text, uuidStart + uuid.length - 4, uuidStart + uuid.length + 2)).toBe(
+      false
+    )
+  })
+
+  it('does not treat the same digits outside a uuid as inside', () => {
+    expect(insideUuidIdentifier('406580686117', 0, 12)).toBe(false)
+  })
+
+  it('keeps detectPhi reporting the shape inside a uuid', () => {
+    const spans = detectPhi(`artifact_id: ${uuid}`)
+    expect(spans.map((span) => span.category)).toContain('MY_NUMBER')
+  })
 })

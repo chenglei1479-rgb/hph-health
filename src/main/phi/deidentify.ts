@@ -1,5 +1,5 @@
 import type { PhiCategory, PhiSpan } from './detect'
-import { detectPhi, isAggregateAgeRule } from './detect'
+import { detectPhi, insideUuidIdentifier, isAggregateAgeRule } from './detect'
 import { formatShiftedDate } from './dates'
 import { isPhiPlaceholder, PHI_PLACEHOLDER_LABELS as LABELS, type PhiStore } from './store'
 
@@ -26,6 +26,15 @@ export interface DeidentifyOptions {
    * masks: #159 keeps a patient number in a workspace path out of the envelope.
    */
   keepUnlabeledInsuredIds?: boolean
+  /**
+   * Machine tool fields (`function_call_output` / `arguments`, #266): a span that sits entirely inside
+   * a canonical UUID is an artifact or version identifier — the id the agent must send back to name the
+   * file it just wrote — not patient data. It is neither replaced nor counted. `detectPhi` still
+   * reports the shape; this option is how the field scope decides, and user text does not pass it.
+   * Labelled spans are excluded: a label states what the value is, so `被保険者番号 <uuid tail>` is
+   * still an insured number and gets masked like any other.
+   */
+  keepUuidIdentifiers?: boolean
 }
 
 const HIGH_RISK = new Set<PhiCategory>(['MY_NUMBER', 'INSURER_NO', 'INSURED_ID', 'KARTE_NO'])
@@ -79,6 +88,14 @@ export function deidentify(
   }
 
   for (const span of spans) {
+    // A labelled span is never kept: the same reason as in gate.ts — `被保険者番号 …` says what the
+    // number is, and an identifier-shaped surrounding does not turn that into an artifact id.
+    if (
+      options.keepUuidIdentifiers &&
+      !span.labeled &&
+      insideUuidIdentifier(text, span.start, span.end)
+    )
+      continue
     if (options.keepUnlabeledInsuredIds && span.category === 'INSURED_ID' && !span.labeled) continue
     counts[span.category] = (counts[span.category] ?? 0) + 1
     if (!isHighRisk(span) && allow.has(span.text)) {
