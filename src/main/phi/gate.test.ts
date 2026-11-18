@@ -1407,16 +1407,67 @@ describe('UUID identifiers are scoped to machine tool fields (#266)', () => {
     }
   })
 
-  // CTO (2026-11-12), narrowed by #266: the containment check still does not look at `labeled`, so a
-  // label whose value is part of a UUID is dropped with it — but only inside a machine tool field. The
-  // label names the field, and the UUID is still an identifier; a labelled number outside a UUID, or in
-  // user text, still blocks (the cases above).
-  it('leaves a labelled number that sits entirely inside a UUID in tool output alone', async () => {
+  // CTO (2026-11-12), narrowed again by COO: `labeled` now travels into the gate, so a label whose
+  // value happens to sit entirely inside a UUID still blocks. A label is a statement about the text
+  // ("this is an insured number"), and the identifier shape of the surrounding string does not unsay
+  // it. The incidents the exemption exists for were unlabelled id strings, so this costs nothing there.
+  it('still blocks a labelled number that sits entirely inside a UUID in tool output', async () => {
     installMachineApproval(null)
     installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
     const labelledInsideUuid = '被保険者番号 12345678-1234-41d9-b1fe-a737e649318b'
     const body = toolOutputBody(labelledInsideUuid)
+    try {
+      expect(blockedSpanDiagnostics(JSON.parse(body))).toHaveLength(1)
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body
+        })
+      ).rejects.toMatchObject({ code: PHI_BLOCK_CODE })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  // The other half of the same judgement: with approval the request goes out, and the labelled value
+  // is masked rather than sent. Before `labeled` reached the gate, this span was kept whole because it
+  // sat inside a UUID, so approval turned a block into a plaintext insured number.
+  it('masks the labelled number inside a UUID in tool output when the machine has approval', async () => {
+    installMachineApproval(() => true)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = toolOutputBody('被保険者番号 12345678-1234-41d9-b1fe-a737e649318b')
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+      expect(sent).not.toContain('12345678')
+      expect(sent).toContain('[番号')
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  // The field pattern matches by path, and the array form (`output[0].text`) is the shape a provider
+  // uses for a structured tool result. The exemption has to survive the extra index, in both passes.
+  it('keeps the ids of a content-array tool output unchanged', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [
+        {
+          type: 'function_call_output',
+          call_id: 'call_1',
+          output: [{ type: 'output_text', text: manifest }]
+        }
+      ]
+    })
     try {
       expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
       await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
@@ -1424,7 +1475,7 @@ describe('UUID identifiers are scoped to machine tool fields (#266)', () => {
         body
       })
       const sent = JSON.parse((fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string)
-      expect(sent.input[0].output).toBe(labelledInsideUuid)
+      expect(sent.input[0].output[0].text).toBe(manifest)
     } finally {
       installIdentityGate()
     }

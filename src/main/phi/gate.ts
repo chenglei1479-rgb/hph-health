@@ -50,6 +50,10 @@ export interface PhiBlockedSpan {
   text: string
   /** Stable id of the rule that produced the span, when that rule carries one. */
   rule?: string
+  /** True when a label (`被保険者番号`, `患者：`) is what made the span a hit. It travels to the gate so
+   * the machine-field UUID exemption can decline labelled values: a label is a statement about the
+   * text by whoever wrote it, and an identifier shape inside a UUID does not turn that statement off. */
+  labeled?: boolean
 }
 
 // The class a human may see. `code` is the refusal class from ../../shared/phi-block; it decides the
@@ -443,7 +447,8 @@ function patientSpans(text: string): PhiBlockedSpan[] {
       end: span.end,
       category: span.category,
       text: span.text,
-      rule: span.rule
+      rule: span.rule,
+      labeled: span.labeled
     }))
 }
 
@@ -487,6 +492,13 @@ const normalizeScanned = (values: readonly (string | ScannedModelText)[]): Scann
 // the whole turn (session #28; the same family as #131). Only that one rule is exempt, and only in
 // those fields: the same shape in text the researcher typed still blocks, so the DATE category
 // itself is not weakened.
+//
+// Scope note (#266): this pattern matches the *path* `input[*].arguments` / `input[*].output`, and
+// nothing checks that the item's `type` is `function_call` / `function_call_output`. Today the two
+// agree because the provider only nests arguments under a call and output under its result, but that
+// equivalence is not enforced: an item of another type that happens to carry an `output` key would
+// inherit the exemption silently. If the body ever grows such a shape, add the type check here rather
+// than widening the pattern.
 const MACHINE_TOOL_FIELD = /^input\[\d+\]\.(?:arguments|output)(?:\.|\[|$)/u
 const MACHINE_TOOL_EXEMPT_RULES = new Set(['date-bare-iso'])
 
@@ -524,11 +536,16 @@ const diagnosticFor = (
     // #266: a UUID inside a machine tool field is an artifact/version id, not patient text. The
     // detector keeps reporting it; only this field scope drops it, so the same UUID in a researcher's
     // message still blocks. Release mirrors this judgement in `releaseContentValue`.
+    //
+    // A labelled hit is never dropped: `被保険者番号 12345678-1234-41d9-…` says "this number is an
+    // insured number", and the shape of the surrounding identifier does not unsay it. The seed incidents
+    // were unlabelled id strings, so keeping labels blocking costs nothing in the case this rule exists
+    // for, and it keeps the "多遮可接受、漏遮是事故" side of the trade.
     const machineToolField = MACHINE_TOOL_FIELD.test(field)
     const found = patientSpans(text).filter(
       (span) =>
         !(machineToolField && MACHINE_TOOL_EXEMPT_RULES.has(span.rule ?? '')) &&
-        !(machineToolField && insideUuidIdentifier(text, span.start, span.end))
+        !(machineToolField && !span.labeled && insideUuidIdentifier(text, span.start, span.end))
     )
     // Hash only when something was blocked: the gate runs on every outbound request, and a digest per
     // scanned string would be paid by every send that never blocks.
