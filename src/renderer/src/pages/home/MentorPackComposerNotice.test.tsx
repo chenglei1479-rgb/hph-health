@@ -91,9 +91,10 @@ it('keeps the existing mentor-pack hard rule and input notice', async () => {
   )
 })
 
-// #261: the ① disclaimer is translated copy now, not the founder's Japanese shown verbatim. The
-// Japanese catalog keeps the original wording; every other locale must render a translation and, apart
-// from ja itself, the panel must not contain a single kana character.
+// #261: the ① disclaimer is translated copy now, not the founder's Japanese shown verbatim. The ja
+// catalog restores the original sentence, reworded wherever the medical review locked the wording (7
+// of the 45 new keys; the remaining 38 are verbatim). Every other locale must render a translation
+// and, apart from ja itself, the panel must not contain a single kana character.
 it('shows the §34.2 ① research-design checklist in the current locale', async () => {
   for (const locale of LOCALES) {
     await renderNotice(MENTOR_PACK_MODE_LINE, locale)

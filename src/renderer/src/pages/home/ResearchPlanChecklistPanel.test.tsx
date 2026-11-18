@@ -38,7 +38,11 @@ const catalogs = {
 } as const
 
 const translated = (locale: Locale, key: string): string =>
-  locale === 'en' ? key : (catalogs[locale as Exclude<Locale, 'en'>] as { renderer: Record<string, string> }).renderer[key]
+  locale === 'en'
+    ? key
+    : (catalogs[locale as Exclude<Locale, 'en'>] as { renderer: Record<string, string> }).renderer[
+        key
+      ]
 
 let root: Root | null = null
 let host: HTMLDivElement | null = null
@@ -94,8 +98,10 @@ it('shows the four mentor-prep blocks with the ① disclaimer', async () => {
   expect(host?.textContent).toContain('Common pitfalls checklist')
 })
 
-// #261 acceptance: the seed copy is translated in every locale, the Japanese one is the founder's
-// original wording, and a non-Japanese UI must not contain a single kana character.
+// #261 acceptance: the seed copy is translated in every locale, and a non-Japanese UI must not
+// contain a single kana character. The ja catalog restores the founder's original sentences for 38
+// of the 45 new keys; the other 7 were reworded to the terminology the medical review locked in the
+// ticket, so the ja values are close to the old seed constants but not byte-identical to them.
 it('renders the translated seed copy in every locale, with no kana outside ja', async () => {
   for (const locale of LOCALES) {
     initI18n(locale)
@@ -110,7 +116,9 @@ it('renders the translated seed copy in every locale, with no kana outside ja', 
       translated(locale, S34_RESEARCH_PLAN_CHECKLIST[0]!.items[0]!.label)
     )
     expect(text, locale).toContain(translated(locale, S34_2_RESEARCH_DESIGN_CHECKLIST))
-    const options = [...(panel?.querySelectorAll('option') ?? [])].map((option) => option.textContent)
+    const options = [...(panel?.querySelectorAll('option') ?? [])].map(
+      (option) => option.textContent
+    )
     for (const state of RESEARCH_PLAN_CHECK_STATES) {
       expect(options, `${locale}:${state}`).toContain(
         translated(locale, RESEARCH_PLAN_CHECK_STATE_LABELS[state])
