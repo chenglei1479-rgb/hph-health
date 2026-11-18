@@ -99,9 +99,9 @@ it('shows the four mentor-prep blocks with the ① disclaimer', async () => {
 })
 
 // #261 acceptance: the seed copy is translated in every locale, and a non-Japanese UI must not
-// contain a single kana character. The ja catalog restores the founder's original sentences for 38
-// of the 45 new keys; the other 7 were reworded to the terminology the medical review locked in the
-// ticket, so the ja values are close to the old seed constants but not byte-identical to them.
+// contain a single kana character. The ja catalog refills the founder's original sentences, with a
+// few entries reworded where the medical review locked the terminology (the ticket lists them), so
+// the ja values are close to the old seed constants but not byte-identical to them.
 it('renders the translated seed copy in every locale, with no kana outside ja', async () => {
   for (const locale of LOCALES) {
     initI18n(locale)
