@@ -9,7 +9,35 @@ import { createInitialProjectState, useProjectStore } from '@/stores/project-sto
 import { LOCALES, type Locale } from '../../../../shared/locale'
 import { MENTOR_PACK_MODE_LINE } from '../../../../shared/deliverable-pack-policy'
 import { S34_2_RESEARCH_DESIGN_CHECKLIST } from '../../../../shared/s34-disclaimers'
+import de from '../../../../shared/i18n/locales/de.json'
+import es from '../../../../shared/i18n/locales/es.json'
+import fr from '../../../../shared/i18n/locales/fr.json'
+import ja from '../../../../shared/i18n/locales/ja.json'
+import ko from '../../../../shared/i18n/locales/ko.json'
+import ru from '../../../../shared/i18n/locales/ru.json'
+import zhHans from '../../../../shared/i18n/locales/zh-Hans.json'
+import zhHant from '../../../../shared/i18n/locales/zh-Hant.json'
 import { MentorPackComposerNotice } from './MentorPackComposerNotice'
+
+const KANA = /[\p{Script=Hiragana}\p{Script=Katakana}]/u
+
+const catalogs = {
+  de,
+  es,
+  fr,
+  ja,
+  ko,
+  ru,
+  'zh-Hans': zhHans,
+  'zh-Hant': zhHant
+} as const
+
+const translated = (locale: Locale, key: string): string =>
+  locale === 'en'
+    ? key
+    : (catalogs[locale as Exclude<Locale, 'en'>] as { renderer: Record<string, string> }).renderer[
+        key
+      ]
 
 const PROJECT_ID = 'project-1'
 
@@ -63,7 +91,10 @@ it('keeps the existing mentor-pack hard rule and input notice', async () => {
   )
 })
 
-it('shows the §34.2 ① research-design checklist verbatim in the mentor-pack composer notice in every locale', async () => {
+// #261: the ① disclaimer is translated copy now, not the founder's Japanese shown verbatim. The
+// Japanese catalog keeps the original wording; every other locale must render a translation and, apart
+// from ja itself, the panel must not contain a single kana character.
+it('shows the §34.2 ① research-design checklist in the current locale', async () => {
   for (const locale of LOCALES) {
     await renderNotice(MENTOR_PACK_MODE_LINE, locale)
     const notice = document.body.querySelector('[data-testid="mentor-pack-input-notice"]')
@@ -72,7 +103,14 @@ it('shows the §34.2 ① research-design checklist verbatim in the mentor-pack c
       '[data-testid="s34-disclaimer-research-design"]'
     )
     expect(disclaimers, locale).toHaveLength(1)
-    expect(disclaimers[0]?.textContent, locale).toBe(S34_2_RESEARCH_DESIGN_CHECKLIST)
+    const text = disclaimers[0]?.textContent ?? ''
+    expect(text, locale).toBe(translated(locale, S34_2_RESEARCH_DESIGN_CHECKLIST))
+    if (locale === 'ja') {
+      expect(text).toContain('本機能は、研究デザイン')
+      expect(text).not.toBe(S34_2_RESEARCH_DESIGN_CHECKLIST)
+    } else {
+      expect(text, locale).not.toMatch(KANA)
+    }
     expect(notice?.contains(disclaimers[0]!), locale).toBe(true)
     await unmount()
   }

@@ -1,126 +1,194 @@
 // §34 T3 — research-plan four-question checklist seed copy.
 //
-// The four blocks and their items are founder-supplied Japanese seed copy, shown verbatim on the
-// mentor-prep (① 指導医と相談する準備) surface. Every string is a question or a known gap, never a
-// conclusion, so the approval-claim guard in `ethics-protocol/approval-claims.ts` must not flag
-// them. The UI chrome around them is translated; this seed copy is not.
+// The four blocks and their items used to be founder-supplied Japanese shown verbatim on the
+// mentor-prep (① 指導医と相談する準備) surface. #261: the copy is user-visible prose, so it is
+// translated like the chrome around it. The English source strings below are the i18n keys (AGENTS.md:
+// keys are the English source text, not semantic paths); the ids stay stable for storage.
+//
+// Every string is a question or a known gap, never a conclusion, so the approval-claim guard in
+// `ethics-protocol/approval-claims.ts` must not flag them.
 
-/** Check state for one seed item. `未定` is the default for every item. */
-export type ResearchPlanCheckState = '要確認' | '該当' | '非該当' | '未定'
+/** Check state for one seed item. `unset` is the default for every item. */
+export type ResearchPlanCheckState = 'needs-check' | 'applies' | 'not-applies' | 'unset'
 
 export const RESEARCH_PLAN_CHECK_STATES: readonly ResearchPlanCheckState[] = [
-  '要確認',
-  '該当',
-  '非該当',
-  '未定'
+  'needs-check',
+  'applies',
+  'not-applies',
+  'unset'
 ]
 
-export const DEFAULT_RESEARCH_PLAN_CHECK_STATE: ResearchPlanCheckState = '未定'
+export const DEFAULT_RESEARCH_PLAN_CHECK_STATE: ResearchPlanCheckState = 'unset'
+
+/** English source (i18n key) for each state label. */
+export const RESEARCH_PLAN_CHECK_STATE_LABELS: Readonly<Record<ResearchPlanCheckState, string>> = {
+  'needs-check': 'Needs check',
+  applies: 'Applies',
+  'not-applies': 'Does not apply',
+  unset: 'Not set'
+}
+
+// #261: the four states were stored as these Japanese strings before the id migration. Drafts written
+// by an earlier build must keep their ticks, so `normalizeResearchPlanChecklistDraft` still reads them;
+// every other value (empty string, junk, a state from a newer build) falls back to `unset` and never
+// throws.
+const LEGACY_CHECK_STATES: Readonly<Record<string, ResearchPlanCheckState>> = {
+  要確認: 'needs-check',
+  該当: 'applies',
+  非該当: 'not-applies',
+  未定: 'unset'
+}
 
 export const isResearchPlanCheckState = (value: unknown): value is ResearchPlanCheckState =>
   typeof value === 'string' && (RESEARCH_PLAN_CHECK_STATES as readonly string[]).includes(value)
+
+/** Reads a stored state: current id, legacy Japanese, or `unset` for anything else. */
+export const researchPlanCheckStateOf = (value: unknown): ResearchPlanCheckState => {
+  if (isResearchPlanCheckState(value)) return value
+  return typeof value === 'string' ? (LEGACY_CHECK_STATES[value] ?? 'unset') : 'unset'
+}
 
 export type ResearchPlanChecklistBlockId = 'design' | 'pitfalls' | 'endpoints' | 'confounding'
 
 export type ResearchPlanChecklistItem = {
   id: string
+  /** English source text, used directly as the i18n key. */
   label: string
 }
 
 export type ResearchPlanChecklistBlock = {
   id: ResearchPlanChecklistBlockId
-  /** Fixed Japanese block heading. ② keeps the founder-locked title. */
+  /** English source heading (i18n key). */
   title: string
-  /** One guiding question per block. */
+  /** One guiding question per block (English source, i18n key). */
   question: string
   items: readonly ResearchPlanChecklistItem[]
 }
 
-export const S34_PITFALLS_TITLE = 'よく落ちる点のチェックリスト'
+export const S34_PITFALLS_TITLE = 'Common pitfalls checklist'
 
-/** Panel heading for the four-question checklist. Fixed Japanese, like the seed copy. */
-export const S34_RESEARCH_PLAN_PANEL_HEADING = '研究計画の四つの確認'
+/** Panel heading for the four-question checklist (English source, i18n key). */
+export const S34_RESEARCH_PLAN_PANEL_HEADING = 'Four checks for the research plan'
 
-/** Items of ② shown before 「もっと見る」. The block has 13 seeds, so one stays collapsed. */
+/** Items of ② shown before 「Show more」. The block has 13 seeds, so one stays collapsed. */
 export const S34_PITFALLS_INITIAL_VISIBLE = 12
 
 export const S34_RESEARCH_PLAN_CHECKLIST: readonly ResearchPlanChecklistBlock[] = [
   {
     id: 'design',
-    title: '① デザインの種類',
-    question: 'この研究に近いデザインはどれですか？／表から見て不向きな点は？',
+    title: '① Study design type',
+    question:
+      'Which design is closest to this study? / Looking at the variable definition table, where does it fall short?',
     items: [
-      { id: 'design:retro-cohort', label: '後ろ向きコホート（既存データの追跡）' },
-      { id: 'design:case-control', label: '症例対照' },
-      { id: 'design:cross-sectional', label: '横断研究' },
-      { id: 'design:prospective', label: '前向き観察' },
-      { id: 'design:pre-post', label: '単一群の前後比較' },
-      { id: 'design:columns-insufficient', label: '表の列だけではデザイン判断が難しい（要確認）' }
+      { id: 'design:retro-cohort', label: 'Retrospective cohort (follow-up of existing data)' },
+      { id: 'design:case-control', label: 'Case-control' },
+      { id: 'design:cross-sectional', label: 'Cross-sectional study' },
+      { id: 'design:prospective', label: 'Prospective observation' },
+      { id: 'design:pre-post', label: 'Single-group before-and-after comparison' },
+      {
+        id: 'design:columns-insufficient',
+        label: 'The table columns alone are not enough to judge the design (Needs check)'
+      }
     ]
   },
   {
     id: 'pitfalls',
     title: S34_PITFALLS_TITLE,
-    question: 'この計画で、よく落ちる点に当てはまるものはありますか？',
+    question: 'Does this plan hit any of the common pitfalls?',
     items: [
-      { id: 'pitfalls:period', label: '対象期間の開始・終了が明記されていない' },
-      { id: 'pitfalls:selection', label: '選択基準が曖昧' },
-      { id: 'pitfalls:unmeasurable', label: '測定不能' },
-      { id: 'pitfalls:exclusion', label: '除外基準が欠けている' },
-      { id: 'pitfalls:population-source', label: '対象集団とデータソースの対応が不明' },
+      {
+        id: 'pitfalls:period',
+        label: 'The start and end of the observation period are not stated'
+      },
+      { id: 'pitfalls:selection', label: 'The selection criteria are vague' },
+      { id: 'pitfalls:unmeasurable', label: 'The measure cannot be measured' },
+      { id: 'pitfalls:exclusion', label: 'Exclusion criteria are missing' },
+      {
+        id: 'pitfalls:population-source',
+        label: 'How the population maps to the data source is unclear'
+      },
       {
         id: 'pitfalls:missing-primary',
-        label: '欠損が多い変数を主解析に置いていないか未確認'
+        label:
+          'Not yet checked whether a variable with many missing values sits in the primary analysis'
       },
       {
         id: 'pitfalls:sample-size',
-        label: 'サンプルサイズ根拠が未記載（全例でも「悉皆である」旨が無い）'
+        label:
+          'No sample-size rationale (no statement that every case was included either)'
       },
-      { id: 'pitfalls:confounder-list', label: '交絡候補の一覧が無い' },
-      { id: 'pitfalls:endpoint-operational', label: 'エンドポイント定義が操作可能でない' },
-      { id: 'pitfalls:stopping', label: '追跡／観察の打ち切り理由が未整理' },
-      { id: 'pitfalls:multiplicity', label: '多重比較・探索的解析の扱いが未記載' },
+      { id: 'pitfalls:confounder-list', label: 'There is no list of candidate confounders' },
+      {
+        id: 'pitfalls:endpoint-operational',
+        label: 'The endpoint definition is not operational'
+      },
+      {
+        id: 'pitfalls:stopping',
+        label: 'The reasons for stopping follow-up are not sorted out'
+      },
+      {
+        id: 'pitfalls:multiplicity',
+        label: 'How multiple comparisons and exploratory analyses are handled is not stated'
+      },
       {
         id: 'pitfalls:ethics-section',
-        label: '倫理・個人情報の手続き欄が空のまま相談に出そうとしている'
+        label:
+          'The ethics and personal-information section is still empty while the plan is heading into consultation with the supervising physician'
       },
-      { id: 'pitfalls:unshared-assumption', label: '指導医と未共有の仮定がメモに残っている' }
+      {
+        id: 'pitfalls:unshared-assumption',
+        label: 'Assumptions not yet shared with the supervising physician are left in the memo'
+      }
     ]
   },
   {
     id: 'endpoints',
-    title: '③ 暴露／主・副エンドポイント',
-    question: '主エンドポイントと暴露の定義は、測定手順まで落ちていますか？',
+    title: '③ Exposure, primary and secondary endpoints',
+    question:
+      'Are the primary endpoint and the exposure defined down to the measurement procedure?',
     items: [
-      { id: 'endpoints:single-primary', label: '主エンドポイントが一つに絞れていない' },
-      { id: 'endpoints:too-many-secondary', label: '副次エンドポイントが過多／未優先' },
+      { id: 'endpoints:single-primary', label: 'The primary endpoint is not narrowed down to one' },
+      {
+        id: 'endpoints:too-many-secondary',
+        label: 'There are too many secondary endpoints / no priority among them'
+      },
       {
         id: 'endpoints:exposure-definition',
-        label: '暴露（介入・要因）の定義が測定手順まで落ちていない'
+        label:
+          'The definition of the exposure (intervention or factor) does not reach the measurement procedure'
       },
-      { id: 'endpoints:timepoints', label: '時点（ベースライン／フォロー）が揃っていない' },
-      { id: 'endpoints:composite', label: '複合エンドポイントの構成が未合意' }
+      {
+        id: 'endpoints:timepoints',
+        label: 'The time points (baseline / follow-up) are not aligned'
+      },
+      { id: 'endpoints:composite', label: 'The components of the composite endpoint are not settled' }
     ]
   },
   {
     id: 'confounding',
-    title: '④ 交絡と欠測',
-    question: '交絡と欠測について、指導医に説明できる材料はありますか？',
+    title: '④ Confounding and missing data',
+    question: 'Can you explain confounding and missing data to your supervising physician with what you have?',
     items: [
       {
         id: 'confounding:candidate-list',
-        label: '交絡因子の候補リストが指導医用に書けていない'
+        label: 'The candidate confounder list is not written for the supervising physician'
       },
       {
         id: 'confounding:missing-mechanism',
-        label: '欠損メカニズム（MCAR/MAR 等）を議論する材料が無い'
+        label: 'There is no material to discuss the missing-data mechanism (MCAR/MAR etc.)'
       },
-      { id: 'confounding:sensitivity', label: '感度分析の要否が未記載' },
+      {
+        id: 'confounding:sensitivity',
+        label: 'Whether a sensitivity analysis is needed is not stated'
+      },
       {
         id: 'confounding:selection-bias',
-        label: '除外による選択バイアスの論点が抜けている'
+        label: 'The selection-bias argument from exclusions is missing'
       },
-      { id: 'confounding:measurement-error', label: '測定誤差・誤分類の可能性が未言及' }
+      {
+        id: 'confounding:measurement-error',
+        label: 'Measurement error and misclassification are not mentioned'
+      }
     ]
   }
 ]
@@ -151,6 +219,10 @@ const MEMO_LIMIT = 500
 /**
  * Settings files are untrusted input. Keep only known item ids with known states, and only known
  * block ids with a trimmed, length-capped memo; anything else is dropped instead of repaired.
+ *
+ * #261: states are stored as stable ids now. A draft written before the migration carries the Japanese
+ * labels, so those are read through `researchPlanCheckStateOf`; writes always use the ids (the panel
+ * never writes a legacy value), and an unknown value becomes `unset` instead of throwing.
  */
 export const normalizeResearchPlanChecklistDraft = (value: unknown): ResearchPlanChecklistDraft => {
   const draft = emptyResearchPlanChecklistDraft()
@@ -159,9 +231,10 @@ export const normalizeResearchPlanChecklistDraft = (value: unknown): ResearchPla
   const knownItems = new Set(researchPlanChecklistItemIds())
   if (record.checks && typeof record.checks === 'object' && !Array.isArray(record.checks)) {
     for (const [id, state] of Object.entries(record.checks as Record<string, unknown>)) {
-      if (!knownItems.has(id) || !isResearchPlanCheckState(state)) continue
-      if (state === DEFAULT_RESEARCH_PLAN_CHECK_STATE) continue
-      draft.checks[id] = state
+      if (!knownItems.has(id)) continue
+      const normalized = researchPlanCheckStateOf(state)
+      if (normalized === DEFAULT_RESEARCH_PLAN_CHECK_STATE) continue
+      draft.checks[id] = normalized
     }
   }
   if (record.memos && typeof record.memos === 'object' && !Array.isArray(record.memos)) {

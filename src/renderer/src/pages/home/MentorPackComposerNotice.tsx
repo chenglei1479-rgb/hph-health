@@ -28,7 +28,7 @@ export const MentorPackComposerNotice = ({
       <p className="font-medium text-[#9a5046]">{copy.hardRule}</p>
       <p>{copy.inputNotice}</p>
       <p data-testid="s34-disclaimer-research-design" className="border-t border-[#e4ded2] pt-2">
-        {S34_2_RESEARCH_DESIGN_CHECKLIST}
+        {t(S34_2_RESEARCH_DESIGN_CHECKLIST)}
       </p>
       <ResearchPlanChecklistPanel projectId={projectId} />
     </div>

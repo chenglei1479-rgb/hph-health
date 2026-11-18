@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   DEFAULT_RESEARCH_PLAN_CHECK_STATE,
   RESEARCH_PLAN_CHECK_STATES,
+  RESEARCH_PLAN_CHECK_STATE_LABELS,
   S34_PITFALLS_INITIAL_VISIBLE,
   S34_RESEARCH_PLAN_CHECKLIST,
   S34_RESEARCH_PLAN_PANEL_HEADING,
@@ -22,8 +23,8 @@ const checkStateOf = (draft: ResearchPlanChecklistDraft, itemId: string): Resear
 
 /**
  * §34 T3 — the four-question research-plan checklist on the mentor-prep (① 指導医と相談する準備)
- * surface. Seed copy is founder-locked Japanese; the chrome (show more, memo placeholder) is
- * translated, and the ① disclaimer is imported so it can never drift into a locale file.
+ * surface. The seed copy is translated since #261: each English source string is the i18n key, the
+ * item ids stay stable for the stored draft, and the ① disclaimer goes through `t` like the chrome.
  */
 export const ResearchPlanChecklistPanel = ({
   projectId
@@ -65,8 +66,8 @@ export const ResearchPlanChecklistPanel = ({
       data-testid="s34-research-plan-checklist"
       className="mt-2 space-y-2 rounded-xl border border-[#e4ded2] bg-[#faf8f2] px-3.5 py-3 text-xs leading-5 text-[#635f56]"
     >
-      <p className="font-medium">{S34_RESEARCH_PLAN_PANEL_HEADING}</p>
-      <p data-testid="s34-plan-disclaimer">{S34_2_RESEARCH_DESIGN_CHECKLIST}</p>
+      <p className="font-medium">{t(S34_RESEARCH_PLAN_PANEL_HEADING)}</p>
+      <p data-testid="s34-plan-disclaimer">{t(S34_2_RESEARCH_DESIGN_CHECKLIST)}</p>
       {S34_RESEARCH_PLAN_CHECKLIST.map((block) => {
         const limit = block.id === 'pitfalls' ? S34_PITFALLS_INITIAL_VISIBLE : block.items.length
         const visible = expanded[block.id] ? block.items : block.items.slice(0, limit)
@@ -77,8 +78,8 @@ export const ResearchPlanChecklistPanel = ({
             data-testid={`s34-plan-block-${block.id}`}
             className="border-t border-[#e4ded2] pt-2"
           >
-            <summary className="cursor-pointer font-medium">{block.title}</summary>
-            <p className="mt-1">{block.question}</p>
+            <summary className="cursor-pointer font-medium">{t(block.title)}</summary>
+            <p className="mt-1">{t(block.question)}</p>
             <ul className="mt-2 space-y-1">
               {visible.map((item) => (
                 <li
@@ -86,9 +87,9 @@ export const ResearchPlanChecklistPanel = ({
                   data-testid={`s34-plan-item-${item.id}`}
                   className="flex flex-wrap items-center gap-2"
                 >
-                  <span className="min-w-0 flex-1">{item.label}</span>
+                  <span className="min-w-0 flex-1">{t(item.label)}</span>
                   <select
-                    aria-label={item.label}
+                    aria-label={t(item.label)}
                     value={checkStateOf(draft, item.id)}
                     onChange={(event) =>
                       setCheck(item.id, event.target.value as ResearchPlanCheckState)
@@ -97,7 +98,7 @@ export const ResearchPlanChecklistPanel = ({
                   >
                     {RESEARCH_PLAN_CHECK_STATES.map((state) => (
                       <option key={state} value={state}>
-                        {state}
+                        {t(RESEARCH_PLAN_CHECK_STATE_LABELS[state])}
                       </option>
                     ))}
                   </select>
@@ -127,7 +128,7 @@ export const ResearchPlanChecklistPanel = ({
             <input
               type="text"
               data-testid={`s34-plan-memo-${block.id}`}
-              aria-label={`${block.title} — ${t('Notes')}`}
+              aria-label={`${t(block.title)} — ${t('Notes')}`}
               placeholder={t('Notes')}
               value={draft.memos[block.id] ?? ''}
               onChange={(event) => setMemo(block.id, event.target.value)}
