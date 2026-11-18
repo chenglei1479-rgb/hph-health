@@ -353,40 +353,24 @@ export function detectPhi(original: string): PhiSpan[] {
   detectFacilities(spans, map, norm)
   detectNames(spans, map, norm)
 
-  return resolve(withoutUuidIdentifiers(original, spans))
+  return resolve(spans)
 }
 
-// The 2026-11-11 15:34 and 15:35 blocks (digests 64981faa / 5478675b) were both artifact manifests in
-// tool output: `insurer-no-grouped` matched the middle of an `artifact_id` UUID and
-// `my-number-bare-12` matched the twelve-hex-digit tail of a `version_id`. Masking them corrupts the id
-// the agent needs in order to name the artifact it just wrote — the same defect as rewriting
-// `x-codex-*` ids (#244).
-//
-// A UUID is an identifier, not patient information. This is the judgement gate.ts already makes with
-// `NON_CONTENT_KEYS`: an identifier field is structure, not content. It is not a loosening of either
-// shape rule: a span must sit *entirely* inside a canonical UUID to be dropped, so the same twelve
-// digits next to a UUID still match, and a labelled number that is not inside a UUID still matches
-// (被保険者番号 12345678).
-//
-// The containment check deliberately does not look at `labeled`, so a label whose value happens to fall
-// inside a UUID is dropped with it (`被保険者番号: <uuid>`): the label names the field, and the UUID is
-// still an identifier. The consequence worth naming is concrete: a twelve-digit My Number is all
-// hexadecimal digits, so a My Number wrapped into a UUID shape is not masked either. No PHI source in
-// this app produces UUIDs, and the trade buys back the artifact ids the agent needs in order to name
-// what it just wrote. A test pins the labelled-inside case, so changing either side has to decide it.
+// #266: a canonical UUID (8-4-4-4-12 hex, case-insensitive, not part of a longer hex run) is an
+// identifier, not content. `detectPhi` keeps reporting the shape — a span inside a UUID is still a hit
+// here — and the *field* decides whether that hit is patient text: gate.ts drops it only for machine
+// tool fields (`function_call_output` / `arguments`), where it is an artifact or version id. The same
+// digits in a researcher's message are still masked, so this is a scope rule, not a shape relaxation.
 const UUID_IDENTIFIER =
   /(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])/giu
 
-function withoutUuidIdentifiers(original: string, spans: PhiSpan[]): PhiSpan[] {
-  const ranges: Array<{ start: number; end: number }> = []
-  for (const match of original.matchAll(UUID_IDENTIFIER)) {
+/** True when [start, end) sits entirely inside a UUID in `text`. */
+export function insideUuidIdentifier(text: string, start: number, end: number): boolean {
+  for (const match of text.matchAll(UUID_IDENTIFIER)) {
     if (match.index === undefined) continue
-    ranges.push({ start: match.index, end: match.index + match[0].length })
+    if (start >= match.index && end <= match.index + match[0].length) return true
   }
-  if (ranges.length === 0) return spans
-  return spans.filter(
-    (span) => !ranges.some((range) => span.start >= range.start && span.end <= range.end)
-  )
+  return false
 }
 
 // #170: a mean age and a "per N years" ratio unit are statistics about a group, not a person's age.

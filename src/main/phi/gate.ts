@@ -33,7 +33,13 @@ import {
   type PhiReplacement,
   type PhiResult
 } from './deidentify'
-import { detectPhi, isAggregateAgeRule, type PhiCategory, type PhiSpan } from './detect'
+import {
+  detectPhi,
+  insideUuidIdentifier,
+  isAggregateAgeRule,
+  type PhiCategory,
+  type PhiSpan
+} from './detect'
 import type { PhiStore } from './store'
 import { hasOnlyOrdinaryLabelPhi, isOrdinaryLabel } from './ordinary-label'
 
@@ -515,8 +521,14 @@ const diagnosticFor = (
   const spans: PhiBlockedSpan[] = []
   const downgraded: BlockedSpanDiagnostic[] = []
   for (const { text, field } of values) {
+    // #266: a UUID inside a machine tool field is an artifact/version id, not patient text. The
+    // detector keeps reporting it; only this field scope drops it, so the same UUID in a researcher's
+    // message still blocks. Release mirrors this judgement in `releaseContentValue`.
+    const machineToolField = MACHINE_TOOL_FIELD.test(field)
     const found = patientSpans(text).filter(
-      (span) => !(MACHINE_TOOL_FIELD.test(field) && MACHINE_TOOL_EXEMPT_RULES.has(span.rule ?? ''))
+      (span) =>
+        !(machineToolField && MACHINE_TOOL_EXEMPT_RULES.has(span.rule ?? '')) &&
+        !(machineToolField && insideUuidIdentifier(text, span.start, span.end))
     )
     // Hash only when something was blocked: the gate runs on every outbound request, and a digest per
     // scanned string would be paid by every send that never blocks.
@@ -1285,11 +1297,18 @@ async function releaseContentValue(
   field = ''
 ): Promise<unknown> {
   if (typeof value === 'string') {
-    const result = await releaseThroughInstalledGate(
-      value,
-      projectId,
-      agentReserved ? { keepUnlabeledInsuredIds: true } : undefined
-    )
+    // #266: the release pass makes the same field judgement as the blocking pass. A UUID inside a
+    // tool call's arguments or output is the artifact/version id the agent needs back; replacing it
+    // would corrupt that id (the 2026-11-11 blocks). User text never gets this option.
+    const machineToolField = MACHINE_TOOL_FIELD.test(field)
+    const options: DeidentifyOptions | undefined =
+      agentReserved || machineToolField
+        ? {
+            ...(agentReserved ? { keepUnlabeledInsuredIds: true } : {}),
+            ...(machineToolField ? { keepUuidIdentifiers: true } : {})
+          }
+        : undefined
+    const result = await releaseThroughInstalledGate(value, projectId, options)
     if (result.warnings.length > 0) warnings.set(projectId, result.warnings)
     // One pass over the replacements: callers instrument them with an iterator, and the two collectors
     // must observe the same list rather than a second traversal.

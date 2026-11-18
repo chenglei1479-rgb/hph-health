@@ -892,85 +892,6 @@ describe('machine-generated tool traffic (#244)', () => {
   })
 })
 
-// The 2026-11-11 15:34 / 15:35 blocks (digests 64981faa / 5478675b) were artifact manifests in tool
-// output. A uuid is structure, not content, so it is neither blocked nor rewritten; a labelled number
-// in the same request still blocks, so no labelled counterpart was lost.
-describe('UUID identifiers in tool output', () => {
-  const uuid = 'a8191d31-3752-41d9-b1fe-a737e649318b'
-  const manifest = JSON.stringify({
-    artifact: {
-      artifact_id: uuid,
-      version_id: '2af61efc-fbe4-4dbb-96a1-406580686117',
-      version_number: 1,
-      filename: 'bronchiectasis_stage1_analysis_draft.md',
-      size_bytes: 6629
-    }
-  })
-
-  const installIdentityGate = (): void => {
-    installMachineApproval(null)
-    installPhiGate({
-      release: (text) => ({ text, replacements: [], warnings: [] }),
-      restore: (text) => text
-    })
-  }
-
-  it('sends an artifact manifest back with its ids unchanged', async () => {
-    installMachineApproval(null)
-    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
-    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
-    const body = JSON.stringify({
-      model: 'gpt-6.1-sol',
-      input: [{ type: 'function_call_output', call_id: 'call_1', output: manifest }]
-    })
-    try {
-      expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
-      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
-        method: 'POST',
-        body
-      })
-      expect(fetchImpl).toHaveBeenCalledOnce()
-      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
-      // Neither the shape rules nor the release may touch an id the agent has to send back.
-      expect(sent).not.toContain('[番号')
-      expect(JSON.parse(sent).input[0].output).toBe(manifest)
-    } finally {
-      installIdentityGate()
-    }
-  })
-
-  it('still blocks a labelled insured number next to a uuid', async () => {
-    installMachineApproval(null)
-    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
-    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
-    const body = JSON.stringify({
-      model: 'gpt-6.1-sol',
-      input: [
-        {
-          type: 'message',
-          role: 'user',
-          content: [{ type: 'input_text', text: `被保険者番号 12345678（対象 ${uuid}）` }]
-        },
-        { type: 'function_call_output', call_id: 'call_1', output: manifest }
-      ]
-    })
-    try {
-      expect(blockedSpanDiagnostics(JSON.parse(body)).map((item) => item.category)).toEqual([
-        'INSURED_ID'
-      ])
-      await expect(
-        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
-          method: 'POST',
-          body
-        })
-      ).rejects.toMatchObject({ code: PHI_BLOCK_CODE })
-      expect(fetchImpl).not.toHaveBeenCalled()
-    } finally {
-      installIdentityGate()
-    }
-  })
-})
-
 // #252: the beta.23 build refused every turn with PHI-UNAVAILABLE-01 / reason "gate-error" and only the class
 // was recorded, so the incident could not be attributed (the same defect as the 502 that dropped
 // error.cause, #251). The message can carry a vault path, so the log records stable identifiers only.
@@ -1336,5 +1257,176 @@ describe('release-only shape rules (#264)', () => {
       if (!covered) missing.push(span.record)
     }
     expect(missing).toEqual([])
+  })
+})
+
+// #266: the UUID exemption is a field rule, not a detector rule. Inside a tool call's arguments or
+// output, a UUID is the artifact/version id the agent must send back to name what it wrote; the same
+// digits in a researcher's message are masked again, and a labelled number stays blocked everywhere.
+describe('UUID identifiers are scoped to machine tool fields (#266)', () => {
+  const uuid = 'a8191d31-3752-41d9-b1fe-a737e649318b'
+  const manifest = JSON.stringify({
+    artifact: {
+      artifact_id: uuid,
+      version_id: '2af61efc-fbe4-4dbb-96a1-406580686117',
+      version_number: 1,
+      filename: 'bronchiectasis_stage1_analysis_draft.md',
+      size_bytes: 6629
+    }
+  })
+
+  const installIdentityGate = (): void => {
+    installMachineApproval(null)
+    installPhiGate({
+      release: (text) => ({ text, replacements: [], warnings: [] }),
+      restore: (text) => text
+    })
+  }
+
+  const toolOutputBody = (output: string): string =>
+    JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [{ type: 'function_call_output', call_id: 'call_1', output }]
+    })
+
+  const toolArgumentsBody = (args: string): string =>
+    JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [{ type: 'function_call', name: 'write_stage_draft', arguments: args }]
+    })
+
+  const userBody = (text: string): string =>
+    JSON.stringify({
+      model: 'gpt-6.1-sol',
+      input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text }] }]
+    })
+
+  it('sends a tool output artifact manifest back with its ids unchanged', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = toolOutputBody(manifest)
+    try {
+      expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      expect(fetchImpl).toHaveBeenCalledOnce()
+      const sent = JSON.parse((fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string)
+      expect(sent.input[0].output).toBe(manifest)
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('sends a tool call argument manifest back with its ids unchanged', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = toolArgumentsBody(manifest)
+    try {
+      expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      const sent = JSON.parse((fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string)
+      expect(sent.input[0].arguments).toBe(manifest)
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('masks the same UUID in a message the researcher typed', async () => {
+    installMachineApproval(() => true)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const body = userBody(`対象の識別子は ${uuid} です。`)
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+      expect(sent).not.toContain(uuid)
+      expect(sent).not.toContain('3752-41')
+      expect(sent).toContain('[番号')
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('still blocks the same UUID in a message when the machine has no approval', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    try {
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body: userBody(`対象の識別子は ${uuid} です。`)
+        })
+      ).rejects.toMatchObject({ code: PHI_BLOCK_CODE })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('still masks the twelve digits when they sit outside the UUID in user text', async () => {
+    installMachineApproval(() => true)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    try {
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body: userBody('識別子 406580686117 の件')
+      })
+      const sent = (fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string
+      expect(sent).not.toContain('406580686117')
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  it('still blocks a labelled insured number in machine tool output', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    try {
+      await expect(
+        fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+          method: 'POST',
+          body: toolOutputBody('被保険者番号 12345678')
+        })
+      ).rejects.toMatchObject({ code: PHI_BLOCK_CODE })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      installIdentityGate()
+    }
+  })
+
+  // CTO (2026-11-12), narrowed by #266: the containment check still does not look at `labeled`, so a
+  // label whose value is part of a UUID is dropped with it — but only inside a machine tool field. The
+  // label names the field, and the UUID is still an identifier; a labelled number outside a UUID, or in
+  // user text, still blocks (the cases above).
+  it('leaves a labelled number that sits entirely inside a UUID in tool output alone', async () => {
+    installMachineApproval(null)
+    installPhiGate(createVaultBackedGate(createMemoryPhiVault()))
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('{}'))
+    const labelledInsideUuid = '被保険者番号 12345678-1234-41d9-b1fe-a737e649318b'
+    const body = toolOutputBody(labelledInsideUuid)
+    try {
+      expect(blockedSpanDiagnostics(JSON.parse(body))).toEqual([])
+      await fetchProviderRequest(fetchImpl, 'https://gateway.invalid/v1/responses', {
+        method: 'POST',
+        body
+      })
+      const sent = JSON.parse((fetchImpl.mock.calls[0]?.[1] as RequestInit).body as string)
+      expect(sent.input[0].output).toBe(labelledInsideUuid)
+    } finally {
+      installIdentityGate()
+    }
   })
 })
